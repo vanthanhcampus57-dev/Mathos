@@ -11,17 +11,17 @@
 
 ### Project Boot Command (GUI)
 ```cmd
-"D:\Tools\Godot\4.7.1\Godot_v4.7.1-stable_win64.exe" --path "D:\SICDLab\Mathos"
+"D:\Tools\Godot\4.7.1\Godot_v4.7.1-stable_win64.exe" --path "D:\Mathos"
 ```
 
 ### Headless Test Command
 ```cmd
-"D:\Tools\Godot\4.7.1\Godot_v4.7.1-stable_win64_console.exe" --headless --path "D:\SICDLab\Mathos" -s tests/test_runner.gd
+"D:\Tools\Godot\4.7.1\Godot_v4.7.1-stable_win64_console.exe" --headless --path "D:\Mathos" -s tests/test_runner.gd
 ```
 
 ### Foundation Content Validation Command
 ```cmd
-"D:\Tools\Godot\4.7.1\Godot_v4.7.1-stable_win64_console.exe" --headless --path "D:\SICDLab\Mathos" -s tools/validation/validate_content.gd
+"D:\Tools\Godot\4.7.1\Godot_v4.7.1-stable_win64_console.exe" --headless --path "D:\Mathos" -s tools/validation/validate_content.gd
 ```
 
 ### Windows Build Command
