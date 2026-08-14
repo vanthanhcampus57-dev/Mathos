@@ -2,12 +2,13 @@ class_name ValidateContent
 extends SceneTree
 
 ## Foundation & Full Content Validator CLI for Mathos.
-## Supports `--mode foundation` and `--mode full --content-root <root>`.
+## Supports `--mode foundation [--config-path <path>]` and `--mode full [--content-root <root>]`.
 
 func _init() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
 	var mode: String = "foundation"
 	var content_root: String = "res://content"
+	var config_path: String = "res://content/config/game_config.json"
 
 	var i: int = 0
 	while i < args.size():
@@ -18,23 +19,26 @@ func _init() -> void:
 		elif arg == "--content-root" and i + 1 < args.size():
 			content_root = args[i + 1]
 			i += 1
+		elif arg == "--config-path" and i + 1 < args.size():
+			config_path = args[i + 1]
+			i += 1
 		i += 1
 
 	if mode == "foundation":
-		_run_foundation_mode()
+		_run_foundation_mode(config_path)
 	elif mode == "full":
 		_run_full_mode(content_root)
 	else:
 		print("Unknown mode: " + mode)
 		quit(1)
 
-func _run_foundation_mode() -> void:
+func _run_foundation_mode(config_path: String = "res://content/config/game_config.json") -> void:
 	print("==========================================")
 	print("MATHOS FOUNDATION CONTENT VALIDATION")
 	print("==========================================")
 
 	var valid: bool = true
-	valid = validate_game_config() and valid
+	valid = validate_game_config(config_path) and valid
 	valid = validate_content_directories() and valid
 
 	print("==========================================")
@@ -77,8 +81,7 @@ func _run_full_mode(content_root: String) -> void:
 		print("==========================================")
 		quit(1)
 
-func validate_game_config() -> bool:
-	var config_path: String = "res://content/config/game_config.json"
+func validate_game_config(config_path: String = "res://content/config/game_config.json") -> bool:
 	print("[VALIDATOR] Checking " + config_path + "...")
 
 	if not FileAccess.file_exists(config_path):

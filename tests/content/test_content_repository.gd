@@ -217,10 +217,12 @@ static func test_content_017_duplicate_json_key() -> bool:
 	return true
 
 static func test_content_018_foundation_regression() -> bool:
-	print("[CONTENT-018] Testing foundation validation regression...")
+	print("[CONTENT-018] Testing foundation validation regression (positive + negative)...")
 	var v_script: ValidateContent = ValidateContent.new()
-	if not v_script.validate_game_config() or not v_script.validate_content_directories():
-		print("[CONTENT-018] FAIL: Foundation validation regression failed")
+	var pos_ok: bool = v_script.validate_game_config("res://content/config/game_config.json")
+	var neg_ok: bool = not v_script.validate_game_config("res://tests/fixtures/content/invalid_duplicate_key/config/game_config.json")
+	if not pos_ok or not neg_ok:
+		print("[CONTENT-018] FAIL: Foundation validation regression failed (pos: " + str(pos_ok) + ", neg: " + str(neg_ok) + ")")
 		return false
 	print("[CONTENT-018] PASS")
 	return true
