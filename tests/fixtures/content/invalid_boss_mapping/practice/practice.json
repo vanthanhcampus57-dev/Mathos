@@ -1,0 +1,282 @@
+[
+  {
+    "schema_version": 1,
+    "practice_id": "practice_01_01",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "question_scope": {
+      "dungeon_id": "dungeon_01",
+      "topic_id": "trial_sample_event",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_01_02",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "question_scope": {
+      "dungeon_id": "dungeon_01",
+      "topic_id": "trial_sample_event",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_01_03",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "question_scope": {
+      "dungeon_id": "dungeon_01",
+      "topic_id": "trial_sample_event",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_01_04",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "question_scope": {
+      "dungeon_id": "dungeon_01",
+      "topic_id": "trial_sample_event",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_01_05",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "question_scope": {
+      "dungeon_id": "dungeon_01",
+      "topic_id": "trial_sample_event",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_02_01",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "question_scope": {
+      "dungeon_id": "dungeon_02",
+      "topic_id": "classical_probability",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_02_02",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "question_scope": {
+      "dungeon_id": "dungeon_02",
+      "topic_id": "classical_probability",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_02_03",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "question_scope": {
+      "dungeon_id": "dungeon_02",
+      "topic_id": "classical_probability",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_02_04",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "question_scope": {
+      "dungeon_id": "dungeon_02",
+      "topic_id": "classical_probability",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_02_05",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "question_scope": {
+      "dungeon_id": "dungeon_02",
+      "topic_id": "classical_probability",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_03_01",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "question_scope": {
+      "dungeon_id": "dungeon_03",
+      "topic_id": "addition_rule",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_03_02",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "question_scope": {
+      "dungeon_id": "dungeon_03",
+      "topic_id": "addition_rule",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_03_03",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "question_scope": {
+      "dungeon_id": "dungeon_03",
+      "topic_id": "addition_rule",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_03_04",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "question_scope": {
+      "dungeon_id": "dungeon_03",
+      "topic_id": "addition_rule",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_03_05",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "question_scope": {
+      "dungeon_id": "dungeon_03",
+      "topic_id": "addition_rule",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_04_01",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "question_scope": {
+      "dungeon_id": "dungeon_04",
+      "topic_id": "multiplication_independence",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_04_02",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "question_scope": {
+      "dungeon_id": "dungeon_04",
+      "topic_id": "multiplication_independence",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_04_03",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "question_scope": {
+      "dungeon_id": "dungeon_04",
+      "topic_id": "multiplication_independence",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_04_04",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "question_scope": {
+      "dungeon_id": "dungeon_04",
+      "topic_id": "multiplication_independence",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  },
+  {
+    "schema_version": 1,
+    "practice_id": "practice_04_05",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "question_scope": {
+      "dungeon_id": "dungeon_04",
+      "topic_id": "multiplication_independence",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "question_count": 3
+  }
+]

@@ -1,0 +1,242 @@
+[
+  {
+    "schema_version": 1,
+    "story_id": "story_01_01",
+    "dungeon_id": "dungeon_01",
+    "stage_id": "stage_01_01",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_01_01"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_01_02",
+    "dungeon_id": "dungeon_01",
+    "stage_id": "stage_01_02",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_01_02"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_01_03",
+    "dungeon_id": "dungeon_01",
+    "stage_id": "stage_01_03",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_01_03"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_01_04",
+    "dungeon_id": "dungeon_01",
+    "stage_id": "stage_01_04",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_01_04"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_01_05",
+    "dungeon_id": "dungeon_01",
+    "stage_id": "stage_01_05",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_01_05"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_02_01",
+    "dungeon_id": "dungeon_02",
+    "stage_id": "stage_02_01",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_02_01"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_02_02",
+    "dungeon_id": "dungeon_02",
+    "stage_id": "stage_02_02",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_02_02"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_02_03",
+    "dungeon_id": "dungeon_02",
+    "stage_id": "stage_02_03",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_02_03"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_02_04",
+    "dungeon_id": "dungeon_02",
+    "stage_id": "stage_02_04",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_02_04"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_02_05",
+    "dungeon_id": "dungeon_02",
+    "stage_id": "stage_02_05",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_02_05"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_03_01",
+    "dungeon_id": "dungeon_03",
+    "stage_id": "stage_03_01",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_03_01"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_03_02",
+    "dungeon_id": "dungeon_03",
+    "stage_id": "stage_03_02",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_03_02"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_03_03",
+    "dungeon_id": "dungeon_03",
+    "stage_id": "stage_03_03",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_03_03"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_03_04",
+    "dungeon_id": "dungeon_03",
+    "stage_id": "stage_03_04",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_03_04"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_03_05",
+    "dungeon_id": "dungeon_03",
+    "stage_id": "stage_03_05",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_03_05"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_04_01",
+    "dungeon_id": "dungeon_04",
+    "stage_id": "stage_04_01",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_04_01"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_04_02",
+    "dungeon_id": "dungeon_04",
+    "stage_id": "stage_04_02",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_04_02"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_04_03",
+    "dungeon_id": "dungeon_04",
+    "stage_id": "stage_04_03",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_04_03"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_04_04",
+    "dungeon_id": "dungeon_04",
+    "stage_id": "stage_04_04",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_04_04"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_04_05",
+    "dungeon_id": "dungeon_04",
+    "stage_id": "stage_04_05",
+    "dialogue_steps": [
+      {
+        "speaker": "Hero",
+        "text": "Entering stage_04_05"
+      }
+    ]
+  }
+]

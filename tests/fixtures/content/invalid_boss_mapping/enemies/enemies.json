@@ -1,0 +1,132 @@
+[
+  {
+    "schema_version": 1,
+    "enemy_id": "enemy_minion_01",
+    "dungeon_id": "dungeon_01",
+    "role": "minion",
+    "max_hp": 30,
+    "stage_ids": [
+      "stage_01_04"
+    ],
+    "intent_selection": "fixed_sequence",
+    "intents": [
+      {
+        "intent_id": "i1",
+        "sequence_order": 0,
+        "weight": null,
+        "telegraph_text": "Attacks!",
+        "effects": [
+          {
+            "effect_type": "damage",
+            "target": "player",
+            "amount": 5
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "enemy_id": "enemy_d1_stochas",
+    "dungeon_id": "dungeon_01",
+    "role": "boss",
+    "max_hp": 100,
+    "stage_ids": [
+      "stage_01_05"
+    ],
+    "intent_selection": "fixed_sequence",
+    "intents": [
+      {
+        "intent_id": "i1",
+        "sequence_order": 0,
+        "weight": null,
+        "telegraph_text": "Boss Attack!",
+        "effects": [
+          {
+            "effect_type": "damage",
+            "target": "player",
+            "amount": 12
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "enemy_id": "enemy_d2_aleator",
+    "dungeon_id": "dungeon_02",
+    "role": "boss",
+    "max_hp": 120,
+    "stage_ids": [
+      "stage_02_05"
+    ],
+    "intent_selection": "fixed_sequence",
+    "intents": [
+      {
+        "intent_id": "i1",
+        "sequence_order": 0,
+        "weight": null,
+        "telegraph_text": "Boss Attack!",
+        "effects": [
+          {
+            "effect_type": "damage",
+            "target": "player",
+            "amount": 14
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "enemy_id": "enemy_d3_melkor",
+    "dungeon_id": "dungeon_03",
+    "role": "boss",
+    "max_hp": 140,
+    "stage_ids": [
+      "stage_03_05"
+    ],
+    "intent_selection": "fixed_sequence",
+    "intents": [
+      {
+        "intent_id": "i1",
+        "sequence_order": 0,
+        "weight": null,
+        "telegraph_text": "Boss Attack!",
+        "effects": [
+          {
+            "effect_type": "damage",
+            "target": "player",
+            "amount": 16
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "enemy_id": "enemy_d4_aphodius",
+    "dungeon_id": "dungeon_04",
+    "role": "boss",
+    "max_hp": 160,
+    "stage_ids": [
+      "stage_04_05"
+    ],
+    "intent_selection": "fixed_sequence",
+    "intents": [
+      {
+        "intent_id": "i1",
+        "sequence_order": 0,
+        "weight": null,
+        "telegraph_text": "Boss Attack!",
+        "effects": [
+          {
+            "effect_type": "damage",
+            "target": "player",
+            "amount": 18
+          }
+        ]
+      }
+    ]
+  }
+]

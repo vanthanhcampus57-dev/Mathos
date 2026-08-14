@@ -1,0 +1,670 @@
+[
+  {
+    "schema_version": 1,
+    "stage_id": "stage_01_01",
+    "dungeon_id": "dungeon_01",
+    "order_in_dungeon": 1,
+    "learning_objective": "Objective stage_01_01",
+    "learning_scope": {
+      "dungeon_id": "dungeon_01",
+      "topic_id": "trial_sample_event",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_01_01",
+    "lesson_id": "lesson_01_01",
+    "practice_id": "practice_01_01",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_01_01",
+    "card_pool_ids": [],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_01_02",
+    "dungeon_id": "dungeon_01",
+    "order_in_dungeon": 2,
+    "learning_objective": "Objective stage_01_02",
+    "learning_scope": {
+      "dungeon_id": "dungeon_01",
+      "topic_id": "trial_sample_event",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_01_02",
+    "lesson_id": "lesson_01_02",
+    "practice_id": "practice_01_02",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_01_02",
+    "card_pool_ids": [],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_01_03",
+    "dungeon_id": "dungeon_01",
+    "order_in_dungeon": 3,
+    "learning_objective": "Objective stage_01_03",
+    "learning_scope": {
+      "dungeon_id": "dungeon_01",
+      "topic_id": "trial_sample_event",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_01_03",
+    "lesson_id": "lesson_01_03",
+    "practice_id": "practice_01_03",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_01_03",
+    "card_pool_ids": [],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_01_04",
+    "dungeon_id": "dungeon_01",
+    "order_in_dungeon": 4,
+    "learning_objective": "Objective stage_01_04",
+    "learning_scope": {
+      "dungeon_id": "dungeon_01",
+      "topic_id": "trial_sample_event",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_01_04",
+    "lesson_id": "lesson_01_04",
+    "practice_id": "practice_01_04",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_01_04",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": "enemy_minion_01",
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_01_05",
+    "dungeon_id": "dungeon_01",
+    "order_in_dungeon": 5,
+    "learning_objective": "Objective stage_01_05",
+    "learning_scope": {
+      "dungeon_id": "dungeon_01",
+      "topic_id": "trial_sample_event",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_01_05",
+    "lesson_id": "lesson_01_05",
+    "practice_id": "practice_01_05",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_01_05",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": "enemy_d1_stochas",
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_02_01",
+    "dungeon_id": "dungeon_02",
+    "order_in_dungeon": 1,
+    "learning_objective": "Objective stage_02_01",
+    "learning_scope": {
+      "dungeon_id": "dungeon_02",
+      "topic_id": "classical_probability",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_02_01",
+    "lesson_id": "lesson_02_01",
+    "practice_id": "practice_02_01",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_02_01",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": null,
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_02_02",
+    "dungeon_id": "dungeon_02",
+    "order_in_dungeon": 2,
+    "learning_objective": "Objective stage_02_02",
+    "learning_scope": {
+      "dungeon_id": "dungeon_02",
+      "topic_id": "classical_probability",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_02_02",
+    "lesson_id": "lesson_02_02",
+    "practice_id": "practice_02_02",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_02_02",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": null,
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_02_03",
+    "dungeon_id": "dungeon_02",
+    "order_in_dungeon": 3,
+    "learning_objective": "Objective stage_02_03",
+    "learning_scope": {
+      "dungeon_id": "dungeon_02",
+      "topic_id": "classical_probability",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_02_03",
+    "lesson_id": "lesson_02_03",
+    "practice_id": "practice_02_03",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_02_03",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": null,
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_02_04",
+    "dungeon_id": "dungeon_02",
+    "order_in_dungeon": 4,
+    "learning_objective": "Objective stage_02_04",
+    "learning_scope": {
+      "dungeon_id": "dungeon_02",
+      "topic_id": "classical_probability",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_02_04",
+    "lesson_id": "lesson_02_04",
+    "practice_id": "practice_02_04",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_02_04",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": null,
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_02_05",
+    "dungeon_id": "dungeon_02",
+    "order_in_dungeon": 5,
+    "learning_objective": "Objective stage_02_05",
+    "learning_scope": {
+      "dungeon_id": "dungeon_02",
+      "topic_id": "classical_probability",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_02_05",
+    "lesson_id": "lesson_02_05",
+    "practice_id": "practice_02_05",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_02_05",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": "enemy_d2_aleator",
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_03_01",
+    "dungeon_id": "dungeon_03",
+    "order_in_dungeon": 1,
+    "learning_objective": "Objective stage_03_01",
+    "learning_scope": {
+      "dungeon_id": "dungeon_03",
+      "topic_id": "addition_rule",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_03_01",
+    "lesson_id": "lesson_03_01",
+    "practice_id": "practice_03_01",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_03_01",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": null,
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_03_02",
+    "dungeon_id": "dungeon_03",
+    "order_in_dungeon": 2,
+    "learning_objective": "Objective stage_03_02",
+    "learning_scope": {
+      "dungeon_id": "dungeon_03",
+      "topic_id": "addition_rule",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_03_02",
+    "lesson_id": "lesson_03_02",
+    "practice_id": "practice_03_02",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_03_02",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": null,
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_03_03",
+    "dungeon_id": "dungeon_03",
+    "order_in_dungeon": 3,
+    "learning_objective": "Objective stage_03_03",
+    "learning_scope": {
+      "dungeon_id": "dungeon_03",
+      "topic_id": "addition_rule",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_03_03",
+    "lesson_id": "lesson_03_03",
+    "practice_id": "practice_03_03",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_03_03",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": null,
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_03_04",
+    "dungeon_id": "dungeon_03",
+    "order_in_dungeon": 4,
+    "learning_objective": "Objective stage_03_04",
+    "learning_scope": {
+      "dungeon_id": "dungeon_03",
+      "topic_id": "addition_rule",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_03_04",
+    "lesson_id": "lesson_03_04",
+    "practice_id": "practice_03_04",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_03_04",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": null,
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_03_05",
+    "dungeon_id": "dungeon_03",
+    "order_in_dungeon": 5,
+    "learning_objective": "Objective stage_03_05",
+    "learning_scope": {
+      "dungeon_id": "dungeon_03",
+      "topic_id": "addition_rule",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_03_05",
+    "lesson_id": "lesson_03_05",
+    "practice_id": "practice_03_05",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_03_05",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": "enemy_d3_melkor",
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_04_01",
+    "dungeon_id": "dungeon_04",
+    "order_in_dungeon": 1,
+    "learning_objective": "Objective stage_04_01",
+    "learning_scope": {
+      "dungeon_id": "dungeon_04",
+      "topic_id": "multiplication_independence",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_04_01",
+    "lesson_id": "lesson_04_01",
+    "practice_id": "practice_04_01",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_04_01",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": null,
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_04_02",
+    "dungeon_id": "dungeon_04",
+    "order_in_dungeon": 2,
+    "learning_objective": "Objective stage_04_02",
+    "learning_scope": {
+      "dungeon_id": "dungeon_04",
+      "topic_id": "multiplication_independence",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_04_02",
+    "lesson_id": "lesson_04_02",
+    "practice_id": "practice_04_02",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_04_02",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": null,
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_04_03",
+    "dungeon_id": "dungeon_04",
+    "order_in_dungeon": 3,
+    "learning_objective": "Objective stage_04_03",
+    "learning_scope": {
+      "dungeon_id": "dungeon_04",
+      "topic_id": "multiplication_independence",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_04_03",
+    "lesson_id": "lesson_04_03",
+    "practice_id": "practice_04_03",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_04_03",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": null,
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_04_04",
+    "dungeon_id": "dungeon_04",
+    "order_in_dungeon": 4,
+    "learning_objective": "Objective stage_04_04",
+    "learning_scope": {
+      "dungeon_id": "dungeon_04",
+      "topic_id": "multiplication_independence",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_04_04",
+    "lesson_id": "lesson_04_04",
+    "practice_id": "practice_04_04",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_04_04",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": null,
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_04_05",
+    "dungeon_id": "dungeon_04",
+    "order_in_dungeon": 5,
+    "learning_objective": "Objective stage_04_05",
+    "learning_scope": {
+      "dungeon_id": "dungeon_04",
+      "topic_id": "multiplication_independence",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_04_05",
+    "lesson_id": "lesson_04_05",
+    "practice_id": "practice_04_05",
+    "encounter_mode": "card_combat",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_04_05",
+    "card_pool_ids": [
+      "card_strike",
+      "card_defend",
+      "card_heal"
+    ],
+    "enemy_id": "enemy_d4_aphodius",
+    "intent_enabled": true
+  }
+]

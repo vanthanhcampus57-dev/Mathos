@@ -1,0 +1,44 @@
+[
+  {
+    "schema_version": 1,
+    "card_id": "card_strike",
+    "name": "Strike",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 10
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_defend",
+    "name": "Defend",
+    "card_type": "shield",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "shield",
+        "target": "player",
+        "amount": 8
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_heal",
+    "name": "Heal",
+    "card_type": "heal",
+    "cost": 2,
+    "effects": [
+      {
+        "effect_type": "heal",
+        "target": "player",
+        "amount": 15
+      }
+    ]
+  }
+]

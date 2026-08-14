@@ -1,8 +1,8 @@
 class_name TestRunner
 extends SceneTree
 
-## Headless Test Runner for Mathos initialization task.
-## Executes TEST-BOOT-001, TEST-SMOKE-001, TEST-CONFIG-001.
+## Headless Test Runner for Mathos task verification.
+## Executes TEST-BOOT-001, TEST-SMOKE-001, TEST-CONFIG-001, and CONTENT-001..018.
 
 func _init() -> void:
 	print("==========================================")
@@ -14,10 +14,11 @@ func _init() -> void:
 	all_passed = run_smoke_test() and all_passed
 	all_passed = run_boot_test() and all_passed
 	all_passed = run_config_test() and all_passed
+	all_passed = TestContentRepository.run_all_tests() and all_passed
 
 	print("==========================================")
 	if all_passed:
-		print("ALL INITIALIZATION TESTS PASSED")
+		print("ALL INITIALIZATION AND CONTENT TESTS PASSED")
 		print("==========================================")
 		quit(0)
 	else:
@@ -79,7 +80,6 @@ func run_config_test() -> bool:
 
 	var config: Dictionary = data as Dictionary
 
-	# Validate required fields
 	var required_fields: Array[String] = [
 		"schema_version",
 		"game_version",
