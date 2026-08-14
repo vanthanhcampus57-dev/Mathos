@@ -1,0 +1,55 @@
+[gd_scene load_steps=2 format=3 uid="uid://capproot00001"]
+
+[ext_resource type="Script" path="res://src/app/app_root.gd" id="1_approot"]
+
+[node name="AppRoot" type="Node"]
+script = ExtResource("1_approot")
+
+[node name="BootstrapUI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ColorRect" type="ColorRect" parent="BootstrapUI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.08, 0.09, 0.12, 1)
+
+[node name="MarginContainer" type="MarginContainer" parent="BootstrapUI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="BootstrapUI/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="BootstrapUI/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+text = "Mathos"
+horizontal_alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="BootstrapUI/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Foundation Build"
+horizontal_alignment = 1
+
+[node name="VersionLabel" type="Label" parent="BootstrapUI/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "0.1.0-dev"
+horizontal_alignment = 1

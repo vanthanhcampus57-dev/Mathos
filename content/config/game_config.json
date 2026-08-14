@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "game_version": "1.0.0",
+  "content_version": 1,
+  "initial_dungeon_id": "dungeon_01",
+  "initial_stage_id": "stage_01_01",
+  "difficulty_min": 1,
+  "difficulty_max": 5,
+  "minimum_valid_candidates_per_required_scope": 3,
+  "default_practice_question_count": 3,
+  "adaptive_recent_record_limit": 100,
+  "player_stats": {
+    "max_hp": 100,
+    "starting_hp": 100,
+    "hand_size": 5
+  },
+  "performance_grade_thresholds": {
+    "a_max_time_ratio": 0.75,
+    "b_max_time_ratio": 1.25
+  },
+  "supported_interaction_types": [
+    "multiple_choice",
+    "drag_drop",
+    "matching",
+    "input"
+  ]
+}

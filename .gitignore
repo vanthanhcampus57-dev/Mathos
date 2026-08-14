@@ -1,0 +1,17 @@
+# Godot 4+ cache and imports
+.godot/
+
+# Build artifacts
+build/
+*.import
+
+# OS and Editor artifacts
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+*.swp
+*~
+
+# User data / local save games (do not commit live save)
+user://
