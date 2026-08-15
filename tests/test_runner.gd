@@ -2,7 +2,7 @@ class_name TestRunner
 extends SceneTree
 
 ## Headless Test Runner for Mathos task verification.
-## Executes TEST-BOOT-001, TEST-SMOKE-001, TEST-CONFIG-001, and CONTENT-001..018.
+## Executes CORE/CONFIG, CONTENT-001..018, Player/Reward contracts, and PROGRESS-001..015.
 
 func _init() -> void:
 	print("==========================================")
@@ -15,10 +15,14 @@ func _init() -> void:
 	all_passed = run_boot_test() and all_passed
 	all_passed = run_config_test() and all_passed
 	all_passed = TestContentRepository.run_all_tests() and all_passed
+	all_passed = TestRewardGrant.run_all_tests() and all_passed
+	all_passed = TestPlayerFoundation.run_all_tests() and all_passed
+	all_passed = TestProgressService.run_all_tests() and all_passed
+	all_passed = TestProgressIntegration.run_all_tests() and all_passed
 
 	print("==========================================")
 	if all_passed:
-		print("ALL INITIALIZATION AND CONTENT TESTS PASSED")
+		print("ALL REGISTERED TESTS PASSED")
 		print("==========================================")
 		quit(0)
 	else:
