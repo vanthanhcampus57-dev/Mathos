@@ -321,28 +321,150 @@ func _validate_question(item: Dictionary, fpath: String, report: ContentValidati
 				if not payload.has("options") or not (payload["options"] is Array) or (payload["options"] as Array).size() < 2:
 					report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_PAYLOAD_MC", "questions", id, fpath, "multiple_choice options must be array of size >= 2"))
 					valid = false
-				if not answer.has("correct_option_id"):
-					report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_ANSWER_MC", "questions", id, fpath, "multiple_choice answer_spec missing correct_option_id"))
+				if not answer.has("correct_option_id") or not _question_dict_has_only_fields(answer, ["correct_option_id"]):
+					report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_ANSWER_MC", "questions", id, fpath, "multiple_choice answer_spec must contain only correct_option_id"))
 					valid = false
 			"drag_drop":
-				if not payload.has("items") or not payload.has("targets"):
-					report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_PAYLOAD_DD", "questions", id, fpath, "drag_drop missing items or targets"))
-					valid = false
-				if not answer.has("correct_mappings"):
-					report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_ANSWER_DD", "questions", id, fpath, "drag_drop missing correct_mappings"))
+				if not _validate_drag_drop_question(payload, answer, id, fpath, report):
 					valid = false
 			"matching":
-				if not payload.has("left_items") or not payload.has("right_items"):
-					report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_PAYLOAD_MATCHING", "questions", id, fpath, "matching missing left_items or right_items"))
-					valid = false
-				if not answer.has("correct_pairs"):
-					report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_ANSWER_MATCHING", "questions", id, fpath, "matching missing correct_pairs"))
+				if not _validate_matching_question(payload, answer, id, fpath, report):
 					valid = false
 			"input":
-				if not answer.has("accepted_answers") or not (answer["accepted_answers"] is Array) or (answer["accepted_answers"] as Array).size() == 0:
-					report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_ANSWER_INPUT", "questions", id, fpath, "input missing accepted_answers non-empty array"))
+				if not _validate_input_question(payload, answer, id, fpath, report):
 					valid = false
 	return valid
+
+func _question_dict_has_only_fields(data: Dictionary, allowed_fields: Array[String]) -> bool:
+	for key_variant in data.keys():
+		if not allowed_fields.has(String(key_variant)):
+			return false
+	return true
+
+func _question_ids_from_items(items: Array, id_field: String) -> Dictionary:
+	var result: Dictionary = {}
+	for item_variant in items:
+		if not (item_variant is Dictionary):
+			return {}
+		var item: Dictionary = item_variant as Dictionary
+		if not item.has(id_field) or not (item[id_field] is String):
+			return {}
+		var item_id: String = String(item[id_field])
+		if item_id == "" or result.has(item_id):
+			return {}
+		result[item_id] = true
+	return result
+
+func _validate_drag_drop_question(payload: Dictionary, answer: Dictionary, id: String, fpath: String, report: ContentValidationReport) -> bool:
+	var valid: bool = true
+	if not _question_dict_has_only_fields(answer, ["mappings"]):
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_ANSWER_DD_FIELDS", "questions", id, fpath, "drag_drop answer_spec permits only canonical field mappings"))
+		valid = false
+	if not payload.has("items") or not (payload["items"] is Array) or not payload.has("targets") or not (payload["targets"] is Array):
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_PAYLOAD_DD", "questions", id, fpath, "drag_drop requires items and targets arrays"))
+		return false
+	if not answer.has("mappings") or not (answer["mappings"] is Array) or (answer["mappings"] as Array).is_empty():
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_ANSWER_DD", "questions", id, fpath, "drag_drop answer_spec.mappings must be a non-empty array"))
+		return false
+
+	var item_ids: Dictionary = _question_ids_from_items(payload["items"] as Array, "item_id")
+	var target_ids: Dictionary = _question_ids_from_items(payload["targets"] as Array, "target_id")
+	if item_ids.is_empty() or target_ids.is_empty():
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_PAYLOAD_DD_IDS", "questions", id, fpath, "drag_drop item_id/target_id values must be unique non-empty strings"))
+		return false
+
+	var seen_items: Dictionary = {}
+	for mapping_variant in answer["mappings"] as Array:
+		if not (mapping_variant is Dictionary):
+			valid = false
+			break
+		var mapping: Dictionary = mapping_variant as Dictionary
+		if not _question_dict_has_only_fields(mapping, ["item_id", "target_id"]) or not mapping.has("item_id") or not mapping.has("target_id"):
+			valid = false
+			break
+		if not (mapping["item_id"] is String) or not (mapping["target_id"] is String):
+			valid = false
+			break
+		var item_id: String = String(mapping["item_id"])
+		var target_id: String = String(mapping["target_id"])
+		if not item_ids.has(item_id) or not target_ids.has(target_id) or seen_items.has(item_id):
+			valid = false
+			break
+		seen_items[item_id] = true
+
+	if bool(payload.get("must_place_all", true)) and seen_items.size() != item_ids.size():
+		valid = false
+	if not valid:
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_ANSWER_DD_MAPPING", "questions", id, fpath, "drag_drop answer_spec.mappings contains an invalid, duplicate, unknown, or incomplete mapping"))
+	return valid
+
+func _validate_matching_question(payload: Dictionary, answer: Dictionary, id: String, fpath: String, report: ContentValidationReport) -> bool:
+	var valid: bool = true
+	if not _question_dict_has_only_fields(answer, ["pairs"]):
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_ANSWER_MATCHING_FIELDS", "questions", id, fpath, "matching answer_spec permits only canonical field pairs"))
+		valid = false
+	if not payload.has("left_items") or not (payload["left_items"] is Array) or not payload.has("right_items") or not (payload["right_items"] is Array):
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_PAYLOAD_MATCHING", "questions", id, fpath, "matching requires left_items and right_items arrays"))
+		return false
+	if not answer.has("pairs") or not (answer["pairs"] is Array):
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_ANSWER_MATCHING", "questions", id, fpath, "matching answer_spec.pairs must be an array"))
+		return false
+
+	var left_ids: Dictionary = _question_ids_from_items(payload["left_items"] as Array, "item_id")
+	var right_ids: Dictionary = _question_ids_from_items(payload["right_items"] as Array, "item_id")
+	if left_ids.is_empty() or right_ids.is_empty():
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_PAYLOAD_MATCHING_IDS", "questions", id, fpath, "matching item IDs must be unique non-empty strings"))
+		return false
+
+	var pairs: Array = answer["pairs"] as Array
+	if pairs.size() != left_ids.size():
+		valid = false
+	var seen_left: Dictionary = {}
+	var seen_right: Dictionary = {}
+	var seen_pairs: Dictionary = {}
+	for pair_variant in pairs:
+		if not (pair_variant is Dictionary):
+			valid = false
+			break
+		var pair: Dictionary = pair_variant as Dictionary
+		if not _question_dict_has_only_fields(pair, ["left_id", "right_id"]) or not pair.has("left_id") or not pair.has("right_id"):
+			valid = false
+			break
+		if not (pair["left_id"] is String) or not (pair["right_id"] is String):
+			valid = false
+			break
+		var left_id: String = String(pair["left_id"])
+		var right_id: String = String(pair["right_id"])
+		var pair_key: String = left_id + "\u001f" + right_id
+		if not left_ids.has(left_id) or not right_ids.has(right_id) or seen_left.has(left_id) or seen_right.has(right_id) or seen_pairs.has(pair_key):
+			valid = false
+			break
+		seen_left[left_id] = true
+		seen_right[right_id] = true
+		seen_pairs[pair_key] = true
+
+	if seen_left.size() != left_ids.size():
+		valid = false
+	if not valid:
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_ANSWER_MATCHING_PAIR", "questions", id, fpath, "matching answer_spec.pairs must be complete one-to-one ground truth with known unique IDs"))
+	return valid
+
+func _validate_input_question(payload: Dictionary, answer: Dictionary, id: String, fpath: String, report: ContentValidationReport) -> bool:
+	var allowed_answer_fields: Array[String] = ["accepted_values", "numeric_tolerance", "case_sensitive", "trim_whitespace"]
+	if not _question_dict_has_only_fields(answer, allowed_answer_fields):
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_ANSWER_INPUT_FIELDS", "questions", id, fpath, "input answer_spec contains a non-canonical field"))
+		return false
+	if not payload.has("input_type") or not (payload["input_type"] is String) or not ["integer", "float", "string", "symbol"].has(String(payload["input_type"])):
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_PAYLOAD_INPUT", "questions", id, fpath, "input interaction_payload.input_type must be integer, float, string, or symbol"))
+		return false
+	if not answer.has("accepted_values") or not (answer["accepted_values"] is Array) or (answer["accepted_values"] as Array).is_empty():
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_ANSWER_INPUT", "questions", id, fpath, "input answer_spec.accepted_values must be a non-empty array"))
+		return false
+	if answer.has("numeric_tolerance") and answer["numeric_tolerance"] != null:
+		if not (answer["numeric_tolerance"] is int or answer["numeric_tolerance"] is float) or float(answer["numeric_tolerance"]) < 0.0:
+			report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.REJECT_ITEM, "ERR_ANSWER_INPUT_TOLERANCE", "questions", id, fpath, "numeric_tolerance must be null or >= 0"))
+			return false
+	return true
 
 func _validate_card(item: Dictionary, fpath: String, report: ContentValidationReport) -> bool:
 	var id: String = item.get("card_id", "")

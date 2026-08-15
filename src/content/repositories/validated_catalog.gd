@@ -4,6 +4,19 @@ extends RefCounted
 ## Immutable, indexed container of validated game static content definitions.
 ## Published ONLY by ContentRepository after successful validation gate.
 
+const TOPIC_BY_DUNGEON: Dictionary = {
+	"dungeon_01": "trial_sample_event",
+	"dungeon_02": "classical_probability",
+	"dungeon_03": "addition_rule",
+	"dungeon_04": "multiplication_independence"
+}
+const SUBTOPICS_BY_TOPIC: Dictionary = {
+	"trial_sample_event": ["random_trial", "sample_space", "event_subset", "event_classification", "counting_outcomes"],
+	"classical_probability": ["equally_likely", "classical_probability_formula", "probability_representation", "compare_probability", "multi_data_classical"],
+	"addition_rule": ["union_intersection", "mutually_exclusive", "addition_simple", "addition_general", "addition_selection"],
+	"multiplication_independence": ["independence", "tree_diagram", "multiplication_two_step", "multiplication_chain", "independence_application"]
+}
+
 var _config: Dictionary = {}
 var _dungeons: Dictionary = {} # id -> Dictionary
 var _stages: Dictionary = {}   # id -> Dictionary
@@ -103,7 +116,19 @@ func query_questions(scope: Dictionary, context: String = "") -> Array[Dictionar
 	var candidates: Array[Dictionary] = []
 	var req_dungeon: String = scope.get("dungeon_id", "")
 	var req_topic: String = scope.get("topic_id", "")
-	var req_subtopics: Array = scope.get("subtopics", [])
+	if not TOPIC_BY_DUNGEON.has(req_dungeon) or String(TOPIC_BY_DUNGEON[req_dungeon]) != req_topic:
+		return []
+	# Canonical QuestionScope uses subtopic_ids only. Legacy `subtopics` is rejected
+	# here instead of being interpreted or widened into an empty canonical filter.
+	if scope.has("subtopics") or not scope.has("subtopic_ids"):
+		return []
+	var raw_subtopics: Variant = scope["subtopic_ids"]
+	if not (raw_subtopics is Array):
+		return []
+	var req_subtopics: Array = raw_subtopics as Array
+	for subtopic_variant in req_subtopics:
+		if not (subtopic_variant is String):
+			return []
 	var req_min_diff: int = int(scope.get("difficulty_min", 1))
 	var req_max_diff: int = int(scope.get("difficulty_max", 5))
 
@@ -120,8 +145,11 @@ func query_questions(scope: Dictionary, context: String = "") -> Array[Dictionar
 			var allowed_contexts: Array = q.get("allowed_contexts", [])
 			if not allowed_contexts.has(context):
 				continue
+		var q_subtopic: String = q.get("subtopic_id", "")
+		var canonical_subtopics: Array = SUBTOPICS_BY_TOPIC.get(req_topic, [])
+		if not canonical_subtopics.has(q_subtopic):
+			continue
 		if req_subtopics.size() > 0:
-			var q_subtopic: String = q.get("subtopic_id", "")
 			if not req_subtopics.has(q_subtopic):
 				continue
 		candidates.append(q.duplicate(true))

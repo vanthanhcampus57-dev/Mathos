@@ -1,7 +1,7 @@
 class_name TestContentRepository
 extends RefCounted
 
-## Automated test suite covering CONTENT-001 through CONTENT-018.
+## Automated test suite covering CONTENT-001 through CONTENT-028.
 
 static func run_all_tests() -> bool:
 	print("--- RUNNING CONTENT REPOSITORY & VALIDATOR SUITE ---")
@@ -25,6 +25,16 @@ static func run_all_tests() -> bool:
 	all_ok = test_content_016_asset_policy() and all_ok
 	all_ok = test_content_017_duplicate_json_key() and all_ok
 	all_ok = test_content_018_foundation_regression() and all_ok
+	all_ok = test_content_019_drag_drop_canonical_mappings() and all_ok
+	all_ok = test_content_020_drag_drop_legacy_mapping_rejected() and all_ok
+	all_ok = test_content_021_matching_canonical_pairs() and all_ok
+	all_ok = test_content_022_matching_legacy_pairs_rejected() and all_ok
+	all_ok = test_content_023_input_canonical_accepted_values() and all_ok
+	all_ok = test_content_024_input_legacy_accepted_answers_rejected() and all_ok
+	all_ok = test_content_025_query_honors_subtopic_ids() and all_ok
+	all_ok = test_content_026_query_empty_subtopic_ids_same_topic() and all_ok
+	all_ok = test_content_027_query_legacy_subtopics_not_canonical() and all_ok
+	all_ok = test_content_028_query_hard_dungeon_topic_boundary() and all_ok
 
 	return all_ok
 
@@ -93,7 +103,7 @@ static func test_content_007_cross_dungeon_blocked() -> bool:
 	var repo: ContentRepository = ContentRepository.new()
 	var report: ContentValidationReport = repo.load_and_validate("res://tests/fixtures/content/valid_catalog")
 	var catalog: ValidatedCatalog = repo.get_catalog()
-	var scope: Dictionary = {"dungeon_id": "dungeon_01", "topic_id": "trial_sample_event"}
+	var scope: Dictionary = {"dungeon_id": "dungeon_01", "topic_id": "trial_sample_event", "subtopic_ids": []}
 	var d1_qs: Array[Dictionary] = catalog.query_questions(scope)
 	for q in d1_qs:
 		if q.get("dungeon_id") != "dungeon_01":
@@ -226,3 +236,199 @@ static func test_content_018_foundation_regression() -> bool:
 		return false
 	print("[CONTENT-018] PASS")
 	return true
+
+static func test_content_019_drag_drop_canonical_mappings() -> bool:
+	print("[CONTENT-019] Testing drag_drop canonical answer_spec.mappings...")
+	var q: Dictionary = _contract_base_question("q_drag_canonical", "drag_drop")
+	q["interaction_payload"] = {
+		"items": [{"item_id": "item_a", "text": "A"}, {"item_id": "item_b", "text": "B"}],
+		"targets": [{"target_id": "target_a", "label": "A"}, {"target_id": "target_b", "label": "B"}],
+		"must_place_all": true
+	}
+	q["answer_spec"] = {"mappings": [{"item_id": "item_a", "target_id": "target_a"}, {"item_id": "item_b", "target_id": "target_b"}]}
+	if not _validate_contract_question(q):
+		print("[CONTENT-019] FAIL: Canonical mappings was rejected")
+		return false
+	print("[CONTENT-019] PASS")
+	return true
+
+static func test_content_020_drag_drop_legacy_mapping_rejected() -> bool:
+	print("[CONTENT-020] Testing legacy correct_mappings rejection...")
+	var q: Dictionary = _contract_base_question("q_drag_legacy", "drag_drop")
+	q["interaction_payload"] = {
+		"items": [{"item_id": "item_a", "text": "A"}],
+		"targets": [{"target_id": "target_a", "label": "A"}],
+		"must_place_all": true
+	}
+	q["answer_spec"] = {"correct_mappings": [{"item_id": "item_a", "target_id": "target_a"}]}
+	if _validate_contract_question(q):
+		print("[CONTENT-020] FAIL: Legacy correct_mappings was accepted")
+		return false
+	print("[CONTENT-020] PASS")
+	return true
+
+static func test_content_021_matching_canonical_pairs() -> bool:
+	print("[CONTENT-021] Testing matching canonical answer_spec.pairs...")
+	var q: Dictionary = _contract_matching_question("q_matching_canonical")
+	if not _validate_contract_question(q):
+		print("[CONTENT-021] FAIL: Canonical complete pairs was rejected")
+		return false
+	var incomplete: Dictionary = q.duplicate(true)
+	incomplete["answer_spec"] = {"pairs": [{"left_id": "left_a", "right_id": "right_a"}]}
+	if _validate_contract_question(incomplete):
+		print("[CONTENT-021] FAIL: Incomplete answer_spec.pairs ground truth was accepted")
+		return false
+	var duplicate_right: Dictionary = q.duplicate(true)
+	duplicate_right["answer_spec"] = {"pairs": [{"left_id": "left_a", "right_id": "right_a"}, {"left_id": "left_b", "right_id": "right_a"}]}
+	if _validate_contract_question(duplicate_right):
+		print("[CONTENT-021] FAIL: Non one-to-one answer_spec.pairs ground truth was accepted")
+		return false
+	print("[CONTENT-021] PASS")
+	return true
+
+static func test_content_022_matching_legacy_pairs_rejected() -> bool:
+	print("[CONTENT-022] Testing legacy correct_pairs rejection...")
+	var q: Dictionary = _contract_matching_question("q_matching_legacy")
+	q["answer_spec"] = {"correct_pairs": [{"left_id": "left_a", "right_id": "right_a"}, {"left_id": "left_b", "right_id": "right_b"}]}
+	if _validate_contract_question(q):
+		print("[CONTENT-022] FAIL: Legacy correct_pairs was accepted")
+		return false
+	print("[CONTENT-022] PASS")
+	return true
+
+static func test_content_023_input_canonical_accepted_values() -> bool:
+	print("[CONTENT-023] Testing input canonical answer_spec.accepted_values...")
+	var q: Dictionary = _contract_base_question("q_input_canonical", "input")
+	q["interaction_payload"] = {"input_type": "float", "placeholder": null, "unit": null}
+	q["answer_spec"] = {"accepted_values": [0.25], "numeric_tolerance": 0.001, "case_sensitive": false, "trim_whitespace": true}
+	if not _validate_contract_question(q):
+		print("[CONTENT-023] FAIL: Canonical accepted_values was rejected")
+		return false
+	print("[CONTENT-023] PASS")
+	return true
+
+static func test_content_024_input_legacy_accepted_answers_rejected() -> bool:
+	print("[CONTENT-024] Testing legacy accepted_answers rejection...")
+	var q: Dictionary = _contract_base_question("q_input_legacy", "input")
+	q["interaction_payload"] = {"input_type": "integer", "placeholder": null, "unit": null}
+	q["answer_spec"] = {"accepted_answers": [2], "numeric_tolerance": null, "case_sensitive": false, "trim_whitespace": true}
+	if _validate_contract_question(q):
+		print("[CONTENT-024] FAIL: Legacy accepted_answers was accepted")
+		return false
+	print("[CONTENT-024] PASS")
+	return true
+
+static func test_content_025_query_honors_subtopic_ids() -> bool:
+	print("[CONTENT-025] Testing query_questions subtopic_ids restriction...")
+	var catalog: ValidatedCatalog = _contract_query_catalog()
+	var result: Array[Dictionary] = catalog.query_questions(_contract_query_scope(["sample_space"]), "practice")
+	if result.size() != 1 or result[0].get("subtopic_id", "") != "sample_space":
+		print("[CONTENT-025] FAIL: subtopic_ids filter was not honored")
+		return false
+	print("[CONTENT-025] PASS")
+	return true
+
+static func test_content_026_query_empty_subtopic_ids_same_topic() -> bool:
+	print("[CONTENT-026] Testing empty subtopic_ids preserves legal same-topic candidates...")
+	var catalog: ValidatedCatalog = _contract_query_catalog()
+	var result: Array[Dictionary] = catalog.query_questions(_contract_query_scope([]), "practice")
+	if result.size() != 2:
+		print("[CONTENT-026] FAIL: Empty subtopic_ids did not retain same-topic candidates")
+		return false
+	for q in result:
+		if q.get("dungeon_id", "") != "dungeon_01" or q.get("topic_id", "") != "trial_sample_event":
+			print("[CONTENT-026] FAIL: Empty subtopic_ids widened outside same topic")
+			return false
+	print("[CONTENT-026] PASS")
+	return true
+
+static func test_content_027_query_legacy_subtopics_not_canonical() -> bool:
+	print("[CONTENT-027] Testing legacy subtopics is not silently interpreted...")
+	var catalog: ValidatedCatalog = _contract_query_catalog()
+	var scope: Dictionary = _contract_query_scope([])
+	scope.erase("subtopic_ids")
+	scope["subtopics"] = ["sample_space"]
+	var result: Array[Dictionary] = catalog.query_questions(scope, "practice")
+	if not result.is_empty():
+		print("[CONTENT-027] FAIL: Legacy subtopics was treated as canonical or widened")
+		return false
+	print("[CONTENT-027] PASS")
+	return true
+
+static func test_content_028_query_hard_dungeon_topic_boundary() -> bool:
+	print("[CONTENT-028] Testing hard Dungeon/topic restriction remains intact...")
+	var catalog: ValidatedCatalog = _contract_query_catalog()
+	var result: Array[Dictionary] = catalog.query_questions(_contract_query_scope([]), "practice")
+	for q in result:
+		if q.get("dungeon_id", "") != "dungeon_01" or q.get("topic_id", "") != "trial_sample_event":
+			print("[CONTENT-028] FAIL: Query crossed Dungeon/topic boundary")
+			return false
+	var forged: Dictionary = _contract_query_scope([])
+	forged["topic_id"] = "classical_probability"
+	if not catalog.query_questions(forged, "practice").is_empty():
+		print("[CONTENT-028] FAIL: Non-canonical Dungeon/topic scope was accepted")
+		return false
+	print("[CONTENT-028] PASS")
+	return true
+
+static func _contract_base_question(question_id: String, interaction_type: String) -> Dictionary:
+	return {
+		"schema_version": 1,
+		"question_id": question_id,
+		"dungeon_id": "dungeon_01",
+		"topic_id": "trial_sample_event",
+		"subtopic_id": "sample_space",
+		"learning_objective": "Synthetic validation objective",
+		"prompt": "Synthetic prompt",
+		"explanation": "Synthetic explanation",
+		"difficulty": 2,
+		"interaction_type": interaction_type,
+		"interaction_payload": {},
+		"answer_spec": {},
+		"allowed_contexts": ["practice"]
+	}
+
+static func _contract_matching_question(question_id: String) -> Dictionary:
+	var q: Dictionary = _contract_base_question(question_id, "matching")
+	q["interaction_payload"] = {
+		"left_items": [{"item_id": "left_a", "text": "A"}, {"item_id": "left_b", "text": "B"}],
+		"right_items": [{"item_id": "right_a", "text": "A"}, {"item_id": "right_b", "text": "B"}]
+	}
+	q["answer_spec"] = {"pairs": [{"left_id": "left_a", "right_id": "right_a"}, {"left_id": "left_b", "right_id": "right_b"}]}
+	return q
+
+static func _validate_contract_question(question: Dictionary) -> bool:
+	var validator: ContentValidator = ContentValidator.new()
+	var report: ContentValidationReport = ContentValidationReport.new()
+	return validator._validate_question(question, "synthetic_question.json", report)
+
+static func _contract_query_scope(subtopic_ids: Array) -> Dictionary:
+	return {
+		"dungeon_id": "dungeon_01",
+		"topic_id": "trial_sample_event",
+		"subtopic_ids": subtopic_ids,
+		"difficulty_min": 1,
+		"difficulty_max": 5,
+		"interaction_types": []
+	}
+
+static func _contract_query_catalog() -> ValidatedCatalog:
+	var questions: Dictionary = {
+		"q_sample": _contract_query_question("q_sample", "dungeon_01", "trial_sample_event", "sample_space"),
+		"q_event": _contract_query_question("q_event", "dungeon_01", "trial_sample_event", "event_subset"),
+		"q_d2": _contract_query_question("q_d2", "dungeon_02", "classical_probability", "equally_likely"),
+		"q_wrong_topic": _contract_query_question("q_wrong_topic", "dungeon_01", "classical_probability", "equally_likely"),
+		"q_bad_subtopic": _contract_query_question("q_bad_subtopic", "dungeon_01", "trial_sample_event", "not_canonical")
+	}
+	return ValidatedCatalog.new({}, {}, {}, {}, {}, {}, questions, {}, {}, {})
+
+static func _contract_query_question(question_id: String, dungeon_id: String, topic_id: String, subtopic_id: String) -> Dictionary:
+	return {
+		"question_id": question_id,
+		"dungeon_id": dungeon_id,
+		"topic_id": topic_id,
+		"subtopic_id": subtopic_id,
+		"difficulty": 2,
+		"interaction_type": "multiple_choice",
+		"allowed_contexts": ["practice"]
+	}
