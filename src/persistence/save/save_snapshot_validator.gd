@@ -5,15 +5,18 @@ extends RefCounted
 ## Validates data integrity, sequential progression, fragment locks, adaptive profile bounds,
 ## and transient field exclusion without mutating gameplay state.
 
-static func validate_snapshot(snapshot: Dictionary, catalog: ValidatedCatalog = null) -> Dictionary:
+static func validate_snapshot(snapshot: Dictionary, catalog: ValidatedCatalog = null, custom_config: Dictionary = {}) -> Dictionary:
 	if snapshot.is_empty():
 		return _error(SaveErrorCodes.CORRUPT_SAVE, "Snapshot cannot be empty")
 
 	# Check schema version gate first
 	if snapshot.has("schema_version"):
 		var ver_variant: Variant = snapshot["schema_version"]
-		if ver_variant is int or ver_variant is float:
+		if (typeof(ver_variant) == TYPE_INT or typeof(ver_variant) == TYPE_FLOAT) and not (ver_variant is bool):
+			var version_float: float = float(ver_variant)
 			var version_int: int = int(ver_variant)
+			if version_float != float(version_int):
+				return _error(SaveErrorCodes.CORRUPT_SAVE, "schema_version must be a whole integer")
 			var ver_check: Dictionary = SaveVersioning.check_version(version_int)
 			if not bool(ver_check.get("success", false)):
 				return ver_check
@@ -47,7 +50,7 @@ static func validate_snapshot(snapshot: Dictionary, catalog: ValidatedCatalog = 
 		return progress_res
 
 	# Validate Adaptive Profile
-	var adaptive_res: Dictionary = _validate_adaptive_profile(snapshot["adaptive_profile"], catalog)
+	var adaptive_res: Dictionary = _validate_adaptive_profile(snapshot["adaptive_profile"], catalog, custom_config)
 	if not bool(adaptive_res.get("success", false)):
 		return adaptive_res
 
@@ -124,10 +127,10 @@ static func _validate_progress(progress: Variant, catalog: ValidatedCatalog) -> 
 	# If catalog is provided, verify stages/dungeons against catalog
 	if catalog != null:
 		for d in unlocked_dungeons:
-			if not catalog.dungeons.has(d):
+			if catalog.get_dungeon(d).is_empty():
 				return _error(SaveErrorCodes.CORRUPT_SAVE, "Dungeon '%s' not found in catalog" % d)
 		for s in unlocked_stages:
-			if not catalog.stages.has(s):
+			if catalog.get_stage(s).is_empty():
 				return _error(SaveErrorCodes.CORRUPT_SAVE, "Stage '%s' not found in catalog" % s)
 
 	# Mandatory baseline unlocked checks
@@ -141,7 +144,6 @@ static func _validate_progress(progress: Variant, catalog: ValidatedCatalog) -> 
 		var d_id: String = "dungeon_0%d" % d_idx
 		var d_unlocked: bool = unlocked_dungeons.has(d_id)
 
-		# Check stage progression 1..5 in dungeon
 		for s_idx in range(1, 6):
 			var s_id: String = "stage_0%d_0%d" % [d_idx, s_idx]
 			var s_unlocked: bool = unlocked_stages.has(s_id)
@@ -160,7 +162,6 @@ static func _validate_progress(progress: Variant, catalog: ValidatedCatalog) -> 
 				return _error(SaveErrorCodes.CORRUPT_SAVE, "Stage '%s' is cleared but not unlocked" % s_id)
 
 	# Fragment & Dungeon unlock dependency checks
-	# fragment_01 requires stage_01_05 clear
 	if fragment_ids.has("fragment_01") and not cleared_stages.has("stage_01_05"):
 		return _error(SaveErrorCodes.CORRUPT_SAVE, "fragment_01 requires stage_01_05 to be cleared")
 	if fragment_ids.has("fragment_02") and not cleared_stages.has("stage_02_05"):
@@ -170,7 +171,6 @@ static func _validate_progress(progress: Variant, catalog: ValidatedCatalog) -> 
 	if fragment_ids.has("fragment_04") and not cleared_stages.has("stage_04_05"):
 		return _error(SaveErrorCodes.CORRUPT_SAVE, "fragment_04 requires stage_04_05 to be cleared")
 
-	# Dungeon unlocking dependencies
 	if unlocked_dungeons.has("dungeon_02"):
 		if not cleared_stages.has("stage_01_05") or not fragment_ids.has("fragment_01"):
 			return _error(SaveErrorCodes.CORRUPT_SAVE, "dungeon_02 requires stage_01_05 clear and fragment_01")
@@ -189,7 +189,7 @@ static func _validate_progress(progress: Variant, catalog: ValidatedCatalog) -> 
 
 	return {"success": true}
 
-static func _validate_adaptive_profile(adaptive: Variant, catalog: ValidatedCatalog) -> Dictionary:
+static func _validate_adaptive_profile(adaptive: Variant, catalog: ValidatedCatalog, custom_config: Dictionary) -> Dictionary:
 	if not (adaptive is Dictionary):
 		return _error(SaveErrorCodes.CORRUPT_SAVE, "adaptive_profile must be a Dictionary")
 	var adp: Dictionary = adaptive as Dictionary
@@ -236,14 +236,18 @@ static func _validate_adaptive_profile(adaptive: Variant, catalog: ValidatedCata
 			if not (last_diff is int or last_diff is float) or int(last_diff) < 1 or int(last_diff) > 5:
 				return _error(SaveErrorCodes.CORRUPT_SAVE, "last_difficulty must be null or 1..5")
 
-	# Validate recent_records
+	# Validate recent_records limit dynamically from catalog config or custom_config
 	if not (adp["recent_records"] is Array):
 		return _error(SaveErrorCodes.CORRUPT_SAVE, "recent_records must be an Array")
 	var records: Array = adp["recent_records"] as Array
 
 	var limit: int = 100
-	if catalog != null and catalog.config.has("adaptive_recent_record_limit"):
-		limit = int(catalog.config["adaptive_recent_record_limit"])
+	if catalog != null:
+		var cfg: Dictionary = catalog.get_config()
+		if cfg.has("adaptive_recent_record_limit"):
+			limit = int(cfg["adaptive_recent_record_limit"])
+	elif custom_config.has("adaptive_recent_record_limit"):
+		limit = int(custom_config["adaptive_recent_record_limit"])
 
 	if records.size() > limit:
 		return _error(SaveErrorCodes.CORRUPT_SAVE, "recent_records length (%d) exceeds limit (%d)" % [records.size(), limit])
@@ -257,10 +261,10 @@ static func _validate_adaptive_profile(adaptive: Variant, catalog: ValidatedCata
 
 		if String(rec["attempt_id"]).is_empty():
 			return _error(SaveErrorCodes.CORRUPT_SAVE, "PerformanceRecord attempt_id must be non-empty")
-		if String(rec["question_id"]).is_empty():
+
+		var q_id: String = String(rec["question_id"])
+		if q_id.is_empty():
 			return _error(SaveErrorCodes.CORRUPT_SAVE, "PerformanceRecord question_id must be non-empty")
-		if catalog != null and not catalog.questions.has(String(rec["question_id"])):
-			return _error(SaveErrorCodes.CORRUPT_SAVE, "PerformanceRecord question_id '%s' not found in catalog" % String(rec["question_id"]))
 
 		var dung_id: String = String(rec["dungeon_id"])
 		if not SaveSchema.CANONICAL_DUNGEONS.has(dung_id):
@@ -270,8 +274,24 @@ static func _validate_adaptive_profile(adaptive: Variant, catalog: ValidatedCata
 		if String(rec["topic_id"]) != expected_topic:
 			return _error(SaveErrorCodes.CORRUPT_SAVE, "PerformanceRecord topic_id '%s' does not match dungeon topic '%s'" % [String(rec["topic_id"]), expected_topic])
 
-		if String(rec["subtopic_id"]).is_empty():
+		var sub_id: String = String(rec["subtopic_id"])
+		if sub_id.is_empty():
 			return _error(SaveErrorCodes.CORRUPT_SAVE, "PerformanceRecord subtopic_id must be non-empty")
+
+		# If catalog is available, validate against catalog questions reference
+		if catalog != null:
+			if catalog.get_dungeon(dung_id).is_empty():
+				return _error(SaveErrorCodes.CORRUPT_SAVE, "PerformanceRecord dungeon_id '%s' not found in catalog" % dung_id)
+			var q_def: Dictionary = catalog.get_question(q_id)
+			if q_def.is_empty():
+				return _error(SaveErrorCodes.CORRUPT_SAVE, "PerformanceRecord question_id '%s' not found in catalog" % q_id)
+
+			if String(q_def.get("dungeon_id", "")) != dung_id:
+				return _error(SaveErrorCodes.CORRUPT_SAVE, "PerformanceRecord dungeon_id '%s' incompatible with question definition '%s'" % [dung_id, String(q_def.get("dungeon_id", ""))])
+			if String(q_def.get("topic_id", "")) != String(rec["topic_id"]):
+				return _error(SaveErrorCodes.CORRUPT_SAVE, "PerformanceRecord topic_id '%s' incompatible with question definition '%s'" % [String(rec["topic_id"]), String(q_def.get("topic_id", ""))])
+			if String(q_def.get("subtopic_id", "")) != sub_id:
+				return _error(SaveErrorCodes.CORRUPT_SAVE, "PerformanceRecord subtopic_id '%s' incompatible with question definition '%s'" % [sub_id, String(q_def.get("subtopic_id", ""))])
 
 		var ctx: String = String(rec["context"])
 		if not SaveSchema.ALLOWED_PERFORMANCE_CONTEXTS.has(ctx):
