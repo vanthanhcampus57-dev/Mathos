@@ -2,7 +2,7 @@ class_name TestSaveServiceIO
 extends RefCounted
 
 ## Unit test suite for SaveService I/O operations, transactional commits,
-## backup preservation, corrupt diagnostics, and failure classification.
+## backup preservation, corrupt diagnostics, and recovery flows.
 
 static func run_all_tests() -> bool:
 	print("--- RUNNING SAVE SERVICE IO SUITE ---")
@@ -25,6 +25,13 @@ static func run_all_tests() -> bool:
 	all_ok = test_save_retry_io_only() and all_ok
 	all_ok = test_has_save_valid_vs_corrupt_distinction() and all_ok
 	all_ok = test_no_writes_to_res_or_project_source() and all_ok
+
+	# Dedicated Backup Recovery Contract Gate Tests (SAVE-IO-RECOVERY-001..005)
+	all_ok = test_save_io_recovery_001() and all_ok
+	all_ok = test_save_io_recovery_002() and all_ok
+	all_ok = test_save_io_recovery_003() and all_ok
+	all_ok = test_save_io_recovery_004() and all_ok
+	all_ok = test_save_io_recovery_005() and all_ok
 	return all_ok
 
 static func _make_test_store() -> SaveFileStore:
@@ -257,18 +264,10 @@ static func test_valid_backup_discovery_path() -> bool:
 	store.write_text(store.backup_path, JSON.stringify(snap, "\t"))
 
 	var load_res: Dictionary = service.load()
-	if bool(load_res.get("success", false)) or not bool(load_res.get("backup_available", false)):
-		return _fail("SAVE-IO-014", "Valid backup discovery did not indicate backup_available=true")
+	if not bool(load_res.get("success", false)):
+		return _fail("SAVE-IO-014", "Load with valid backup failed")
 
-	var backup_snap: Dictionary = load_res["backup_snapshot"] as Dictionary
-	var save_res: Dictionary = service.save(backup_snap)
-	if not bool(save_res.get("success", false)):
-		return _fail("SAVE-IO-014", "Re-persisting discovered backup snapshot failed")
-
-	var post_load: Dictionary = service.load()
-	if not bool(post_load.get("success", false)):
-		return _fail("SAVE-IO-014", "Load after backup re-persistence failed")
-	var coin: int = int((post_load["snapshot"]["player_persistent"] as Dictionary)["coin_balance"])
+	var coin: int = int((load_res["snapshot"]["player_persistent"] as Dictionary)["coin_balance"])
 	if coin != 777:
 		return _fail("SAVE-IO-014", "Recovered snapshot did not preserve coin_balance=777")
 	print("[SAVE-IO-014] PASS")
@@ -332,6 +331,110 @@ static func test_no_writes_to_res_or_project_source() -> bool:
 	if base_dir.begins_with("res://") or base_dir.begins_with("src/") or base_dir.begins_with("content/"):
 		return _fail("SAVE-IO-018", "SaveFileStore path violates user:// isolation boundary")
 	print("[SAVE-IO-018] PASS")
+	return true
+
+# --- Dedicated Backup Recovery Contract Gate Tests ---
+
+static func test_save_io_recovery_001() -> bool:
+	# SAVE-IO-RECOVERY-001: invalid main + valid backup -> recovery succeeds through approved method.
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+	var bak_snap: Dictionary = _valid_snapshot()
+	bak_snap["player_persistent"]["coin_balance"] = 999
+	store.write_text(store.main_path, "{ corrupt main json }")
+	store.write_text(store.backup_path, JSON.stringify(bak_snap, "\t"))
+
+	var load_res: Dictionary = service.load()
+	if not bool(load_res.get("success", false)):
+		return _fail("SAVE-IO-RECOVERY-001", "Recovery load failed for invalid main + valid backup")
+	if not bool(load_res.get("recovered_from_backup", false)):
+		return _fail("SAVE-IO-RECOVERY-001", "recovered_from_backup flag missing")
+	print("[SAVE-IO-RECOVERY-001] PASS")
+	return true
+
+static func test_save_io_recovery_002() -> bool:
+	# SAVE-IO-RECOVERY-002: resulting main parses and validates.
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+	var bak_snap: Dictionary = _valid_snapshot()
+	bak_snap["player_persistent"]["coin_balance"] = 999
+	store.write_text(store.main_path, "{ corrupt main json }")
+	store.write_text(store.backup_path, JSON.stringify(bak_snap, "\t"))
+
+	service.load()
+
+	# Verify resulting main file exists, parses, and validates independently
+	if not store.file_exists(store.main_path):
+		return _fail("SAVE-IO-RECOVERY-002", "Recovered main file missing")
+
+	var main_read: Dictionary = store.read_text(store.main_path)
+	var codec_res: Dictionary = SaveSnapshotCodec.deserialize(str(main_read.get("content", "")))
+	if not bool(codec_res.get("success", false)):
+		return _fail("SAVE-IO-RECOVERY-002", "Recovered main file failed deserialization")
+
+	var val_res: Dictionary = service.validate_persisted_snapshot(codec_res["snapshot"] as Dictionary)
+	if not bool(val_res.get("success", false)):
+		return _fail("SAVE-IO-RECOVERY-002", "Recovered main file failed validation")
+	var coin: int = int(((codec_res["snapshot"] as Dictionary)["player_persistent"] as Dictionary)["coin_balance"])
+	if coin != 999:
+		return _fail("SAVE-IO-RECOVERY-002", "Recovered main file coin_balance != 999")
+	print("[SAVE-IO-RECOVERY-002] PASS")
+	return true
+
+static func test_save_io_recovery_003() -> bool:
+	# SAVE-IO-RECOVERY-003: corrupt main and backup are not merged.
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+	var bak_snap: Dictionary = _valid_snapshot()
+	bak_snap["player_persistent"]["coin_balance"] = 50
+	store.write_text(store.main_path, "{\"corrupt_garbage\": 99999, \"player_persistent\": {\"coin_balance\": 99999}}")
+	store.write_text(store.backup_path, JSON.stringify(bak_snap, "\t"))
+
+	var load_res: Dictionary = service.load()
+	if not bool(load_res.get("success", false)):
+		return _fail("SAVE-IO-RECOVERY-003", "Load failed during non-merge recovery")
+
+	var loaded_snap: Dictionary = load_res["snapshot"] as Dictionary
+	if loaded_snap.has("corrupt_garbage"):
+		return _fail("SAVE-IO-RECOVERY-003", "Corrupt main fields were merged into recovered snapshot")
+	var coin: int = int((loaded_snap["player_persistent"] as Dictionary)["coin_balance"])
+	if coin != 50:
+		return _fail("SAVE-IO-RECOVERY-003", "Coin balance was merged/mutated")
+	print("[SAVE-IO-RECOVERY-003] PASS")
+	return true
+
+static func test_save_io_recovery_004() -> bool:
+	# SAVE-IO-RECOVERY-004: recovery write/final-readback failure -> explicit failure, no false success.
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+	var bak_snap: Dictionary = _valid_snapshot()
+	store.write_text(store.main_path, "{ corrupt main }")
+	store.write_text(store.backup_path, JSON.stringify(bak_snap, "\t"))
+
+	# Inject replacement failure during recovery write
+	store.inject_fail_replace = true
+
+	var load_res: Dictionary = service.load()
+	if bool(load_res.get("success", false)):
+		return _fail("SAVE-IO-RECOVERY-004", "Recovery load reported false success despite replacement failure")
+	if String(load_res.get("error_code", "")) != SaveErrorCodes.WRITE_ERROR:
+		return _fail("SAVE-IO-RECOVERY-004", "Recovery failure did not return WriteError")
+	print("[SAVE-IO-RECOVERY-004] PASS")
+	return true
+
+static func test_save_io_recovery_005() -> bool:
+	# SAVE-IO-RECOVERY-005: invalid backup -> no recovery success.
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+	store.write_text(store.main_path, "{ corrupt main }")
+	store.write_text(store.backup_path, "{ corrupt backup }")
+
+	var load_res: Dictionary = service.load()
+	if bool(load_res.get("success", false)):
+		return _fail("SAVE-IO-RECOVERY-005", "Recovery load reported false success for invalid backup")
+	if String(load_res.get("error_code", "")) != SaveErrorCodes.CORRUPT_SAVE:
+		return _fail("SAVE-IO-RECOVERY-005", "Invalid backup load did not return CorruptSaveError")
+	print("[SAVE-IO-RECOVERY-005] PASS")
 	return true
 
 static func _fail(test_id: String, message: String) -> bool:

@@ -122,39 +122,57 @@ func save(snapshot: Dictionary) -> Dictionary:
 	return {"success": true, "snapshot": (main_codec["snapshot"] as Dictionary).duplicate(true)}
 
 ## Loads committed save snapshot from disk.
+## If main is missing or corrupt, attempts recovery from an independently valid backup.
 ## Returns validated snapshot or classified error.
 func load() -> Dictionary:
-	if not _file_store.file_exists(_file_store.main_path):
-		if _file_store.file_exists(_file_store.backup_path):
-			var bak_read: Dictionary = _file_store.read_text(_file_store.backup_path)
-			if bool(bak_read.get("success", false)):
-				var bak_codec: Dictionary = SaveSnapshotCodec.deserialize(str(bak_read.get("content", "")))
-				if bool(bak_codec.get("success", false)):
-					var bak_val: Dictionary = validate_persisted_snapshot(bak_codec["snapshot"] as Dictionary)
-					if bool(bak_val.get("success", false)):
+	var main_valid: bool = false
+	var main_snapshot: Dictionary = {}
+	var main_error: Dictionary = {}
+
+	if _file_store.file_exists(_file_store.main_path):
+		var read_res: Dictionary = _file_store.read_text(_file_store.main_path)
+		if bool(read_res.get("success", false)):
+			var codec_res: Dictionary = SaveSnapshotCodec.deserialize(str(read_res.get("content", "")))
+			if bool(codec_res.get("success", false)):
+				var val_res: Dictionary = validate_persisted_snapshot(codec_res["snapshot"] as Dictionary)
+				if bool(val_res.get("success", false)):
+					main_valid = true
+					main_snapshot = (codec_res["snapshot"] as Dictionary).duplicate(true)
+				else:
+					main_error = val_res
+			else:
+				main_error = codec_res
+		else:
+			main_error = read_res
+	else:
+		main_error = _error(SaveErrorCodes.READ_ERROR, "Save file does not exist: %s" % _file_store.main_path)
+
+	if main_valid:
+		return {"success": true, "snapshot": main_snapshot}
+
+	# Fallback recovery: if main is missing or invalid, check for an independently valid backup
+	if _file_store.file_exists(_file_store.backup_path):
+		var bak_read: Dictionary = _file_store.read_text(_file_store.backup_path)
+		if bool(bak_read.get("success", false)):
+			var bak_codec: Dictionary = SaveSnapshotCodec.deserialize(str(bak_read.get("content", "")))
+			if bool(bak_codec.get("success", false)):
+				var bak_snapshot: Dictionary = bak_codec["snapshot"] as Dictionary
+				var bak_val: Dictionary = validate_persisted_snapshot(bak_snapshot)
+				if bool(bak_val.get("success", false)):
+					# Backup is valid! Perform recovery to create a new validated main save through normal write flow
+					var recover_save_res: Dictionary = save(bak_snapshot)
+					if bool(recover_save_res.get("success", false)):
 						return {
-							"success": false,
-							"error_code": SaveErrorCodes.READ_ERROR,
-							"error_message": "Main save file missing, valid backup available",
-							"backup_available": true,
-							"backup_snapshot": (bak_codec["snapshot"] as Dictionary).duplicate(true)
+							"success": true,
+							"snapshot": bak_snapshot.duplicate(true),
+							"recovered_from_backup": true
 						}
-		return _error(SaveErrorCodes.READ_ERROR, "Save file does not exist: %s" % _file_store.main_path)
+					else:
+						# Recovery write flow failed (e.g. replacement or final readback error)
+						return recover_save_res
 
-	var read_res: Dictionary = _file_store.read_text(_file_store.main_path)
-	if not bool(read_res.get("success", false)):
-		return read_res
-
-	var codec_res: Dictionary = SaveSnapshotCodec.deserialize(str(read_res.get("content", "")))
-	if not bool(codec_res.get("success", false)):
-		return codec_res
-
-	var snapshot: Dictionary = codec_res["snapshot"] as Dictionary
-	var val_res: Dictionary = validate_persisted_snapshot(snapshot)
-	if not bool(val_res.get("success", false)):
-		return val_res
-
-	return {"success": true, "snapshot": snapshot.duplicate(true)}
+	# Backup missing or invalid: return original main error
+	return main_error
 
 ## Diagnostic backup for corrupt save file.
 func backup_corrupt_save() -> Dictionary:
