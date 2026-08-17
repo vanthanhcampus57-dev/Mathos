@@ -21,6 +21,8 @@ static func evaluate(
 	var definition_error: String = _validate_definition_common(question)
 	if definition_error != "":
 		return _error(QuestionErrorCodes.INVALID_QUESTION_DEFINITION, definition_error)
+	if not (submitted_payload is Dictionary):
+		return _error(QuestionErrorCodes.INVALID_ANSWER_SHAPE, "submitted_payload must be a Dictionary")
 	if elapsed_seconds < 0.0:
 		return _error(QuestionErrorCodes.INVALID_ANSWER_SHAPE, "elapsed_seconds must be >= 0")
 
@@ -171,7 +173,7 @@ static func _evaluate_input(question: Dictionary, payload: Dictionary) -> Dictio
 		var normalized_accepted: Dictionary = _normalize_input_value(accepted_variant, input_type, bool(answer.get("trim_whitespace", true)), bool(answer.get("case_sensitive", false)))
 		if not bool(normalized_accepted.get("success", false)):
 			return _error(QuestionErrorCodes.INVALID_QUESTION_DEFINITION, "accepted_values contains incompatible value")
-		if input_type == "float":
+		if input_type == "integer" or input_type == "float":
 			if abs(float(normalized_submission["value"]) - float(normalized_accepted["value"])) <= tolerance:
 				return {"success": true, "is_correct": true}
 		elif normalized_submission["value"] == normalized_accepted["value"]:
@@ -181,17 +183,25 @@ static func _evaluate_input(question: Dictionary, payload: Dictionary) -> Dictio
 static func _normalize_input_value(value: Variant, input_type: String, trim_whitespace: bool, case_sensitive: bool) -> Dictionary:
 	match input_type:
 		"integer":
-			if value is int:
+			if typeof(value) == TYPE_INT:
 				return {"success": true, "value": int(value)}
-			if value is String and String(value).is_valid_int():
-				return {"success": true, "value": String(value).to_int()}
+			if typeof(value) == TYPE_STRING:
+				var str_val: String = String(value)
+				if trim_whitespace:
+					str_val = str_val.strip_edges()
+				if str_val.is_valid_int():
+					return {"success": true, "value": str_val.to_int()}
 		"float":
-			if value is int or value is float:
+			if typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT:
 				return {"success": true, "value": float(value)}
-			if value is String and String(value).is_valid_float():
-				return {"success": true, "value": String(value).to_float()}
+			if typeof(value) == TYPE_STRING:
+				var str_val: String = String(value)
+				if trim_whitespace:
+					str_val = str_val.strip_edges()
+				if str_val.is_valid_float():
+					return {"success": true, "value": str_val.to_float()}
 		"string", "symbol":
-			if value is String:
+			if typeof(value) == TYPE_STRING:
 				var normalized: String = String(value)
 				if trim_whitespace:
 					normalized = normalized.strip_edges()
