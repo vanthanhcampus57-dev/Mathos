@@ -1,0 +1,46 @@
+{
+	"schema_version": 1,
+	"game_version": "1.0.0",
+	"content_version": 1,
+	"saved_at_utc": "2026-08-17T00:00:00Z",
+	"profile_id": "local_player",
+	"player_persistent": {
+		"player_id": "char_karl",
+		"coin_balance": 150,
+		"exp_total": 500
+	},
+	"progress": {
+		"unlocked_dungeon_ids": ["dungeon_01"],
+		"unlocked_stage_ids": ["stage_01_01", "stage_01_02"],
+		"cleared_stage_ids": ["stage_01_01"],
+		"fragment_ids": [],
+		"game_complete": false
+	},
+	"adaptive_profile": {
+		"attempts_total": 5,
+		"correct_total": 4,
+		"consecutive_correct": 2,
+		"consecutive_incorrect": 0,
+		"topic_stats": {
+			"trial_sample_event": {
+				"attempts": 5,
+				"correct": 4,
+				"average_time_seconds": 12.5,
+				"last_difficulty": 2
+			}
+		},
+		"recent_records": [
+			{
+				"attempt_id": "att_001",
+				"question_id": "question_a",
+				"dungeon_id": "dungeon_01",
+				"topic_id": "trial_sample_event",
+				"subtopic_id": "sample_space",
+				"context": "practice",
+				"difficulty": 2,
+				"is_correct": true,
+				"elapsed_seconds": 10.5
+			}
+		]
+	}
+}
