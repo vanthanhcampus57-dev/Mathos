@@ -21,6 +21,10 @@ func _init() -> void:
 	all_passed = TestPlayerFoundation.run_all_tests() and all_passed
 	all_passed = TestProgressService.run_all_tests() and all_passed
 	all_passed = TestProgressIntegration.run_all_tests() and all_passed
+	all_passed = (preload("res://tests/unit/save/test_save_contract.gd")).run_all_tests() and all_passed
+	all_passed = (preload("res://tests/unit/save/test_save_service_io.gd")).run_all_tests() and all_passed
+	all_passed = (preload("res://tests/unit/save/test_save_negative_paths.gd")).run_all_tests() and all_passed
+	all_passed = (preload("res://tests/integration/save/test_save_integration.gd")).run_all_tests() and all_passed
 
 	print("==========================================")
 	if all_passed:
