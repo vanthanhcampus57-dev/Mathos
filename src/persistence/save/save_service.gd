@@ -2,8 +2,8 @@ class_name SaveService
 extends RefCounted
 
 ## Public boundary for SaveService disk persistence, transactional commit,
-## backup preservation, corrupt diagnostic handling, and load validation.
-## Conforms strictly to locked Save public interface (File 06, File 08, File 12).
+## backup preservation, corrupt raw byte preservation, and explicit backup recovery.
+## Conforms strictly to locked Save public interface (File 06, File 08, File 12) + M1 authority.
 
 var _catalog: ValidatedCatalog = null
 var _file_store: SaveFileStore = null
@@ -54,6 +54,10 @@ func has_save() -> bool:
 ## Validates pre-write -> serializes -> writes temp -> validates temp readback ->
 ## preserves valid main as backup -> replaces main -> validates final main readback.
 func save(snapshot: Dictionary) -> Dictionary:
+	return _save_internal(snapshot, false)
+
+## Internal transactional save helper with recovery flag seam.
+func _save_internal(snapshot: Dictionary, is_recovery: bool) -> Dictionary:
 	# 1. Pre-write validation
 	var val_res: Dictionary = validate_persisted_snapshot(snapshot)
 	if not bool(val_res.get("success", false)):
@@ -84,8 +88,8 @@ func save(snapshot: Dictionary) -> Dictionary:
 		_file_store.remove_file(_file_store.temp_path)
 		return temp_val
 
-	# 6. Preserve existing valid main as backup
-	if _file_store.file_exists(_file_store.main_path):
+	# 6. Preserve existing valid main as backup (ONLY during ordinary save, NOT recovery)
+	if not is_recovery and _file_store.file_exists(_file_store.main_path):
 		var existing_read: Dictionary = _file_store.read_text(_file_store.main_path)
 		if bool(existing_read.get("success", false)):
 			var existing_codec: Dictionary = SaveSnapshotCodec.deserialize(str(existing_read.get("content", "")))
@@ -156,11 +160,67 @@ func load() -> Dictionary:
 
 	return {"success": true, "snapshot": snapshot.duplicate(true)}
 
-## Preservation handler for corrupt save file.
-## File 12 locks user://save_v1.json, user://save_v1.tmp, and user://save_v1.bak.
-## Unspecified corrupt diagnostic path requires explicit contract authority.
-func backup_corrupt_save() -> Dictionary:
-	return _error(SaveErrorCodes.READ_ERROR, "CONTRACT DETAIL MISSING — CORRUPT DIAGNOSTIC PATH")
+## Preservation handler for corrupt save file (M1 Authorized).
+## Copies RAW main bytes to user://save_v1_corrupt_diagnostic.json iff main is invalid.
+## Does not deserialize or rewrite bytes. Must NOT overwrite save_v1.bak.
+## Returns true on success, false if main is absent/valid or copy fails.
+func backup_corrupt_save() -> bool:
+	if not _file_store.file_exists(_file_store.main_path):
+		return false
+
+	# Check if main is valid; only operate when main is INVALID
+	var read_res: Dictionary = _file_store.read_text(_file_store.main_path)
+	if bool(read_res.get("success", false)):
+		var codec_res: Dictionary = SaveSnapshotCodec.deserialize(str(read_res.get("content", "")))
+		if bool(codec_res.get("success", false)):
+			var val_res: Dictionary = validate_persisted_snapshot(codec_res["snapshot"] as Dictionary)
+			if bool(val_res.get("success", false)):
+				# Main is valid! Do not pretend to preserve a corrupt save.
+				return false
+
+	# Main is corrupt/invalid. Copy raw main bytes to diagnostic path
+	var copy_res: Dictionary = _file_store.copy_file(_file_store.main_path, _file_store.diagnostic_path)
+	return bool(copy_res.get("success", false))
+
+## Explicit backup recovery operation (M1 Authorized).
+## Validates user://save_v1.bak -> preserves raw corrupt main if present ->
+## feeds backup snapshot through validated write path without overwriting backup.
+## Returns true iff newly written main validates successfully.
+func recover_from_backup() -> bool:
+	if not _file_store.file_exists(_file_store.backup_path):
+		return false
+
+	var bak_read: Dictionary = _file_store.read_text(_file_store.backup_path)
+	if not bool(bak_read.get("success", false)):
+		return false
+
+	var bak_codec: Dictionary = SaveSnapshotCodec.deserialize(str(bak_read.get("content", "")))
+	if not bool(bak_codec.get("success", false)):
+		return false
+
+	var bak_snapshot: Dictionary = bak_codec["snapshot"] as Dictionary
+	var bak_val: Dictionary = validate_persisted_snapshot(bak_snapshot)
+	if not bool(bak_val.get("success", false)):
+		return false
+
+	# Backup is valid! Check if current main exists and is invalid
+	if _file_store.file_exists(_file_store.main_path):
+		var main_read: Dictionary = _file_store.read_text(_file_store.main_path)
+		var is_main_invalid: bool = true
+		if bool(main_read.get("success", false)):
+			var main_codec: Dictionary = SaveSnapshotCodec.deserialize(str(main_read.get("content", "")))
+			if bool(main_codec.get("success", false)):
+				var main_val: Dictionary = validate_persisted_snapshot(main_codec["snapshot"] as Dictionary)
+				if bool(main_val.get("success", false)):
+					is_main_invalid = false
+
+		if is_main_invalid:
+			# Preserve raw corrupt main bytes before replacement
+			backup_corrupt_save()
+
+	# Re-commit backup snapshot through normal write flow with is_recovery=true
+	var save_res: Dictionary = _save_internal(bak_snapshot, true)
+	return bool(save_res.get("success", false))
 
 func _error(code: String, message: String) -> Dictionary:
 	return {

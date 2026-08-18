@@ -2,12 +2,13 @@ class_name SaveFileStore
 extends RefCounted
 
 ## File system abstraction seam for SaveService disk operations.
-## Supports isolated test directories and failure injection seams.
+## Supports isolated test directories, authorized persistent paths, and failure injection seams.
 
 var _base_dir: String = "user://"
 var main_path: String = ""
 var temp_path: String = ""
 var backup_path: String = ""
+var diagnostic_path: String = ""
 
 # Failure injection flags for testing
 var inject_fail_temp_write: bool = false
@@ -15,6 +16,7 @@ var inject_fail_temp_read: bool = false
 var inject_fail_backup: bool = false
 var inject_fail_replace: bool = false
 var inject_fail_final_read: bool = false
+var inject_fail_diagnostic_write: bool = false
 
 func _init(base_dir: String = "user://") -> void:
 	_base_dir = base_dir
@@ -23,6 +25,7 @@ func _init(base_dir: String = "user://") -> void:
 	main_path = _base_dir + "save_v1.json"
 	temp_path = _base_dir + "save_v1.tmp"
 	backup_path = _base_dir + "save_v1.bak"
+	diagnostic_path = _base_dir + "save_v1_corrupt_diagnostic.json"
 
 func get_base_dir() -> String:
 	return _base_dir
@@ -51,6 +54,8 @@ func read_text(path: String) -> Dictionary:
 func write_text(path: String, text: String) -> Dictionary:
 	if path == temp_path and inject_fail_temp_write:
 		return _error(SaveErrorCodes.WRITE_ERROR, "Injected temp write failure")
+	if path == diagnostic_path and inject_fail_diagnostic_write:
+		return _error(SaveErrorCodes.WRITE_ERROR, "Injected diagnostic write failure")
 
 	_ensure_directory_exists(path)
 
@@ -67,6 +72,8 @@ func write_text(path: String, text: String) -> Dictionary:
 func copy_file(src_path: String, dst_path: String) -> Dictionary:
 	if dst_path == backup_path and inject_fail_backup:
 		return _error(SaveErrorCodes.WRITE_ERROR, "Injected backup failure")
+	if dst_path == diagnostic_path and inject_fail_diagnostic_write:
+		return _error(SaveErrorCodes.WRITE_ERROR, "Injected diagnostic write failure")
 
 	if not FileAccess.file_exists(src_path):
 		return _error(SaveErrorCodes.READ_ERROR, "Source file for copy does not exist: %s" % src_path)

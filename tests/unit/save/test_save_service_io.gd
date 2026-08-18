@@ -2,7 +2,7 @@ class_name TestSaveServiceIO
 extends RefCounted
 
 ## Unit test suite for SaveService I/O operations, transactional commits,
-## backup preservation, corrupt handling, and failure classification.
+## backup preservation, corrupt diagnostic handling, and M1 backup recovery.
 
 static func run_all_tests() -> bool:
 	print("--- RUNNING SAVE SERVICE IO SUITE ---")
@@ -25,6 +25,22 @@ static func run_all_tests() -> bool:
 	all_ok = test_save_retry_io_only() and all_ok
 	all_ok = test_has_save_valid_vs_corrupt_distinction() and all_ok
 	all_ok = test_no_writes_to_res_or_project_source() and all_ok
+
+	# Dedicated Backup Recovery Tests (SAVE-IO-RECOVERY-001..005)
+	all_ok = test_save_io_recovery_001() and all_ok
+	all_ok = test_save_io_recovery_002() and all_ok
+	all_ok = test_save_io_recovery_003() and all_ok
+	all_ok = test_save_io_recovery_004() and all_ok
+	all_ok = test_save_io_recovery_005() and all_ok
+
+	# Dedicated Corrupt Diagnostic Tests (SAVE-IO-DIAGNOSTIC-001..007)
+	all_ok = test_save_io_diagnostic_001() and all_ok
+	all_ok = test_save_io_diagnostic_002() and all_ok
+	all_ok = test_save_io_diagnostic_003() and all_ok
+	all_ok = test_save_io_diagnostic_004() and all_ok
+	all_ok = test_save_io_diagnostic_005() and all_ok
+	all_ok = test_save_io_diagnostic_006() and all_ok
+	all_ok = test_save_io_diagnostic_007() and all_ok
 	return all_ok
 
 static func _make_test_store() -> SaveFileStore:
@@ -320,6 +336,222 @@ static func test_no_writes_to_res_or_project_source() -> bool:
 	if base_dir.begins_with("res://") or base_dir.begins_with("src/") or base_dir.begins_with("content/"):
 		return _fail("SAVE-IO-018", "SaveFileStore path violates user:// isolation boundary")
 	print("[SAVE-IO-018] PASS")
+	return true
+
+# --- Dedicated Backup Recovery Tests (SAVE-IO-RECOVERY-001..005) ---
+
+static func test_save_io_recovery_001() -> bool:
+	# SAVE-IO-RECOVERY-001: invalid main + valid backup -> recover_from_backup() returns true -> new main exists and is valid
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+	var bak_snap: Dictionary = _valid_snapshot()
+	bak_snap["player_persistent"]["coin_balance"] = 999
+	store.write_text(store.main_path, "{ corrupt main json }")
+	store.write_text(store.backup_path, JSON.stringify(bak_snap, "\t"))
+
+	var rec_ok: bool = service.recover_from_backup()
+	if not rec_ok:
+		return _fail("SAVE-IO-RECOVERY-001", "recover_from_backup() returned false")
+	if not store.file_exists(store.main_path):
+		return _fail("SAVE-IO-RECOVERY-001", "New main save file missing after recovery")
+
+	var load_res: Dictionary = service.load()
+	if not bool(load_res.get("success", false)):
+		return _fail("SAVE-IO-RECOVERY-001", "Load failed on newly recovered main save")
+	print("[SAVE-IO-RECOVERY-001] PASS")
+	return true
+
+static func test_save_io_recovery_002() -> bool:
+	# SAVE-IO-RECOVERY-002: resulting main after recovery -> deserialize PASS -> schema validation PASS -> catalog validation PASS
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+	var bak_snap: Dictionary = _valid_snapshot()
+	bak_snap["player_persistent"]["coin_balance"] = 999
+	store.write_text(store.main_path, "{ corrupt main json }")
+	store.write_text(store.backup_path, JSON.stringify(bak_snap, "\t"))
+
+	service.recover_from_backup()
+
+	var main_read: Dictionary = store.read_text(store.main_path)
+	var codec_res: Dictionary = SaveSnapshotCodec.deserialize(str(main_read.get("content", "")))
+	if not bool(codec_res.get("success", false)):
+		return _fail("SAVE-IO-RECOVERY-002", "Recovered main file failed deserialization")
+
+	var val_res: Dictionary = service.validate_persisted_snapshot(codec_res["snapshot"] as Dictionary)
+	if not bool(val_res.get("success", false)):
+		return _fail("SAVE-IO-RECOVERY-002", "Recovered main file failed validation")
+
+	var coin: int = int(((codec_res["snapshot"] as Dictionary)["player_persistent"] as Dictionary)["coin_balance"])
+	if coin != 999:
+		return _fail("SAVE-IO-RECOVERY-002", "Recovered main file coin_balance != 999")
+	print("[SAVE-IO-RECOVERY-002] PASS")
+	return true
+
+static func test_save_io_recovery_003() -> bool:
+	# SAVE-IO-RECOVERY-003: corrupt main and valid backup are never merged
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+	var bak_snap: Dictionary = _valid_snapshot()
+	bak_snap["player_persistent"]["coin_balance"] = 50
+	store.write_text(store.main_path, "{\"corrupt_garbage\": 99999, \"player_persistent\": {\"coin_balance\": 99999}}")
+	store.write_text(store.backup_path, JSON.stringify(bak_snap, "\t"))
+
+	service.recover_from_backup()
+
+	var load_res: Dictionary = service.load()
+	var loaded_snap: Dictionary = load_res["snapshot"] as Dictionary
+	if loaded_snap.has("corrupt_garbage"):
+		return _fail("SAVE-IO-RECOVERY-003", "Corrupt main fields were merged into recovered snapshot")
+	var coin: int = int((loaded_snap["player_persistent"] as Dictionary)["coin_balance"])
+	if coin != 50:
+		return _fail("SAVE-IO-RECOVERY-003", "Coin balance was merged/mutated")
+	print("[SAVE-IO-RECOVERY-003] PASS")
+	return true
+
+static func test_save_io_recovery_004() -> bool:
+	# SAVE-IO-RECOVERY-004: recovery failure path -> recover_from_backup() returns false, known-valid backup is not destroyed
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+	var bak_snap: Dictionary = _valid_snapshot()
+	bak_snap["player_persistent"]["coin_balance"] = 777
+	store.write_text(store.main_path, "{ corrupt main }")
+	store.write_text(store.backup_path, JSON.stringify(bak_snap, "\t"))
+
+	# Inject replacement failure during recovery write
+	store.inject_fail_replace = true
+
+	var rec_ok: bool = service.recover_from_backup()
+	if rec_ok:
+		return _fail("SAVE-IO-RECOVERY-004", "recover_from_backup() reported true despite replacement failure")
+
+	# Verify known-valid backup file was NOT destroyed
+	if not store.file_exists(store.backup_path):
+		return _fail("SAVE-IO-RECOVERY-004", "Known-valid backup file was destroyed during failed recovery")
+	var bak_read: Dictionary = store.read_text(store.backup_path)
+	var bak_codec: Dictionary = SaveSnapshotCodec.deserialize(str(bak_read.get("content", "")))
+	var coin: int = int((bak_codec["snapshot"]["player_persistent"] as Dictionary)["coin_balance"])
+	if coin != 777:
+		return _fail("SAVE-IO-RECOVERY-004", "Backup content was mutated during failed recovery")
+	print("[SAVE-IO-RECOVERY-004] PASS")
+	return true
+
+static func test_save_io_recovery_005() -> bool:
+	# SAVE-IO-RECOVERY-005: missing or invalid backup -> recover_from_backup() returns false
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+	store.write_text(store.main_path, "{ corrupt main }")
+	store.write_text(store.backup_path, "{ corrupt backup }")
+
+	var rec_ok: bool = service.recover_from_backup()
+	if rec_ok:
+		return _fail("SAVE-IO-RECOVERY-005", "recover_from_backup() reported true for invalid backup")
+	print("[SAVE-IO-RECOVERY-005] PASS")
+	return true
+
+# --- Dedicated Corrupt Diagnostic Tests (SAVE-IO-DIAGNOSTIC-001..007) ---
+
+static func test_save_io_diagnostic_001() -> bool:
+	# SAVE-IO-DIAGNOSTIC-001: invalid main -> backup_corrupt_save() writes raw bytes to user://save_v1_corrupt_diagnostic.json
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+	var corrupt_text: String = "{\"raw_corrupt_main\": 12345}"
+	store.write_text(store.main_path, corrupt_text)
+
+	var ok: bool = service.backup_corrupt_save()
+	if not ok:
+		return _fail("SAVE-IO-DIAGNOSTIC-001", "backup_corrupt_save() returned false for corrupt main")
+	if not store.file_exists(store.diagnostic_path):
+		return _fail("SAVE-IO-DIAGNOSTIC-001", "Diagnostic file user://save_v1_corrupt_diagnostic.json was not created")
+	print("[SAVE-IO-DIAGNOSTIC-001] PASS")
+	return true
+
+static func test_save_io_diagnostic_002() -> bool:
+	# SAVE-IO-DIAGNOSTIC-002: diagnostic bytes are byte-equivalent to corrupt main input
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+	var corrupt_text: String = "EXACT_CORRUPT_BYTES_999!"
+	store.write_text(store.main_path, corrupt_text)
+
+	service.backup_corrupt_save()
+
+	var diag_read: Dictionary = store.read_text(store.diagnostic_path)
+	var diag_content: String = str(diag_read.get("content", ""))
+	if diag_content != corrupt_text:
+		return _fail("SAVE-IO-DIAGNOSTIC-002", "Diagnostic bytes do not match raw corrupt main input")
+	print("[SAVE-IO-DIAGNOSTIC-002] PASS")
+	return true
+
+static func test_save_io_diagnostic_003() -> bool:
+	# SAVE-IO-DIAGNOSTIC-003: existing save_v1.bak is unchanged
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+	var bak_text: String = "VALID_BACKUP_CONTENT_777"
+	store.write_text(store.backup_path, bak_text)
+	store.write_text(store.main_path, "CORRUPT_MAIN_BYTES")
+
+	service.backup_corrupt_save()
+
+	var bak_read: Dictionary = store.read_text(store.backup_path)
+	if str(bak_read.get("content", "")) != bak_text:
+		return _fail("SAVE-IO-DIAGNOSTIC-003", "backup_corrupt_save() overwrote existing save_v1.bak")
+	print("[SAVE-IO-DIAGNOSTIC-003] PASS")
+	return true
+
+static func test_save_io_diagnostic_004() -> bool:
+	# SAVE-IO-DIAGNOSTIC-004: repeated diagnostic preservation may replace prior diagnostic copy
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+
+	store.write_text(store.main_path, "FIRST_CORRUPT_MAIN")
+	service.backup_corrupt_save()
+
+	store.write_text(store.main_path, "SECOND_CORRUPT_MAIN")
+	var ok: bool = service.backup_corrupt_save()
+	if not ok:
+		return _fail("SAVE-IO-DIAGNOSTIC-004", "Repeated backup_corrupt_save() returned false")
+
+	var diag_read: Dictionary = store.read_text(store.diagnostic_path)
+	if str(diag_read.get("content", "")) != "SECOND_CORRUPT_MAIN":
+		return _fail("SAVE-IO-DIAGNOSTIC-004", "Diagnostic copy was not updated on second corrupt main")
+	print("[SAVE-IO-DIAGNOSTIC-004] PASS")
+	return true
+
+static func test_save_io_diagnostic_005() -> bool:
+	# SAVE-IO-DIAGNOSTIC-005: valid main is not treated as corrupt diagnostic input
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+	service.save(_valid_snapshot())
+
+	var ok: bool = service.backup_corrupt_save()
+	if ok:
+		return _fail("SAVE-IO-DIAGNOSTIC-005", "backup_corrupt_save() returned true on valid main save")
+	if store.file_exists(store.diagnostic_path):
+		return _fail("SAVE-IO-DIAGNOSTIC-005", "Diagnostic copy was created for valid main save")
+	print("[SAVE-IO-DIAGNOSTIC-005] PASS")
+	return true
+
+static func test_save_io_diagnostic_006() -> bool:
+	# SAVE-IO-DIAGNOSTIC-006: missing main does not report diagnostic-copy success
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+
+	var ok: bool = service.backup_corrupt_save()
+	if ok:
+		return _fail("SAVE-IO-DIAGNOSTIC-006", "backup_corrupt_save() returned true on missing main file")
+	print("[SAVE-IO-DIAGNOSTIC-006] PASS")
+	return true
+
+static func test_save_io_diagnostic_007() -> bool:
+	# SAVE-IO-DIAGNOSTIC-007: diagnostic-write failure returns false
+	var store: SaveFileStore = _make_test_store()
+	var service: SaveService = SaveService.new(null, store)
+	store.write_text(store.main_path, "CORRUPT_BYTES")
+	store.inject_fail_diagnostic_write = true
+
+	var ok: bool = service.backup_corrupt_save()
+	if ok:
+		return _fail("SAVE-IO-DIAGNOSTIC-007", "backup_corrupt_save() returned true despite diagnostic write failure")
+	print("[SAVE-IO-DIAGNOSTIC-007] PASS")
 	return true
 
 static func _fail(test_id: String, message: String) -> bool:
