@@ -2,7 +2,9 @@ class_name GameFlowService
 extends RefCounted
 
 ## Authoritative GameFlow orchestrator coordinating New Game entry, stage sequence
-## transitions, continue save restoration, and StageOrchestrator delegation.
+## transitions, continue save flow restoration, and StageOrchestrator delegation.
+## Note: SaveService load/save and Progress restoration are owned by A.2 integration bridge.
+## GameFlowService consumes restored state and transitions flow state only.
 
 var _catalog: ValidatedCatalog
 var _question_service: QuestionService
@@ -62,25 +64,17 @@ func start_stage(stage_id: String) -> Dictionary:
 	_flow_state = "STAGE_ACTIVE"
 	return init_res
 
+## Consumes an already-restored save snapshot dictionary to derive the active flow stage.
+## Does NOT execute SaveService.load or ProgressService restoration (owned by A.2).
 func restore_from_save(save_snapshot: Dictionary) -> Dictionary:
-	if _save_service == null:
-		return _error(FlowErrorCodes.SAVE_RESTORE_FAILED, "SaveService is unavailable for restore")
-
-	var val_res: Dictionary = _save_service.validate_persisted_snapshot(save_snapshot)
-	if not bool(val_res.get("success", false)):
-		return {
-			"success": false,
-			"error_code": FlowErrorCodes.SAVE_RESTORE_FAILED,
-			"error_message": "Save snapshot validation failed during restore",
-			"details": val_res
-		}
+	if save_snapshot.is_empty():
+		return _error(FlowErrorCodes.SAVE_RESTORE_FAILED, "Save snapshot dictionary cannot be empty")
 
 	var progress_dict: Dictionary = save_snapshot.get("progress", {}) as Dictionary
 	var unlocked_stages: Array = progress_dict.get("unlocked_stage_ids", []) as Array
 	var cleared_stages: Array = progress_dict.get("cleared_stage_ids", []) as Array
 
 	var target_stage_id: String = ""
-	# Find latest unlocked but uncleared stage or default to last cleared/unlocked
 	for s_id in unlocked_stages:
 		var s_str: String = String(s_id)
 		if not cleared_stages.has(s_str):
@@ -99,8 +93,7 @@ func restore_from_save(save_snapshot: Dictionary) -> Dictionary:
 	return {
 		"success": true,
 		"flow_state": _flow_state,
-		"target_stage_id": target_stage_id,
-		"snapshot": save_snapshot
+		"target_stage_id": target_stage_id
 	}
 
 func advance_to_next_stage() -> Dictionary:

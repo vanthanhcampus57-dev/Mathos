@@ -2,7 +2,10 @@ class_name StageOrchestrator
 extends RefCounted
 
 ## Owns stage-lifetime execution lifecycle, phase transitions, question session
-## integration, and stage-completion commit boundary handoff for Mathos V1.
+## integration, and stage-completion handoff boundary for Mathos V1.
+## Note: Actual ProgressService.commit_stage_clear and SaveService persistence
+## are owned by A.2 integration bridge. StageOrchestrator exposes the prepared
+## handoff payload exactly once.
 
 var _catalog: ValidatedCatalog
 var _question_service: QuestionService
@@ -120,29 +123,24 @@ func submit_question_answer(answer_payload: Dictionary) -> Dictionary:
 		"result": sub_res.get("result", {})
 	}
 
+## Exposes the typed stage-clear handoff boundary exactly once.
+## Does NOT execute ProgressService.commit_stage_clear itself (owned by A.2 integration bridge).
 func prepare_stage_clear_commit(reward_grant: RewardGrant = null) -> Dictionary:
 	if _stage_clear_committed or _current_phase == "COMPLETED":
 		return _error(
 			FlowErrorCodes.DUPLICATE_CALLBACK,
-			"Stage clear commit already executed for stage '%s'" % _current_stage_id
+			"Stage clear commit handoff already prepared for stage '%s'" % _current_stage_id
 		)
 
 	if _current_phase != "QUESTION_COMPLETE" and _current_phase != "LESSON_DIALOGUE_PUZZLE":
 		return _error(
 			FlowErrorCodes.INVALID_LIFECYCLE_TRANSITION,
-			"Cannot commit stage clear from state '%s'" % _current_phase
+			"Cannot prepare stage clear handoff from state '%s'" % _current_phase
 		)
 
 	var grant: RewardGrant = reward_grant
 	if grant == null:
 		grant = _build_default_reward_grant(_current_stage_id)
-
-	var completion_result: StageCompletionResult = _progress_service.commit_stage_clear(_current_stage_id, grant)
-	if completion_result == null:
-		return _error(
-			FlowErrorCodes.INVALID_CONTENT_REFERENCE,
-			"ProgressService stage clear commit failed for stage '%s'" % _current_stage_id
-		)
 
 	_stage_clear_committed = true
 	_current_phase = "COMPLETED"
@@ -150,7 +148,8 @@ func prepare_stage_clear_commit(reward_grant: RewardGrant = null) -> Dictionary:
 	return {
 		"success": true,
 		"phase": _current_phase,
-		"completion_result": completion_result
+		"stage_id": _current_stage_id,
+		"reward_grant": grant
 	}
 
 func get_current_phase() -> String:
