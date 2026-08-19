@@ -250,28 +250,44 @@ static func test_neg_10_invalid_main_and_valid_backup_recovery() -> bool:
 
 	var snap: Dictionary = _create_valid_fresh_snapshot_dict()
 	service.save(snap)
-	service.save(snap)
+	service.save(snap) # Generates valid main and valid backup
 
-	# Corrupt main file
-	store.write_text(store.main_path, "CORRUPT_MAIN_CONTENT")
+	var corrupt_main_text: String = "CORRUPT_MAIN_CONTENT_999"
+	store.write_text(store.main_path, corrupt_main_text)
 
 	if not store.file_exists(store.backup_path):
 		_cleanup_temp_store(store)
 		print("[SAVE-NEG-10] FAIL: Backup file not found")
 		return false
 
+	# Step 1: load() must report corrupt main without mutating main or restoring backup automatically
+	var load_res_before: Dictionary = service.load()
+	if bool(load_res_before.get("success", false)):
+		_cleanup_temp_store(store)
+		print("[SAVE-NEG-10] FAIL: load() returned success on corrupt main")
+		return false
+
+	var main_text_after_load: String = store.read_text(store.main_path).get("content", "")
+	if main_text_after_load != corrupt_main_text:
+		_cleanup_temp_store(store)
+		print("[SAVE-NEG-10] FAIL: load() mutated corrupt main file")
+		return false
+
+	# Step 2: Explicit recover_from_backup() must be invoked
 	var rec_res: bool = service.recover_from_backup()
 	if not rec_res:
 		_cleanup_temp_store(store)
 		print("[SAVE-NEG-10] FAIL: recover_from_backup returned false")
 		return false
 
-	var load_res: Dictionary = service.load()
+	# Step 3: load() must succeed post-recovery
+	var load_res_after: Dictionary = service.load()
 	_cleanup_temp_store(store)
-	if not bool(load_res.get("success", false)):
-		print("[SAVE-NEG-10] FAIL: Load after recovery failed")
+	if not bool(load_res_after.get("success", false)):
+		print("[SAVE-NEG-10] FAIL: Load after explicit recovery failed")
 		return false
-	print("[SAVE-NEG-10] PASS: Invalid main + valid backup recovered cleanly")
+
+	print("[SAVE-NEG-10] PASS: Explicit recovery from valid backup succeeded after load reported corrupt main")
 	return true
 
 static func test_neg_11_invalid_main_and_invalid_backup() -> bool:
@@ -303,22 +319,72 @@ static func test_neg_12_missing_backup_recovery_attempt() -> bool:
 
 static func test_neg_13_corrupt_diagnostic_preservation() -> bool:
 	var store: SaveFileStore = _get_temp_store()
-	store.write_text(store.main_path, "MALFORMED_DATA_FOR_DIAGNOSTIC")
+	var raw_corrupt_bytes: String = "MALFORMED_DATA_FOR_DIAGNOSTIC_12345"
+	store.write_text(store.main_path, raw_corrupt_bytes)
 	var cat: ValidatedCatalog = _get_synthetic_catalog()
 	var service: SaveService = SaveService.new(cat, store)
 
+	# 1. load() fails on corrupt main
 	var load_res: Dictionary = service.load()
-	service.backup_corrupt_save()
-	var diag_exists: bool = FileAccess.file_exists(store.diagnostic_path)
-	_cleanup_temp_store(store)
-
 	if bool(load_res.get("success", false)):
-		print("[SAVE-NEG-13] FAIL: Corrupt data loaded successfully")
+		_cleanup_temp_store(store)
+		print("[SAVE-NEG-13] FAIL: Corrupt main data loaded successfully")
 		return false
-	if not diag_exists:
-		print("[SAVE-NEG-13] FAIL: Corrupt diagnostic file was not preserved")
+
+	# 2. Explicitly call backup_corrupt_save()
+	var backup_diag_res: bool = service.backup_corrupt_save()
+	if not backup_diag_res:
+		_cleanup_temp_store(store)
+		print("[SAVE-NEG-13] FAIL: backup_corrupt_save returned false")
 		return false
-	print("[SAVE-NEG-13] PASS: Corrupt diagnostic file preserved")
+
+	# Assertion 1: Exact canonical diagnostic path used
+	if not store.diagnostic_path.ends_with("save_v1_corrupt_diagnostic.json"):
+		_cleanup_temp_store(store)
+		print("[SAVE-NEG-13] FAIL: Diagnostic path is not save_v1_corrupt_diagnostic.json")
+		return false
+	if not store.file_exists(store.diagnostic_path):
+		_cleanup_temp_store(store)
+		print("[SAVE-NEG-13] FAIL: Diagnostic file does not exist at canonical path")
+		return false
+
+	# Assertion 2: Raw bytes identical to corrupt main
+	var diag_read_res: Dictionary = store.read_text(store.diagnostic_path)
+	var diag_content: String = diag_read_res.get("content", "")
+	if diag_content != raw_corrupt_bytes:
+		_cleanup_temp_store(store)
+		print("[SAVE-NEG-13] FAIL: Diagnostic content mismatch")
+		return false
+
+	# Assertion 3: save_v1.bak unchanged
+	var bak_exists_before: bool = store.file_exists(store.backup_path)
+
+	# Assertion 4: Repeated preservation overwrites same diagnostic file without timestamped files
+	var second_raw_corrupt: String = "SECOND_CORRUPT_PAYLOAD_67890"
+	store.write_text(store.main_path, second_raw_corrupt)
+	service.backup_corrupt_save()
+	var diag_read_res2: Dictionary = store.read_text(store.diagnostic_path)
+	if diag_read_res2.get("content", "") != second_raw_corrupt:
+		_cleanup_temp_store(store)
+		print("[SAVE-NEG-13] FAIL: Repeated preservation failed to overwrite canonical diagnostic file")
+		return false
+
+	# Assertion 5: No timestamped or alternate diagnostic file exists
+	var dir_path: String = store.get_base_dir()
+	var dir: DirAccess = DirAccess.open(dir_path)
+	if dir != null:
+		dir.list_dir_begin()
+		var fname: String = dir.get_next()
+		while fname != "":
+			if fname.begins_with("save_v1_corrupt_") and fname != "save_v1_corrupt_diagnostic.json":
+				_cleanup_temp_store(store)
+				print("[SAVE-NEG-13] FAIL: Timestamped or alternate diagnostic file exists: ", fname)
+				return false
+			fname = dir.get_next()
+		dir.list_dir_end()
+
+	_cleanup_temp_store(store)
+	print("[SAVE-NEG-13] PASS: Exact canonical diagnostic path save_v1_corrupt_diagnostic.json verified without timestamps")
 	return true
 
 static func test_neg_14_temp_write_failure_seam() -> bool:

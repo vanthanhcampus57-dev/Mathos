@@ -231,7 +231,7 @@ static func test_save_03_dungeon_complete() -> bool:
 	print("[SAVE-03] PASS: Dungeon complete contains fragment and next dungeon unlock")
 	return true
 
-# SAVE-04 — Stage 4.5 checkpoint
+# SAVE-04 — Post-clear stage 4.5 checkpoint (pre-Ending completion)
 static func test_save_04_stage_4_5_checkpoint() -> bool:
 	var cat: ValidatedCatalog = _get_synthetic_catalog()
 	var store: SaveFileStore = _get_temp_store()
@@ -266,7 +266,7 @@ static func test_save_04_stage_4_5_checkpoint() -> bool:
 		print("[SAVE-04] FAIL: game_complete should be false before ending sequence")
 		return false
 
-	print("[SAVE-04] PASS: Stage 4.5 checkpoint contains fragment_04 with game_complete=false")
+	print("[SAVE-04] PASS: Post-clear stage 4.5 checkpoint contains fragment_04 with game_complete=false")
 	return true
 
 # SAVE-05 — Game complete
@@ -375,7 +375,7 @@ static func test_save_09_unsupported_schema() -> bool:
 	print("[SAVE-09] PASS: Unsupported schema version rejected")
 	return true
 
-# SAVE-10 — Backup recovery
+# SAVE-10 — Explicit Backup recovery
 static func test_save_10_backup_recovery() -> bool:
 	var store: SaveFileStore = _get_temp_store()
 	var cat: ValidatedCatalog = _get_synthetic_catalog()
@@ -383,24 +383,39 @@ static func test_save_10_backup_recovery() -> bool:
 
 	var snap: Dictionary = _create_valid_fresh_snapshot_dict()
 	service.save(snap)
-	service.save(snap)
+	service.save(snap) # Generates valid main and valid backup
 
-	# Corrupt main file
-	store.write_text(store.main_path, "BAD_MAIN")
+	var corrupt_main_text: String = "BAD_MAIN_CORRUPT"
+	store.write_text(store.main_path, corrupt_main_text)
 
+	# 1. load() must report corrupt main without mutating main or restoring backup automatically
+	var load_res_before: Dictionary = service.load()
+	if bool(load_res_before.get("success", false)):
+		_cleanup_temp_store(store)
+		print("[SAVE-10] FAIL: load() returned success on corrupt main")
+		return false
+
+	var main_after_load: String = store.read_text(store.main_path).get("content", "")
+	if main_after_load != corrupt_main_text:
+		_cleanup_temp_store(store)
+		print("[SAVE-10] FAIL: load() mutated main file")
+		return false
+
+	# 2. Explicit recover_from_backup() call required
 	var rec_res: bool = service.recover_from_backup()
 	if not rec_res:
 		_cleanup_temp_store(store)
 		print("[SAVE-10] FAIL: recover_from_backup returned false")
 		return false
 
-	var load_res: Dictionary = service.load()
+	# 3. load() post-recovery succeeds
+	var load_res_after: Dictionary = service.load()
 	_cleanup_temp_store(store)
-	if not bool(load_res.get("success", false)):
-		print("[SAVE-10] FAIL: Load after recovery failed")
+	if not bool(load_res_after.get("success", false)):
+		print("[SAVE-10] FAIL: Load after explicit recovery failed")
 		return false
 
-	print("[SAVE-10] PASS: Backup recovery succeeded cleanly")
+	print("[SAVE-10] PASS: Explicit backup recovery flow verified")
 	return true
 
 # SAVE-11 — Save failure + retry
@@ -607,7 +622,7 @@ static func test_int_010_save_failure_retry() -> bool:
 	_cleanup_temp_store(store_ok)
 
 	if not bool(ok_res.get("success", false)):
-		print("[INT-010] FAIL: Save failure -> retry pipeline failed")
+		print("[INT-010] FAIL: Save failure -> retry pipeline succeeded")
 		return false
 
 	print("[INT-010] PASS: Save failure -> retry pipeline succeeded")
