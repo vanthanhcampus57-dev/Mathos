@@ -376,8 +376,8 @@ static func test_pres_010_stage_1_1_to_1_3_has_no_combat_dependency() -> String:
 
 # PRES-011 — Continue displays restored legal stage context (WAITING_ON_DEPENDENCY)
 static func test_pres_011_continue_displays_restored_legal_stage_context() -> String:
-	# Approved FLOW Continue handoff interface (StageOrchestrator class and GameFlow.restore_stage_context_from_save(snapshot)) is absent on canonical main b2bb5c0
-	print("[PRES-011] WAITING_ON_DEPENDENCY: StageOrchestrator class and GameFlow.restore_stage_context_from_save(snapshot) handoff interface absent on canonical main b2bb5c0")
+	# Approved src/gameplay/flow production, StageOrchestrator class, and Continue -> restored StageContext presentation handoff are absent on canonical main b2bb5c0
+	print("[PRES-011] WAITING_ON_DEPENDENCY: approved src/gameplay/flow production and StageOrchestrator handoff absent on canonical main b2bb5c0")
 	return "WAITING_ON_DEPENDENCY"
 
 # PRES-012 — Question regression PASS
