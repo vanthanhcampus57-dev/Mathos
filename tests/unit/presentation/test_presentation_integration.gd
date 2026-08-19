@@ -4,25 +4,55 @@ extends RefCounted
 ## B.3 Presentation Integration Suite covering PRES-001..012.
 ## Validates end-to-end UI presentation flow, QuestionService request/submit pipeline,
 ## AttemptResult feedback mapping, and FLOW/Progress ownership boundaries.
+##
+## Implements strict tri-state status accounting (PASS, FAIL, WAITING_ON_DEPENDENCY).
 
-static func run_all_tests() -> bool:
+static func run_all_tests() -> Dictionary:
 	print("--- RUNNING B.3 FINAL PRESENTATION INTEGRATION SUITE (PRES-001..012) ---")
-	var all_ok: bool = true
+	var pass_count: int = 0
+	var fail_count: int = 0
+	var waiting_count: int = 0
 
-	all_ok = test_pres_001_multiple_choice_render_and_submit() and all_ok
-	all_ok = test_pres_002_input_render_and_submit() and all_ok
-	all_ok = test_pres_003_drag_drop_canonical_mappings() and all_ok
-	all_ok = test_pres_004_matching_canonical_pairs() and all_ok
-	all_ok = test_pres_005_feedback_derives_from_attempt_result() and all_ok
-	all_ok = test_pres_006_completion_event_exactly_once() and all_ok
-	all_ok = test_pres_007_ui_does_not_mutate_progress_state() and all_ok
-	all_ok = test_pres_008_invalid_question_definition_fails_explicitly() and all_ok
-	all_ok = test_pres_009_stage_presentation_sequence() and all_ok
-	all_ok = test_pres_010_stage_1_1_to_1_3_has_no_combat_dependency() and all_ok
-	all_ok = test_pres_011_continue_displays_restored_legal_stage_context() and all_ok
-	all_ok = test_pres_012_question_regression_pass() and all_ok
+	var tests: Array[Callable] = [
+		test_pres_001_multiple_choice_render_and_submit,
+		test_pres_002_input_render_and_submit,
+		test_pres_003_drag_drop_canonical_mappings,
+		test_pres_004_matching_canonical_pairs,
+		test_pres_005_feedback_derives_from_attempt_result,
+		test_pres_006_completion_event_exactly_once,
+		test_pres_007_ui_does_not_mutate_progress_state,
+		test_pres_008_invalid_question_definition_fails_explicitly,
+		test_pres_009_stage_presentation_sequence,
+		test_pres_010_stage_1_1_to_1_3_has_no_combat_dependency,
+		test_pres_011_continue_displays_restored_legal_stage_context,
+		test_pres_012_question_regression_pass
+	]
 
-	return all_ok
+	for t in tests:
+		var status: String = String(t.call())
+		match status:
+			"PASS":
+				pass_count += 1
+			"FAIL":
+				fail_count += 1
+			"WAITING_ON_DEPENDENCY":
+				waiting_count += 1
+			_:
+				fail_count += 1
+
+	print("==========================================")
+	print("B.3 PRESENTATION INTEGRATION SUITE SUMMARY:")
+	print("  PASS: %d" % pass_count)
+	print("  FAIL: %d" % fail_count)
+	print("  WAITING: %d" % waiting_count)
+	print("==========================================")
+
+	return {
+		"pass": pass_count,
+		"fail": fail_count,
+		"waiting": waiting_count,
+		"success": (fail_count == 0)
+	}
 
 static func _get_synthetic_catalog() -> ValidatedCatalog:
 	var config: Dictionary = {
@@ -106,7 +136,7 @@ static func _request(interaction_type: String) -> Dictionary:
 	}
 
 # PRES-001 — multiple_choice render + canonical payload submit
-static func test_pres_001_multiple_choice_render_and_submit() -> bool:
+static func test_pres_001_multiple_choice_render_and_submit() -> String:
 	var cat: ValidatedCatalog = _get_synthetic_catalog()
 	var service: QuestionService = QuestionService.new(cat)
 	var panel: QuestionPanel = QuestionPanel.new()
@@ -116,24 +146,24 @@ static func test_pres_001_multiple_choice_render_and_submit() -> bool:
 	var start_res: Dictionary = controller.start_question(request)
 	if not bool(start_res.get("success", false)):
 		print("[PRES-001] FAIL: start_question failed: ", start_res)
-		return false
+		return "FAIL"
 
 	var mc_view: MultipleChoiceView = panel.get_active_interaction_view() as MultipleChoiceView
 	if mc_view == null or not mc_view.select_option("opt_a"):
 		print("[PRES-001] FAIL: MultipleChoiceView setup or select_option failed")
-		return false
+		return "FAIL"
 
 	var payload: Dictionary = panel.get_current_interaction_payload()
 	var submit_res: Dictionary = controller.submit_answer(payload)
 	if not bool(submit_res.get("success", false)):
 		print("[PRES-001] FAIL: submit_answer returned success=false: ", submit_res)
-		return false
+		return "FAIL"
 
 	print("[PRES-001] PASS: multiple_choice render + canonical submit pipeline verified")
-	return true
+	return "PASS"
 
 # PRES-002 — input render + canonical payload submit
-static func test_pres_002_input_render_and_submit() -> bool:
+static func test_pres_002_input_render_and_submit() -> String:
 	var cat: ValidatedCatalog = _get_synthetic_catalog()
 	var service: QuestionService = QuestionService.new(cat)
 	var panel: QuestionPanel = QuestionPanel.new()
@@ -143,12 +173,12 @@ static func test_pres_002_input_render_and_submit() -> bool:
 	var start_res: Dictionary = controller.start_question(request)
 	if not bool(start_res.get("success", false)):
 		print("[PRES-002] FAIL: Input question start_question failed: ", start_res)
-		return false
+		return "FAIL"
 
 	var inp_view: InputView = panel.get_active_interaction_view() as InputView
 	if inp_view == null:
 		print("[PRES-002] FAIL: InputView setup failed")
-		return false
+		return "FAIL"
 
 	inp_view.set_input_value("4")
 
@@ -156,13 +186,13 @@ static func test_pres_002_input_render_and_submit() -> bool:
 	var submit_res: Dictionary = controller.submit_answer(payload)
 	if not bool(submit_res.get("success", false)):
 		print("[PRES-002] FAIL: Input submit_answer returned success=false: ", submit_res)
-		return false
+		return "FAIL"
 
 	print("[PRES-002] PASS: input render + canonical payload submit verified")
-	return true
+	return "PASS"
 
 # PRES-003 — drag_drop canonical placements
-static func test_pres_003_drag_drop_canonical_mappings() -> bool:
+static func test_pres_003_drag_drop_canonical_mappings() -> String:
 	var view: DragDropView = DragDropView.new()
 	var payload: Dictionary = {
 		"items": [{"item_id": "item_a", "text": "A"}],
@@ -170,19 +200,19 @@ static func test_pres_003_drag_drop_canonical_mappings() -> bool:
 	}
 	if not view.setup(payload):
 		print("[PRES-003] FAIL: DragDropView setup failed")
-		return false
+		return "FAIL"
 
 	view.place_item("item_a", "target_a")
 	var ans: Dictionary = view.get_interaction_payload()
 	if not ans.has("placements"):
 		print("[PRES-003] FAIL: Missing canonical 'placements' payload key")
-		return false
+		return "FAIL"
 
 	print("[PRES-003] PASS: drag_drop canonical placements verified")
-	return true
+	return "PASS"
 
 # PRES-004 — matching canonical pairs
-static func test_pres_004_matching_canonical_pairs() -> bool:
+static func test_pres_004_matching_canonical_pairs() -> String:
 	var view: MatchingView = MatchingView.new()
 	var payload: Dictionary = {
 		"left_items": [{"item_id": "left_a", "text": "L1"}],
@@ -190,19 +220,19 @@ static func test_pres_004_matching_canonical_pairs() -> bool:
 	}
 	if not view.setup(payload):
 		print("[PRES-004] FAIL: MatchingView setup failed")
-		return false
+		return "FAIL"
 
 	view.add_pair("left_a", "right_a")
 	var ans: Dictionary = view.get_interaction_payload()
 	if not ans.has("pairs"):
 		print("[PRES-004] FAIL: Missing canonical 'pairs' payload key")
-		return false
+		return "FAIL"
 
 	print("[PRES-004] PASS: matching canonical pairs payload verified")
-	return true
+	return "PASS"
 
 # PRES-005 — feedback derives from AttemptResult
-static func test_pres_005_feedback_derives_from_attempt_result() -> bool:
+static func test_pres_005_feedback_derives_from_attempt_result() -> String:
 	var panel: QuestionPanel = QuestionPanel.new()
 	var mock_question: Dictionary = {
 		"question_id": "q_001",
@@ -224,51 +254,49 @@ static func test_pres_005_feedback_derives_from_attempt_result() -> bool:
 	panel.show_feedback(attempt_result)
 	if not panel.has_feedback():
 		print("[PRES-005] FAIL: QuestionPanel has_feedback() is false after show_feedback")
-		return false
+		return "FAIL"
 
 	print("[PRES-005] PASS: Feedback correctly derived from AttemptResult")
-	return true
+	return "PASS"
 
 # PRES-006 — question completion presentation event exactly once
-static func test_pres_006_completion_event_exactly_once() -> bool:
+static func test_pres_006_completion_event_exactly_once() -> String:
 	var cat: ValidatedCatalog = _get_synthetic_catalog()
 	var service: QuestionService = QuestionService.new(cat)
 	var panel: QuestionPanel = QuestionPanel.new()
 	var controller: QuestionPresentationController = QuestionPresentationController.new(service, panel)
 
 	var tracker: Array = [0]
-	var callback = func(_res: Dictionary) -> void:
-		tracker[0] = int(tracker[0]) + 1
-
-	controller.question_completed.connect(callback)
+	controller.question_completed.connect(func(_res: Dictionary) -> void: tracker[0] = int(tracker[0]) + 1)
 
 	var request: Dictionary = _request("multiple_choice")
-
 	var res: Dictionary = controller.start_question(request)
 	if not bool(res.get("success", false)):
 		print("[PRES-006] FAIL: start_question failed: ", res)
-		return false
+		return "FAIL"
 
 	var mc_view: MultipleChoiceView = panel.get_active_interaction_view() as MultipleChoiceView
 	if mc_view == null or not mc_view.select_option("opt_a"):
 		print("[PRES-006] FAIL: select_option failed")
-		return false
+		return "FAIL"
 
 	var payload: Dictionary = panel.get_current_interaction_payload()
-	var sub_res: Dictionary = controller.submit_answer(payload)
-	if not bool(sub_res.get("success", false)):
-		print("[PRES-006] FAIL: submit_answer returned error: ", sub_res)
-		return false
+	var first_submit: Dictionary = controller.submit_answer(payload)
+	var second_submit: Dictionary = controller.submit_answer(payload)
+
+	if not bool(first_submit.get("success", false)):
+		print("[PRES-006] FAIL: first submit_answer failed: ", first_submit)
+		return "FAIL"
 
 	if int(tracker[0]) != 1:
 		print("[PRES-006] FAIL: question_completed emitted %d times, expected 1" % int(tracker[0]))
-		return false
+		return "FAIL"
 
 	print("[PRES-006] PASS: Question completion presentation event emitted exactly once")
-	return true
+	return "PASS"
 
 # PRES-007 — UI does not mutate ProgressState
-static func test_pres_007_ui_does_not_mutate_progress_state() -> bool:
+static func test_pres_007_ui_does_not_mutate_progress_state() -> String:
 	var shell: StagePresentationShell = StagePresentationShell.new()
 	var info: PresentationModels.StageContextInfo = PresentationModels.StageContextInfo.new(
 		"stage_01_01", "Title", "Dungeon", [], false
@@ -279,18 +307,18 @@ static func test_pres_007_ui_does_not_mutate_progress_state() -> bool:
 	# Verify UI shell contains no reference to ProgressState
 	if shell.get("progress_state") != null or shell.get("_progress_state") != null:
 		print("[PRES-007] FAIL: StagePresentationShell holds direct ProgressState reference")
-		return false
+		return "FAIL"
 
 	print("[PRES-007] PASS: Presentation UI does not hold or mutate ProgressState")
-	return true
+	return "PASS"
 
 # PRES-008 — invalid QuestionDefinition fails explicitly
-static func test_pres_008_invalid_question_definition_fails_explicitly() -> bool:
+static func test_pres_008_invalid_question_definition_fails_explicitly() -> String:
 	var panel: QuestionPanel = QuestionPanel.new()
 	var invalid_q1: Dictionary = {"question_id": "q_bad"} # missing interaction_type and payload
 	if panel.setup_question(invalid_q1):
 		print("[PRES-008] FAIL: Invalid QuestionDefinition (missing fields) accepted")
-		return false
+		return "FAIL"
 
 	var invalid_q2: Dictionary = {
 		"question_id": "q_bad",
@@ -300,39 +328,39 @@ static func test_pres_008_invalid_question_definition_fails_explicitly() -> bool
 	}
 	if panel.setup_question(invalid_q2):
 		print("[PRES-008] FAIL: Invalid interaction_type accepted")
-		return false
+		return "FAIL"
 
 	print("[PRES-008] PASS: Invalid QuestionDefinition fails explicitly")
-	return true
+	return "PASS"
 
 # PRES-009 — Stage presentation sequence: lesson -> question -> result
-static func test_pres_009_stage_presentation_sequence() -> bool:
+static func test_pres_009_stage_presentation_sequence() -> String:
 	var shell: StagePresentationShell = StagePresentationShell.new()
 	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_ENTRY)
 	if shell.get_view_mode() != StagePresentationShell.ViewMode.MODE_ENTRY:
 		print("[PRES-009] FAIL: ViewMode is not MODE_ENTRY")
-		return false
+		return "FAIL"
 
 	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_LESSON)
 	if shell.get_view_mode() != StagePresentationShell.ViewMode.MODE_LESSON:
 		print("[PRES-009] FAIL: ViewMode is not MODE_LESSON")
-		return false
+		return "FAIL"
 
 	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_QUESTION_HOST)
 	if shell.get_view_mode() != StagePresentationShell.ViewMode.MODE_QUESTION_HOST:
 		print("[PRES-009] FAIL: ViewMode is not MODE_QUESTION_HOST")
-		return false
+		return "FAIL"
 
 	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_STAGE_COMPLETE)
 	if shell.get_view_mode() != StagePresentationShell.ViewMode.MODE_STAGE_COMPLETE:
 		print("[PRES-009] FAIL: ViewMode is not MODE_STAGE_COMPLETE")
-		return false
+		return "FAIL"
 
 	print("[PRES-009] PASS: Stage presentation sequence (lesson -> question -> result) verified")
-	return true
+	return "PASS"
 
 # PRES-010 — Stage 1.1-1.3 presentation has no Combat/Intent dependency
-static func test_pres_010_stage_1_1_to_1_3_has_no_combat_dependency() -> bool:
+static func test_pres_010_stage_1_1_to_1_3_has_no_combat_dependency() -> String:
 	var demo: D1PresentationDemo = D1PresentationDemo.new()
 	demo.start_demo("stage_01_01")
 	demo.start_demo("stage_01_02")
@@ -341,22 +369,22 @@ static func test_pres_010_stage_1_1_to_1_3_has_no_combat_dependency() -> bool:
 	# Verify demo has no combat or enemy intent references
 	if demo.get("combat_engine") != null or demo.get("enemy_intent") != null:
 		print("[PRES-010] FAIL: Presentation demo references combat engine or enemy intent")
-		return false
+		return "FAIL"
 
 	print("[PRES-010] PASS: Stage 1.1-1.3 presentation has no Combat or Intent dependency")
-	return true
+	return "PASS"
 
 # PRES-011 — Continue displays restored legal stage context (WAITING_ON_DEPENDENCY)
-static func test_pres_011_continue_displays_restored_legal_stage_context() -> bool:
-	# Approved FLOW Continue handoff interface is absent from canonical main b2bb5c0
-	print("[PRES-011] WAITING_ON_DEPENDENCY: GameFlow / SaveService Continue stage context handoff interface absent on canonical main b2bb5c0")
-	return true
+static func test_pres_011_continue_displays_restored_legal_stage_context() -> String:
+	# Approved FLOW Continue handoff interface (StageOrchestrator class and GameFlow.restore_stage_context_from_save(snapshot)) is absent on canonical main b2bb5c0
+	print("[PRES-011] WAITING_ON_DEPENDENCY: StageOrchestrator class and GameFlow.restore_stage_context_from_save(snapshot) handoff interface absent on canonical main b2bb5c0")
+	return "WAITING_ON_DEPENDENCY"
 
 # PRES-012 — Question regression PASS
-static func test_pres_012_question_regression_pass() -> bool:
+static func test_pres_012_question_regression_pass() -> String:
 	var ok: bool = TestQuestionPresentation.run_all_tests()
 	if not ok:
 		print("[PRES-012] FAIL: TestQuestionPresentation regression failed")
-		return false
+		return "FAIL"
 	print("[PRES-012] PASS: Question UI presentation regression suite passed")
-	return true
+	return "PASS"
