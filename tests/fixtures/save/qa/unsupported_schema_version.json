@@ -1,0 +1,27 @@
+{
+  "schema_version": 99,
+  "game_version": "9.9.9",
+  "content_version": 1,
+  "saved_at_utc": "2026-08-18T00:00:00Z",
+  "profile_id": "local_player",
+  "player_persistent": {
+    "player_id": "char_karl",
+    "coin_balance": 0,
+    "exp_total": 0
+  },
+  "progress": {
+    "unlocked_dungeon_ids": ["dungeon_01"],
+    "unlocked_stage_ids": ["stage_01_01"],
+    "cleared_stage_ids": [],
+    "fragment_ids": [],
+    "game_complete": false
+  },
+  "adaptive_profile": {
+    "attempts_total": 0,
+    "correct_total": 0,
+    "consecutive_correct": 0,
+    "consecutive_incorrect": 0,
+    "topic_stats": {},
+    "recent_records": []
+  }
+}
