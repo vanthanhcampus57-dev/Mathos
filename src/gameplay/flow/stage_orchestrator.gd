@@ -72,6 +72,12 @@ func advance_to_question_phase(request_params: Dictionary = {}, adaptive_recomme
 		return _error(FlowErrorCodes.COMBAT_NOT_ALLOWED, "Stages 1.1-1.3 cannot use combat context")
 
 	var scope: Dictionary = request_params.get("scope", _extract_question_scope(_current_stage_data)) as Dictionary
+	if scope.is_empty():
+		return _error(
+			FlowErrorCodes.INVALID_CONTENT_REFERENCE,
+			"Stage '%s' lacks valid practice_id or PracticeDefinition question_scope" % _current_stage_id
+		)
+
 	var request_id: String = String(request_params.get("request_id", "req_%s_01" % _current_stage_id))
 	var preferred_diff: int = int(request_params.get("preferred_difficulty", 1))
 	var exclude_ids: Array = request_params.get("exclude_question_ids", []) as Array
@@ -165,12 +171,15 @@ func _is_v1_puzzle_onboarding_stage(stage_id: String) -> bool:
 	return stage_id == "stage_01_01" or stage_id == "stage_01_02" or stage_id == "stage_01_03"
 
 func _extract_question_scope(stage_data: Dictionary) -> Dictionary:
-	var raw_scope: Dictionary = {}
-	if stage_data.has("question_scope") and (stage_data["question_scope"] is Dictionary):
-		raw_scope = stage_data["question_scope"] as Dictionary
-	elif stage_data.has("learning_scope") and (stage_data["learning_scope"] is Dictionary):
-		raw_scope = stage_data["learning_scope"] as Dictionary
+	var practice_id: String = String(stage_data.get("practice_id", ""))
+	if practice_id.is_empty():
+		return {}
 
+	var practice: Dictionary = _catalog.get_practice(practice_id)
+	if practice.is_empty() or not practice.has("question_scope") or not (practice["question_scope"] is Dictionary):
+		return {}
+
+	var raw_scope: Dictionary = practice["question_scope"] as Dictionary
 	var dungeon_id: String = String(raw_scope.get("dungeon_id", stage_data.get("dungeon_id", "dungeon_01")))
 	var topic_id: String = String(raw_scope.get("topic_id", QuestionService.TOPIC_BY_DUNGEON.get(dungeon_id, "trial_sample_event")))
 
