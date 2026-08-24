@@ -61,7 +61,7 @@ static func _get_synthetic_catalog() -> ValidatedCatalog:
 			"b_max_time_ratio": 1.25
 		}
 	}
-	var stage_scope: Dictionary = {
+	var practice_scope: Dictionary = {
 		"dungeon_id": "dungeon_01",
 		"topic_id": "trial_sample_event",
 		"subtopic_ids": [],
@@ -69,10 +69,13 @@ static func _get_synthetic_catalog() -> ValidatedCatalog:
 		"difficulty_max": 5,
 		"interaction_types": []
 	}
+	var practices: Dictionary = {
+		"practice_01_01": {"practice_id": "practice_01_01", "question_scope": practice_scope}
+	}
 	var stages: Dictionary = {
-		"stage_01_01": {"stage_id": "stage_01_01", "dungeon_id": "dungeon_01", "question_scope": stage_scope},
-		"stage_01_02": {"stage_id": "stage_01_02", "dungeon_id": "dungeon_01", "question_scope": stage_scope},
-		"stage_01_03": {"stage_id": "stage_01_03", "dungeon_id": "dungeon_01", "question_scope": stage_scope}
+		"stage_01_01": {"stage_id": "stage_01_01", "dungeon_id": "dungeon_01", "practice_id": "practice_01_01", "question_scope": practice_scope},
+		"stage_01_02": {"stage_id": "stage_01_02", "dungeon_id": "dungeon_01", "practice_id": "practice_01_01", "question_scope": practice_scope},
+		"stage_01_03": {"stage_id": "stage_01_03", "dungeon_id": "dungeon_01", "practice_id": "practice_01_01", "question_scope": practice_scope}
 	}
 
 	var mc_q: Dictionary = _base_question("q_mc", "multiple_choice")
@@ -98,7 +101,7 @@ static func _get_synthetic_catalog() -> ValidatedCatalog:
 	mat_q["answer_spec"] = {"pairs": [{"left_id": "left_a", "right_id": "right_a"}, {"left_id": "left_b", "right_id": "right_b"}]}
 
 	var questions: Dictionary = {"q_mc": mc_q, "q_inp": inp_q, "q_dd": dd_q, "q_mat": mat_q}
-	return ValidatedCatalog.new(config, {}, stages, {}, {}, {}, questions, {}, {}, {})
+	return ValidatedCatalog.new(config, {}, stages, {}, {}, practices, questions, {}, {}, {})
 
 static func _base_question(qid: String, interaction_type: String) -> Dictionary:
 	return {
@@ -374,11 +377,61 @@ static func test_pres_010_stage_1_1_to_1_3_has_no_combat_dependency() -> String:
 	print("[PRES-010] PASS: Stage 1.1-1.3 presentation has no Combat or Intent dependency")
 	return "PASS"
 
-# PRES-011 — Continue displays restored legal stage context (WAITING_ON_DEPENDENCY)
+# PRES-011 — Continue displays restored legal StageContext through real approved FLOW/Save integration
 static func test_pres_011_continue_displays_restored_legal_stage_context() -> String:
-	# Approved src/gameplay/flow production, StageOrchestrator class, and Continue -> restored StageContext presentation handoff are absent on canonical main b2bb5c0
-	print("[PRES-011] WAITING_ON_DEPENDENCY: approved src/gameplay/flow production and StageOrchestrator handoff absent on canonical main b2bb5c0")
-	return "WAITING_ON_DEPENDENCY"
+	var repo := ContentRepository.new()
+	if not repo.load_and_validate("res://tests/fixtures/content/valid_catalog"):
+		print("[PRES-011] FAIL: ContentRepository failed to load valid_catalog")
+		return "FAIL"
+	var catalog: ValidatedCatalog = repo.get_catalog()
+
+	var player_persistent := PlayerPersistentState.new(PlayerPersistentState.CANONICAL_PLAYER_ID, 100, 500)
+	var progress_service := ProgressService.new(catalog, player_persistent)
+	var file_store := SaveFileStore.new("user://test_pres_011/")
+	file_store.remove_file(file_store.main_path)
+	var save_service := SaveService.new(catalog, file_store)
+	var question_service := QuestionService.new(catalog)
+	var bridge := ProgressSaveBridge.new(catalog, player_persistent, progress_service, save_service)
+	var flow_service := GameFlowService.new(catalog, question_service, progress_service, save_service, player_persistent)
+
+	# Commit stage_01_01 clear and checkpoint to disk
+	var reward := RewardGrant.new("reward_01_01", "stage_01_01", 10, 25, [])
+	var commit_res: Dictionary = bridge.commit_stage_and_checkpoint("stage_01_01", reward)
+	if not bool(commit_res.get("success", false)):
+		print("[PRES-011] FAIL: Bridge commit_stage_and_checkpoint failed")
+		return "FAIL"
+
+	# Execute Continue restoration from disk save
+	var restore_res: Dictionary = bridge.restore_from_save()
+	if not bool(restore_res.get("success", false)):
+		print("[PRES-011] FAIL: Bridge restore_from_save failed")
+		return "FAIL"
+
+	var flow_restore: Dictionary = flow_service.restore_from_save(restore_res)
+	if not bool(flow_restore.get("success", false)):
+		print("[PRES-011] FAIL: GameFlowService restore_from_save failed: ", flow_restore)
+		return "FAIL"
+
+	if String(flow_restore.get("target_stage_id", "")) != "stage_01_02":
+		print("[PRES-011] FAIL: Restored target_stage_id is not stage_01_02 (got %s)" % String(flow_restore.get("target_stage_id", "")))
+		return "FAIL"
+
+	var raw_ctx: Dictionary = flow_restore.get("stage_context", {}) as Dictionary
+	if raw_ctx.is_empty() or not bool(raw_ctx.get("is_restored_context", false)):
+		print("[PRES-011] FAIL: Stage context missing or is_restored_context is false")
+		return "FAIL"
+
+	var ctx_info: PresentationModels.StageContextInfo = PresentationModels.StageContextInfo.from_dict(raw_ctx)
+	var shell: StagePresentationShell = StagePresentationShell.new()
+	shell.set_stage_context(ctx_info)
+
+	if not shell.is_restored_context_displayed():
+		print("[PRES-011] FAIL: StagePresentationShell is_restored_context_displayed returned false")
+		return "FAIL"
+
+	file_store.remove_file(file_store.main_path)
+	print("[PRES-011] PASS: Continue displayed restored legal StageContext stage_01_02 through real FLOW/Save integration")
+	return "PASS"
 
 # PRES-012 — Question regression PASS
 static func test_pres_012_question_regression_pass() -> String:
