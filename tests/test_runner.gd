@@ -2,7 +2,7 @@ class_name TestRunner
 extends SceneTree
 
 ## Headless Test Runner for Mathos task verification.
-## Executes TEST-BOOT-001, TEST-SMOKE-001, TEST-CONFIG-001, CONTENT-001..028, QUESTION-001..026, Player/Reward contracts, PROGRESS-001..015, SAVE suites, and PRES suites.
+## Executes TEST-BOOT-001, TEST-SMOKE-001, TEST-CONFIG-001, CONTENT-001..028, QUESTION-001..026, Player/Reward contracts, PROGRESS-001..015, SAVE suites, FLOW-001..012, APPROOT-001..015, and PRES suites.
 ## Implements truthful tri-state test accounting (PASS, FAIL, WAITING).
 
 func _initialize() -> void:
@@ -29,6 +29,8 @@ func _initialize() -> void:
 		{"name": "Save Service IO", "func": Callable(preload("res://tests/unit/save/test_save_service_io.gd"), "run_all_tests")},
 		{"name": "Save Negative Paths", "func": Callable(preload("res://tests/unit/save/test_save_negative_paths.gd"), "run_all_tests")},
 		{"name": "Save Integration", "func": Callable(preload("res://tests/integration/save/test_save_integration.gd"), "run_all_tests")},
+		{"name": "GameFlow Vertical Slice", "func": Callable(load("res://tests/integration/flow/test_flow_vertical_slice.gd") as GDScript, "run_all_tests")},
+		{"name": "AppRoot Integration", "func": Callable(load("res://tests/integration/app/test_app_root_integration.gd") as GDScript, "run_all_tests")},
 		{"name": "Question Presentation (B.1)", "func": Callable(preload("res://tests/unit/presentation/question/test_question_presentation.gd"), "run_all_tests")},
 		{"name": "Presentation Shell (B.2)", "func": Callable(preload("res://tests/unit/presentation/lesson/test_stage_presentation_shell.gd"), "run_all_tests").bind(self)}
 	]
@@ -98,6 +100,8 @@ func _count_suite_tests(name: String) -> int:
 		"Save Service IO": return 30
 		"Save Negative Paths": return 20
 		"Save Integration": return 17
+		"GameFlow Vertical Slice": return 12
+		"AppRoot Integration": return 15
 		"Question Presentation (B.1)": return 7
 		"Presentation Shell (B.2)": return 12
 		_: return 1
