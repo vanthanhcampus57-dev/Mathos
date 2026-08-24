@@ -195,7 +195,7 @@ func _validate_scope(scope: Dictionary) -> String:
 	for subtopic_variant in scope["subtopic_ids"] as Array:
 		if not canonical_subtopics.has(String(subtopic_variant)):
 			return "subtopic_id is outside canonical topic"
-	if not (scope["difficulty_min"] is int) or not (scope["difficulty_max"] is int):
+	if not (scope["difficulty_min"] is int or scope["difficulty_min"] is float) or not (scope["difficulty_max"] is int or scope["difficulty_max"] is float):
 		return "difficulty_min/max must be int"
 	var min_diff: int = int(scope["difficulty_min"])
 	var max_diff: int = int(scope["difficulty_max"])
