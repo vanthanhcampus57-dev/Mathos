@@ -68,8 +68,8 @@ static func test_approot_001_normal_launch_instantiates_composition() -> bool:
 		print("[APPROOT-001] FAIL: Unable to instantiate res://src/app/app_root.tscn")
 		return false
 
-	var flow: Variant = instance.get("game_flow") if instance.get("game_flow") != null else (instance.call("get_game_flow") if instance.has_method("get_game_flow") else null)
-	var shell: Variant = instance.get("presentation_shell") if instance.get("presentation_shell") != null else (instance.call("get_presentation_shell") if instance.has_method("get_presentation_shell") else null)
+	var flow: Variant = instance.call("get_game_flow_service") if instance.has_method("get_game_flow_service") else instance.get("_game_flow_service")
+	var shell: Variant = instance.call("get_presentation_shell") if instance.has_method("get_presentation_shell") else instance.get("_presentation_shell")
 	instance.free()
 
 	if flow == null or shell == null:
@@ -90,7 +90,7 @@ static func test_approot_002_new_game_reaches_initial_stage() -> bool:
 	if instance.has_method("start_new_game"):
 		instance.call("start_new_game")
 
-	var flow: Variant = instance.get("game_flow") if instance.get("game_flow") != null else (instance.call("get_game_flow") if instance.has_method("get_game_flow") else null)
+	var flow: Variant = instance.call("get_game_flow_service") if instance.has_method("get_game_flow_service") else instance.get("_game_flow_service")
 	var current_stage: String = ""
 	if flow != null and flow.has_method("get_current_stage_id"):
 		current_stage = String(flow.call("get_current_stage_id"))
@@ -114,7 +114,7 @@ static func test_approot_003_new_game_delivers_stage_context() -> bool:
 	if instance.has_method("start_new_game"):
 		instance.call("start_new_game")
 
-	var shell: Variant = instance.get("presentation_shell") if instance.get("presentation_shell") != null else (instance.call("get_presentation_shell") if instance.has_method("get_presentation_shell") else null)
+	var shell: Variant = instance.call("get_presentation_shell") if instance.has_method("get_presentation_shell") else instance.get("_presentation_shell")
 	var context: Dictionary = {}
 	if shell != null and shell.has_method("get_stage_context"):
 		context = shell.call("get_stage_context") as Dictionary
