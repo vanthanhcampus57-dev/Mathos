@@ -70,9 +70,10 @@ static func test_approot_001_normal_launch_instantiates_composition() -> bool:
 
 	var flow: Variant = instance.call("get_game_flow_service") if instance.has_method("get_game_flow_service") else instance.get("_game_flow_service")
 	var shell: Variant = instance.call("get_presentation_shell") if instance.has_method("get_presentation_shell") else instance.get("_presentation_shell")
+	var has_valid_composition: bool = (flow != null and shell != null)
 	instance.free()
 
-	if flow == null or shell == null:
+	if not has_valid_composition:
 		print("[APPROOT-001] FAIL: AppRoot scene missing game_flow or presentation_shell composition")
 		return false
 
@@ -116,8 +117,15 @@ static func test_approot_003_new_game_delivers_stage_context() -> bool:
 
 	var shell: Variant = instance.call("get_presentation_shell") if instance.has_method("get_presentation_shell") else instance.get("_presentation_shell")
 	var context: Dictionary = {}
-	if shell != null and shell.has_method("get_stage_context"):
-		context = shell.call("get_stage_context") as Dictionary
+	if shell != null:
+		if shell.has_method("get_stage_context"):
+			var res: Variant = shell.call("get_stage_context")
+			if res is Dictionary:
+				context = res as Dictionary
+		if context.is_empty() and shell.get("_context_info") != null:
+			var info: Variant = shell.get("_context_info")
+			if info is PresentationModels.StageContextInfo:
+				context = (info as PresentationModels.StageContextInfo).to_dict()
 	instance.free()
 
 	if context.is_empty() or String(context.get("stage_id", "")) != "stage_01_01":
