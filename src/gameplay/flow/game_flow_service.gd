@@ -64,24 +64,29 @@ func start_stage(stage_id: String) -> Dictionary:
 	_flow_state = "STAGE_ACTIVE"
 	return init_res
 
-## Consumes an authoritative A.2 restore bridge result (or dictionary containing entry_stage_id)
-## to initialize the active flow stage. Does NOT read raw save progress arrays or execute
-## SaveService.load / ProgressService restoration (owned by A.2 integration bridge).
+## Consumes an authoritative A.2 restore bridge result to initialize the active flow stage.
+## Requires a valid non-empty String 'entry_stage_id'. Zero fallbacks permitted.
+## Does NOT read raw save progress arrays or execute SaveService.load / ProgressService restoration.
 func restore_from_save(restore_result: Dictionary) -> Dictionary:
 	if restore_result.is_empty():
 		return _error(FlowErrorCodes.SAVE_RESTORE_FAILED, "Restore result dictionary cannot be empty")
 
-	var target_stage_id: String = ""
-	if restore_result.has("entry_stage_id"):
-		target_stage_id = String(restore_result["entry_stage_id"])
-	elif restore_result.has("target_stage_id"):
-		target_stage_id = String(restore_result["target_stage_id"])
-	elif restore_result.has("stage_id"):
-		target_stage_id = String(restore_result["stage_id"])
-	else:
-		target_stage_id = String(_catalog.get_config().get("initial_stage_id", "stage_01_01"))
+	if not restore_result.has("entry_stage_id"):
+		return _error(FlowErrorCodes.SAVE_RESTORE_FAILED, "Restore result missing required 'entry_stage_id'")
 
-	var init_res: Dictionary = start_stage(target_stage_id)
+	var entry_stage_val: Variant = restore_result["entry_stage_id"]
+	if not (entry_stage_val is String) or String(entry_stage_val).strip_edges().is_empty():
+		return _error(FlowErrorCodes.SAVE_RESTORE_FAILED, "Restore result 'entry_stage_id' must be a non-empty String")
+
+	var entry_stage_id: String = String(entry_stage_val).strip_edges()
+
+	if _catalog.get_stage(entry_stage_id).is_empty():
+		return _error(FlowErrorCodes.INVALID_STAGE_ID, "Unknown stage_id '%s' in ValidatedCatalog" % entry_stage_id)
+
+	if not _progress_service.can_enter(entry_stage_id):
+		return _error(FlowErrorCodes.STAGE_LOCKED, "Stage '%s' is locked by ProgressService" % entry_stage_id)
+
+	var init_res: Dictionary = start_stage(entry_stage_id)
 	if not bool(init_res.get("success", false)):
 		return init_res
 
@@ -92,7 +97,7 @@ func restore_from_save(restore_result: Dictionary) -> Dictionary:
 	return {
 		"success": true,
 		"flow_state": _flow_state,
-		"target_stage_id": target_stage_id,
+		"target_stage_id": entry_stage_id,
 		"stage_context": context,
 		"orchestrator_result": init_res
 	}
