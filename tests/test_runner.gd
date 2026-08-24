@@ -5,6 +5,8 @@ extends SceneTree
 ## Headless Test Runner for Mathos task verification.
 ## Executes TEST-BOOT-001, TEST-SMOKE-001, TEST-CONFIG-001, CONTENT-001..028, QUESTION-001..026, Player/Reward contracts, and PROGRESS-001..015.
 
+const TestFlowScript = preload("res://tests/unit/flow/test_flow_foundation.gd")
+
 func _init() -> void:
 	print("==========================================")
 	print("MATHOS HEADLESS TEST HARNESS STARTING")
@@ -21,6 +23,7 @@ func _init() -> void:
 	all_passed = TestPlayerFoundation.run_all_tests() and all_passed
 	all_passed = TestProgressService.run_all_tests() and all_passed
 	all_passed = TestProgressIntegration.run_all_tests() and all_passed
+	all_passed = TestFlowScript.run_all_tests() and all_passed
 	all_passed = (preload("res://tests/unit/save/test_save_contract.gd")).run_all_tests() and all_passed
 	all_passed = (preload("res://tests/unit/save/test_save_service_io.gd")).run_all_tests() and all_passed
 	all_passed = (preload("res://tests/unit/save/test_save_negative_paths.gd")).run_all_tests() and all_passed
