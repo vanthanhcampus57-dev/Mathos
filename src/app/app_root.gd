@@ -14,10 +14,10 @@ var _progress_service: ProgressService = null
 var _bridge: ProgressSaveBridge = null
 var _question_service: QuestionService = null
 var _game_flow_service: GameFlowService = null
-var _question_controller: QuestionPresentationController = null
+var _question_controller: RefCounted = null
 
 # UI Presentation
-var _presentation_shell: StagePresentationShell = null
+var _presentation_shell: Control = null
 var _bootstrap_ui: Control = null
 
 func _ready() -> void:
@@ -49,7 +49,10 @@ func bootstrap_runtime(custom_content_root: String = "") -> bool:
 	_bridge = ProgressSaveBridge.new(_catalog, _player_persistent, _progress_service, _save_service)
 	_question_service = QuestionService.new(_catalog)
 	_game_flow_service = GameFlowService.new(_catalog, _question_service, _progress_service, _save_service, _player_persistent)
-	_question_controller = QuestionPresentationController.new(_question_service)
+
+	var q_ctrl_script: Resource = load("res://src/ui/question/question_presentation_controller.gd")
+	if q_ctrl_script is GDScript:
+		_question_controller = (q_ctrl_script as GDScript).new(_question_service)
 
 	_setup_presentation_shell()
 	print("[AppRoot] Runtime services and composition root initialized cleanly.")
@@ -65,9 +68,10 @@ func start_new_game() -> Dictionary:
 		return flow_res
 
 	var context: Dictionary = _game_flow_service.get_stage_context(false)
-	if _presentation_shell != null:
-		_presentation_shell.set_stage_context(context)
-		_presentation_shell.set_view_mode(StagePresentationShell.ViewMode.MODE_LESSON)
+	if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
+		_presentation_shell.call("set_stage_context", context)
+		if _presentation_shell.has_method("set_view_mode"):
+			_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
 		if _bootstrap_ui != null:
 			_bootstrap_ui.visible = false
 
@@ -95,9 +99,10 @@ func continue_game() -> Dictionary:
 	_player_persistent = _bridge.get_player_persistent()
 
 	var context: Dictionary = _game_flow_service.get_stage_context(true)
-	if _presentation_shell != null:
-		_presentation_shell.set_stage_context(context)
-		_presentation_shell.set_view_mode(StagePresentationShell.ViewMode.MODE_LESSON)
+	if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
+		_presentation_shell.call("set_stage_context", context)
+		if _presentation_shell.has_method("set_view_mode"):
+			_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
 		if _bootstrap_ui != null:
 			_bootstrap_ui.visible = false
 
@@ -128,40 +133,40 @@ func get_save_service() -> SaveService:
 func get_question_service() -> QuestionService:
 	return _question_service
 
-func get_question_controller() -> QuestionPresentationController:
+func get_question_controller() -> RefCounted:
 	return _question_controller
 
-func get_presentation_shell() -> StagePresentationShell:
+func get_presentation_shell() -> Control:
 	return _presentation_shell
 
 # Internal Helper Methods
 func _setup_presentation_shell() -> void:
 	if _presentation_shell == null:
-		_presentation_shell = get_node_or_null("StagePresentationShell") as StagePresentationShell
+		_presentation_shell = get_node_or_null("StagePresentationShell") as Control
 
 	if _presentation_shell == null:
 		var scene_res: Resource = load("res://src/ui/stage/stage_presentation_shell.tscn")
 		if scene_res is PackedScene:
-			_presentation_shell = (scene_res as PackedScene).instantiate() as StagePresentationShell
+			_presentation_shell = (scene_res as PackedScene).instantiate() as Control
 			add_child(_presentation_shell)
 
 	if _presentation_shell == null:
 		var script_res: Resource = load("res://src/ui/stage/stage_presentation_shell.gd")
 		if script_res is GDScript:
-			_presentation_shell = (script_res as GDScript).new() as StagePresentationShell
+			_presentation_shell = (script_res as GDScript).new() as Control
 			add_child(_presentation_shell)
 
 	if _presentation_shell != null:
-		if not _presentation_shell.new_game_requested.is_connected(_on_new_game_requested):
-			_presentation_shell.new_game_requested.connect(_on_new_game_requested)
-		if not _presentation_shell.lesson_continue_requested.is_connected(_on_lesson_continue_requested):
-			_presentation_shell.lesson_continue_requested.connect(_on_lesson_continue_requested)
-		if not _presentation_shell.question_host_ready.is_connected(_on_question_host_ready):
-			_presentation_shell.question_host_ready.connect(_on_question_host_ready)
-		if not _presentation_shell.feedback_host_ready.is_connected(_on_feedback_host_ready):
-			_presentation_shell.feedback_host_ready.connect(_on_feedback_host_ready)
-		if not _presentation_shell.stage_continue_requested.is_connected(_on_stage_continue_requested):
-			_presentation_shell.stage_continue_requested.connect(_on_stage_continue_requested)
+		if _presentation_shell.has_signal("new_game_requested") and not _presentation_shell.is_connected("new_game_requested", _on_new_game_requested):
+			_presentation_shell.connect("new_game_requested", _on_new_game_requested)
+		if _presentation_shell.has_signal("lesson_continue_requested") and not _presentation_shell.is_connected("lesson_continue_requested", _on_lesson_continue_requested):
+			_presentation_shell.connect("lesson_continue_requested", _on_lesson_continue_requested)
+		if _presentation_shell.has_signal("question_host_ready") and not _presentation_shell.is_connected("question_host_ready", _on_question_host_ready):
+			_presentation_shell.connect("question_host_ready", _on_question_host_ready)
+		if _presentation_shell.has_signal("feedback_host_ready") and not _presentation_shell.is_connected("feedback_host_ready", _on_feedback_host_ready):
+			_presentation_shell.connect("feedback_host_ready", _on_feedback_host_ready)
+		if _presentation_shell.has_signal("stage_continue_requested") and not _presentation_shell.is_connected("stage_continue_requested", _on_stage_continue_requested):
+			_presentation_shell.connect("stage_continue_requested", _on_stage_continue_requested)
 
 # Signal Event Handlers
 func _on_new_game_requested() -> void:
@@ -170,35 +175,35 @@ func _on_new_game_requested() -> void:
 func _on_lesson_continue_requested() -> void:
 	if _game_flow_service != null:
 		_game_flow_service.get_orchestrator().advance_to_question_phase()
-	if _presentation_shell != null:
-		_presentation_shell.set_view_mode(StagePresentationShell.ViewMode.MODE_QUESTION_HOST)
+	if _presentation_shell != null and _presentation_shell.has_method("set_view_mode"):
+		_presentation_shell.call("set_view_mode", 2) # MODE_QUESTION_HOST
 
 func _on_question_host_ready(host_container: Control) -> void:
 	if host_container == null:
 		return
 
-	var panel: QuestionPanel = host_container.get_node_or_null("QuestionPanel") as QuestionPanel
+	var panel: Control = host_container.get_node_or_null("QuestionPanel") as Control
 	if panel == null:
 		var scene_res: Resource = load("res://src/ui/question/question_panel.tscn")
 		if scene_res is PackedScene:
-			panel = (scene_res as PackedScene).instantiate() as QuestionPanel
+			panel = (scene_res as PackedScene).instantiate() as Control
 			host_container.add_child(panel)
 		else:
 			var script_res: Resource = load("res://src/ui/question/question_panel.gd")
 			if script_res is GDScript:
-				panel = (script_res as GDScript).new() as QuestionPanel
+				panel = (script_res as GDScript).new() as Control
 				host_container.add_child(panel)
 
-	if panel != null and _question_controller != null:
-		_question_controller.attach_panel(panel)
-		if not _question_controller.question_completed.is_connected(_on_question_completed):
-			_question_controller.question_completed.connect(_on_question_completed)
+	if panel != null and _question_controller != null and _question_controller.has_method("attach_panel"):
+		_question_controller.call("attach_panel", panel)
+		if _question_controller.has_signal("question_completed") and not _question_controller.is_connected("question_completed", _on_question_completed):
+			_question_controller.connect("question_completed", _on_question_completed)
 
 	_start_current_question()
 
 func _on_feedback_host_ready(_host_container: Control) -> void:
-	if _presentation_shell != null:
-		_presentation_shell.set_view_mode(StagePresentationShell.ViewMode.MODE_FEEDBACK_HOST)
+	if _presentation_shell != null and _presentation_shell.has_method("set_view_mode"):
+		_presentation_shell.call("set_view_mode", 3) # MODE_FEEDBACK_HOST
 
 func _on_question_completed(result: Dictionary) -> void:
 	if _game_flow_service == null:
@@ -221,8 +226,8 @@ func _on_question_completed(result: Dictionary) -> void:
 		if not stage_id.is_empty() and reward_grant != null and _bridge != null:
 			_bridge.commit_stage_and_checkpoint(stage_id, reward_grant)
 
-	if _presentation_shell != null:
-		_presentation_shell.set_view_mode(StagePresentationShell.ViewMode.MODE_STAGE_COMPLETE)
+	if _presentation_shell != null and _presentation_shell.has_method("set_view_mode"):
+		_presentation_shell.call("set_view_mode", 4) # MODE_STAGE_COMPLETE
 
 func _on_stage_continue_requested() -> void:
 	if _game_flow_service == null:
@@ -231,9 +236,10 @@ func _on_stage_continue_requested() -> void:
 	var adv_res: Dictionary = _game_flow_service.advance_to_next_stage()
 	if bool(adv_res.get("success", false)):
 		var context: Dictionary = _game_flow_service.get_stage_context(false)
-		if _presentation_shell != null:
-			_presentation_shell.set_stage_context(context)
-			_presentation_shell.set_view_mode(StagePresentationShell.ViewMode.MODE_LESSON)
+		if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
+			_presentation_shell.call("set_stage_context", context)
+			if _presentation_shell.has_method("set_view_mode"):
+				_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
 
 func _start_current_question() -> Dictionary:
 	if _game_flow_service == null or _question_controller == null or _catalog == null:
@@ -253,4 +259,6 @@ func _start_current_question() -> Dictionary:
 		"scope": scope
 	}
 
-	return _question_controller.start_question(request)
+	if _question_controller.has_method("start_question"):
+		return _question_controller.call("start_question", request) as Dictionary
+	return {"success": false, "error_code": "CONTROLLER_METHOD_MISSING"}
