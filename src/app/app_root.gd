@@ -84,19 +84,32 @@ func start_new_game() -> Dictionary:
 
 ## Restores committed save state via ProgressSaveBridge and initializes GameFlow stage context.
 func continue_game() -> Dictionary:
-	if _bridge == null or _game_flow_service == null:
+	if _bridge == null:
 		return {"success": false, "error_code": "NOT_INITIALIZED"}
 
 	var restore_res: Dictionary = _bridge.restore_from_save()
 	if not bool(restore_res.get("success", false)):
 		return restore_res
 
+	var restored_progress: ProgressService = restore_res.get("progress_service") as ProgressService
+	var restored_player: PlayerPersistentState = restore_res.get("player_persistent") as PlayerPersistentState
+
+	if restored_progress != null:
+		_progress_service = restored_progress
+	if restored_player != null:
+		_player_persistent = restored_player
+
+	_game_flow_service = GameFlowService.new(
+		_catalog,
+		_question_service,
+		_progress_service,
+		_save_service,
+		_player_persistent
+	)
+
 	var flow_res: Dictionary = _game_flow_service.restore_from_save(restore_res)
 	if not bool(flow_res.get("success", false)):
 		return flow_res
-
-	_progress_service = _bridge.get_progress_service()
-	_player_persistent = _bridge.get_player_persistent()
 
 	var context: Dictionary = _game_flow_service.get_stage_context(true)
 	if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
