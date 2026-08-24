@@ -1,0 +1,107 @@
+class_name QuestionPresentationController
+extends RefCounted
+
+## Presentation controller for managing QuestionSession lifecycle, rendering interaction views,
+## submitting canonical AnswerPayloads to QuestionService, consuming AttemptResult feedback,
+## and emitting completion/failure events toward stage presentation.
+
+signal question_completed(result: Dictionary)
+signal question_failed(error: Dictionary)
+
+var _question_service: QuestionService
+var _question_panel: QuestionPanel = null
+var _active_session_id: String = ""
+var _active_interaction_type: String = ""
+var _completed: bool = false
+
+func _init(p_service: QuestionService, p_panel: QuestionPanel = null) -> void:
+	_question_service = p_service
+	if p_panel != null:
+		attach_panel(p_panel)
+
+func attach_panel(panel: QuestionPanel) -> void:
+	_question_panel = panel
+	if not _question_panel.submit_requested.is_connected(submit_answer):
+		_question_panel.submit_requested.connect(submit_answer)
+
+func start_question(request: Dictionary, adaptive_recommendation: Dictionary = {}) -> Dictionary:
+	_active_session_id = ""
+	_active_interaction_type = ""
+	_completed = false
+
+	if _question_service == null:
+		var err_null: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION_SESSION, "QuestionService reference is null")
+		question_failed.emit(err_null)
+		return err_null
+
+	var response: Dictionary = _question_service.request_question(request, adaptive_recommendation)
+	if not bool(response.get("success", false)):
+		question_failed.emit(response)
+		return response
+
+	var session: Dictionary = response.get("session", {}) as Dictionary
+	var question: Dictionary = response.get("question", {}) as Dictionary
+
+	if session.is_empty() or question.is_empty() or not session.has("session_id") or not question.has("interaction_type"):
+		var err_shape: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION, "Malformed presentation view from QuestionService")
+		question_failed.emit(err_shape)
+		return err_shape
+
+	# Never require or expose answer_spec
+	if question.has("answer_spec"):
+		var err_leak: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION, "answer_spec leaked into presentation view")
+		question_failed.emit(err_leak)
+		return err_leak
+
+	if _question_panel != null:
+		var panel_ok: bool = _question_panel.setup_question(question)
+		if not panel_ok:
+			var err_panel: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION, "Failed to setup QuestionPanel with question view")
+			question_failed.emit(err_panel)
+			return err_panel
+
+	_active_session_id = String(session["session_id"])
+	_active_interaction_type = String(question["interaction_type"])
+	_completed = false
+	return response
+
+func submit_answer(interaction_payload: Dictionary) -> Dictionary:
+	if _question_service == null or _active_session_id.is_empty() or _completed:
+		return _error(QuestionErrorCodes.INVALID_QUESTION_SESSION, "No active or uncompleted QuestionSession")
+
+	var answer_payload: Dictionary = {
+		"session_id": _active_session_id,
+		"interaction_type": _active_interaction_type,
+		"payload": interaction_payload
+	}
+
+	var response: Dictionary = _question_service.submit_answer(answer_payload)
+	if not bool(response.get("success", false)):
+		# Malformed submission errors do not lock or complete the session.
+		return response
+
+	var result: Dictionary = (response.get("result", {}) as Dictionary).duplicate(true)
+	_completed = true
+
+	if _question_panel != null:
+		_question_panel.show_feedback(result)
+
+	var session_completed_id: String = _active_session_id
+	_active_session_id = ""
+	_active_interaction_type = ""
+
+	# Emit completion signal exactly once for this session
+	question_completed.emit(result)
+	return {"success": true, "result": result}
+
+func has_active_session() -> bool:
+	return not _active_session_id.is_empty() and not _completed
+
+func is_completed() -> bool:
+	return _completed
+
+func get_active_session_id() -> String:
+	return _active_session_id
+
+func _error(code: String, message: String) -> Dictionary:
+	return {"success": false, "error_code": code, "error_message": message}
