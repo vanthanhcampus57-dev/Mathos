@@ -38,7 +38,9 @@ static func _has_approot_composition() -> bool:
 	var instance: Node = packed.instantiate()
 	if instance == null:
 		return false
-	var has_comp: bool = (instance.get("game_flow") != null or instance.has_method("get_game_flow") or instance.has_method("start_new_game"))
+	if instance.has_method("bootstrap_runtime"):
+		instance.call("bootstrap_runtime")
+	var has_comp: bool = (instance.get("game_flow") != null or instance.has_method("get_game_flow_service") or instance.has_method("start_new_game"))
 	instance.free()
 	return has_comp
 
@@ -49,7 +51,10 @@ static func _instantiate_approot() -> Node:
 	var packed: PackedScene = ResourceLoader.load(scene_path) as PackedScene
 	if packed == null:
 		return null
-	return packed.instantiate()
+	var app: Node = packed.instantiate()
+	if app != null and app.has_method("bootstrap_runtime"):
+		app.call("bootstrap_runtime")
+	return app
 
 # APPROOT-001 / APPROOT-CONTINUE-E2E-01: Normal launch instantiates real AppRoot scene composition
 static func test_approot_001_normal_launch_instantiates_composition() -> bool:
