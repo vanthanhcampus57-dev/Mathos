@@ -70,9 +70,12 @@ static func _get_synthetic_catalog() -> ValidatedCatalog:
 		"interaction_types": []
 	}
 	var stages: Dictionary = {
-		"stage_01_01": {"stage_id": "stage_01_01", "dungeon_id": "dungeon_01", "question_scope": stage_scope},
-		"stage_01_02": {"stage_id": "stage_01_02", "dungeon_id": "dungeon_01", "question_scope": stage_scope},
-		"stage_01_03": {"stage_id": "stage_01_03", "dungeon_id": "dungeon_01", "question_scope": stage_scope}
+		"stage_01_01": {"stage_id": "stage_01_01", "dungeon_id": "dungeon_01", "practice_id": "practice_01_01", "question_scope": stage_scope},
+		"stage_01_02": {"stage_id": "stage_01_02", "dungeon_id": "dungeon_01", "practice_id": "practice_01_01", "question_scope": stage_scope},
+		"stage_01_03": {"stage_id": "stage_01_03", "dungeon_id": "dungeon_01", "practice_id": "practice_01_01", "question_scope": stage_scope}
+	}
+	var practices: Dictionary = {
+		"practice_01_01": {"practice_id": "practice_01_01", "question_scope": stage_scope}
 	}
 
 	var mc_q: Dictionary = _base_question("q_mc", "multiple_choice")
@@ -98,7 +101,7 @@ static func _get_synthetic_catalog() -> ValidatedCatalog:
 	mat_q["answer_spec"] = {"pairs": [{"left_id": "left_a", "right_id": "right_a"}, {"left_id": "left_b", "right_id": "right_b"}]}
 
 	var questions: Dictionary = {"q_mc": mc_q, "q_inp": inp_q, "q_dd": dd_q, "q_mat": mat_q}
-	return ValidatedCatalog.new(config, {}, stages, {}, {}, {}, questions, {}, {}, {})
+	return ValidatedCatalog.new(config, {}, stages, {}, practices, {}, questions, {}, {}, {})
 
 static func _base_question(qid: String, interaction_type: String) -> Dictionary:
 	return {
