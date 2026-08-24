@@ -64,27 +64,21 @@ func start_stage(stage_id: String) -> Dictionary:
 	_flow_state = "STAGE_ACTIVE"
 	return init_res
 
-## Consumes an already-restored save snapshot dictionary to derive the active flow stage.
-## Does NOT execute SaveService.load or ProgressService restoration (owned by A.2).
-func restore_from_save(save_snapshot: Dictionary) -> Dictionary:
-	if save_snapshot.is_empty():
-		return _error(FlowErrorCodes.SAVE_RESTORE_FAILED, "Save snapshot dictionary cannot be empty")
-
-	var progress_dict: Dictionary = save_snapshot.get("progress", {}) as Dictionary
-	var unlocked_stages: Array = progress_dict.get("unlocked_stage_ids", []) as Array
-	var cleared_stages: Array = progress_dict.get("cleared_stage_ids", []) as Array
+## Consumes an authoritative A.2 restore bridge result (or dictionary containing entry_stage_id)
+## to initialize the active flow stage. Does NOT read raw save progress arrays or execute
+## SaveService.load / ProgressService restoration (owned by A.2 integration bridge).
+func restore_from_save(restore_result: Dictionary) -> Dictionary:
+	if restore_result.is_empty():
+		return _error(FlowErrorCodes.SAVE_RESTORE_FAILED, "Restore result dictionary cannot be empty")
 
 	var target_stage_id: String = ""
-	for s_id in unlocked_stages:
-		var s_str: String = String(s_id)
-		if not cleared_stages.has(s_str):
-			target_stage_id = s_str
-			break
-
-	if target_stage_id.is_empty() and not unlocked_stages.is_empty():
-		target_stage_id = String(unlocked_stages[unlocked_stages.size() - 1])
-
-	if target_stage_id.is_empty():
+	if restore_result.has("entry_stage_id"):
+		target_stage_id = String(restore_result["entry_stage_id"])
+	elif restore_result.has("target_stage_id"):
+		target_stage_id = String(restore_result["target_stage_id"])
+	elif restore_result.has("stage_id"):
+		target_stage_id = String(restore_result["stage_id"])
+	else:
 		target_stage_id = String(_catalog.get_config().get("initial_stage_id", "stage_01_01"))
 
 	var init_res: Dictionary = start_stage(target_stage_id)
