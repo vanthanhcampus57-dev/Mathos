@@ -167,6 +167,49 @@ func get_current_stage_id() -> String:
 func is_stage_active() -> bool:
 	return _current_phase != "UNINITIALIZED" and _current_phase != "COMPLETED" and _current_phase != "FAILED"
 
+func create_stage_context(is_restored: bool = false) -> Dictionary:
+	if _current_stage_id.is_empty() or _current_stage_data.is_empty():
+		return {}
+
+	var dungeon_id: String = String(_current_stage_data.get("dungeon_id", "dungeon_01"))
+	var dungeon: Dictionary = _catalog.get_dungeon(dungeon_id)
+	var dungeon_title: String = String(dungeon.get("title", dungeon_id))
+
+	var stage_title: String = String(_current_stage_data.get("title", _current_stage_data.get("learning_objective", "Stage %s" % _current_stage_id)))
+
+	var lesson_id: String = String(_current_stage_data.get("lesson_id", ""))
+	var lesson: Dictionary = _catalog.get_lesson(lesson_id)
+	var raw_sections: Array = lesson.get("sections", []) as Array
+
+	var steps: Array[Dictionary] = []
+	if not raw_sections.is_empty():
+		var total: int = raw_sections.size()
+		for idx in range(total):
+			var sec: Dictionary = raw_sections[idx] as Dictionary
+			steps.append({
+				"speaker_label": String(sec.get("speaker", sec.get("header", "Guide"))),
+				"body_text": String(sec.get("body", sec.get("content", ""))),
+				"context_title": stage_title,
+				"step_index": idx + 1,
+				"total_steps": total
+			})
+	else:
+		steps.append({
+			"speaker_label": "Guide",
+			"body_text": "Welcome to %s" % stage_title,
+			"context_title": stage_title,
+			"step_index": 1,
+			"total_steps": 1
+		})
+
+	return {
+		"stage_id": _current_stage_id,
+		"stage_title": stage_title,
+		"dungeon_title": dungeon_title,
+		"lesson_steps": steps,
+		"is_restored_context": is_restored
+	}
+
 func _is_v1_puzzle_onboarding_stage(stage_id: String) -> bool:
 	return stage_id == "stage_01_01" or stage_id == "stage_01_02" or stage_id == "stage_01_03"
 

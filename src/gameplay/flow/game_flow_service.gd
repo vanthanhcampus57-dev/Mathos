@@ -87,13 +87,20 @@ func restore_from_save(save_snapshot: Dictionary) -> Dictionary:
 	if target_stage_id.is_empty():
 		target_stage_id = String(_catalog.get_config().get("initial_stage_id", "stage_01_01"))
 
+	var init_res: Dictionary = start_stage(target_stage_id)
+	if not bool(init_res.get("success", false)):
+		return init_res
+
 	_flow_state = "CONTINUE_RESTORE"
-	_current_stage_id = target_stage_id
+
+	var context: Dictionary = get_stage_context(true)
 
 	return {
 		"success": true,
 		"flow_state": _flow_state,
-		"target_stage_id": target_stage_id
+		"target_stage_id": target_stage_id,
+		"stage_context": context,
+		"orchestrator_result": init_res
 	}
 
 func advance_to_next_stage() -> Dictionary:
@@ -112,6 +119,9 @@ func advance_to_next_stage() -> Dictionary:
 		return _error(FlowErrorCodes.STAGE_LOCKED, "Next stage is locked or unavailable")
 
 	return start_stage(target_stage_id)
+
+func get_stage_context(is_restored: bool = false) -> Dictionary:
+	return _orchestrator.create_stage_context(is_restored)
 
 func get_flow_state() -> String:
 	return _flow_state
