@@ -277,7 +277,7 @@ static func _synthetic_catalog() -> ValidatedCatalog:
 	mat_q["answer_spec"] = {"pairs": [{"left_id": "left_a", "right_id": "right_a"}, {"left_id": "left_b", "right_id": "right_b"}]}
 
 	var questions: Dictionary = {"q_mc": mc_q, "q_inp": inp_q, "q_dd": dd_q, "q_mat": mat_q}
-	return ValidatedCatalog.new(config, {}, stages, {}, practices, {}, questions, {}, {}, {})
+	return ValidatedCatalog.new(config, {}, stages, {}, {}, practices, questions, {}, {}, {})
 
 static func _base_question(qid: String, interaction_type: String) -> Dictionary:
 	return {
