@@ -26,6 +26,7 @@ func _init() -> void:
 	all_passed = (preload("res://tests/unit/save/test_save_negative_paths.gd")).run_all_tests() and all_passed
 	all_passed = (preload("res://tests/integration/save/test_save_integration.gd")).run_all_tests() and all_passed
 	all_passed = bool((load("res://tests/integration/flow/test_flow_vertical_slice.gd") as GDScript).call("run_all_tests")) and all_passed
+	all_passed = bool((load("res://tests/integration/app/test_app_root_integration.gd") as GDScript).call("run_all_tests")) and all_passed
 
 	print("==========================================")
 	if all_passed:
