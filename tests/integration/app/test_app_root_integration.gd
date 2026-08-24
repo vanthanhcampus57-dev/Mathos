@@ -116,19 +116,19 @@ static func test_approot_003_new_game_delivers_stage_context() -> bool:
 		instance.call("start_new_game")
 
 	var shell: Variant = instance.call("get_presentation_shell") if instance.has_method("get_presentation_shell") else instance.get("_presentation_shell")
-	var context: Dictionary = {}
+	var stage_id: String = ""
 	if shell != null:
 		if shell.has_method("get_stage_context"):
 			var res: Variant = shell.call("get_stage_context")
 			if res is Dictionary:
-				context = res as Dictionary
-		if context.is_empty() and shell.get("_context_info") != null:
+				stage_id = String((res as Dictionary).get("stage_id", ""))
+		if stage_id.is_empty() and shell.get("_context_info") != null:
 			var info: Variant = shell.get("_context_info")
 			if info is PresentationModels.StageContextInfo:
-				context = (info as PresentationModels.StageContextInfo).to_dict()
+				stage_id = (info as PresentationModels.StageContextInfo).stage_id
 	instance.free()
 
-	if context.is_empty() or String(context.get("stage_id", "")) != "stage_01_01":
+	if stage_id != "stage_01_01":
 		print("[APPROOT-003] FAIL: StagePresentationShell did not receive valid stage_01_01 context")
 		return false
 

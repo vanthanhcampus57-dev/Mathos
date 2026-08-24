@@ -407,7 +407,8 @@ static func test_pres_011_continue_displays_restored_legal_stage_context() -> St
 		print("[PRES-011] FAIL: AppRoot missing GameFlowService or ProgressSaveBridge")
 		return "FAIL"
 
-	var reward: RewardGrant = RewardGrant.new("reward_01_01", "stage_01_01", 10, 10, ["card_strike"])
+	var empty_fragments: Array[String] = []
+	var reward: RewardGrant = RewardGrant.new("reward_01_01", "stage_01_01", 10, 10, empty_fragments)
 	bridge.commit_stage_and_checkpoint("stage_01_01", reward)
 	app.free()
 
