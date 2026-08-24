@@ -42,7 +42,7 @@ func bootstrap_runtime(custom_content_root: String = "") -> bool:
 		push_error("AppRoot: Failed to initialize ValidatedCatalog from root '%s'" % root_path)
 		return false
 
-	_player_persistent = PlayerPersistentState.new("player_001", 0, 0)
+	_player_persistent = PlayerPersistentState.new(PlayerPersistentState.CANONICAL_PLAYER_ID, 0, 0)
 	_save_file_store = SaveFileStore.new("user://")
 	_save_service = SaveService.new(_catalog, _save_file_store)
 	_progress_service = ProgressService.new(_catalog, _player_persistent)
