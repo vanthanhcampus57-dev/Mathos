@@ -30,7 +30,7 @@ func _initialize() -> void:
 		{"name": "Save Negative Paths", "func": Callable(preload("res://tests/unit/save/test_save_negative_paths.gd"), "run_all_tests")},
 		{"name": "Save Integration", "func": Callable(preload("res://tests/integration/save/test_save_integration.gd"), "run_all_tests")},
 		{"name": "Flow Vertical Slice", "func": Callable(preload("res://tests/integration/flow/test_flow_vertical_slice.gd"), "run_all_tests")},
-		{"name": "Question Presentation (B.1)", "func": Callable(preload("res://tests/unit/presentation/question/test_question_presentation.gd"), "run_all_tests")},
+		{"name": "Question Presentation (B.1)", "func": Callable(preload("res://tests/helpers/presentation/presentation_test_helper.gd"), "run_b1_question_presentation_suite")},
 		{"name": "Presentation Shell (B.2)", "func": Callable(preload("res://tests/unit/presentation/lesson/test_stage_presentation_shell.gd"), "run_all_tests").bind(self)}
 	]
 
@@ -42,10 +42,10 @@ func _initialize() -> void:
 		else:
 			fail_total += 1
 
-	# 2. B.3 Presentation Integration Suite (returns tri-state Dictionary)
-	var pres_b3_script: GDScript = load("res://tests/unit/presentation/test_presentation_integration.gd") as GDScript
-	if pres_b3_script != null and pres_b3_script.has_script_method("run_all_tests"):
-		var b3_res: Dictionary = pres_b3_script.call("run_all_tests") as Dictionary
+	# 2. B.3 Presentation + FLOW Integration Suite (returns tri-state Dictionary)
+	var pres_flow_script: GDScript = load("res://tests/integration/presentation/test_presentation_flow_integration.gd") as GDScript
+	if pres_flow_script != null and pres_flow_script.has_script_method("run_all_tests"):
+		var b3_res: Dictionary = pres_flow_script.call("run_all_tests") as Dictionary
 		pass_total += int(b3_res.get("pass", 0))
 		fail_total += int(b3_res.get("fail", 0))
 		waiting_total += int(b3_res.get("waiting", 0))
