@@ -47,15 +47,27 @@ func request_question(request: Dictionary, adaptive_recommendation: Dictionary =
 
 	var stage_id: String = String(request["stage_id"])
 	var stage: Dictionary = _catalog.get_stage(stage_id)
-	if stage.is_empty() or not stage.has("question_scope") or not (stage["question_scope"] is Dictionary):
-		return _error(QuestionErrorCodes.INVALID_QUESTION, "Active stage lacks canonical question_scope")
+	if stage.is_empty():
+		return _error(QuestionErrorCodes.INVALID_QUESTION, "Active stage '%s' not found in catalog" % stage_id)
+
+	var practice_id: String = String(stage.get("practice_id", ""))
+	if practice_id.is_empty():
+		return _error(QuestionErrorCodes.INVALID_QUESTION, "Active stage '%s' lacks practice_id" % stage_id)
+
+	var practice: Dictionary = _catalog.get_practice(practice_id)
+	if practice.is_empty():
+		return _error(QuestionErrorCodes.INVALID_QUESTION, "Practice '%s' for stage '%s' not found in catalog" % [practice_id, stage_id])
+
+	if not practice.has("question_scope") or not (practice["question_scope"] is Dictionary):
+		return _error(QuestionErrorCodes.INVALID_QUESTION, "Practice '%s' lacks canonical question_scope" % practice_id)
+
 	var request_scope: Dictionary = (request["scope"] as Dictionary).duplicate(true)
-	var stage_scope: Dictionary = stage["question_scope"] as Dictionary
+	var stage_scope: Dictionary = practice["question_scope"] as Dictionary
 	var stage_scope_error: String = _validate_scope(stage_scope)
 	if stage_scope_error != "":
-		return _error(QuestionErrorCodes.INVALID_QUESTION, "Stage question_scope invalid: " + stage_scope_error)
+		return _error(QuestionErrorCodes.INVALID_QUESTION, "Practice question_scope invalid: " + stage_scope_error)
 	if not _scope_is_equal_or_narrower(request_scope, stage_scope):
-		return _error(QuestionErrorCodes.INVALID_QUESTION, "QuestionRequest scope exceeds active Stage question_scope")
+		return _error(QuestionErrorCodes.INVALID_QUESTION, "QuestionRequest scope exceeds active Practice question_scope")
 
 	var context: String = String(request["context"])
 	var candidates: Array[Dictionary] = _catalog.query_questions(request_scope, context)
@@ -183,7 +195,7 @@ func _validate_scope(scope: Dictionary) -> String:
 	for subtopic_variant in scope["subtopic_ids"] as Array:
 		if not canonical_subtopics.has(String(subtopic_variant)):
 			return "subtopic_id is outside canonical topic"
-	if not (scope["difficulty_min"] is int) or not (scope["difficulty_max"] is int):
+	if not (scope["difficulty_min"] is int or scope["difficulty_min"] is float) or not (scope["difficulty_max"] is int or scope["difficulty_max"] is float):
 		return "difficulty_min/max must be int"
 	var min_diff: int = int(scope["difficulty_min"])
 	var max_diff: int = int(scope["difficulty_max"])

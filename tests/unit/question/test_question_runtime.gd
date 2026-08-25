@@ -32,6 +32,11 @@ static func run_all_tests() -> bool:
 	all_ok = question_024_exhaustion_error() and all_ok
 	all_ok = question_025_presentation_session_result_contract() and all_ok
 	all_ok = question_026_adaptive_narrowing_only() and all_ok
+	all_ok = qs_flow_001_valid_practice_scope() and all_ok
+	all_ok = qs_flow_002_missing_practice_id() and all_ok
+	all_ok = qs_flow_003_unknown_practice_id() and all_ok
+	all_ok = qs_flow_004_missing_question_scope() and all_ok
+	all_ok = qs_flow_005_no_learning_scope_fallback() and all_ok
 	return all_ok
 
 static func question_001_mc_correct() -> bool:
@@ -362,9 +367,11 @@ static func _request(scope: Dictionary) -> Dictionary:
 	}
 
 static func _service_catalog() -> ValidatedCatalog:
+	var cat_script = preload("res://src/content/repositories/validated_catalog.gd")
 	var config: Dictionary = {"performance_grade_thresholds": _thresholds()}
 	var stage_scope: Dictionary = _scope("dungeon_01", "trial_sample_event", [], 1, 3, [])
-	var stages: Dictionary = {"stage_01_01": {"stage_id": "stage_01_01", "dungeon_id": "dungeon_01", "question_scope": stage_scope}}
+	var stages: Dictionary = {"stage_01_01": {"stage_id": "stage_01_01", "dungeon_id": "dungeon_01", "practice_id": "practice_01_01"}}
+	var practice: Dictionary = {"practice_01_01": {"practice_id": "practice_01_01", "dungeon_id": "dungeon_01", "topic_id": "trial_sample_event", "question_scope": stage_scope}}
 	var question_a: Dictionary = _mc_question()
 	question_a["question_id"] = "question_a"
 	question_a["subtopic_id"] = "sample_space"
@@ -379,20 +386,22 @@ static func _service_catalog() -> ValidatedCatalog:
 	question_c["subtopic_id"] = "event_subset"
 	question_c["difficulty"] = 3
 	var questions: Dictionary = {"question_a": question_a, "question_b": question_b, "question_c": question_c}
-	return ValidatedCatalog.new(config, {}, stages, {}, {}, {}, questions, {}, {}, {})
+	return cat_script.new(config, {}, stages, {}, {}, practice, questions, {}, {}, {})
 
 
 static func _service_catalog_with_unusable_candidate() -> ValidatedCatalog:
+	var cat_script = preload("res://src/content/repositories/validated_catalog.gd")
 	var config: Dictionary = {"performance_grade_thresholds": _thresholds()}
 	var stage_scope: Dictionary = _scope("dungeon_01", "trial_sample_event", [], 1, 3, [])
-	var stages: Dictionary = {"stage_01_01": {"stage_id": "stage_01_01", "dungeon_id": "dungeon_01", "question_scope": stage_scope}}
+	var stages: Dictionary = {"stage_01_01": {"stage_id": "stage_01_01", "dungeon_id": "dungeon_01", "practice_id": "practice_01_01"}}
+	var practice: Dictionary = {"practice_01_01": {"practice_id": "practice_01_01", "dungeon_id": "dungeon_01", "topic_id": "trial_sample_event", "question_scope": stage_scope}}
 	var unusable: Dictionary = _mc_question()
 	unusable["question_id"] = "question_a_unusable"
 	unusable.erase("answer_spec")
 	var valid: Dictionary = _mc_question()
 	valid["question_id"] = "question_valid"
 	var questions: Dictionary = {"question_a_unusable": unusable, "question_valid": valid}
-	return ValidatedCatalog.new(config, {}, stages, {}, {}, {}, questions, {}, {}, {})
+	return cat_script.new(config, {}, stages, {}, {}, practice, questions, {}, {}, {})
 
 static func _has_exact_keys(data: Dictionary, fields: Array[String]) -> bool:
 	if data.size() != fields.size():
@@ -400,4 +409,87 @@ static func _has_exact_keys(data: Dictionary, fields: Array[String]) -> bool:
 	for field in fields:
 		if not data.has(field):
 			return false
+	return true
+
+# --- QS-FLOW-001..005 CANONICAL PRACTICE QUESTION-SCOPE TESTS ---
+
+static func _custom_catalog(stages: Dictionary, practice: Dictionary = {}) -> ValidatedCatalog:
+	var cat_script = preload("res://src/content/repositories/validated_catalog.gd")
+	var config: Dictionary = {"performance_grade_thresholds": _thresholds()}
+	return cat_script.new(config, {}, stages, {}, {}, practice, {}, {}, {}, {})
+
+static func qs_flow_001_valid_practice_scope() -> bool:
+	print("[QS-FLOW-001] Valid StageDefinition -> practice_id -> PracticeDefinition -> question_scope...")
+	var qs_script = preload("res://src/education/question/question_service.gd")
+	var service = qs_script.new(_service_catalog())
+	var request: Dictionary = _request(_scope("dungeon_01", "trial_sample_event", [], 1, 3, []))
+	var res: Dictionary = service.request_question(request)
+	if not bool(res.get("success", false)):
+		print("[QS-FLOW-001] FAIL: " + str(res))
+		return false
+	print("[QS-FLOW-001] PASS")
+	return true
+
+static func qs_flow_002_missing_practice_id() -> bool:
+	print("[QS-FLOW-002] Stage missing practice_id -> explicit QuestionService failure...")
+	var qs_script = preload("res://src/education/question/question_service.gd")
+	var stages: Dictionary = {"stage_01_01": {"stage_id": "stage_01_01", "dungeon_id": "dungeon_01"}}
+	var catalog = _custom_catalog(stages)
+	var service = qs_script.new(catalog)
+	var request: Dictionary = _request(_scope("dungeon_01", "trial_sample_event", [], 1, 3, []))
+	var res: Dictionary = service.request_question(request)
+	if bool(res.get("success", false)) or String(res.get("error_code", "")) != QuestionErrorCodes.INVALID_QUESTION:
+		print("[QS-FLOW-002] FAIL: " + str(res))
+		return false
+	print("[QS-FLOW-002] PASS")
+	return true
+
+static func qs_flow_003_unknown_practice_id() -> bool:
+	print("[QS-FLOW-003] Unknown practice_id -> explicit QuestionService failure...")
+	var qs_script = preload("res://src/education/question/question_service.gd")
+	var stages: Dictionary = {"stage_01_01": {"stage_id": "stage_01_01", "dungeon_id": "dungeon_01", "practice_id": "practice_unknown"}}
+	var catalog = _custom_catalog(stages)
+	var service = qs_script.new(catalog)
+	var request: Dictionary = _request(_scope("dungeon_01", "trial_sample_event", [], 1, 3, []))
+	var res: Dictionary = service.request_question(request)
+	if bool(res.get("success", false)) or String(res.get("error_code", "")) != QuestionErrorCodes.INVALID_QUESTION:
+		print("[QS-FLOW-003] FAIL: " + str(res))
+		return false
+	print("[QS-FLOW-003] PASS")
+	return true
+
+static func qs_flow_004_missing_question_scope() -> bool:
+	print("[QS-FLOW-004] PracticeDefinition missing question_scope -> explicit QuestionService failure...")
+	var qs_script = preload("res://src/education/question/question_service.gd")
+	var stages: Dictionary = {"stage_01_01": {"stage_id": "stage_01_01", "dungeon_id": "dungeon_01", "practice_id": "practice_01_01"}}
+	var practice: Dictionary = {"practice_01_01": {"practice_id": "practice_01_01", "dungeon_id": "dungeon_01"}}
+	var catalog = _custom_catalog(stages, practice)
+	var service = qs_script.new(catalog)
+	var request: Dictionary = _request(_scope("dungeon_01", "trial_sample_event", [], 1, 3, []))
+	var res: Dictionary = service.request_question(request)
+	if bool(res.get("success", false)) or String(res.get("error_code", "")) != QuestionErrorCodes.INVALID_QUESTION:
+		print("[QS-FLOW-004] FAIL: " + str(res))
+		return false
+	print("[QS-FLOW-004] PASS")
+	return true
+
+static func qs_flow_005_no_learning_scope_fallback() -> bool:
+	print("[QS-FLOW-005] Prove StageDefinition.learning_scope is NOT used as fallback...")
+	var qs_script = preload("res://src/education/question/question_service.gd")
+	var learning_scope: Dictionary = _scope("dungeon_01", "trial_sample_event", [], 1, 3, [])
+	var stages: Dictionary = {
+		"stage_01_01": {
+			"stage_id": "stage_01_01",
+			"dungeon_id": "dungeon_01",
+			"learning_scope": learning_scope
+		}
+	}
+	var catalog = _custom_catalog(stages)
+	var service = qs_script.new(catalog)
+	var request: Dictionary = _request(_scope("dungeon_01", "trial_sample_event", [], 1, 3, []))
+	var res: Dictionary = service.request_question(request)
+	if bool(res.get("success", false)) or String(res.get("error_code", "")) != QuestionErrorCodes.INVALID_QUESTION:
+		print("[QS-FLOW-005] FAIL: learning_scope was erroneously used as fallback: " + str(res))
+		return false
+	print("[QS-FLOW-005] PASS")
 	return true
