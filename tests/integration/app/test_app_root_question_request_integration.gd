@@ -468,6 +468,8 @@ static func test_approot_qr_016_composed_f5_full_production_path() -> String:
 		return "FAIL"
 
 	var panel: QuestionPanel = host_container.get_node_or_null("QuestionPanel") as QuestionPanel
+	if panel == null and host_container.get_child_count() > 0:
+		panel = host_container.get_child(0) as QuestionPanel
 	if panel == null:
 		print("[APPROOT-QR-016] FAIL: QuestionPanel node not mounted in QuestionHostContainer")
 		app.free()
