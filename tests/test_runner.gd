@@ -46,7 +46,8 @@ func _initialize() -> void:
 	# 2. Tri-state Presentation Integration Suites from both accepted lineages
 	var pres_suites: Array[String] = [
 		"res://tests/integration/presentation/test_presentation_flow_integration.gd",
-		"res://tests/unit/presentation/test_presentation_integration.gd"
+		"res://tests/unit/presentation/test_presentation_integration.gd",
+		"res://tests/integration/app/test_app_root_question_request_integration.gd"
 	]
 
 	for script_path in pres_suites:
