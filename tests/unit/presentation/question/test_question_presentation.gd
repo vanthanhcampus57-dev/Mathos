@@ -221,8 +221,18 @@ static func pres_008_invalid_question_definition_fails_explicitly() -> bool:
 	return true
 
 static func pres_012_question_mount_and_ui_visibility_regression() -> bool:
+	# 1. Verify production scene resource exists and instantiates cleanly
+	var scene_res: Resource = load("res://src/ui/question/question_panel.tscn")
+	if not (scene_res is PackedScene):
+		print("[PRES-012] FAIL: res://src/ui/question/question_panel.tscn resource missing or not a PackedScene")
+		return false
+
+	var panel: QuestionPanel = (scene_res as PackedScene).instantiate() as QuestionPanel
+	if panel == null:
+		print("[PRES-012] FAIL: Failed to instantiate QuestionPanel from res://src/ui/question/question_panel.tscn")
+		return false
+
 	var service: QuestionService = QuestionService.new(_synthetic_catalog())
-	var panel: QuestionPanel = QuestionPanel.new()
 	var controller: QuestionPresentationController = QuestionPresentationController.new(service, panel)
 
 	var host: MarginContainer = MarginContainer.new()
@@ -239,6 +249,21 @@ static func pres_012_question_mount_and_ui_visibility_regression() -> bool:
 		print("[PRES-012] FAIL: QuestionPresentationController does not own active session")
 		return false
 
+	# Verify Prompt Label
+	var prompt_label: Label = panel.get_node_or_null("MainVBox/PromptLabel") as Label
+	if prompt_label == null:
+		print("[PRES-012] FAIL: PromptLabel node does not exist in QuestionPanel scene tree")
+		return false
+
+	if prompt_label.text.is_empty():
+		print("[PRES-012] FAIL: PromptLabel text is empty")
+		return false
+
+	if not prompt_label.visible:
+		print("[PRES-012] FAIL: PromptLabel is not visible")
+		return false
+
+	# Verify Interaction View
 	var mc_view: MultipleChoiceView = panel.get_active_interaction_view() as MultipleChoiceView
 	if mc_view == null:
 		print("[PRES-012] FAIL: MultipleChoiceView does not exist on QuestionPanel")
@@ -256,6 +281,19 @@ static func pres_012_question_mount_and_ui_visibility_regression() -> bool:
 		print("[PRES-012] FAIL: MultipleChoiceView interaction node has zero custom minimum layout size")
 		return false
 
+	# Verify Option Buttons for all options returned in payload
+	var opt_a_btn: Button = mc_view.get_node_or_null("OptionsVBox/OptionButton_opt_a") as Button
+	var opt_b_btn: Button = mc_view.get_node_or_null("OptionsVBox/OptionButton_opt_b") as Button
+
+	if opt_a_btn == null or opt_b_btn == null:
+		print("[PRES-012] FAIL: Option buttons opt_a or opt_b not created inside MultipleChoiceView")
+		return false
+
+	if not opt_a_btn.visible or not opt_b_btn.visible:
+		print("[PRES-012] FAIL: Option buttons opt_a or opt_b are not visible")
+		return false
+
+	# Verify Submit Button
 	var submit_btn: Button = panel.get_node_or_null("MainVBox/SubmitButton") as Button
 	if submit_btn == null or not submit_btn.visible:
 		print("[PRES-012] FAIL: QuestionPanel does not have a visible SubmitButton path")
