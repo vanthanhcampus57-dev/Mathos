@@ -267,9 +267,14 @@ func _start_current_question() -> Dictionary:
 	var practice_data: Dictionary = _catalog.get_practice(practice_id)
 	var scope: Dictionary = practice_data.get("question_scope", {}) as Dictionary
 
+	var exclude_ids: Array[String] = []
 	var request: Dictionary = {
 		"request_id": "req_%s" % current_stage_id,
-		"scope": scope
+		"stage_id": current_stage_id,
+		"scope": scope,
+		"context": "practice",
+		"preferred_difficulty": null,
+		"exclude_question_ids": exclude_ids
 	}
 
 	if _question_controller.has_method("start_question"):
