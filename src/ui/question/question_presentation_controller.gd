@@ -65,6 +65,62 @@ func start_question(request: Dictionary, adaptive_recommendation: Dictionary = {
 	_completed = false
 	return response
 
+func bind_existing_session(session: Dictionary, question: Dictionary) -> Dictionary:
+	_active_session_id = ""
+	_active_interaction_type = ""
+	_completed = false
+
+	if _question_service == null:
+		var err_null: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION_SESSION, "QuestionService reference is null")
+		question_failed.emit(err_null)
+		return err_null
+
+	if not _question_service.has_active_session():
+		var err_no_session: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION_SESSION, "QuestionService has no active session to bind")
+		question_failed.emit(err_no_session)
+		return err_no_session
+
+	if not (session is Dictionary) or session.is_empty() or not session.has("session_id") or not (session["session_id"] is String):
+		var err_sess_shape: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION_SESSION, "Supplied session dictionary is missing session_id")
+		question_failed.emit(err_sess_shape)
+		return err_sess_shape
+
+	var active_sess_dict: Dictionary = _question_service.get_active_session()
+	var active_session_id: String = String(active_sess_dict.get("session_id", ""))
+	var supplied_session_id: String = String(session["session_id"])
+
+	if supplied_session_id != active_session_id or active_session_id.is_empty():
+		var err_mismatch: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION_SESSION, "Supplied session_id '%s' does not match active QuestionService session '%s'" % [supplied_session_id, active_session_id])
+		question_failed.emit(err_mismatch)
+		return err_mismatch
+
+	if not (question is Dictionary) or question.is_empty() or not question.has("question_id") or not question.has("interaction_type"):
+		var err_q_shape: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION, "Supplied question view dictionary is missing required fields")
+		question_failed.emit(err_q_shape)
+		return err_q_shape
+
+	if question.has("answer_spec"):
+		var err_leak: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION, "answer_spec leaked into presentation view")
+		question_failed.emit(err_leak)
+		return err_leak
+
+	if _question_panel != null:
+		var panel_ok: bool = _question_panel.setup_question(question)
+		if not panel_ok:
+			var err_panel: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION, "Failed to setup QuestionPanel with question view")
+			question_failed.emit(err_panel)
+			return err_panel
+
+	_active_session_id = supplied_session_id
+	_active_interaction_type = String(question["interaction_type"])
+	_completed = false
+
+	return {
+		"success": true,
+		"session": session.duplicate(true),
+		"question": question.duplicate(true)
+	}
+
 func submit_answer(interaction_payload: Dictionary) -> Dictionary:
 	if _question_service == null or _active_session_id.is_empty() or _completed:
 		return _error(QuestionErrorCodes.INVALID_QUESTION_SESSION, "No active or uncompleted QuestionSession")
