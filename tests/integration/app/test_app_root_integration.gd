@@ -25,8 +25,98 @@ static func run_all_tests() -> bool:
 	all_ok = test_approot_013_transient_state_excluded_from_restore() and all_ok
 	all_ok = test_approot_014_invalid_continue_fails_explicitly() and all_ok
 	all_ok = test_approot_015_normal_launch_uses_approot_tscn() and all_ok
+	all_ok = test_approot_016_question_request_canonical_construction() and all_ok
 
 	return all_ok
+
+# APPROOT-016: AppRoot constructs canonical six-field QuestionRequest accepted by QuestionService
+static func test_approot_016_question_request_canonical_construction() -> bool:
+	print("[APPROOT-016] Testing AppRoot canonical 6-field QuestionRequest construction...")
+	var app: Node = _instantiate_approot()
+	if app == null:
+		print("[APPROOT-016] FAIL: Unable to instantiate AppRoot scene")
+		return false
+
+	var start_res: Dictionary = app.call("start_new_game") as Dictionary
+	if not bool(start_res.get("success", false)):
+		app.free()
+		print("[APPROOT-016] FAIL: start_new_game failed")
+		return false
+
+	var current_stage_id: String = String((app.call("get_game_flow_service") as Object).call("get_current_stage_id"))
+	if current_stage_id != "stage_01_01":
+		app.free()
+		print("[APPROOT-016] FAIL: Expected active stage stage_01_01, got ", current_stage_id)
+		return false
+
+	var q_res: Dictionary = app.call("_start_current_question") as Dictionary
+	if not bool(q_res.get("success", false)):
+		app.free()
+		print("[APPROOT-016] FAIL: _start_current_question failed: ", q_res)
+		return false
+
+	var q_service: QuestionService = app.call("get_question_service") as QuestionService
+	if q_service == null or not q_service.has_active_session():
+		app.free()
+		print("[APPROOT-016] FAIL: QuestionService missing or has no active session after _start_current_question")
+		return false
+
+	var session: Dictionary = q_service.get_active_session()
+	if String(session.get("request_id", "")) != "req_stage_01_01":
+		app.free()
+		print("[APPROOT-016] FAIL: Session request_id mismatch")
+		return false
+
+	if String(session.get("context", "")) != "practice":
+		app.free()
+		print("[APPROOT-016] FAIL: Session context mismatch")
+		return false
+
+	var bad_missing_key: Dictionary = {
+		"request_id": "req_01",
+		"stage_id": "stage_01_01",
+		"scope": {},
+		"context": "practice",
+		"preferred_difficulty": null
+	}
+	var err_missing: Dictionary = q_service.request_question(bad_missing_key)
+	if bool(err_missing.get("success", false)):
+		app.free()
+		print("[APPROOT-016] FAIL: QuestionService accepted missing field request")
+		return false
+
+	var bad_extra_key: Dictionary = {
+		"request_id": "req_01",
+		"stage_id": "stage_01_01",
+		"scope": {},
+		"context": "practice",
+		"preferred_difficulty": null,
+		"exclude_question_ids": [],
+		"extra_alias": "bad"
+	}
+	var err_extra: Dictionary = q_service.request_question(bad_extra_key)
+	if bool(err_extra.get("success", false)):
+		app.free()
+		print("[APPROOT-016] FAIL: QuestionService accepted extra field request")
+		return false
+
+	var bad_context: Dictionary = {
+		"request_id": "req_01",
+		"stage_id": "stage_01_01",
+		"scope": {},
+		"context": "invalid_context_name",
+		"preferred_difficulty": null,
+		"exclude_question_ids": []
+	}
+	var err_ctx: Dictionary = q_service.request_question(bad_context)
+	if bool(err_ctx.get("success", false)):
+		app.free()
+		print("[APPROOT-016] FAIL: QuestionService accepted invalid context")
+		return false
+
+	app.free()
+	print("[APPROOT-016] PASS: AppRoot canonical six-field QuestionRequest construction verified")
+	return true
 
 static func _has_approot_composition() -> bool:
 	var scene_path: String = "res://src/app/app_root.tscn"
@@ -39,7 +129,7 @@ static func _has_approot_composition() -> bool:
 	if instance == null:
 		return false
 	if instance.has_method("bootstrap_runtime"):
-		instance.call("bootstrap_runtime")
+		instance.call("bootstrap_runtime", "res://tests/fixtures/content/valid_catalog")
 	var has_comp: bool = (instance.get("game_flow") != null or instance.has_method("get_game_flow_service") or instance.has_method("start_new_game"))
 	instance.free()
 	return has_comp
@@ -53,7 +143,7 @@ static func _instantiate_approot() -> Node:
 		return null
 	var app: Node = packed.instantiate()
 	if app != null and app.has_method("bootstrap_runtime"):
-		app.call("bootstrap_runtime")
+		app.call("bootstrap_runtime", "res://tests/fixtures/content/valid_catalog")
 	return app
 
 # APPROOT-001 / APPROOT-CONTINUE-E2E-01: Normal launch instantiates real AppRoot scene composition
