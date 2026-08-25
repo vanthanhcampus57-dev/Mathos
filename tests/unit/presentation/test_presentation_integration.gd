@@ -70,9 +70,12 @@ static func _get_synthetic_catalog() -> ValidatedCatalog:
 		"interaction_types": []
 	}
 	var stages: Dictionary = {
-		"stage_01_01": {"stage_id": "stage_01_01", "dungeon_id": "dungeon_01", "question_scope": stage_scope},
-		"stage_01_02": {"stage_id": "stage_01_02", "dungeon_id": "dungeon_01", "question_scope": stage_scope},
-		"stage_01_03": {"stage_id": "stage_01_03", "dungeon_id": "dungeon_01", "question_scope": stage_scope}
+		"stage_01_01": {"stage_id": "stage_01_01", "dungeon_id": "dungeon_01", "practice_id": "practice_01_01", "question_scope": stage_scope},
+		"stage_01_02": {"stage_id": "stage_01_02", "dungeon_id": "dungeon_01", "practice_id": "practice_01_01", "question_scope": stage_scope},
+		"stage_01_03": {"stage_id": "stage_01_03", "dungeon_id": "dungeon_01", "practice_id": "practice_01_01", "question_scope": stage_scope}
+	}
+	var practices: Dictionary = {
+		"practice_01_01": {"practice_id": "practice_01_01", "question_scope": stage_scope}
 	}
 
 	var mc_q: Dictionary = _base_question("q_mc", "multiple_choice")
@@ -98,7 +101,7 @@ static func _get_synthetic_catalog() -> ValidatedCatalog:
 	mat_q["answer_spec"] = {"pairs": [{"left_id": "left_a", "right_id": "right_a"}, {"left_id": "left_b", "right_id": "right_b"}]}
 
 	var questions: Dictionary = {"q_mc": mc_q, "q_inp": inp_q, "q_dd": dd_q, "q_mat": mat_q}
-	return ValidatedCatalog.new(config, {}, stages, {}, {}, {}, questions, {}, {}, {})
+	return ValidatedCatalog.new(config, {}, stages, {}, {}, practices, questions, {}, {}, {})
 
 static func _base_question(qid: String, interaction_type: String) -> Dictionary:
 	return {
@@ -374,11 +377,66 @@ static func test_pres_010_stage_1_1_to_1_3_has_no_combat_dependency() -> String:
 	print("[PRES-010] PASS: Stage 1.1-1.3 presentation has no Combat or Intent dependency")
 	return "PASS"
 
-# PRES-011 — Continue displays restored legal stage context (WAITING_ON_DEPENDENCY)
+# PRES-011 — Continue displays restored legal stage context
 static func test_pres_011_continue_displays_restored_legal_stage_context() -> String:
-	# Approved src/gameplay/flow production, StageOrchestrator class, and Continue -> restored StageContext presentation handoff are absent on canonical main b2bb5c0
-	print("[PRES-011] WAITING_ON_DEPENDENCY: approved src/gameplay/flow production and StageOrchestrator handoff absent on canonical main b2bb5c0")
-	return "WAITING_ON_DEPENDENCY"
+	print("[PRES-011] Testing Continue displays restored legal stage context...")
+	var packed: PackedScene = ResourceLoader.load("res://src/app/app_root.tscn") as PackedScene
+	if packed == null:
+		print("[PRES-011] FAIL: Unable to load res://src/app/app_root.tscn")
+		return "FAIL"
+
+	var app: AppRoot = packed.instantiate() as AppRoot
+	if app == null:
+		print("[PRES-011] FAIL: Unable to instantiate AppRoot scene")
+		return "FAIL"
+	app.bootstrap_runtime()
+
+	# 1. Start new game to initialize baseline
+	var start_res: Dictionary = app.start_new_game()
+	if not bool(start_res.get("success", false)):
+		app.free()
+		print("[PRES-011] FAIL: AppRoot start_new_game failed")
+		return "FAIL"
+
+	# 2. Complete stage_01_01 to save checkpoint stage_01_02
+	var flow: GameFlowService = app.get_game_flow_service()
+	var bridge: ProgressSaveBridge = app.get_progress_save_bridge()
+
+	if flow == null or bridge == null:
+		app.free()
+		print("[PRES-011] FAIL: AppRoot missing GameFlowService or ProgressSaveBridge")
+		return "FAIL"
+
+	var orch: StageOrchestrator = flow.get_orchestrator()
+	orch.set("_current_phase", "QUESTION_COMPLETE")
+	var prep_res: Dictionary = orch.prepare_stage_clear_commit()
+	var reward: RewardGrant = prep_res.get("reward_grant") as RewardGrant
+	bridge.commit_stage_and_checkpoint("stage_01_01", reward)
+	app.free()
+
+	# 3. Instantiate fresh AppRoot and execute Continue
+	var app_continue: AppRoot = packed.instantiate() as AppRoot
+	if app_continue == null:
+		print("[PRES-011] FAIL: Unable to instantiate fresh AppRoot for Continue")
+		return "FAIL"
+	app_continue.bootstrap_runtime()
+	var cont_res: Dictionary = app_continue.continue_game()
+	if not bool(cont_res.get("success", false)):
+		app_continue.free()
+		print("[PRES-011] FAIL: AppRoot continue_game failed")
+		return "FAIL"
+
+	var restored_context: Dictionary = cont_res.get("stage_context", {}) as Dictionary
+	var is_restored: bool = bool(restored_context.get("is_restored_context", false))
+	var entry_stage: String = String(restored_context.get("stage_id", ""))
+	app_continue.free()
+
+	if not is_restored or entry_stage != "stage_01_02":
+		print("[PRES-011] FAIL: Restored context invalid: stage='%s', is_restored=%s" % [entry_stage, str(is_restored)])
+		return "FAIL"
+
+	print("[PRES-011] PASS: Real AppRoot Continue delivered restored legal StageContext (stage_01_02, is_restored=true)")
+	return "PASS"
 
 # PRES-012 — Question regression PASS
 static func test_pres_012_question_regression_pass() -> String:

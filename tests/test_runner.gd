@@ -1,8 +1,8 @@
 class_name TestRunner
 extends SceneTree
 
-## Headless Test Runner for Mathos task verification.
-## Executes TEST-BOOT-001, TEST-SMOKE-001, TEST-CONFIG-001, CONTENT-001..028, QUESTION-001..026, Player/Reward contracts, PROGRESS-001..015, SAVE suites, and PRES suites.
+## Headless Test Runner for Mathos canonical D1 final integration task.
+## Executes TEST-BOOT-001, TEST-SMOKE-001, TEST-CONFIG-001, CONTENT-001..028, QUESTION-001..026, Player/Reward contracts, PROGRESS-001..015, SAVE suites, FLOW-001..012, APPROOT-001..015, and PRES suites from both accepted lineages.
 ## Implements truthful tri-state test accounting (PASS, FAIL, WAITING).
 
 func _initialize() -> void:
@@ -19,18 +19,19 @@ func _initialize() -> void:
 		{"name": "Smoke Test", "func": Callable(self, "run_smoke_test")},
 		{"name": "Boot Test", "func": Callable(self, "run_boot_test")},
 		{"name": "Config Test", "func": Callable(self, "run_config_test")},
-		{"name": "Content Repository", "func": Callable(preload("res://tests/content/test_content_repository.gd"), "run_all_tests")},
-		{"name": "Question Runtime", "func": Callable(preload("res://tests/unit/question/test_question_runtime.gd"), "run_all_tests")},
-		{"name": "Reward Grant", "func": Callable(preload("res://tests/unit/reward/test_reward_grant.gd"), "run_all_tests")},
-		{"name": "Player Foundation", "func": Callable(preload("res://tests/unit/player/test_player_foundation.gd"), "run_all_tests")},
-		{"name": "Progress Service", "func": Callable(preload("res://tests/unit/progress/test_progress_service.gd"), "run_all_tests")},
-		{"name": "Progress Integration", "func": Callable(preload("res://tests/integration/progress/test_progress_integration.gd"), "run_all_tests")},
+		{"name": "Content Repository", "func": Callable(TestContentRepository, "run_all_tests")},
+		{"name": "Question Runtime", "func": Callable(TestQuestionRuntime, "run_all_tests")},
+		{"name": "Reward Grant", "func": Callable(TestRewardGrant, "run_all_tests")},
+		{"name": "Player Foundation", "func": Callable(TestPlayerFoundation, "run_all_tests")},
+		{"name": "Progress Service", "func": Callable(TestProgressService, "run_all_tests")},
+		{"name": "Progress Integration", "func": Callable(TestProgressIntegration, "run_all_tests")},
 		{"name": "Save Contract", "func": Callable(preload("res://tests/unit/save/test_save_contract.gd"), "run_all_tests")},
 		{"name": "Save Service IO", "func": Callable(preload("res://tests/unit/save/test_save_service_io.gd"), "run_all_tests")},
 		{"name": "Save Negative Paths", "func": Callable(preload("res://tests/unit/save/test_save_negative_paths.gd"), "run_all_tests")},
 		{"name": "Save Integration", "func": Callable(preload("res://tests/integration/save/test_save_integration.gd"), "run_all_tests")},
-		{"name": "Flow Vertical Slice", "func": Callable(preload("res://tests/integration/flow/test_flow_vertical_slice.gd"), "run_all_tests")},
-		{"name": "Question Presentation (B.1)", "func": Callable(preload("res://tests/helpers/presentation/presentation_test_helper.gd"), "run_b1_question_presentation_suite")},
+		{"name": "GameFlow Vertical Slice", "func": Callable(load("res://tests/integration/flow/test_flow_vertical_slice.gd") as GDScript, "run_all_tests")},
+		{"name": "AppRoot Integration", "func": Callable(load("res://tests/integration/app/test_app_root_integration.gd") as GDScript, "run_all_tests")},
+		{"name": "Question Presentation (B.1)", "func": Callable(preload("res://tests/unit/presentation/question/test_question_presentation.gd"), "run_all_tests")},
 		{"name": "Presentation Shell (B.2)", "func": Callable(preload("res://tests/unit/presentation/lesson/test_stage_presentation_shell.gd"), "run_all_tests").bind(self)}
 	]
 
@@ -42,15 +43,21 @@ func _initialize() -> void:
 		else:
 			fail_total += 1
 
-	# 2. B.3 Presentation + FLOW Integration Suite (returns tri-state Dictionary)
-	var pres_flow_script: GDScript = load("res://tests/integration/presentation/test_presentation_flow_integration.gd") as GDScript
-	if pres_flow_script != null and pres_flow_script.has_script_method("run_all_tests"):
-		var b3_res: Dictionary = pres_flow_script.call("run_all_tests") as Dictionary
-		pass_total += int(b3_res.get("pass", 0))
-		fail_total += int(b3_res.get("fail", 0))
-		waiting_total += int(b3_res.get("waiting", 0))
-	else:
-		fail_total += 1
+	# 2. Tri-state Presentation Integration Suites from both accepted lineages
+	var pres_suites: Array[String] = [
+		"res://tests/integration/presentation/test_presentation_flow_integration.gd",
+		"res://tests/unit/presentation/test_presentation_integration.gd"
+	]
+
+	for script_path in pres_suites:
+		var script: GDScript = load(script_path) as GDScript
+		if script != null and script.has_script_method("run_all_tests"):
+			var tri_res: Dictionary = script.call("run_all_tests") as Dictionary
+			pass_total += int(tri_res.get("pass", 0))
+			fail_total += int(tri_res.get("fail", 0))
+			waiting_total += int(tri_res.get("waiting", 0))
+		else:
+			fail_total += 1
 
 	print("==========================================")
 	print("FULL CANONICAL TEST RUNNER SUMMARY:")
@@ -99,7 +106,8 @@ func _count_suite_tests(name: String) -> int:
 		"Save Service IO": return 30
 		"Save Negative Paths": return 20
 		"Save Integration": return 17
-		"Flow Vertical Slice": return 12
+		"GameFlow Vertical Slice": return 12
+		"AppRoot Integration": return 15
 		"Question Presentation (B.1)": return 7
 		"Presentation Shell (B.2)": return 12
 		_: return 1
