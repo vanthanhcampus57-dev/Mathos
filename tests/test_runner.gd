@@ -53,10 +53,13 @@ func _initialize() -> void:
 	for script_path in pres_suites:
 		var script: GDScript = load(script_path) as GDScript
 		if script != null and script.has_script_method("run_all_tests"):
-			var tri_res: Dictionary = script.call("run_all_tests") as Dictionary
-			pass_total += int(tri_res.get("pass", 0))
-			fail_total += int(tri_res.get("fail", 0))
-			waiting_total += int(tri_res.get("waiting", 0))
+			var tri_res: Variant = script.call("run_all_tests")
+			if tri_res is Signal:
+				tri_res = await tri_res
+			var tri_dict: Dictionary = tri_res as Dictionary
+			pass_total += int(tri_dict.get("pass", 0))
+			fail_total += int(tri_dict.get("fail", 0))
+			waiting_total += int(tri_dict.get("waiting", 0))
 		else:
 			fail_total += 1
 
