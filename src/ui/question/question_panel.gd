@@ -14,9 +14,79 @@ var _feedback_text: String = ""
 var _is_correct: bool = false
 var _has_feedback: bool = false
 
+# UI Control nodes
+var _main_vbox: VBoxContainer = null
+var _objective_label: Label = null
+var _prompt_label: Label = null
+var _interaction_container: MarginContainer = null
+var _feedback_label: Label = null
+var _submit_button: Button = null
+
+func _ready() -> void:
+	_ensure_ui_built()
+
+func _ensure_ui_built() -> void:
+	if _main_vbox != null:
+		return
+
+	set_anchors_preset(PRESET_FULL_RECT)
+	size_flags_horizontal = SIZE_EXPAND_FILL
+	size_flags_vertical = SIZE_EXPAND_FILL
+	custom_minimum_size = Vector2(400, 300)
+
+	_main_vbox = VBoxContainer.new()
+	_main_vbox.name = "MainVBox"
+	_main_vbox.set_anchors_preset(PRESET_FULL_RECT)
+	_main_vbox.size_flags_horizontal = SIZE_EXPAND_FILL
+	_main_vbox.size_flags_vertical = SIZE_EXPAND_FILL
+	_main_vbox.add_theme_constant_override("separation", 12)
+	add_child(_main_vbox)
+
+	_objective_label = Label.new()
+	_objective_label.name = "ObjectiveLabel"
+	_objective_label.visible = false
+	_main_vbox.add_child(_objective_label)
+
+	_prompt_label = Label.new()
+	_prompt_label.name = "PromptLabel"
+	_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_prompt_label.text = _prompt_text
+	_prompt_label.visible = not _prompt_text.is_empty()
+	_main_vbox.add_child(_prompt_label)
+
+	_interaction_container = MarginContainer.new()
+	_interaction_container.name = "InteractionContainer"
+	_interaction_container.size_flags_horizontal = SIZE_EXPAND_FILL
+	_interaction_container.size_flags_vertical = SIZE_EXPAND_FILL
+	_main_vbox.add_child(_interaction_container)
+
+	_feedback_label = Label.new()
+	_feedback_label.name = "FeedbackLabel"
+	_feedback_label.visible = _has_feedback
+	_feedback_label.text = _feedback_text
+	_main_vbox.add_child(_feedback_label)
+
+	_submit_button = Button.new()
+	_submit_button.name = "SubmitButton"
+	_submit_button.text = "Submit Answer"
+	_submit_button.custom_minimum_size = Vector2(160, 40)
+	_submit_button.pressed.connect(_on_submit_button_pressed)
+	_main_vbox.add_child(_submit_button)
+
+	if _active_interaction_view != null and _active_interaction_view.get_parent() == null:
+		_interaction_container.add_child(_active_interaction_view)
+
 func setup_question(question_view: Dictionary) -> bool:
 	_question_view = {}
-	_active_interaction_view = null
+	if _active_interaction_view != null:
+		if _active_interaction_view.get_parent() != null:
+			_active_interaction_view.get_parent().remove_child(_active_interaction_view)
+		if _active_interaction_view.is_inside_tree():
+			_active_interaction_view.queue_free()
+		else:
+			_active_interaction_view.free()
+		_active_interaction_view = null
+
 	_prompt_text = ""
 	_objective_text = ""
 	_feedback_text = ""
@@ -70,8 +140,27 @@ func setup_question(question_view: Dictionary) -> bool:
 				return false
 			_active_interaction_view = mat_view
 
+	_ensure_ui_built()
+
+	if _prompt_label != null:
+		_prompt_label.text = _prompt_text
+		_prompt_label.visible = not _prompt_text.is_empty()
+
+	if _objective_label != null:
+		_objective_label.text = _objective_text
+		_objective_label.visible = not _objective_text.is_empty()
+
+	if _feedback_label != null:
+		_feedback_label.visible = false
+		_feedback_label.text = ""
+
 	if _active_interaction_view != null:
-		add_child(_active_interaction_view)
+		if _active_interaction_view.get_parent() != null:
+			_active_interaction_view.get_parent().remove_child(_active_interaction_view)
+		if _interaction_container != null:
+			_interaction_container.add_child(_active_interaction_view)
+		else:
+			add_child(_active_interaction_view)
 	return true
 
 func get_current_interaction_payload() -> Dictionary:
@@ -91,6 +180,10 @@ func show_feedback(attempt_result: Dictionary) -> bool:
 	_is_correct = bool(attempt_result["is_correct"])
 	_feedback_text = String(attempt_result["feedback_text"])
 	_has_feedback = true
+
+	if _feedback_label != null:
+		_feedback_label.text = "[%s] %s" % ["CORRECT" if _is_correct else "INCORRECT", _feedback_text]
+		_feedback_label.visible = true
 	return true
 
 func get_prompt_text() -> String:
@@ -110,3 +203,6 @@ func has_feedback() -> bool:
 
 func get_active_interaction_view() -> Control:
 	return _active_interaction_view
+
+func _on_submit_button_pressed() -> void:
+	request_submit()

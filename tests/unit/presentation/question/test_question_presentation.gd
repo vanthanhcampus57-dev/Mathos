@@ -1,7 +1,7 @@
 class_name TestQuestionPresentation
 extends RefCounted
 
-## Unit test suite for QuestionPresentationController, QuestionPanel, and Interaction Views (PRES-001..008).
+## Unit test suite for QuestionPresentationController, QuestionPanel, and Interaction Views (PRES-001..008, PRES-012).
 
 static func run_all_tests() -> bool:
 	print("--- RUNNING QUESTION PRESENTATION SUITE ---")
@@ -13,6 +13,7 @@ static func run_all_tests() -> bool:
 	all_ok = pres_005_feedback_uses_attempt_result() and all_ok
 	all_ok = pres_006_completion_event_exactly_once() and all_ok
 	all_ok = pres_008_invalid_question_definition_fails_explicitly() and all_ok
+	all_ok = pres_012_question_mount_and_ui_visibility_regression() and all_ok
 	return all_ok
 
 static func pres_001_multiple_choice_render_and_submit() -> bool:
@@ -217,6 +218,50 @@ static func pres_008_invalid_question_definition_fails_explicitly() -> bool:
 		return false
 
 	print("[PRES-008] PASS")
+	return true
+
+static func pres_012_question_mount_and_ui_visibility_regression() -> bool:
+	var service: QuestionService = QuestionService.new(_synthetic_catalog())
+	var panel: QuestionPanel = QuestionPanel.new()
+	var controller: QuestionPresentationController = QuestionPresentationController.new(service, panel)
+
+	var host: MarginContainer = MarginContainer.new()
+	host.name = "QuestionHostContainer"
+	host.add_child(panel)
+
+	var request: Dictionary = _request("multiple_choice")
+	var start_res: Dictionary = controller.start_question(request)
+	if not bool(start_res.get("success", false)):
+		print("[PRES-012] FAIL: start_question failed: ", start_res)
+		return false
+
+	if not controller.has_active_session():
+		print("[PRES-012] FAIL: QuestionPresentationController does not own active session")
+		return false
+
+	var mc_view: MultipleChoiceView = panel.get_active_interaction_view() as MultipleChoiceView
+	if mc_view == null:
+		print("[PRES-012] FAIL: MultipleChoiceView does not exist on QuestionPanel")
+		return false
+
+	if mc_view.get_parent() == null:
+		print("[PRES-012] FAIL: MultipleChoiceView interaction node is not mounted under parent container")
+		return false
+
+	if not mc_view.visible:
+		print("[PRES-012] FAIL: MultipleChoiceView interaction node is not visible")
+		return false
+
+	if mc_view.custom_minimum_size.x <= 0 or mc_view.custom_minimum_size.y <= 0:
+		print("[PRES-012] FAIL: MultipleChoiceView interaction node has zero custom minimum layout size")
+		return false
+
+	var submit_btn: Button = panel.get_node_or_null("MainVBox/SubmitButton") as Button
+	if submit_btn == null or not submit_btn.visible:
+		print("[PRES-012] FAIL: QuestionPanel does not have a visible SubmitButton path")
+		return false
+
+	print("[PRES-012] PASS")
 	return true
 
 static func _request(interaction_type: String) -> Dictionary:
