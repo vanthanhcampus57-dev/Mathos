@@ -67,6 +67,10 @@ func set_stage_context(data: Variant) -> void:
 func set_view_mode(mode: ViewMode) -> void:
 	_current_mode = mode
 
+	var header_bar: Control = _get_header_bar()
+	if header_bar != null:
+		header_bar.visible = (_current_mode != ViewMode.MODE_ENTRY)
+
 	var start_game_container: Control = _get_start_game_container()
 	if start_game_container != null:
 		start_game_container.visible = (_current_mode == ViewMode.MODE_ENTRY)
@@ -127,21 +131,19 @@ func is_restored_context_displayed() -> bool:
 	return _context_info != null and _context_info.is_restored_context
 
 func _update_header() -> void:
-	if _context_info == null:
-		return
-
 	var stage_title_label: Label = _get_stage_title_label()
 	if stage_title_label != null:
-		stage_title_label.text = _context_info.stage_title
+		stage_title_label.text = _context_info.stage_title if _context_info != null else ""
 
 	var dungeon_title_label: Label = _get_dungeon_title_label()
 	if dungeon_title_label != null:
-		dungeon_title_label.text = _context_info.dungeon_title
+		dungeon_title_label.text = _context_info.dungeon_title if _context_info != null else ""
 
 	var restored_badge_label: Label = _get_restored_badge_label()
 	if restored_badge_label != null:
-		restored_badge_label.visible = _context_info.is_restored_context
-		restored_badge_label.text = "[RESTORED STATE]" if _context_info.is_restored_context else ""
+		var is_restored: bool = _context_info != null and _context_info.is_restored_context
+		restored_badge_label.visible = is_restored
+		restored_badge_label.text = "[RESTORED STATE]" if is_restored else ""
 
 func _on_new_game_pressed() -> void:
 	new_game_requested.emit()
@@ -155,6 +157,9 @@ func _on_lesson_completed() -> void:
 
 func _on_stage_continue() -> void:
 	stage_continue_requested.emit()
+
+func _get_header_bar() -> Control:
+	return get_node_or_null("VBoxContainer/HeaderBar") as Control
 
 func _get_stage_title_label() -> Label:
 	return get_node_or_null("VBoxContainer/HeaderBar/StageTitleLabel") as Label

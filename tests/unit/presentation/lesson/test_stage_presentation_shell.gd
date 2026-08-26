@@ -2,7 +2,7 @@ class_name TestStagePresentationShell
 extends RefCounted
 
 ## Unit test suite for StagePresentationShell, LessonPanel, StageCompletePanel,
-## and presentation models (supporting PRES-009, PRES-010, PRES-011).
+## and presentation models (supporting PRES-009, PRES-010, PRES-011, PRES-STARTUP-LEAK).
 
 static func run_all_tests(tree: SceneTree = null) -> bool:
 	print("--- RUNNING PRESENTATION UI SHELL SUITE ---")
@@ -10,6 +10,7 @@ static func run_all_tests(tree: SceneTree = null) -> bool:
 	all_ok = test_models_neutral_data() and all_ok
 	all_ok = test_shell_instantiation_and_nodes_exist(tree) and all_ok
 	all_ok = test_start_new_game_entry_presentation(tree) and all_ok
+	all_ok = test_entry_mode_does_not_expose_restored_header(tree) and all_ok
 	all_ok = test_stage_title_and_context(tree) and all_ok
 	all_ok = test_lesson_panel_pagination_and_continue(tree) and all_ok
 	all_ok = test_question_host_container_ready(tree) and all_ok
@@ -116,6 +117,45 @@ static func test_start_new_game_entry_presentation(tree: SceneTree = null) -> bo
 
 	_remove_node_from_tree(shell)
 	print("[PRES-SHELL-002] PASS")
+	return true
+
+static func test_entry_mode_does_not_expose_restored_header(tree: SceneTree = null) -> bool:
+	var scene: PackedScene = load("res://src/ui/stage/stage_presentation_shell.tscn")
+	var shell: StagePresentationShell = scene.instantiate() as StagePresentationShell
+	_add_node_to_tree(shell, tree)
+
+	# In MODE_ENTRY (default upon ready), HeaderBar and RestoredBadgeLabel must not be visible
+	var header: Control = shell._get_header_bar()
+	var badge: Label = shell._get_restored_badge_label()
+
+	if header != null and header.visible:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-STARTUP-LEAK", "HeaderBar is visible during MODE_ENTRY")
+
+	if badge != null and badge.visible:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-STARTUP-LEAK", "RestoredBadgeLabel is visible during MODE_ENTRY")
+
+	# Even if set_stage_context is called with is_restored_context=true while in MODE_ENTRY
+	shell.set_stage_context(_sample_context("stage_01_01", true))
+
+	if header != null and header.visible:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-STARTUP-LEAK", "HeaderBar exposed restored context during MODE_ENTRY")
+
+	# Transitioning to MODE_LESSON must reveal header and badge for restored context
+	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_LESSON)
+
+	if header == null or not header.visible:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-STARTUP-LEAK", "HeaderBar failed to become visible in MODE_LESSON")
+
+	if badge == null or not badge.visible:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-STARTUP-LEAK", "RestoredBadgeLabel failed to become visible in MODE_LESSON for restored context")
+
+	_remove_node_from_tree(shell)
+	print("[PRES-STARTUP-LEAK] PASS")
 	return true
 
 static func test_stage_title_and_context(tree: SceneTree = null) -> bool:
@@ -232,6 +272,7 @@ static func test_restored_stage_context_display_pres_011(tree: SceneTree = null)
 
 	var restored_ctx: PresentationModels.StageContextInfo = _sample_context("stage_01_02", true)
 	shell.set_stage_context(restored_ctx)
+	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_LESSON)
 
 	if not shell.is_restored_context_displayed():
 		_remove_node_from_tree(shell)
@@ -239,7 +280,7 @@ static func test_restored_stage_context_display_pres_011(tree: SceneTree = null)
 	var badge: Label = shell._get_restored_badge_label()
 	if badge == null or not badge.visible:
 		_remove_node_from_tree(shell)
-		return _fail("PRES-011", "Restored badge label is not visible for restored context")
+		return _fail("PRES-011", "Restored badge label is not visible for restored context in active stage mode")
 
 	_remove_node_from_tree(shell)
 	print("[PRES-011] PASS")
