@@ -25,7 +25,7 @@ class RequestSpyController:
 		return {}
 
 static func run_all_tests() -> Dictionary:
-	print("--- RUNNING APPROOT QUESTIONREQUEST CONTRACT SUITE (APPROOT-QR-001..015) ---")
+	print("--- RUNNING APPROOT QUESTIONREQUEST CONTRACT SUITE (APPROOT-QR-001..016) ---")
 	var passes: int = 0
 	var fails: int = 0
 	var waiting: int = 0
@@ -45,7 +45,8 @@ static func run_all_tests() -> Dictionary:
 		{"code": "APPROOT-QR-012", "func": Callable(TestAppRootQuestionRequestIntegration, "test_approot_qr_012_incorrect_stage_id_detected")},
 		{"code": "APPROOT-QR-013", "func": Callable(TestAppRootQuestionRequestIntegration, "test_approot_qr_013_approot_request_accepted_by_service")},
 		{"code": "APPROOT-QR-014", "func": Callable(TestAppRootQuestionRequestIntegration, "test_approot_qr_014_approot_request_creates_active_session")},
-		{"code": "APPROOT-QR-015", "func": Callable(TestAppRootQuestionRequestIntegration, "test_approot_qr_015_approot_request_returns_question_and_interaction")}
+		{"code": "APPROOT-QR-015", "func": Callable(TestAppRootQuestionRequestIntegration, "test_approot_qr_015_approot_request_returns_question_and_interaction")},
+		{"code": "APPROOT-QR-016", "func": Callable(TestAppRootQuestionRequestIntegration, "test_approot_qr_016_composed_f5_full_production_path")}
 	]
 
 	for t in tests:
@@ -427,4 +428,71 @@ static func test_approot_qr_015_approot_request_returns_question_and_interaction
 		return "FAIL"
 
 	print("[APPROOT-QR-015] PASS: Returned real question_id='%s', interaction_type='%s'" % [question_id, interaction_type])
+	return "PASS"
+
+# APPROOT-QR-016: Full composed production F5 route validation (Start New Game -> Lesson -> Start Puzzle -> QuestionPanel populated)
+static func test_approot_qr_016_composed_f5_full_production_path() -> String:
+	print("[APPROOT-QR-016] Testing full composed production F5 route (Start New Game -> Lesson -> Start Puzzle)...")
+	var packed: PackedScene = load("res://src/app/app_root.tscn") as PackedScene
+	if packed == null:
+		print("[APPROOT-QR-016] FAIL: Unable to load app_root.tscn")
+		return "FAIL"
+
+	var app: AppRoot = packed.instantiate() as AppRoot
+	if app == null:
+		print("[APPROOT-QR-016] FAIL: Unable to instantiate AppRoot")
+		return "FAIL"
+
+	app.bootstrap_runtime("res://tests/fixtures/content/valid_catalog")
+	app.start_new_game()
+
+	var pres_shell: StagePresentationShell = app.get_presentation_shell() as StagePresentationShell
+	if pres_shell == null:
+		print("[APPROOT-QR-016] FAIL: StagePresentationShell is null")
+		app.free()
+		return "FAIL"
+
+	var lesson_panel: LessonPanel = pres_shell.get_lesson_panel()
+	if lesson_panel == null:
+		print("[APPROOT-QR-016] FAIL: LessonPanel is null")
+		app.free()
+		return "FAIL"
+
+	# Simulate player clicking 'Start Puzzle' on lesson panel
+	pres_shell._on_lesson_continue()
+
+	var host_container: MarginContainer = pres_shell.get_question_host_container()
+	if host_container == null:
+		print("[APPROOT-QR-016] FAIL: QuestionHostContainer is null")
+		app.free()
+		return "FAIL"
+
+	var panel: QuestionPanel = host_container.get_node_or_null("QuestionPanel") as QuestionPanel
+	if panel == null and host_container.get_child_count() > 0:
+		panel = host_container.get_child(0) as QuestionPanel
+	if panel == null:
+		print("[APPROOT-QR-016] FAIL: QuestionPanel node not mounted in QuestionHostContainer")
+		app.free()
+		return "FAIL"
+
+	var prompt_text: String = panel.get_prompt_text()
+	var active_view: Control = panel.get_active_interaction_view()
+
+	if prompt_text.is_empty():
+		print("[APPROOT-QR-016] FAIL (REPRODUCED REAL-F5 BUG): QuestionPanel prompt text is empty after Start Puzzle!")
+		app.free()
+		return "FAIL"
+
+	if active_view == null:
+		print("[APPROOT-QR-016] FAIL (REPRODUCED REAL-F5 BUG): QuestionPanel active_interaction_view is null after Start Puzzle!")
+		app.free()
+		return "FAIL"
+
+	if active_view.get_child_count() == 0:
+		print("[APPROOT-QR-016] FAIL: Active interaction view has 0 option controls")
+		app.free()
+		return "FAIL"
+
+	app.free()
+	print("[APPROOT-QR-016] PASS: Full composed production F5 route verified successfully!")
 	return "PASS"
