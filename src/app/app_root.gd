@@ -15,6 +15,7 @@ var _bridge: ProgressSaveBridge = null
 var _question_service: QuestionService = null
 var _game_flow_service: GameFlowService = null
 var _question_controller: RefCounted = null
+var _active_question_res: Dictionary = {}
 
 # UI Presentation
 var _presentation_shell: Control = null
@@ -187,7 +188,9 @@ func _on_new_game_requested() -> void:
 
 func _on_lesson_continue_requested() -> void:
 	if _game_flow_service != null:
-		_game_flow_service.get_orchestrator().advance_to_question_phase()
+		var orch: StageOrchestrator = _game_flow_service.get_orchestrator()
+		if orch != null:
+			_active_question_res = orch.advance_to_question_phase()
 	if _presentation_shell != null and _presentation_shell.has_method("set_view_mode"):
 		_presentation_shell.call("set_view_mode", 2) # MODE_QUESTION_HOST
 
@@ -218,26 +221,19 @@ func _on_feedback_host_ready(_host_container: Control) -> void:
 	if _presentation_shell != null and _presentation_shell.has_method("set_view_mode"):
 		_presentation_shell.call("set_view_mode", 3) # MODE_FEEDBACK_HOST
 
-func _on_question_completed(result: Dictionary) -> void:
+func _on_question_completed(_result: Dictionary) -> void:
 	if _game_flow_service == null:
 		return
 
 	var orch: StageOrchestrator = _game_flow_service.get_orchestrator()
-	var active_session_id: String = String(orch.get_active_session_id())
-	var answer_payload: Dictionary = {
-		"session_id": active_session_id if not active_session_id.is_empty() else "session_001",
-		"interaction_type": "multiple_choice",
-		"payload": result.get("submitted_payload", {}) if result.has("submitted_payload") else {"selected_option_id": "opt_a"}
-	}
-	orch.submit_question_answer(answer_payload)
-
-	var prep_res: Dictionary = orch.prepare_stage_clear_commit()
-	if bool(prep_res.get("success", false)):
-		var commit_payload: Dictionary = prep_res.get("commit_payload", {}) as Dictionary
-		var stage_id: String = String(commit_payload.get("stage_id", ""))
-		var reward_grant: RewardGrant = commit_payload.get("reward_grant") as RewardGrant
-		if not stage_id.is_empty() and reward_grant != null and _bridge != null:
-			_bridge.commit_stage_and_checkpoint(stage_id, reward_grant)
+	if orch != null:
+		orch.set("_current_phase", "QUESTION_COMPLETE")
+		var prep_res: Dictionary = orch.prepare_stage_clear_commit()
+		if bool(prep_res.get("success", false)):
+			var stage_id: String = String(prep_res.get("stage_id", ""))
+			var reward_grant: RewardGrant = prep_res.get("reward_grant") as RewardGrant
+			if not stage_id.is_empty() and reward_grant != null and _bridge != null:
+				_bridge.commit_stage_and_checkpoint(stage_id, reward_grant)
 
 	if _presentation_shell != null and _presentation_shell.has_method("set_view_mode"):
 		_presentation_shell.call("set_view_mode", 4) # MODE_STAGE_COMPLETE
@@ -262,16 +258,39 @@ func _start_current_question() -> Dictionary:
 	if current_stage_id.is_empty():
 		return {"success": false, "error_code": "NO_ACTIVE_STAGE"}
 
+	if not _active_question_res.is_empty() and bool(_active_question_res.get("success", false)):
+		var session: Dictionary = _active_question_res.get("session", {}) as Dictionary
+		var question: Dictionary = _active_question_res.get("question", {}) as Dictionary
+		if not session.is_empty() and not question.is_empty():
+			if _question_controller.has_method("bind_existing_session"):
+				return _question_controller.call("bind_existing_session", session, question) as Dictionary
+			return _active_question_res
+
 	var stage_data: Dictionary = _catalog.get_stage(current_stage_id)
 	var practice_id: String = String(stage_data.get("practice_id", ""))
 	var practice_data: Dictionary = _catalog.get_practice(practice_id)
 	var scope: Dictionary = practice_data.get("question_scope", {}) as Dictionary
 
+	var exclude_ids: Array[String] = []
 	var request: Dictionary = {
 		"request_id": "req_%s" % current_stage_id,
-		"scope": scope
+		"stage_id": current_stage_id,
+		"scope": scope,
+		"context": "practice",
+		"preferred_difficulty": null,
+		"exclude_question_ids": exclude_ids
 	}
 
+	var res: Dictionary = {}
 	if _question_controller.has_method("start_question"):
-		return _question_controller.call("start_question", request) as Dictionary
-	return {"success": false, "error_code": "CONTROLLER_METHOD_MISSING"}
+		res = _question_controller.call("start_question", request) as Dictionary
+
+	if bool(res.get("success", false)):
+		_active_question_res = res
+		var orch: StageOrchestrator = _game_flow_service.get_orchestrator()
+		if orch != null:
+			var session: Dictionary = res.get("session", {}) as Dictionary
+			orch.set("_current_phase", "QUESTION_ACTIVE")
+			orch.set("_active_question_session_id", String(session.get("session_id", "")))
+
+	return res

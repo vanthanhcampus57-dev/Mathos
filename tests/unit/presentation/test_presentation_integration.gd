@@ -389,7 +389,7 @@ static func test_pres_011_continue_displays_restored_legal_stage_context() -> St
 	if app == null:
 		print("[PRES-011] FAIL: Unable to instantiate AppRoot scene")
 		return "FAIL"
-	app.bootstrap_runtime()
+	app.bootstrap_runtime("res://tests/fixtures/content/valid_catalog")
 
 	# 1. Start new game to initialize baseline
 	var start_res: Dictionary = app.start_new_game()
@@ -419,7 +419,7 @@ static func test_pres_011_continue_displays_restored_legal_stage_context() -> St
 	if app_continue == null:
 		print("[PRES-011] FAIL: Unable to instantiate fresh AppRoot for Continue")
 		return "FAIL"
-	app_continue.bootstrap_runtime()
+	app_continue.bootstrap_runtime("res://tests/fixtures/content/valid_catalog")
 	var cont_res: Dictionary = app_continue.continue_game()
 	if not bool(cont_res.get("success", false)):
 		app_continue.free()

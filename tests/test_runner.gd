@@ -46,16 +46,20 @@ func _initialize() -> void:
 	# 2. Tri-state Presentation Integration Suites from both accepted lineages
 	var pres_suites: Array[String] = [
 		"res://tests/integration/presentation/test_presentation_flow_integration.gd",
-		"res://tests/unit/presentation/test_presentation_integration.gd"
+		"res://tests/unit/presentation/test_presentation_integration.gd",
+		"res://tests/integration/app/test_app_root_question_request_integration.gd"
 	]
 
 	for script_path in pres_suites:
 		var script: GDScript = load(script_path) as GDScript
 		if script != null and script.has_script_method("run_all_tests"):
-			var tri_res: Dictionary = script.call("run_all_tests") as Dictionary
-			pass_total += int(tri_res.get("pass", 0))
-			fail_total += int(tri_res.get("fail", 0))
-			waiting_total += int(tri_res.get("waiting", 0))
+			var tri_res: Variant = script.call("run_all_tests")
+			if tri_res is Signal:
+				tri_res = await tri_res
+			var tri_dict: Dictionary = tri_res as Dictionary
+			pass_total += int(tri_dict.get("pass", 0))
+			fail_total += int(tri_dict.get("fail", 0))
+			waiting_total += int(tri_dict.get("waiting", 0))
 		else:
 			fail_total += 1
 
@@ -108,6 +112,6 @@ func _count_suite_tests(name: String) -> int:
 		"Save Integration": return 17
 		"GameFlow Vertical Slice": return 12
 		"AppRoot Integration": return 15
-		"Question Presentation (B.1)": return 7
+		"Question Presentation (B.1)": return 14
 		"Presentation Shell (B.2)": return 12
 		_: return 1
