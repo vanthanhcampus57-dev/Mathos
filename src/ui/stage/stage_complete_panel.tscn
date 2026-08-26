@@ -1,6 +1,11 @@
-[gd_scene load_steps=2 format=3 uid="uid://d1_stage_complete_panel_001"]
+[gd_scene load_steps=8 format=3 uid="uid://d1_stage_complete_panel_001"]
 
 [ext_resource type="Script" path="res://src/ui/stage/stage_complete_panel.gd" id="1_script"]
+[ext_resource type="StyleBox" path="res://src/ui/stage/styles/panel_bg.tres" id="2_panel_bg"]
+[ext_resource type="StyleBox" path="res://src/ui/stage/styles/btn_complete_normal.tres" id="3_btn_c_norm"]
+[ext_resource type="StyleBox" path="res://src/ui/stage/styles/btn_complete_hover.tres" id="4_btn_c_hov"]
+[ext_resource type="StyleBox" path="res://src/ui/stage/styles/btn_complete_pressed.tres" id="5_btn_c_press"]
+[ext_resource type="StyleBox" path="res://src/ui/stage/styles/btn_focus.tres" id="6_btn_focus"]
 
 [node name="StageCompletePanel" type="Control"]
 layout_mode = 3
@@ -25,21 +30,34 @@ theme_override_constants/margin_bottom = 32
 
 [node name="PanelContainer" type="PanelContainer" parent="MarginContainer"]
 layout_mode = 2
+theme_override_styles/panel = ExtResource("2_panel_bg")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/PanelContainer"]
 layout_mode = 2
+theme_override_constants/separation = 20
 alignment = 1
 
 [node name="TitleLabel" type="Label" parent="MarginContainer/PanelContainer/VBoxContainer"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.06, 0.73, 0.51, 1)
+theme_override_font_sizes/font_size = 32
+text = "Stage Completed!"
 horizontal_alignment = 1
 
 [node name="SummaryLabel" type="Label" parent="MarginContainer/PanelContainer/VBoxContainer"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.80, 0.84, 0.88, 1)
+theme_override_font_sizes/font_size = 20
 horizontal_alignment = 1
 
 [node name="ContinueButton" type="Button" parent="MarginContainer/PanelContainer/VBoxContainer"]
-custom_minimum_size = Vector2(160, 40)
+custom_minimum_size = Vector2(240, 52)
 layout_mode = 2
 size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.97, 0.98, 0.99, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = ExtResource("3_btn_c_norm")
+theme_override_styles/hover = ExtResource("4_btn_c_hov")
+theme_override_styles/pressed = ExtResource("5_btn_c_press")
+theme_override_styles/focus = ExtResource("6_btn_focus")
 text = "Continue to Next Stage"
