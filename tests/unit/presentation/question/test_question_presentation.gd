@@ -1,7 +1,7 @@
 class_name TestQuestionPresentation
 extends RefCounted
 
-## Unit test suite for QuestionPresentationController, QuestionPanel, and Interaction Views (PRES-001..008, PRES-012..017).
+## Unit test suite for QuestionPresentationController, QuestionPanel, and Interaction Views (PRES-001..008, PRES-012..018).
 
 static func run_all_tests() -> bool:
 	print("--- RUNNING QUESTION PRESENTATION SUITE ---")
@@ -19,6 +19,7 @@ static func run_all_tests() -> bool:
 	all_ok = pres_015_bind_existing_session_mismatched_session_id() and all_ok
 	all_ok = pres_016_bind_existing_session_invalid_question_payload() and all_ok
 	all_ok = pres_017_bind_existing_session_duplicate_bind_after_completion() and all_ok
+	all_ok = pres_018_bind_existing_session_mismatched_question_id() and all_ok
 	return all_ok
 
 static func pres_001_multiple_choice_render_and_submit() -> bool:
@@ -543,7 +544,7 @@ static func pres_015_bind_existing_session_mismatched_session_id() -> bool:
 	var qs_res: Dictionary = service.request_question(_request("multiple_choice"))
 	var real_question: Dictionary = qs_res.get("question", {}) as Dictionary
 
-	var mismatched_session: Dictionary = {"session_id": "session_mismatched_999"}
+	var mismatched_session: Dictionary = {"session_id": "session_mismatched_999", "question_id": "q_mc"}
 
 	var requests_before: int = service.request_question_count
 	var bind_res: Dictionary = controller.bind_existing_session(mismatched_session, real_question)
@@ -637,6 +638,68 @@ static func pres_017_bind_existing_session_duplicate_bind_after_completion() -> 
 		return false
 
 	print("[PRES-017] PASS")
+	return true
+
+static func pres_018_bind_existing_session_mismatched_question_id() -> bool:
+	var catalog: ValidatedCatalog = _synthetic_catalog()
+	var service: CountingQuestionService = CountingQuestionService.new(catalog)
+	var panel: CountingQuestionPanel = CountingQuestionPanel.new()
+	var controller: QuestionPresentationController = QuestionPresentationController.new(service, panel)
+
+	# Create real session (creates active session with question_id = "q_mc")
+	var qs_res: Dictionary = service.request_question(_request("multiple_choice"))
+	var real_session: Dictionary = qs_res.get("session", {}) as Dictionary
+
+	# Construct structurally valid question definition with a DIFFERENT question_id
+	var mismatched_question: Dictionary = {
+		"schema_version": 1,
+		"question_id": "q_different_999",
+		"dungeon_id": "dungeon_01",
+		"topic_id": "trial_sample_event",
+		"subtopic_id": "sample_space",
+		"learning_objective": "Test objective",
+		"difficulty": 2,
+		"interaction_type": "multiple_choice",
+		"prompt": "Mismatched question prompt",
+		"interaction_payload": {"options": [{"option_id": "opt_a", "text": "A"}]}
+	}
+
+	var requests_before: int = service.request_question_count
+	var completion_count: Array = [0]
+	controller.question_completed.connect(func(_res: Dictionary) -> void: completion_count[0] += 1)
+
+	var bind_res: Dictionary = controller.bind_existing_session(real_session, mismatched_question)
+	var requests_after: int = service.request_question_count
+
+	if bool(bind_res.get("success", false)):
+		print("[PRES-018] FAIL: bind_existing_session succeeded with mismatched question_id")
+		return false
+
+	if String(bind_res.get("error_code", "")) != QuestionErrorCodes.INVALID_QUESTION:
+		print("[PRES-018] FAIL: unexpected error_code: ", bind_res.get("error_code", ""))
+		return false
+
+	if (requests_after - requests_before) != 0:
+		print("[PRES-018] FAIL: request_question called during rejection")
+		return false
+
+	if panel.setup_question_count != 0:
+		print("[PRES-018] FAIL: setup_question called during rejection")
+		return false
+
+	if not service.has_active_session() or String(service.get_active_session().get("session_id", "")) != String(real_session["session_id"]):
+		print("[PRES-018] FAIL: active QuestionService session changed after rejection")
+		return false
+
+	if controller.has_active_session():
+		print("[PRES-018] FAIL: controller reports active session after rejection")
+		return false
+
+	if completion_count[0] != 0:
+		print("[PRES-018] FAIL: question_completed emitted during rejection")
+		return false
+
+	print("[PRES-018] PASS")
 	return true
 
 static func _request(interaction_type: String) -> Dictionary:
