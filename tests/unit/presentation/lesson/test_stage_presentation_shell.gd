@@ -10,6 +10,7 @@ static func run_all_tests(tree: SceneTree = null) -> bool:
 	all_ok = test_models_neutral_data() and all_ok
 	all_ok = test_shell_instantiation_and_nodes_exist(tree) and all_ok
 	all_ok = test_start_new_game_entry_presentation(tree) and all_ok
+	all_ok = test_entry_layout_non_overlapping_controls(tree) and all_ok
 	all_ok = test_entry_mode_does_not_expose_restored_header(tree) and all_ok
 	all_ok = test_stage_title_and_context(tree) and all_ok
 	all_ok = test_lesson_panel_pagination_and_continue(tree) and all_ok
@@ -117,6 +118,40 @@ static func test_start_new_game_entry_presentation(tree: SceneTree = null) -> bo
 
 	_remove_node_from_tree(shell)
 	print("[PRES-SHELL-002] PASS")
+	return true
+
+static func test_entry_layout_non_overlapping_controls(tree: SceneTree = null) -> bool:
+	var scene: PackedScene = load("res://src/ui/stage/stage_presentation_shell.tscn")
+	var shell: StagePresentationShell = scene.instantiate() as StagePresentationShell
+	_add_node_to_tree(shell, tree)
+
+	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_ENTRY)
+	shell.set_continue_available(true)
+
+	var cont_btn: Button = shell._get_continue_game_button()
+	var new_btn: Button = shell._get_new_game_button()
+
+	if cont_btn == null or not cont_btn.visible:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-LAYOUT-001", "ContinueButton is not visible when enabled")
+
+	if new_btn == null or not new_btn.visible:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-LAYOUT-001", "NewGameButton is not visible in MODE_ENTRY")
+
+	var cont_parent: Node = cont_btn.get_parent()
+	var new_parent: Node = new_btn.get_parent()
+
+	if cont_parent == null or cont_parent != new_parent or not (cont_parent is VBoxContainer):
+		_remove_node_from_tree(shell)
+		return _fail("PRES-LAYOUT-001", "ContinueButton and NewGameButton do not share a common VBoxContainer layout")
+
+	if cont_btn.get_index() >= new_btn.get_index():
+		_remove_node_from_tree(shell)
+		return _fail("PRES-LAYOUT-001", "ContinueButton index is not above NewGameButton in VBoxContainer")
+
+	_remove_node_from_tree(shell)
+	print("[PRES-LAYOUT-001] PASS")
 	return true
 
 static func test_entry_mode_does_not_expose_restored_header(tree: SceneTree = null) -> bool:

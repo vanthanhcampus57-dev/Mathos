@@ -184,6 +184,8 @@ func _setup_presentation_shell() -> void:
 			_presentation_shell.connect("feedback_host_ready", _on_feedback_host_ready)
 		if _presentation_shell.has_signal("stage_continue_requested") and not _presentation_shell.is_connected("stage_continue_requested", _on_stage_continue_requested):
 			_presentation_shell.connect("stage_continue_requested", _on_stage_continue_requested)
+		if _bootstrap_ui != null:
+			_bootstrap_ui.visible = false
 
 func refresh_continue_availability() -> void:
 	var has_save: bool = false
