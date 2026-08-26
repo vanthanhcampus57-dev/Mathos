@@ -420,6 +420,19 @@ static func test_pres_011_continue_displays_restored_legal_stage_context() -> St
 		print("[PRES-011] FAIL: Unable to instantiate fresh AppRoot for Continue")
 		return "FAIL"
 	app_continue.bootstrap_runtime("res://tests/fixtures/content/valid_catalog")
+
+	var shell: StagePresentationShell = app_continue.get_presentation_shell() as StagePresentationShell
+	if shell == null:
+		app_continue.free()
+		print("[PRES-011] FAIL: StagePresentationShell is null on fresh AppRoot")
+		return "FAIL"
+
+	var cont_btn: Button = shell._get_continue_game_button()
+	if cont_btn == null or not cont_btn.visible:
+		app_continue.free()
+		print("[PRES-011] FAIL: ContinueButton not visible on fresh AppRoot bootstrap with valid save")
+		return "FAIL"
+
 	var cont_res: Dictionary = app_continue.continue_game()
 	if not bool(cont_res.get("success", false)):
 		app_continue.free()

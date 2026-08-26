@@ -56,6 +56,7 @@ func bootstrap_runtime(custom_content_root: String = "") -> bool:
 		_question_controller = (q_ctrl_script as GDScript).new(_question_service)
 
 	_setup_presentation_shell()
+	refresh_continue_availability()
 	print("[AppRoot] Runtime services and composition root initialized cleanly.")
 	return true
 
@@ -173,6 +174,8 @@ func _setup_presentation_shell() -> void:
 	if _presentation_shell != null:
 		if _presentation_shell.has_signal("new_game_requested") and not _presentation_shell.is_connected("new_game_requested", _on_new_game_requested):
 			_presentation_shell.connect("new_game_requested", _on_new_game_requested)
+		if _presentation_shell.has_signal("continue_game_requested") and not _presentation_shell.is_connected("continue_game_requested", _on_continue_game_requested):
+			_presentation_shell.connect("continue_game_requested", _on_continue_game_requested)
 		if _presentation_shell.has_signal("lesson_continue_requested") and not _presentation_shell.is_connected("lesson_continue_requested", _on_lesson_continue_requested):
 			_presentation_shell.connect("lesson_continue_requested", _on_lesson_continue_requested)
 		if _presentation_shell.has_signal("question_host_ready") and not _presentation_shell.is_connected("question_host_ready", _on_question_host_ready):
@@ -182,9 +185,20 @@ func _setup_presentation_shell() -> void:
 		if _presentation_shell.has_signal("stage_continue_requested") and not _presentation_shell.is_connected("stage_continue_requested", _on_stage_continue_requested):
 			_presentation_shell.connect("stage_continue_requested", _on_stage_continue_requested)
 
+func refresh_continue_availability() -> void:
+	var has_save: bool = false
+	if _save_service != null:
+		has_save = _save_service.has_save()
+
+	if _presentation_shell != null and _presentation_shell.has_method("set_continue_available"):
+		_presentation_shell.call("set_continue_available", has_save)
+
 # Signal Event Handlers
 func _on_new_game_requested() -> void:
 	start_new_game()
+
+func _on_continue_game_requested() -> void:
+	continue_game()
 
 func _on_lesson_continue_requested() -> void:
 	if _game_flow_service != null:

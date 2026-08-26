@@ -17,6 +17,7 @@ enum ViewMode {
 }
 
 signal new_game_requested()
+signal continue_game_requested()
 signal lesson_continue_requested()
 signal question_host_ready(container: Control)
 signal feedback_host_ready(container: Control)
@@ -30,6 +31,11 @@ func _ready() -> void:
 	if new_game_btn != null:
 		if not new_game_btn.pressed.is_connected(_on_new_game_pressed):
 			new_game_btn.pressed.connect(_on_new_game_pressed)
+
+	var continue_game_btn: Button = _get_continue_game_button()
+	if continue_game_btn != null:
+		if not continue_game_btn.pressed.is_connected(_on_continue_game_pressed):
+			continue_game_btn.pressed.connect(_on_continue_game_pressed)
 
 	var lesson_panel: LessonPanel = get_lesson_panel()
 	if lesson_panel != null:
@@ -145,8 +151,16 @@ func _update_header() -> void:
 		restored_badge_label.visible = is_restored
 		restored_badge_label.text = "[RESTORED STATE]" if is_restored else ""
 
+func set_continue_available(available: bool) -> void:
+	var continue_btn: Button = _get_continue_game_button()
+	if continue_btn != null:
+		continue_btn.visible = available
+
 func _on_new_game_pressed() -> void:
 	new_game_requested.emit()
+
+func _on_continue_game_pressed() -> void:
+	continue_game_requested.emit()
 
 func _on_lesson_continue() -> void:
 	lesson_continue_requested.emit()
@@ -174,7 +188,16 @@ func _get_start_game_container() -> Control:
 	return get_node_or_null("VBoxContainer/MainBody/StartGameContainer") as Control
 
 func _get_new_game_button() -> Button:
-	return get_node_or_null("VBoxContainer/MainBody/StartGameContainer/NewGameButton") as Button
+	var btn: Button = get_node_or_null("VBoxContainer/MainBody/StartGameContainer/NewGameButton") as Button
+	if btn == null:
+		btn = get_node_or_null("VBoxContainer/MainBody/StartGameContainer/VBoxContainer/NewGameButton") as Button
+	return btn
+
+func _get_continue_game_button() -> Button:
+	var btn: Button = get_node_or_null("VBoxContainer/MainBody/StartGameContainer/ContinueButton") as Button
+	if btn == null:
+		btn = get_node_or_null("VBoxContainer/MainBody/StartGameContainer/VBoxContainer/ContinueButton") as Button
+	return btn
 
 func _get_feedback_label() -> Label:
 	return get_node_or_null("VBoxContainer/MainBody/FeedbackHostContainer/FeedbackPanel/FeedbackLabel") as Label
