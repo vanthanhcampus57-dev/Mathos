@@ -32,7 +32,8 @@ func _initialize() -> void:
 		{"name": "GameFlow Vertical Slice", "func": Callable(load("res://tests/integration/flow/test_flow_vertical_slice.gd") as GDScript, "run_all_tests")},
 		{"name": "AppRoot Integration", "func": Callable(load("res://tests/integration/app/test_app_root_integration.gd") as GDScript, "run_all_tests")},
 		{"name": "Question Presentation (B.1)", "func": Callable(preload("res://tests/unit/presentation/question/test_question_presentation.gd"), "run_all_tests")},
-		{"name": "Presentation Shell (B.2)", "func": Callable(preload("res://tests/unit/presentation/lesson/test_stage_presentation_shell.gd"), "run_all_tests").bind(self)}
+		{"name": "Presentation Shell (B.2)", "func": Callable(preload("res://tests/unit/presentation/lesson/test_stage_presentation_shell.gd"), "run_all_tests").bind(self)},
+		{"name": "Shared Components (A.2)", "func": Callable(preload("res://tests/unit/presentation/test_shared_components.gd"), "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -114,4 +115,5 @@ func _count_suite_tests(name: String) -> int:
 		"AppRoot Integration": return 16
 		"Question Presentation (B.1)": return 14
 		"Presentation Shell (B.2)": return 14
+		"Shared Components (A.2)": return 9
 		_: return 1

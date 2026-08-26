@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://uiprimarybutton001"]
+
+[ext_resource type="Script" path="res://src/ui/common/components/ui_primary_button.gd" id="1_script"]
+
+[node name="UiPrimaryButton" type="Button"]
+custom_minimum_size = Vector2(160, 48)
+theme_type_variation = &"PrimaryButton"
+text = "Action"
+script = ExtResource("1_script")

@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://uisecondarybutton001"]
+
+[ext_resource type="Script" path="res://src/ui/common/components/ui_secondary_button.gd" id="1_script"]
+
+[node name="UiSecondaryButton" type="Button"]
+custom_minimum_size = Vector2(140, 44)
+theme_type_variation = &"SecondaryButton"
+text = "Secondary"
+script = ExtResource("1_script")

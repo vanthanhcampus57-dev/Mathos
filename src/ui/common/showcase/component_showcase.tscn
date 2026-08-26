@@ -1,0 +1,245 @@
+[gd_scene load_steps=14 format=3 uid="uid://componentshowcase001"]
+
+[ext_resource type="Script" path="res://src/ui/common/showcase/component_showcase.gd" id="1_script"]
+[ext_resource type="Script" path="res://src/ui/common/components/ui_surface_panel.gd" id="2_surface"]
+[ext_resource type="Script" path="res://src/ui/common/components/ui_primary_button.gd" id="3_primary"]
+[ext_resource type="Script" path="res://src/ui/common/components/ui_secondary_button.gd" id="4_secondary"]
+[ext_resource type="Script" path="res://src/ui/common/components/ui_destructive_button.gd" id="5_destructive"]
+[ext_resource type="Script" path="res://src/ui/common/components/ui_option_card.gd" id="6_card"]
+[ext_resource type="Script" path="res://src/ui/common/components/ui_title_label.gd" id="7_title"]
+[ext_resource type="Script" path="res://src/ui/common/components/ui_heading_label.gd" id="8_heading"]
+[ext_resource type="Script" path="res://src/ui/common/components/ui_body_label.gd" id="9_body"]
+[ext_resource type="Script" path="res://src/ui/common/components/ui_meta_label.gd" id="10_meta"]
+[ext_resource type="Script" path="res://src/ui/common/components/ui_status_banner.gd" id="11_status"]
+[ext_resource type="Script" path="res://src/ui/common/components/ui_layout_spacer.gd" id="12_spacer"]
+
+[node name="ComponentShowcase" type="Control"]
+custom_minimum_size = Vector2(1280, 720)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+text = "MATHOS SHARED UI COMPONENT SHOWCASE (1280x720)"
+script = ExtResource("7_title")
+
+[node name="Spacer1" type="Control" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+script = ExtResource("12_spacer")
+
+[node name="TypographySection" type="PanelContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_type_variation = &"SurfacePanelCard"
+script = ExtResource("2_surface")
+surface_style = 2
+
+[node name="VBox" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/TypographySection"]
+layout_mode = 2
+
+[node name="Heading" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/TypographySection/VBox"]
+layout_mode = 2
+theme_type_variation = &"HeadingLabel"
+text = "Typography Primitives"
+script = ExtResource("8_heading")
+
+[node name="Body" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/TypographySection/VBox"]
+layout_mode = 2
+theme_type_variation = &"BodyLabel"
+text = "Body text example showing standard paragraph legibility."
+script = ExtResource("9_body")
+
+[node name="Meta" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/TypographySection/VBox"]
+layout_mode = 2
+theme_type_variation = &"MetaLabel"
+text = "Meta / caption subtext (v1.0.0)"
+script = ExtResource("10_meta")
+
+[node name="Spacer2" type="Control" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+script = ExtResource("12_spacer")
+
+[node name="ButtonsSection" type="PanelContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_type_variation = &"SurfacePanelCard"
+script = ExtResource("2_surface")
+surface_style = 2
+
+[node name="VBox" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/ButtonsSection"]
+layout_mode = 2
+
+[node name="Heading" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/ButtonsSection/VBox"]
+layout_mode = 2
+theme_type_variation = &"HeadingLabel"
+text = "Action Buttons"
+script = ExtResource("8_heading")
+
+[node name="HBox" type="HBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/ButtonsSection/VBox"]
+layout_mode = 2
+
+[node name="PrimaryBtn" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer/ButtonsSection/VBox/HBox"]
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+theme_type_variation = &"PrimaryButton"
+text = "Primary Action"
+script = ExtResource("3_primary")
+
+[node name="SecondaryBtn" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer/ButtonsSection/VBox/HBox"]
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+theme_type_variation = &"SecondaryButton"
+text = "Secondary Action"
+script = ExtResource("4_secondary")
+
+[node name="DestructiveBtn" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer/ButtonsSection/VBox/HBox"]
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+theme_type_variation = &"DestructiveButton"
+text = "Delete Action"
+script = ExtResource("5_destructive")
+
+[node name="DisabledBtn" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer/ButtonsSection/VBox/HBox"]
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+disabled = true
+theme_type_variation = &"PrimaryButton"
+text = "Disabled Action"
+script = ExtResource("3_primary")
+
+[node name="Spacer3" type="Control" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+script = ExtResource("12_spacer")
+
+[node name="CardsSection" type="PanelContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_type_variation = &"SurfacePanelCard"
+script = ExtResource("2_surface")
+surface_style = 2
+
+[node name="VBox" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/CardsSection"]
+layout_mode = 2
+
+[node name="Heading" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/CardsSection/VBox"]
+layout_mode = 2
+theme_type_variation = &"HeadingLabel"
+text = "Option / Card Visual Shells"
+script = ExtResource("8_heading")
+
+[node name="HBox" type="HBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/CardsSection/VBox"]
+layout_mode = 2
+
+[node name="CardNormal" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer/CardsSection/VBox/HBox"]
+custom_minimum_size = Vector2(240, 72)
+layout_mode = 2
+theme_type_variation = &"OptionCard"
+toggle_mode = true
+script = ExtResource("6_card")
+title_text = "Normal Card Option"
+subtitle_text = "Default state"
+
+[node name="CardSelected" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer/CardsSection/VBox/HBox"]
+custom_minimum_size = Vector2(240, 72)
+layout_mode = 2
+button_pressed = true
+theme_type_variation = &"OptionCardSelected"
+toggle_mode = true
+script = ExtResource("6_card")
+title_text = "Selected Option"
+subtitle_text = "Selected state"
+is_card_selected = true
+
+[node name="CardCorrect" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer/CardsSection/VBox/HBox"]
+custom_minimum_size = Vector2(240, 72)
+layout_mode = 2
+theme_type_variation = &"OptionCardCorrect"
+toggle_mode = true
+script = ExtResource("6_card")
+title_text = "Correct Option"
+subtitle_text = "Feedback correct"
+
+[node name="CardIncorrect" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer/CardsSection/VBox/HBox"]
+custom_minimum_size = Vector2(240, 72)
+layout_mode = 2
+theme_type_variation = &"OptionCardIncorrect"
+toggle_mode = true
+script = ExtResource("6_card")
+title_text = "Incorrect Option"
+subtitle_text = "Feedback incorrect"
+
+[node name="Spacer4" type="Control" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+script = ExtResource("12_spacer")
+
+[node name="StatusSection" type="PanelContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_type_variation = &"SurfacePanelCard"
+script = ExtResource("2_surface")
+surface_style = 2
+
+[node name="VBox" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/StatusSection"]
+layout_mode = 2
+
+[node name="Heading" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/StatusSection/VBox"]
+layout_mode = 2
+theme_type_variation = &"HeadingLabel"
+text = "Status / Feedback Banners"
+script = ExtResource("8_heading")
+
+[node name="StatusInfo" type="PanelContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/StatusSection/VBox"]
+custom_minimum_size = Vector2(300, 60)
+layout_mode = 2
+theme_type_variation = &"StatusBannerInfo"
+script = ExtResource("11_status")
+title_text = "Information"
+message_text = "This is a neutral info status banner."
+
+[node name="StatusSuccess" type="PanelContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/StatusSection/VBox"]
+custom_minimum_size = Vector2(300, 60)
+layout_mode = 2
+theme_type_variation = &"StatusBannerSuccess"
+script = ExtResource("11_status")
+status_type = 1
+title_text = "Success"
+message_text = "Stage completed successfully!"
+
+[node name="StatusError" type="PanelContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/StatusSection/VBox"]
+custom_minimum_size = Vector2(300, 60)
+layout_mode = 2
+theme_type_variation = &"StatusBannerError"
+script = ExtResource("11_status")
+status_type = 2
+title_text = "Error"
+message_text = "Submission error encountered."
+
+[node name="StatusWarning" type="PanelContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/StatusSection/VBox"]
+custom_minimum_size = Vector2(300, 60)
+layout_mode = 2
+theme_type_variation = &"StatusBannerWarning"
+script = ExtResource("11_status")
+status_type = 3
+title_text = "Warning"
+message_text = "Please check your input choices."

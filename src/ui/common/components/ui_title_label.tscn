@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://uititlelabel001"]
+
+[ext_resource type="Script" path="res://src/ui/common/components/ui_title_label.gd" id="1_script"]
+
+[node name="UiTitleLabel" type="Label"]
+theme_type_variation = &"TitleLabel"
+text = "Title Text"
+script = ExtResource("1_script")
