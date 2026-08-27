@@ -49,7 +49,8 @@ func _initialize() -> void:
 	var pres_suites: Array[String] = [
 		"res://tests/integration/presentation/test_presentation_flow_integration.gd",
 		"res://tests/unit/presentation/test_presentation_integration.gd",
-		"res://tests/integration/app/test_app_root_question_request_integration.gd"
+		"res://tests/integration/app/test_app_root_question_request_integration.gd",
+		"res://tests/unit/presentation/ui/test_shared_ui_harness.gd"
 	]
 
 	for script_path in pres_suites:
