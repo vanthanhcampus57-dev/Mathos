@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://uimetalabel001"]
+
+[ext_resource type="Script" path="res://src/ui/common/components/ui_meta_label.gd" id="1_script"]
+
+[node name="UiMetaLabel" type="Label"]
+theme_type_variation = &"MathosMeta"
+text = "Meta / Subcaption Text"
+script = ExtResource("1_script")

@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://uilayoutspacer001"]
+
+[ext_resource type="Script" path="res://src/ui/common/components/ui_layout_spacer.gd" id="1_script"]
+
+[node name="UiLayoutSpacer" type="Control"]
+custom_minimum_size = Vector2(16, 16)
+script = ExtResource("1_script")
