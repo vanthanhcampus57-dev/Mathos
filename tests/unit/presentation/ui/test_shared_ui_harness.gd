@@ -69,26 +69,22 @@ static func test_ui_sys_001_background_surface_hierarchy() -> bool:
 	return false
 
 static func test_ui_sys_002_typography_hierarchy() -> bool:
-	print("[UI-SYS-002] Testing typography hierarchy readable scale (H1, Title, Subtitle, Body, Caption)...")
-	var h1: Label = Label.new()
-	h1.add_theme_font_size_override("font_size", 48)
-	var title: Label = Label.new()
-	title.add_theme_font_size_override("font_size", 24)
-	var body: Label = Label.new()
-	body.add_theme_font_size_override("font_size", 16)
-	var caption: Label = Label.new()
-	caption.add_theme_font_size_override("font_size", 12)
+	print("[UI-SYS-002] Testing typography hierarchy readable scale (MathosTitle 28, MathosHeading 22, MathosSubtitle 18, MathosBody 16, MathosMeta 14)...")
+	var theme: Theme = MathosTheme.create_theme()
+	var title_sz: int = theme.get_font_size("font_size", "MathosTitle")
+	var heading_sz: int = theme.get_font_size("font_size", "MathosHeading")
+	var subtitle_sz: int = theme.get_font_size("font_size", "MathosSubtitle")
+	var body_sz: int = theme.get_font_size("font_size", "MathosBody")
+	var meta_sz: int = theme.get_font_size("font_size", "MathosMeta")
 
 	var ok: bool = (
-		h1.get_theme_font_size("font_size") > title.get_theme_font_size("font_size") and
-		title.get_theme_font_size("font_size") > body.get_theme_font_size("font_size") and
-		body.get_theme_font_size("font_size") > caption.get_theme_font_size("font_size")
+		title_sz == 28 and heading_sz == 22 and subtitle_sz == 18 and body_sz == 16 and meta_sz == 14 and
+		title_sz > heading_sz and heading_sz > subtitle_sz and subtitle_sz > body_sz and body_sz > meta_sz
 	)
-	h1.free(); title.free(); body.free(); caption.free()
 	if ok:
-		print("[UI-SYS-002] PASS: Typography hierarchy font scale verified")
+		print("[UI-SYS-002] PASS: Authoritative typography hierarchy font scale verified (28 > 22 > 18 > 16 > 14)")
 		return true
-	print("[UI-SYS-002] FAIL: Inconsistent font scale")
+	print("[UI-SYS-002] FAIL: Inconsistent typography font scale")
 	return false
 
 static func test_ui_sys_003_primary_button_states() -> bool:
@@ -228,40 +224,34 @@ static func test_ui_sys_013_option_card_incorrect_state() -> bool:
 	return false
 
 static func test_ui_sys_014_spacing_margin_consistency() -> bool:
-	print("[UI-SYS-014] Testing SPACING & MARGIN grid consistency (8, 12, 16, 24, 32)...")
-	var margin: MarginContainer = MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 16)
-	margin.add_theme_constant_override("margin_top", 16)
-	margin.add_theme_constant_override("margin_right", 16)
-	margin.add_theme_constant_override("margin_bottom", 16)
-	var vbox: VBoxContainer = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 12)
-	margin.add_child(vbox)
-
+	print("[UI-SYS-014] Testing SPACING & MARGIN grid consistency (4, 8, 12, 16, 24, 32)...")
 	var ok: bool = (
-		margin.get_theme_constant("margin_left") == 16 and
-		vbox.get_theme_constant("separation") == 12
+		MathosTokens.SPACING_XS == 4 and
+		MathosTokens.SPACING_SM == 8 and
+		MathosTokens.SPACING_MD == 12 and
+		MathosTokens.SPACING_LG == 16 and
+		MathosTokens.SPACING_XL == 24 and
+		MathosTokens.SPACING_XXL == 32
 	)
-	margin.free()
 	if ok:
-		print("[UI-SYS-014] PASS: Standardized spacing & margin grid verified")
+		print("[UI-SYS-014] PASS: Authoritative MathosTokens spacing scale verified (4, 8, 12, 16, 24, 32)")
 		return true
-	print("[UI-SYS-014] FAIL: Non-standard spacing constants")
+	print("[UI-SYS-014] FAIL: Non-standard spacing scale")
 	return false
 
 static func test_ui_sys_015_radius_corner_consistency() -> bool:
-	print("[UI-SYS-015] Testing corner RADIUS consistency standards (4px, 8px, 12px)...")
-	var sb: StyleBoxFlat = StyleBoxFlat.new()
-	sb.corner_radius_top_left = 8
-	sb.corner_radius_top_right = 8
-	sb.corner_radius_bottom_right = 8
-	sb.corner_radius_bottom_left = 8
-
-	var ok: bool = sb.corner_radius_top_left == 8
+	print("[UI-SYS-015] Testing corner RADIUS consistency standards (0, 4, 8, 12, 999)...")
+	var ok: bool = (
+		MathosTokens.RADIUS_NONE == 0 and
+		MathosTokens.RADIUS_SM == 4 and
+		MathosTokens.RADIUS_MD == 8 and
+		MathosTokens.RADIUS_LG == 12 and
+		MathosTokens.RADIUS_FULL == 999
+	)
 	if ok:
-		print("[UI-SYS-015] PASS: Standardized corner radius verified")
+		print("[UI-SYS-015] PASS: Authoritative MathosTokens radius scale verified (0, 4, 8, 12, 999)")
 		return true
-	print("[UI-SYS-015] FAIL: Non-standard corner radius")
+	print("[UI-SYS-015] FAIL: Non-standard corner radius scale")
 	return false
 
 static func test_ui_sys_016_layout_1280x720_clipping_bounds() -> bool:
