@@ -2,10 +2,10 @@ class_name UiTitleLabel
 extends Label
 
 ## Shared title label primitive.
-## Consumes semantic Theme type variation "TitleLabel".
+## Consumes authoritative Mathos Theme variation "MathosTitle".
 
 func _init() -> void:
-	theme_type_variation = &"TitleLabel"
+	theme_type_variation = &"MathosTitle"
 
 func _ready() -> void:
-	theme_type_variation = &"TitleLabel"
+	theme_type_variation = &"MathosTitle"

@@ -3,5 +3,5 @@
 [ext_resource type="Script" path="res://src/ui/common/components/ui_surface_panel.gd" id="1_script"]
 
 [node name="UiSurfacePanel" type="PanelContainer"]
-theme_type_variation = &"SurfacePanel"
+theme_type_variation = &"MathosPanelPrimary"
 script = ExtResource("1_script")

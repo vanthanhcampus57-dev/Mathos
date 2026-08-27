@@ -4,6 +4,6 @@
 
 [node name="UiDestructiveButton" type="Button"]
 custom_minimum_size = Vector2(140, 44)
-theme_type_variation = &"DestructiveButton"
+theme_type_variation = &"MathosDestructiveButton"
 text = "Delete"
 script = ExtResource("1_script")

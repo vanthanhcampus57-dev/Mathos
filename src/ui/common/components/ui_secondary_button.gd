@@ -2,7 +2,7 @@ class_name UiSecondaryButton
 extends Button
 
 ## Shared secondary action button primitive.
-## Consumes semantic Theme type variation "SecondaryButton".
+## Consumes authoritative Mathos Theme variation "MathosSecondaryButton".
 
 @export var action_text: String = "Secondary":
 	set(value):
@@ -10,9 +10,9 @@ extends Button
 		text = action_text
 
 func _init() -> void:
-	theme_type_variation = &"SecondaryButton"
+	theme_type_variation = &"MathosSecondaryButton"
 
 func _ready() -> void:
-	theme_type_variation = &"SecondaryButton"
+	theme_type_variation = &"MathosSecondaryButton"
 	if text.is_empty():
 		text = action_text

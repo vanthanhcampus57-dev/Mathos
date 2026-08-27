@@ -2,13 +2,14 @@ class_name UiSurfacePanel
 extends PanelContainer
 
 ## Shared panel/surface container primitive.
-## Uses theme_type_variation for semantic styling across header, card, and overlay surfaces.
+## Consumes authoritative Mathos Theme variations for primary, secondary, card, elevated, and modal surfaces.
 
 enum SurfaceStyle {
 	DEFAULT,
-	HEADER,
+	SECONDARY,
 	CARD,
-	OVERLAY
+	ELEVATED,
+	MODAL
 }
 
 @export var surface_style: SurfaceStyle = SurfaceStyle.DEFAULT:
@@ -24,11 +25,13 @@ func _ready() -> void:
 
 func _update_surface_variation() -> void:
 	match surface_style:
-		SurfaceStyle.HEADER:
-			theme_type_variation = &"SurfacePanelHeader"
+		SurfaceStyle.SECONDARY:
+			theme_type_variation = &"MathosPanelSecondary"
 		SurfaceStyle.CARD:
-			theme_type_variation = &"SurfacePanelCard"
-		SurfaceStyle.OVERLAY:
-			theme_type_variation = &"SurfacePanelOverlay"
+			theme_type_variation = &"MathosCard"
+		SurfaceStyle.ELEVATED:
+			theme_type_variation = &"MathosPanelElevated"
+		SurfaceStyle.MODAL:
+			theme_type_variation = &"MathosPanelModal"
 		_:
-			theme_type_variation = &"SurfacePanel"
+			theme_type_variation = &"MathosPanelPrimary"

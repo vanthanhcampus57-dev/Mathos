@@ -3,11 +3,18 @@ extends Control
 
 ## Visual showcase for shared UI components at 1280x720 resolution.
 ## Tests readable text, layout bounds, hierarchy, focus states, and card/status variations.
+## Operates cleanly with authoritative res://src/ui/theme/mathos_theme.tres.
+
+const MATHOS_THEME_PATH: String = "res://src/ui/theme/mathos_theme.tres"
 
 @onready var showcase_container: VBoxContainer = $MarginContainer/ScrollContainer/VBoxContainer
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(1280, 720)
+	if ResourceLoader.exists(MATHOS_THEME_PATH):
+		var mathos_theme: Theme = load(MATHOS_THEME_PATH) as Theme
+		if mathos_theme != null:
+			theme = mathos_theme
 
 func verify_all_components_instantiable() -> bool:
 	var surface := UiSurfacePanel.new()

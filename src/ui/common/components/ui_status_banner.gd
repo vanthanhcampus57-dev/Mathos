@@ -2,7 +2,7 @@ class_name UiStatusBanner
 extends PanelContainer
 
 ## Shared status/feedback presentation shell.
-## Domain-neutral banner displaying status messages with semantic theme variations.
+## Domain-neutral banner displaying status messages using authoritative Mathos Theme variations.
 
 enum StatusType {
 	INFO,
@@ -61,10 +61,23 @@ func _update_labels() -> void:
 func _update_appearance() -> void:
 	match status_type:
 		StatusType.SUCCESS:
-			theme_type_variation = &"StatusBannerSuccess"
+			theme_type_variation = &"MathosPanelElevated"
+			if title_label != null:
+				title_label.theme_type_variation = &"MathosSuccess"
 		StatusType.ERROR:
-			theme_type_variation = &"StatusBannerError"
+			theme_type_variation = &"MathosPanelElevated"
+			if title_label != null:
+				title_label.theme_type_variation = &"MathosError"
 		StatusType.WARNING:
-			theme_type_variation = &"StatusBannerWarning"
+			theme_type_variation = &"MathosPanelSecondary"
+			if title_label != null:
+				title_label.theme_type_variation = &"MathosError"
 		_:
-			theme_type_variation = &"StatusBannerInfo"
+			theme_type_variation = &"MathosPanelSecondary"
+			if title_label != null:
+				title_label.theme_type_variation = &"MathosSubtitle"
+
+	if message_label != null:
+		message_label.theme_type_variation = &"MathosBody"
+	if detail_label != null:
+		detail_label.theme_type_variation = &"MathosMeta"

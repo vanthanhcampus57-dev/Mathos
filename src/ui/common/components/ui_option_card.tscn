@@ -4,7 +4,7 @@
 
 [node name="UiOptionCard" type="Button"]
 custom_minimum_size = Vector2(240, 72)
-theme_type_variation = &"OptionCard"
+theme_type_variation = &"MathosOption"
 toggle_mode = true
 script = ExtResource("1_script")
 
@@ -24,11 +24,11 @@ alignment = 1
 
 [node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_type_variation = &"BodyLabel"
+theme_type_variation = &"MathosBody"
 text = "Option Title"
 
 [node name="SubtitleLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 visible = false
 layout_mode = 2
-theme_type_variation = &"MetaLabel"
+theme_type_variation = &"MathosMeta"
 text = "Subtitle"

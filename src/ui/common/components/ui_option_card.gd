@@ -2,7 +2,7 @@ class_name UiOptionCard
 extends Button
 
 ## Shared option/card visual shell.
-## Domain-neutral selectable card supporting normal, selected, correct, and incorrect states.
+## Domain-neutral selectable card consuming authoritative "MathosOption" Theme variation and states.
 
 enum CardVisualState {
 	NORMAL,
@@ -42,11 +42,13 @@ var card_state: CardVisualState = CardVisualState.NORMAL:
 @onready var subtitle_label: Label = get_node_or_null("MarginContainer/VBoxContainer/SubtitleLabel") as Label
 
 func _init() -> void:
-	_update_theme_variation()
+	theme_type_variation = &"MathosOption"
 
 func _ready() -> void:
+	theme_type_variation = &"MathosOption"
 	toggle_mode = true
-	toggled.connect(_on_toggled)
+	if not toggled.is_connected(_on_toggled):
+		toggled.connect(_on_toggled)
 	_update_labels()
 	_update_theme_variation()
 
@@ -76,12 +78,20 @@ func _update_labels() -> void:
 		subtitle_label.visible = not subtitle_text.is_empty()
 
 func _update_theme_variation() -> void:
+	theme_type_variation = &"MathosOption"
+	var style_key: StringName = &"panel"
 	match card_state:
 		CardVisualState.SELECTED:
-			theme_type_variation = &"OptionCardSelected"
+			style_key = &"selected"
 		CardVisualState.CORRECT:
-			theme_type_variation = &"OptionCardCorrect"
+			style_key = &"correct"
 		CardVisualState.INCORRECT:
-			theme_type_variation = &"OptionCardIncorrect"
+			style_key = &"incorrect"
 		_:
-			theme_type_variation = &"OptionCard"
+			style_key = &"panel"
+
+	if has_theme_stylebox(style_key, &"MathosOption"):
+		var sb: StyleBox = get_theme_stylebox(style_key, &"MathosOption")
+		if sb != null:
+			add_theme_stylebox_override(&"normal", sb)
+			add_theme_stylebox_override(&"pressed", sb)

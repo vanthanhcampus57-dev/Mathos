@@ -4,6 +4,6 @@
 
 [node name="UiSecondaryButton" type="Button"]
 custom_minimum_size = Vector2(140, 44)
-theme_type_variation = &"SecondaryButton"
+theme_type_variation = &"MathosSecondaryButton"
 text = "Secondary"
 script = ExtResource("1_script")

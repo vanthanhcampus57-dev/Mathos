@@ -4,6 +4,6 @@
 
 [node name="UiPrimaryButton" type="Button"]
 custom_minimum_size = Vector2(160, 48)
-theme_type_variation = &"PrimaryButton"
+theme_type_variation = &"MathosPrimaryButton"
 text = "Action"
 script = ExtResource("1_script")

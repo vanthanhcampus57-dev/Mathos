@@ -1,15 +1,15 @@
 class_name TestSharedComponents
 extends SceneTree
 
-## Unit test suite for shared reusable UI components.
-## Verifies instantiation, state transitions, theme type variations, and domain-neutral contracts.
+## Unit test suite for shared reusable UI components aligned to accepted Mathos Theme contract.
+## Verifies instantiation, state transitions, Mathos theme_type_variation resolution, and domain-neutral contracts.
 
 func _init() -> void:
 	var success: bool = run_all_tests()
 	quit(0 if success else 1)
 
 static func run_all_tests() -> bool:
-	print("--- RUNNING SHARED REUSABLE UI COMPONENTS SUITE ---")
+	print("--- RUNNING SHARED REUSABLE UI COMPONENTS SUITE (MATHOS THEME CONTRACT) ---")
 	var success: bool = true
 
 	success = test_surface_panel() and success
@@ -26,32 +26,32 @@ static func run_all_tests() -> bool:
 
 static func test_surface_panel() -> bool:
 	var panel := UiSurfacePanel.new()
-	if panel.theme_type_variation != &"SurfacePanel":
+	if panel.theme_type_variation != &"MathosPanelPrimary":
 		print("[FAIL] UiSurfacePanel default variation mismatch: %s" % String(panel.theme_type_variation))
 		panel.free()
 		return false
 
 	panel.surface_style = UiSurfacePanel.SurfaceStyle.CARD
-	if panel.theme_type_variation != &"SurfacePanelCard":
+	if panel.theme_type_variation != &"MathosCard":
 		print("[FAIL] UiSurfacePanel CARD variation mismatch: %s" % String(panel.theme_type_variation))
 		panel.free()
 		return false
 
-	panel.surface_style = UiSurfacePanel.SurfaceStyle.HEADER
-	if panel.theme_type_variation != &"SurfacePanelHeader":
-		print("[FAIL] UiSurfacePanel HEADER variation mismatch: %s" % String(panel.theme_type_variation))
+	panel.surface_style = UiSurfacePanel.SurfaceStyle.ELEVATED
+	if panel.theme_type_variation != &"MathosPanelElevated":
+		print("[FAIL] UiSurfacePanel ELEVATED variation mismatch: %s" % String(panel.theme_type_variation))
 		panel.free()
 		return false
 
 	panel.free()
-	print("[UI-COMPONENTS-001] UiSurfacePanel... PASS")
+	print("[UI-COMPONENTS-001] UiSurfacePanel (MathosPanelPrimary / MathosCard / MathosPanelElevated)... PASS")
 	return true
 
 static func test_primary_button() -> bool:
 	var btn := UiPrimaryButton.new()
 	btn._ready()
-	if btn.theme_type_variation != &"PrimaryButton":
-		print("[FAIL] UiPrimaryButton theme_type_variation mismatch")
+	if btn.theme_type_variation != &"MathosPrimaryButton":
+		print("[FAIL] UiPrimaryButton theme_type_variation mismatch: %s" % String(btn.theme_type_variation))
 		btn.free()
 		return false
 
@@ -62,14 +62,14 @@ static func test_primary_button() -> bool:
 		return false
 
 	btn.free()
-	print("[UI-COMPONENTS-002] UiPrimaryButton... PASS")
+	print("[UI-COMPONENTS-002] UiPrimaryButton (MathosPrimaryButton)... PASS")
 	return true
 
 static func test_secondary_button() -> bool:
 	var btn := UiSecondaryButton.new()
 	btn._ready()
-	if btn.theme_type_variation != &"SecondaryButton":
-		print("[FAIL] UiSecondaryButton theme_type_variation mismatch")
+	if btn.theme_type_variation != &"MathosSecondaryButton":
+		print("[FAIL] UiSecondaryButton theme_type_variation mismatch: %s" % String(btn.theme_type_variation))
 		btn.free()
 		return false
 
@@ -80,14 +80,14 @@ static func test_secondary_button() -> bool:
 		return false
 
 	btn.free()
-	print("[UI-COMPONENTS-003] UiSecondaryButton... PASS")
+	print("[UI-COMPONENTS-003] UiSecondaryButton (MathosSecondaryButton)... PASS")
 	return true
 
 static func test_destructive_button() -> bool:
 	var btn := UiDestructiveButton.new()
 	btn._ready()
-	if btn.theme_type_variation != &"DestructiveButton":
-		print("[FAIL] UiDestructiveButton theme_type_variation mismatch")
+	if btn.theme_type_variation != &"MathosDestructiveButton":
+		print("[FAIL] UiDestructiveButton theme_type_variation mismatch: %s" % String(btn.theme_type_variation))
 		btn.free()
 		return false
 
@@ -98,37 +98,37 @@ static func test_destructive_button() -> bool:
 		return false
 
 	btn.free()
-	print("[UI-COMPONENTS-004] UiDestructiveButton... PASS")
+	print("[UI-COMPONENTS-004] UiDestructiveButton (MathosDestructiveButton)... PASS")
 	return true
 
 static func test_option_card() -> bool:
 	var card := UiOptionCard.new()
 	card._ready()
-	if card.theme_type_variation != &"OptionCard":
-		print("[FAIL] UiOptionCard default theme_type_variation mismatch")
+	if card.theme_type_variation != &"MathosOption":
+		print("[FAIL] UiOptionCard default theme_type_variation mismatch: %s" % String(card.theme_type_variation))
 		card.free()
 		return false
 
 	card.set_selected(true)
-	if card.theme_type_variation != &"OptionCardSelected":
-		print("[FAIL] UiOptionCard selected variation mismatch: %s" % String(card.theme_type_variation))
+	if card.card_state != UiOptionCard.CardVisualState.SELECTED:
+		print("[FAIL] UiOptionCard set_selected failed to update card_state")
 		card.free()
 		return false
 
 	card.set_feedback(true)
-	if card.theme_type_variation != &"OptionCardCorrect":
-		print("[FAIL] UiOptionCard correct variation mismatch: %s" % String(card.theme_type_variation))
+	if card.card_state != UiOptionCard.CardVisualState.CORRECT:
+		print("[FAIL] UiOptionCard set_feedback(true) failed to set CORRECT state")
 		card.free()
 		return false
 
 	card.set_feedback(false)
-	if card.theme_type_variation != &"OptionCardIncorrect":
-		print("[FAIL] UiOptionCard incorrect variation mismatch: %s" % String(card.theme_type_variation))
+	if card.card_state != UiOptionCard.CardVisualState.INCORRECT:
+		print("[FAIL] UiOptionCard set_feedback(false) failed to set INCORRECT state")
 		card.free()
 		return false
 
 	card.free()
-	print("[UI-COMPONENTS-005] UiOptionCard state transitions... PASS")
+	print("[UI-COMPONENTS-005] UiOptionCard MathosOption state transitions... PASS")
 	return true
 
 static func test_typography_labels() -> bool:
@@ -142,10 +142,10 @@ static func test_typography_labels() -> bool:
 	meta._ready()
 
 	var ok: bool = (
-		title.theme_type_variation == &"TitleLabel" and
-		heading.theme_type_variation == &"HeadingLabel" and
-		body.theme_type_variation == &"BodyLabel" and
-		meta.theme_type_variation == &"MetaLabel"
+		title.theme_type_variation == &"MathosTitle" and
+		heading.theme_type_variation == &"MathosHeading" and
+		body.theme_type_variation == &"MathosBody" and
+		meta.theme_type_variation == &"MathosMeta"
 	)
 
 	title.free()
@@ -157,31 +157,31 @@ static func test_typography_labels() -> bool:
 		print("[FAIL] Typography labels theme_type_variation mismatch")
 		return false
 
-	print("[UI-COMPONENTS-006] Typography Labels... PASS")
+	print("[UI-COMPONENTS-006] Typography Labels (MathosTitle, MathosHeading, MathosBody, MathosMeta)... PASS")
 	return true
 
 static func test_status_banner() -> bool:
 	var banner := UiStatusBanner.new()
 	banner._ready()
-	if banner.theme_type_variation != &"StatusBannerInfo":
-		print("[FAIL] UiStatusBanner default variation mismatch")
+	if banner.theme_type_variation != &"MathosPanelSecondary":
+		print("[FAIL] UiStatusBanner default panel variation mismatch: %s" % String(banner.theme_type_variation))
 		banner.free()
 		return false
 
 	banner.show_status(UiStatusBanner.StatusType.SUCCESS, "Great", "Success message")
-	if banner.theme_type_variation != &"StatusBannerSuccess":
-		print("[FAIL] UiStatusBanner SUCCESS variation mismatch")
+	if banner.theme_type_variation != &"MathosPanelElevated":
+		print("[FAIL] UiStatusBanner SUCCESS panel variation mismatch: %s" % String(banner.theme_type_variation))
 		banner.free()
 		return false
 
 	banner.show_status(UiStatusBanner.StatusType.ERROR, "Error", "Error message")
-	if banner.theme_type_variation != &"StatusBannerError":
-		print("[FAIL] UiStatusBanner ERROR variation mismatch")
+	if banner.theme_type_variation != &"MathosPanelElevated":
+		print("[FAIL] UiStatusBanner ERROR panel variation mismatch: %s" % String(banner.theme_type_variation))
 		banner.free()
 		return false
 
 	banner.free()
-	print("[UI-COMPONENTS-007] UiStatusBanner... PASS")
+	print("[UI-COMPONENTS-007] UiStatusBanner (MathosPanelSecondary / MathosPanelElevated / MathosSuccess / MathosError)... PASS")
 	return true
 
 static func test_layout_spacer() -> bool:
@@ -210,5 +210,5 @@ static func test_component_showcase() -> bool:
 		return false
 
 	showcase.free()
-	print("[UI-COMPONENTS-009] ComponentShowcase... PASS")
+	print("[UI-COMPONENTS-009] ComponentShowcase (1280x720)... PASS")
 	return true

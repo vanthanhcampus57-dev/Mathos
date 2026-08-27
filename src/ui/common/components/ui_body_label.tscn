@@ -3,6 +3,6 @@
 [ext_resource type="Script" path="res://src/ui/common/components/ui_body_label.gd" id="1_script"]
 
 [node name="UiBodyLabel" type="Label"]
-theme_type_variation = &"BodyLabel"
+theme_type_variation = &"MathosBody"
 text = "Body Text"
 script = ExtResource("1_script")

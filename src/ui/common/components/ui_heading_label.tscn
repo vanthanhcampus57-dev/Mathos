@@ -3,6 +3,6 @@
 [ext_resource type="Script" path="res://src/ui/common/components/ui_heading_label.gd" id="1_script"]
 
 [node name="UiHeadingLabel" type="Label"]
-theme_type_variation = &"HeadingLabel"
+theme_type_variation = &"MathosHeading"
 text = "Heading Text"
 script = ExtResource("1_script")
