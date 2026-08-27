@@ -1,11 +1,6 @@
-[gd_scene load_steps=8 format=3 uid="uid://d1_lesson_panel_001"]
+[gd_scene load_steps=2 format=3 uid="uid://d1_lesson_panel_001"]
 
 [ext_resource type="Script" path="res://src/ui/lesson/lesson_panel.gd" id="1_script"]
-[ext_resource type="StyleBox" path="res://src/ui/stage/styles/panel_bg.tres" id="2_panel_bg"]
-[ext_resource type="StyleBox" path="res://src/ui/stage/styles/btn_primary_normal.tres" id="3_btn_p_norm"]
-[ext_resource type="StyleBox" path="res://src/ui/stage/styles/btn_primary_hover.tres" id="4_btn_p_hov"]
-[ext_resource type="StyleBox" path="res://src/ui/stage/styles/btn_primary_pressed.tres" id="5_btn_p_press"]
-[ext_resource type="StyleBox" path="res://src/ui/stage/styles/btn_focus.tres" id="6_btn_focus"]
 
 [node name="LessonPanel" type="Control"]
 layout_mode = 3
@@ -30,11 +25,10 @@ theme_override_constants/margin_bottom = 16
 
 [node name="PanelContainer" type="PanelContainer" parent="MarginContainer"]
 layout_mode = 2
-theme_override_styles/panel = ExtResource("2_panel_bg")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/PanelContainer"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 12
 
 [node name="HeaderContainer" type="HBoxContainer" parent="MarginContainer/PanelContainer/VBoxContainer"]
 layout_mode = 2
@@ -42,22 +36,16 @@ layout_mode = 2
 [node name="ContextTitleLabel" type="Label" parent="MarginContainer/PanelContainer/VBoxContainer/HeaderContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.22, 0.74, 0.97, 1)
-theme_override_font_sizes/font_size = 18
 text = "Stage Context"
 
 [node name="SpeakerLabel" type="Label" parent="MarginContainer/PanelContainer/VBoxContainer/HeaderContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
-theme_override_font_sizes/font_size = 18
 text = "Guide"
 
 [node name="BodyTextLabel" type="RichTextLabel" parent="MarginContainer/PanelContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 140)
+custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/default_color = Color(0.97, 0.98, 0.99, 1)
-theme_override_font_sizes/normal_font_size = 20
 bbcode_enabled = true
 text = "Lesson body text goes here..."
 
@@ -67,18 +55,9 @@ layout_mode = 2
 [node name="PageIndicatorLabel" type="Label" parent="MarginContainer/PanelContainer/VBoxContainer/FooterContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.58, 0.64, 0.72, 1)
-theme_override_font_sizes/font_size = 16
 text = "Step 1 of 1"
-vertical_alignment = 1
 
 [node name="ContinueButton" type="Button" parent="MarginContainer/PanelContainer/VBoxContainer/FooterContainer"]
-custom_minimum_size = Vector2(160, 48)
+custom_minimum_size = Vector2(120, 36)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.97, 0.98, 0.99, 1)
-theme_override_font_sizes/font_size = 18
-theme_override_styles/normal = ExtResource("3_btn_p_norm")
-theme_override_styles/hover = ExtResource("4_btn_p_hov")
-theme_override_styles/pressed = ExtResource("5_btn_p_press")
-theme_override_styles/focus = ExtResource("6_btn_focus")
 text = "Continue"
