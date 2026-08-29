@@ -23,7 +23,7 @@ theme_override_constants/separation = 0
 visible = false
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 16
 
 [node name="DungeonTitleLabel" type="Label" parent="VBoxContainer/HeaderBar"]
 layout_mode = 2
@@ -68,7 +68,6 @@ alignment = 1
 [node name="TitleLabel" type="Label" parent="VBoxContainer/MainBody/StartGameContainer/VBoxContainer"]
 layout_mode = 2
 theme_type_variation = &"MathosTitle"
-theme_override_font_sizes/font_size = 48
 text = "Mathos"
 horizontal_alignment = 1
 
