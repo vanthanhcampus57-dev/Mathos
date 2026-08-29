@@ -113,5 +113,5 @@ func _count_suite_tests(name: String) -> int:
 		"GameFlow Vertical Slice": return 12
 		"AppRoot Integration": return 16
 		"Question Presentation (B.1)": return 14
-		"Presentation Shell (B.2)": return 14
+		"Presentation Shell (B.2)": return 17
 		_: return 1

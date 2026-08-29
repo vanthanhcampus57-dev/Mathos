@@ -2,7 +2,7 @@ class_name TestStagePresentationShell
 extends RefCounted
 
 ## Unit test suite for StagePresentationShell, LessonPanel, StageCompletePanel,
-## and presentation models (supporting PRES-009, PRES-010, PRES-011, PRES-STARTUP-LEAK).
+## and presentation models (supporting PRES-009, PRES-010, PRES-011, PRES-STARTUP-LEAK, STATE-CONTRACT-R2).
 
 static func run_all_tests(tree: SceneTree = null) -> bool:
 	print("--- RUNNING PRESENTATION UI SHELL SUITE ---")
@@ -10,8 +10,10 @@ static func run_all_tests(tree: SceneTree = null) -> bool:
 	all_ok = test_models_neutral_data() and all_ok
 	all_ok = test_shell_instantiation_and_nodes_exist(tree) and all_ok
 	all_ok = test_start_new_game_entry_presentation(tree) and all_ok
+	all_ok = test_continue_game_entry_presentation(tree) and all_ok
 	all_ok = test_entry_layout_non_overlapping_controls(tree) and all_ok
 	all_ok = test_entry_mode_does_not_expose_restored_header(tree) and all_ok
+	all_ok = test_mode_visibility_exclusivity(tree) and all_ok
 	all_ok = test_stage_title_and_context(tree) and all_ok
 	all_ok = test_lesson_panel_pagination_and_continue(tree) and all_ok
 	all_ok = test_question_host_container_ready(tree) and all_ok
@@ -21,6 +23,7 @@ static func run_all_tests(tree: SceneTree = null) -> bool:
 	all_ok = test_sequence_flow_pres_009(tree) and all_ok
 	all_ok = test_no_combat_intent_dependency_pres_010(tree) and all_ok
 	all_ok = test_no_progress_or_save_mutation(tree) and all_ok
+	all_ok = test_primary_cta_focusability(tree) and all_ok
 	return all_ok
 
 static func _sample_context(stage_id: String = "stage_01_01", restored: bool = false) -> PresentationModels.StageContextInfo:
@@ -108,16 +111,46 @@ static func test_start_new_game_entry_presentation(tree: SceneTree = null) -> bo
 		_remove_node_from_tree(shell)
 		return _fail("PRES-SHELL-002", "ViewMode entry not set")
 
-	var state: Dictionary = {"emitted": false}
-	shell.new_game_requested.connect(func(): state["emitted"] = true)
+	var state: Dictionary = {"count": 0}
+	shell.new_game_requested.connect(func(): state["count"] = int(state["count"]) + 1)
 	shell._on_new_game_pressed()
 
-	if not bool(state["emitted"]):
+	if int(state["count"]) != 1:
 		_remove_node_from_tree(shell)
-		return _fail("PRES-SHELL-002", "new_game_requested signal not emitted")
+		return _fail("PRES-SHELL-002", "new_game_requested signal emission count != 1 (got %d)" % int(state["count"]))
 
 	_remove_node_from_tree(shell)
 	print("[PRES-SHELL-002] PASS")
+	return true
+
+static func test_continue_game_entry_presentation(tree: SceneTree = null) -> bool:
+	var scene: PackedScene = load("res://src/ui/stage/stage_presentation_shell.tscn")
+	var shell: StagePresentationShell = scene.instantiate() as StagePresentationShell
+	_add_node_to_tree(shell, tree)
+
+	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_ENTRY)
+	shell.set_continue_available(true)
+
+	var cont_btn: Button = shell._get_continue_game_button()
+	if cont_btn == null or not cont_btn.visible:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-CONTINUE-001", "ContinueButton is not visible after set_continue_available(true)")
+
+	var state: Dictionary = {"count": 0}
+	shell.continue_game_requested.connect(func(): state["count"] = int(state["count"]) + 1)
+	shell._on_continue_game_pressed()
+
+	if int(state["count"]) != 1:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-CONTINUE-001", "continue_game_requested signal emission count != 1 (got %d)" % int(state["count"]))
+
+	shell.set_continue_available(false)
+	if cont_btn.visible:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-CONTINUE-001", "ContinueButton is visible after set_continue_available(false)")
+
+	_remove_node_from_tree(shell)
+	print("[PRES-CONTINUE-001] PASS")
 	return true
 
 static func test_entry_layout_non_overlapping_controls(tree: SceneTree = null) -> bool:
@@ -193,6 +226,53 @@ static func test_entry_mode_does_not_expose_restored_header(tree: SceneTree = nu
 	print("[PRES-STARTUP-LEAK] PASS")
 	return true
 
+static func test_mode_visibility_exclusivity(tree: SceneTree = null) -> bool:
+	var scene: PackedScene = load("res://src/ui/stage/stage_presentation_shell.tscn")
+	var shell: StagePresentationShell = scene.instantiate() as StagePresentationShell
+	_add_node_to_tree(shell, tree)
+	shell.set_stage_context(_sample_context("stage_01_01", true))
+
+	var start_game: Control = shell._get_start_game_container()
+	var lesson: LessonPanel = shell.get_lesson_panel()
+	var q_host: MarginContainer = shell.get_question_host_container()
+	var fb_host: MarginContainer = shell.get_feedback_host_container()
+	var complete: StageCompletePanel = shell.get_stage_complete_panel()
+	var header: Control = shell._get_header_bar()
+
+	# Test MODE_ENTRY
+	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_ENTRY)
+	if not start_game.visible or lesson.visible or q_host.visible or fb_host.visible or complete.visible or header.visible:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-EXCLUSIVITY-001", "MODE_ENTRY visibility contract violated")
+
+	# Test MODE_LESSON
+	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_LESSON)
+	if start_game.visible or not lesson.visible or q_host.visible or fb_host.visible or complete.visible or not header.visible:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-EXCLUSIVITY-001", "MODE_LESSON visibility contract violated")
+
+	# Test MODE_QUESTION_HOST
+	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_QUESTION_HOST)
+	if start_game.visible or lesson.visible or not q_host.visible or fb_host.visible or complete.visible or not header.visible:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-EXCLUSIVITY-001", "MODE_QUESTION_HOST visibility contract violated")
+
+	# Test MODE_FEEDBACK_HOST
+	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_FEEDBACK_HOST)
+	if start_game.visible or lesson.visible or q_host.visible or not fb_host.visible or complete.visible or not header.visible:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-EXCLUSIVITY-001", "MODE_FEEDBACK_HOST visibility contract violated")
+
+	# Test MODE_STAGE_COMPLETE
+	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_STAGE_COMPLETE)
+	if start_game.visible or lesson.visible or q_host.visible or fb_host.visible or not complete.visible or not header.visible:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-EXCLUSIVITY-001", "MODE_STAGE_COMPLETE visibility contract violated")
+
+	_remove_node_from_tree(shell)
+	print("[PRES-EXCLUSIVITY-001] PASS")
+	return true
+
 static func test_stage_title_and_context(tree: SceneTree = null) -> bool:
 	var scene: PackedScene = load("res://src/ui/stage/stage_presentation_shell.tscn")
 	var shell: StagePresentationShell = scene.instantiate() as StagePresentationShell
@@ -223,8 +303,8 @@ static func test_lesson_panel_pagination_and_continue(tree: SceneTree = null) ->
 	var step1: PresentationModels.LessonStepData = PresentationModels.LessonStepData.new("Guide", "Page 1 content", "Title 1")
 	var step2: PresentationModels.LessonStepData = PresentationModels.LessonStepData.new("Guide", "Page 2 content", "Title 2")
 
-	var state: Dictionary = {"completed": false}
-	panel.lesson_completed.connect(func(): state["completed"] = true)
+	var state: Dictionary = {"count": 0}
+	panel.lesson_completed.connect(func(): state["count"] = int(state["count"]) + 1)
 
 	panel.set_lesson_data([step1, step2])
 
@@ -238,9 +318,9 @@ static func test_lesson_panel_pagination_and_continue(tree: SceneTree = null) ->
 		return _fail("PRES-LESSON-001", "LessonPanel failed to advance to next step")
 
 	var final_adv: bool = panel.next_step()
-	if final_adv or not bool(state["completed"]):
+	if final_adv or int(state["count"]) != 1:
 		_remove_node_from_tree(panel)
-		return _fail("PRES-LESSON-001", "LessonPanel did not emit lesson_completed on final step")
+		return _fail("PRES-LESSON-001", "LessonPanel lesson_completed emission count != 1 (got %d)" % int(state["count"]))
 
 	_remove_node_from_tree(panel)
 	print("[PRES-LESSON-001] PASS")
@@ -285,15 +365,15 @@ static func test_stage_complete_presentation(tree: SceneTree = null) -> bool:
 	var shell: StagePresentationShell = scene.instantiate() as StagePresentationShell
 	_add_node_to_tree(shell, tree)
 
-	var state: Dictionary = {"emitted": false}
-	shell.stage_continue_requested.connect(func(): state["emitted"] = true)
+	var state: Dictionary = {"count": 0}
+	shell.stage_continue_requested.connect(func(): state["count"] = int(state["count"]) + 1)
 
 	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_STAGE_COMPLETE)
 	shell.get_stage_complete_panel()._on_continue_pressed()
 
-	if not bool(state["emitted"]):
+	if int(state["count"]) != 1:
 		_remove_node_from_tree(shell)
-		return _fail("PRES-SHELL-006", "stage_continue_requested signal not emitted from stage complete panel")
+		return _fail("PRES-SHELL-006", "stage_continue_requested signal emission count != 1 (got %d)" % int(state["count"]))
 
 	_remove_node_from_tree(shell)
 	print("[PRES-SHELL-006] PASS")
@@ -385,6 +465,36 @@ static func test_no_progress_or_save_mutation(tree: SceneTree = null) -> bool:
 
 	_remove_node_from_tree(shell)
 	print("[PRES-MUTATION-001] PASS")
+	return true
+
+static func test_primary_cta_focusability(tree: SceneTree = null) -> bool:
+	var scene: PackedScene = load("res://src/ui/stage/stage_presentation_shell.tscn")
+	var shell: StagePresentationShell = scene.instantiate() as StagePresentationShell
+	_add_node_to_tree(shell, tree)
+
+	var new_btn: Button = shell._get_new_game_button()
+	var cont_btn: Button = shell._get_continue_game_button()
+	if new_btn == null or new_btn.focus_mode == Control.FOCUS_NONE:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-FOCUS-001", "NewGameButton is null or has FOCUS_NONE")
+	if cont_btn == null or cont_btn.focus_mode == Control.FOCUS_NONE:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-FOCUS-001", "ContinueButton is null or has FOCUS_NONE")
+
+	var lesson_panel: LessonPanel = shell.get_lesson_panel()
+	var lesson_btn: Button = lesson_panel._get_continue_button()
+	if lesson_btn == null or lesson_btn.focus_mode == Control.FOCUS_NONE:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-FOCUS-001", "LessonPanel ContinueButton is null or has FOCUS_NONE")
+
+	var complete_panel: StageCompletePanel = shell.get_stage_complete_panel()
+	var complete_btn: Button = complete_panel._get_continue_button()
+	if complete_btn == null or complete_btn.focus_mode == Control.FOCUS_NONE:
+		_remove_node_from_tree(shell)
+		return _fail("PRES-FOCUS-001", "StageCompletePanel ContinueButton is null or has FOCUS_NONE")
+
+	_remove_node_from_tree(shell)
+	print("[PRES-FOCUS-001] PASS")
 	return true
 
 static func _fail(test_id: String, message: String) -> bool:
