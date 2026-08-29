@@ -34,9 +34,9 @@ func bootstrap_runtime(custom_content_root: String = "") -> bool:
 		root_path = "res://content"
 
 	var report: ContentValidationReport = repo.load_and_validate(root_path)
-	if not report.publication_allowed:
-		root_path = "res://tests/fixtures/content/valid_catalog"
-		report = repo.load_and_validate(root_path)
+	if report == null or not report.publication_allowed:
+		push_error("AppRoot: Content validation failed for root '%s'. Publication not allowed." % root_path)
+		return false
 
 	_catalog = repo.get_catalog()
 	if _catalog == null:

@@ -26,6 +26,7 @@ static func run_all_tests() -> bool:
 	all_ok = test_approot_014_invalid_continue_fails_explicitly() and all_ok
 	all_ok = test_approot_015_normal_launch_uses_approot_tscn() and all_ok
 	all_ok = test_approot_016_question_request_canonical_construction() and all_ok
+	all_ok = test_approot_017_content_fallback_hardening() and all_ok
 
 	return all_ok
 
@@ -116,6 +117,57 @@ static func test_approot_016_question_request_canonical_construction() -> bool:
 
 	app.free()
 	print("[APPROOT-016] PASS: AppRoot canonical six-field QuestionRequest construction verified")
+	return true
+
+# APPROOT-017: Content fallback hardening (no silent valid_catalog fallback in production runtime)
+static func test_approot_017_content_fallback_hardening() -> bool:
+	print("[APPROOT-017] Testing content fallback hardening (no silent valid_catalog fallback)...")
+	var packed: PackedScene = load("res://src/app/app_root.tscn") as PackedScene
+	if packed == null:
+		print("[APPROOT-017] FAIL: Unable to load app_root.tscn")
+		return false
+
+	# 1. Default player runtime without args or with invalid content root fails explicitly
+	var app_default: AppRoot = packed.instantiate() as AppRoot
+	var ok_default: bool = app_default.bootstrap_runtime("")
+	if ok_default:
+		print("[APPROOT-017] FAIL: Default bootstrap_runtime() returned true on invalid res://content")
+		app_default.free()
+		return false
+
+	if app_default.get_catalog() != null:
+		print("[APPROOT-017] FAIL: Catalog was populated with fallback fixture data on invalid production root")
+		app_default.free()
+		return false
+
+	if app_default.get_game_flow_service() != null or app_default.get_question_service() != null:
+		print("[APPROOT-017] FAIL: Core services initialized with fixture data by accident after content failure")
+		app_default.free()
+		return false
+
+	app_default.free()
+
+	# 2. Explicit test fixture root injection path STILL WORKS
+	var app_fixture: AppRoot = packed.instantiate() as AppRoot
+	var ok_fixture: bool = app_fixture.bootstrap_runtime("res://tests/fixtures/content/valid_catalog")
+	if not ok_fixture:
+		print("[APPROOT-017] FAIL: Explicit test fixture root injection failed")
+		app_fixture.free()
+		return false
+
+	if app_fixture.get_catalog() == null:
+		print("[APPROOT-017] FAIL: Catalog null after explicit valid_catalog fixture injection")
+		app_fixture.free()
+		return false
+
+	if app_fixture.get_game_flow_service() == null or app_fixture.get_question_service() == null:
+		print("[APPROOT-017] FAIL: Services null after explicit valid_catalog fixture injection")
+		app_fixture.free()
+		return false
+
+	app_fixture.free()
+
+	print("[APPROOT-017] PASS: Content fallback hardening verified cleanly (no silent fallback, explicit injection preserved)")
 	return true
 
 static func _has_approot_composition() -> bool:

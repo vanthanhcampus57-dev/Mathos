@@ -117,7 +117,7 @@ func _count_suite_tests(name: String) -> int:
 		"Save Negative Paths": return 20
 		"Save Integration": return 17
 		"GameFlow Vertical Slice": return 12
-		"AppRoot Integration": return 16
+		"AppRoot Integration": return 17
 		"Question Presentation (B.1)": return 14
 		"Presentation Shell (B.2)": return 17
 		"Mathos Theme (A.1)": return 6
