@@ -91,6 +91,7 @@ func _ensure_ui_built() -> void:
 	if _submit_button == null:
 		_submit_button = Button.new()
 		_submit_button.name = "SubmitButton"
+		_submit_button.theme_type_variation = &"MathosPrimaryButton"
 		_submit_button.text = "Submit Answer"
 		_submit_button.custom_minimum_size = Vector2(160, 44)
 		_submit_button.size_flags_horizontal = SIZE_SHRINK_CENTER
@@ -105,6 +106,8 @@ func _ensure_ui_built() -> void:
 		_prompt_label.custom_minimum_size = Vector2(0, 44)
 	if _feedback_label != null:
 		_feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if _submit_button != null:
+		_submit_button.theme_type_variation = &"MathosPrimaryButton"
 
 	if _submit_button != null and not _submit_button.pressed.is_connected(_on_submit_button_pressed):
 		_submit_button.pressed.connect(_on_submit_button_pressed)
@@ -212,6 +215,7 @@ func show_feedback(attempt_result: Dictionary) -> bool:
 
 	_ensure_ui_built()
 	if _feedback_label != null:
+		_feedback_label.theme_type_variation = &"MathosSuccess" if _is_correct else &"MathosError"
 		_feedback_label.text = "[%s] %s" % ["CORRECT" if _is_correct else "INCORRECT", _feedback_text]
 		_feedback_label.visible = true
 	return true
@@ -246,6 +250,7 @@ func _update_labels() -> void:
 	if _feedback_label != null:
 		_feedback_label.visible = _has_feedback
 		if _has_feedback:
+			_feedback_label.theme_type_variation = &"MathosSuccess" if _is_correct else &"MathosError"
 			_feedback_label.text = "[%s] %s" % ["CORRECT" if _is_correct else "INCORRECT", _feedback_text]
 
 func _on_submit_button_pressed() -> void:

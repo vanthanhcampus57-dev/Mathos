@@ -46,18 +46,20 @@ func _initialize() -> void:
 		else:
 			fail_total += 1
 
-	# 2. Tri-state Presentation Integration Suites from both accepted lineages
+	# 2. Tri-state Presentation Integration Suites from accepted lineages
 	var pres_suites: Array[String] = [
 		"res://tests/integration/presentation/test_presentation_flow_integration.gd",
 		"res://tests/unit/presentation/test_presentation_integration.gd",
 		"res://tests/integration/app/test_app_root_question_request_integration.gd",
-		"res://tests/unit/presentation/ui/test_shared_ui_harness.gd"
+		"res://tests/unit/presentation/ui/test_shared_ui_harness.gd",
+		"res://tests/direct/question_ui/test_question_ui_acceptance.gd"
 	]
 
 	for script_path in pres_suites:
 		var script: GDScript = load(script_path) as GDScript
-		if script != null and script.has_script_method("run_all_tests"):
-			var tri_res: Variant = script.call("run_all_tests")
+		var method_name: String = "run_all_tests" if (script != null and script.has_script_method("run_all_tests")) else "run_all_checks"
+		if script != null and script.has_script_method(method_name):
+			var tri_res: Variant = script.call(method_name)
 			if tri_res is Signal:
 				tri_res = await tri_res
 			var tri_dict: Dictionary = tri_res as Dictionary
