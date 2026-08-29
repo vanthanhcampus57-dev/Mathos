@@ -1,20 +1,9 @@
-[gd_scene load_steps=14 format=3 uid="uid://d1_stage_presentation_shell_001"]
+[gd_scene load_steps=5 format=3 uid="uid://d1_stage_presentation_shell_001"]
 
 [ext_resource type="Script" path="res://src/ui/stage/stage_presentation_shell.gd" id="1_script"]
-[ext_resource type="PackedScene" uid="uid://d1_lesson_panel_001" path="res://src/ui/lesson/lesson_panel.tscn" id="2_lesson"]
-[ext_resource type="PackedScene" uid="uid://d1_stage_complete_panel_001" path="res://src/ui/stage/stage_complete_panel.tscn" id="3_complete"]
-[ext_resource type="StyleBox" path="res://src/ui/stage/styles/badge_restored.tres" id="4_badge_bg"]
-[ext_resource type="StyleBox" path="res://src/ui/stage/styles/panel_bg.tres" id="5_panel_bg"]
-[ext_resource type="StyleBox" path="res://src/ui/stage/styles/btn_primary_normal.tres" id="6_btn_p_norm"]
-[ext_resource type="StyleBox" path="res://src/ui/stage/styles/btn_primary_hover.tres" id="7_btn_p_hov"]
-[ext_resource type="StyleBox" path="res://src/ui/stage/styles/btn_primary_pressed.tres" id="8_btn_p_press"]
-[ext_resource type="StyleBox" path="res://src/ui/stage/styles/btn_secondary_normal.tres" id="9_btn_s_norm"]
-[ext_resource type="StyleBox" path="res://src/ui/stage/styles/btn_secondary_hover.tres" id="10_btn_s_hov"]
-[ext_resource type="StyleBox" path="res://src/ui/stage/styles/btn_secondary_pressed.tres" id="11_btn_s_press"]
-[ext_resource type="StyleBox" path="res://src/ui/stage/styles/btn_focus.tres" id="12_btn_focus"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_root_bg"]
-bg_color = Color(0.0588235, 0.0901961, 0.164706, 1)
+[ext_resource type="Theme" uid="uid://mathos_theme_001" path="res://src/ui/theme/mathos_theme.tres" id="2_theme"]
+[ext_resource type="PackedScene" uid="uid://d1_lesson_panel_001" path="res://src/ui/lesson/lesson_panel.tscn" id="3_lesson"]
+[ext_resource type="PackedScene" uid="uid://d1_stage_complete_panel_001" path="res://src/ui/stage/stage_complete_panel.tscn" id="4_complete"]
 
 [node name="StagePresentationShell" type="PanelContainer"]
 anchors_preset = 15
@@ -22,7 +11,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_root_bg")
+theme = ExtResource("2_theme")
+theme_type_variation = &"MathosPanelPrimary"
 script = ExtResource("1_script")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
@@ -31,31 +21,27 @@ theme_override_constants/separation = 0
 
 [node name="HeaderBar" type="HBoxContainer" parent="VBoxContainer"]
 visible = false
-custom_minimum_size = Vector2(0, 60)
+custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_override_constants/separation = 20
 
 [node name="DungeonTitleLabel" type="Label" parent="VBoxContainer/HeaderBar"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.580392, 0.639216, 0.721569, 1)
-theme_override_font_sizes/font_size = 18
+theme_type_variation = &"MathosSubtitle"
 text = "Dungeon Title"
 vertical_alignment = 1
 
 [node name="StageTitleLabel" type="Label" parent="VBoxContainer/HeaderBar"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.972549, 0.980392, 0.988235, 1)
-theme_override_font_sizes/font_size = 22
+theme_type_variation = &"MathosHeading"
 text = "Stage Title"
 vertical_alignment = 1
 
 [node name="RestoredBadgeLabel" type="Label" parent="VBoxContainer/HeaderBar"]
 visible = false
 layout_mode = 2
-theme_override_colors/font_color = Color(0.960784, 0.619608, 0.043137, 1)
-theme_override_font_sizes/font_size = 14
-theme_override_styles/normal = ExtResource("4_badge_bg")
+theme_type_variation = &"MathosHeading"
 text = "[RESTORED STATE]"
 vertical_alignment = 1
 
@@ -72,7 +58,7 @@ custom_minimum_size = Vector2(480, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-theme_override_styles/panel = ExtResource("5_panel_bg")
+theme_type_variation = &"MathosCard"
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainBody/StartGameContainer"]
 layout_mode = 2
@@ -81,51 +67,39 @@ alignment = 1
 
 [node name="TitleLabel" type="Label" parent="VBoxContainer/MainBody/StartGameContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.972549, 0.980392, 0.988235, 1)
-theme_override_font_sizes/font_size = 52
+theme_type_variation = &"MathosTitle"
+theme_override_font_sizes/font_size = 48
 text = "Mathos"
 horizontal_alignment = 1
 
 [node name="SubtitleLabel" type="Label" parent="VBoxContainer/MainBody/StartGameContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.580392, 0.639216, 0.721569, 1)
-theme_override_font_sizes/font_size = 18
+theme_type_variation = &"MathosSubtitle"
 text = "Foundation Build"
 horizontal_alignment = 1
 
 [node name="ContinueButton" type="Button" parent="VBoxContainer/MainBody/StartGameContainer/VBoxContainer"]
 visible = false
-custom_minimum_size = Vector2(280, 52)
+custom_minimum_size = Vector2(280, 48)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_override_colors/font_color = Color(0.972549, 0.980392, 0.988235, 1)
-theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = ExtResource("6_btn_p_norm")
-theme_override_styles/hover = ExtResource("7_btn_p_hov")
-theme_override_styles/pressed = ExtResource("8_btn_p_press")
-theme_override_styles/focus = ExtResource("12_btn_focus")
+theme_type_variation = &"MathosPrimaryButton"
 text = "Continue"
 
 [node name="NewGameButton" type="Button" parent="VBoxContainer/MainBody/StartGameContainer/VBoxContainer"]
-custom_minimum_size = Vector2(280, 52)
+custom_minimum_size = Vector2(280, 48)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_override_colors/font_color = Color(0.972549, 0.980392, 0.988235, 1)
-theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = ExtResource("6_btn_p_norm")
-theme_override_styles/hover = ExtResource("7_btn_p_hov")
-theme_override_styles/pressed = ExtResource("8_btn_p_press")
-theme_override_styles/focus = ExtResource("12_btn_focus")
+theme_type_variation = &"MathosSecondaryButton"
 text = "Start New Game"
 
 [node name="VersionLabel" type="Label" parent="VBoxContainer/MainBody/StartGameContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.392157, 0.454902, 0.545098, 1)
-theme_override_font_sizes/font_size = 14
+theme_type_variation = &"MathosMeta"
 text = "0.1.0-dev"
 horizontal_alignment = 1
 
-[node name="LessonPanel" parent="VBoxContainer/MainBody" instance=ExtResource("2_lesson")]
+[node name="LessonPanel" parent="VBoxContainer/MainBody" instance=ExtResource("3_lesson")]
 layout_mode = 2
 
 [node name="QuestionHostContainer" type="MarginContainer" parent="VBoxContainer/MainBody"]
@@ -138,15 +112,14 @@ layout_mode = 2
 
 [node name="FeedbackPanel" type="PanelContainer" parent="VBoxContainer/MainBody/FeedbackHostContainer"]
 layout_mode = 2
-theme_override_styles/panel = ExtResource("5_panel_bg")
+theme_type_variation = &"MathosCard"
 
 [node name="FeedbackLabel" type="Label" parent="VBoxContainer/MainBody/FeedbackHostContainer/FeedbackPanel"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.972549, 0.980392, 0.988235, 1)
-theme_override_font_sizes/font_size = 22
+theme_type_variation = &"MathosHeading"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="StageCompletePanel" parent="VBoxContainer/MainBody" instance=ExtResource("3_complete")]
+[node name="StageCompletePanel" parent="VBoxContainer/MainBody" instance=ExtResource("4_complete")]
 visible = false
 layout_mode = 2
