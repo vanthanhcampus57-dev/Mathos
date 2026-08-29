@@ -31,6 +31,10 @@ func _ensure_ui_built() -> void:
 	size_flags_vertical = SIZE_EXPAND_FILL
 	custom_minimum_size = Vector2(400, 300)
 
+	if theme == null:
+		theme = load("res://src/ui/theme/mathos_theme.tres")
+	theme_type_variation = &"MathosCard"
+
 	if _main_vbox == null:
 		_main_vbox = get_node_or_null("MainVBox") as VBoxContainer
 	if _objective_label == null:
@@ -51,20 +55,22 @@ func _ensure_ui_built() -> void:
 		_main_vbox.set_anchors_preset(PRESET_FULL_RECT)
 		_main_vbox.size_flags_horizontal = SIZE_EXPAND_FILL
 		_main_vbox.size_flags_vertical = SIZE_EXPAND_FILL
-		_main_vbox.add_theme_constant_override("separation", 12)
+		_main_vbox.add_theme_constant_override("separation", 16)
 		add_child(_main_vbox)
 
 	if _objective_label == null:
 		_objective_label = Label.new()
 		_objective_label.name = "ObjectiveLabel"
+		_objective_label.theme_type_variation = &"MathosMeta"
 		_objective_label.visible = false
 		_main_vbox.add_child(_objective_label)
 
 	if _prompt_label == null:
 		_prompt_label = Label.new()
 		_prompt_label.name = "PromptLabel"
+		_prompt_label.theme_type_variation = &"MathosHeading"
 		_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_prompt_label.custom_minimum_size = Vector2(0, 40)
+		_prompt_label.custom_minimum_size = Vector2(0, 44)
 		_prompt_label.size_flags_horizontal = SIZE_EXPAND_FILL
 		_main_vbox.add_child(_prompt_label)
 
@@ -78,6 +84,7 @@ func _ensure_ui_built() -> void:
 	if _feedback_label == null:
 		_feedback_label = Label.new()
 		_feedback_label.name = "FeedbackLabel"
+		_feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_feedback_label.visible = false
 		_main_vbox.add_child(_feedback_label)
 
@@ -88,6 +95,16 @@ func _ensure_ui_built() -> void:
 		_submit_button.custom_minimum_size = Vector2(160, 44)
 		_submit_button.size_flags_horizontal = SIZE_SHRINK_CENTER
 		_main_vbox.add_child(_submit_button)
+
+	# Ensure theme variations and layout properties on existing scene nodes
+	if _objective_label != null:
+		_objective_label.theme_type_variation = &"MathosMeta"
+	if _prompt_label != null:
+		_prompt_label.theme_type_variation = &"MathosHeading"
+		_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_prompt_label.custom_minimum_size = Vector2(0, 44)
+	if _feedback_label != null:
+		_feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 	if _submit_button != null and not _submit_button.pressed.is_connected(_on_submit_button_pressed):
 		_submit_button.pressed.connect(_on_submit_button_pressed)

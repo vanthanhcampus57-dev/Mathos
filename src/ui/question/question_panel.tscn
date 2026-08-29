@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://c8qpanel001"]
+[gd_scene load_steps=3 format=3 uid="uid://c8qpanel001"]
 
 [ext_resource type="Script" path="res://src/ui/question/question_panel.gd" id="1_qpanel"]
+[ext_resource type="Theme" path="res://src/ui/theme/mathos_theme.tres" id="2_mtheme"]
 
 [node name="QuestionPanel" type="PanelContainer"]
 anchors_preset = 15
@@ -10,36 +11,39 @@ grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme = ExtResource("2_mtheme")
+theme_type_variation = &"MathosCard"
 script = ExtResource("1_qpanel")
 
 [node name="MainVBox" type="VBoxContainer" parent="."]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 12
+theme_override_constants/separation = 16
 
 [node name="ObjectiveLabel" type="Label" parent="MainVBox"]
 visible = false
 layout_mode = 2
-theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_type_variation = &"MathosMeta"
 
 [node name="PromptLabel" type="Label" parent="MainVBox"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 18
+theme_type_variation = &"MathosHeading"
 autowrap_mode = 3
 
 [node name="InteractionContainer" type="MarginContainer" parent="MainVBox"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
 
 [node name="FeedbackLabel" type="Label" parent="MainVBox"]
 visible = false
 layout_mode = 2
-theme_override_colors/font_color = Color(0.2, 0.8, 0.2, 1)
+autowrap_mode = 3
 
 [node name="SubmitButton" type="Button" parent="MainVBox"]
 custom_minimum_size = Vector2(160, 44)
