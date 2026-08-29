@@ -71,12 +71,6 @@ theme_type_variation = &"MathosTitle"
 text = "Mathos"
 horizontal_alignment = 1
 
-[node name="SubtitleLabel" type="Label" parent="VBoxContainer/MainBody/StartGameContainer/VBoxContainer"]
-layout_mode = 2
-theme_type_variation = &"MathosSubtitle"
-text = "Foundation Build"
-horizontal_alignment = 1
-
 [node name="ContinueButton" type="Button" parent="VBoxContainer/MainBody/StartGameContainer/VBoxContainer"]
 visible = false
 custom_minimum_size = Vector2(280, 48)
