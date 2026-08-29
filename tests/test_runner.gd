@@ -2,7 +2,7 @@ class_name TestRunner
 extends SceneTree
 
 ## Headless Test Runner for Mathos canonical D1 final integration task.
-## Executes TEST-BOOT-001, TEST-SMOKE-001, TEST-CONFIG-001, CONTENT-001..028, QUESTION-001..026, Player/Reward contracts, PROGRESS-001..015, SAVE suites, FLOW-001..012, APPROOT-001..015, and PRES suites from both accepted lineages.
+## Executes TEST-BOOT-001, TEST-SMOKE-001, TEST-CONFIG-001, CONTENT-001..028, QUESTION-001..026, Player/Reward contracts, PROGRESS-001..015, SAVE suites, FLOW-001..012, APPROOT-001..015, PRES suites, and Shared Mathos Theme suite.
 ## Implements truthful tri-state test accounting (PASS, FAIL, WAITING).
 
 func _initialize() -> void:
@@ -32,7 +32,9 @@ func _initialize() -> void:
 		{"name": "GameFlow Vertical Slice", "func": Callable(load("res://tests/integration/flow/test_flow_vertical_slice.gd") as GDScript, "run_all_tests")},
 		{"name": "AppRoot Integration", "func": Callable(load("res://tests/integration/app/test_app_root_integration.gd") as GDScript, "run_all_tests")},
 		{"name": "Question Presentation (B.1)", "func": Callable(preload("res://tests/unit/presentation/question/test_question_presentation.gd"), "run_all_tests")},
-		{"name": "Presentation Shell (B.2)", "func": Callable(preload("res://tests/unit/presentation/lesson/test_stage_presentation_shell.gd"), "run_all_tests").bind(self)}
+		{"name": "Presentation Shell (B.2)", "func": Callable(preload("res://tests/unit/presentation/lesson/test_stage_presentation_shell.gd"), "run_all_tests").bind(self)},
+		{"name": "Mathos Theme (A.1)", "func": Callable(TestMathosTheme, "run_all_tests")},
+		{"name": "Shared Components (A.2)", "func": Callable(preload("res://tests/unit/presentation/test_shared_components.gd"), "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -47,7 +49,8 @@ func _initialize() -> void:
 	var pres_suites: Array[String] = [
 		"res://tests/integration/presentation/test_presentation_flow_integration.gd",
 		"res://tests/unit/presentation/test_presentation_integration.gd",
-		"res://tests/integration/app/test_app_root_question_request_integration.gd"
+		"res://tests/integration/app/test_app_root_question_request_integration.gd",
+		"res://tests/unit/presentation/ui/test_shared_ui_harness.gd"
 	]
 
 	for script_path in pres_suites:
@@ -114,4 +117,6 @@ func _count_suite_tests(name: String) -> int:
 		"AppRoot Integration": return 16
 		"Question Presentation (B.1)": return 14
 		"Presentation Shell (B.2)": return 17
+		"Mathos Theme (A.1)": return 6
+		"Shared Components (A.2)": return 9
 		_: return 1
