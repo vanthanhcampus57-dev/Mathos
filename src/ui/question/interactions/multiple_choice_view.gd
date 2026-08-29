@@ -1,15 +1,17 @@
 class_name MultipleChoiceView
 extends Control
 
-## UI View for rendering Multiple Choice question interactions.
+## UI View for rendering Multiple Choice question interactions consuming Mathos Shared UI Foundation.
+## Supports visual states: normal, hover, selected, focus, disabled.
 
 signal option_selected(option_id: String)
 
 var _options: Array = []
 var _selected_option_id: String = ""
+var _disabled: bool = false
 
 var _vbox: VBoxContainer = null
-var _option_buttons: Dictionary = {} # option_id -> Button
+var _option_buttons: Dictionary = {} # option_id -> UiOptionCard
 
 func _ready() -> void:
 	_ensure_ui_built()
@@ -28,7 +30,7 @@ func _ensure_ui_built() -> void:
 	_vbox.set_anchors_preset(PRESET_FULL_RECT)
 	_vbox.size_flags_horizontal = SIZE_EXPAND_FILL
 	_vbox.size_flags_vertical = SIZE_EXPAND_FILL
-	_vbox.add_theme_constant_override("separation", 8)
+	_vbox.add_theme_constant_override("separation", MathosTokens.SPACING_SM)
 	add_child(_vbox)
 
 	_rebuild_option_buttons()
@@ -36,6 +38,7 @@ func _ensure_ui_built() -> void:
 func setup(interaction_payload: Dictionary) -> bool:
 	_options = []
 	_selected_option_id = ""
+	_disabled = false
 	_option_buttons.clear()
 
 	if not interaction_payload.has("options") or not (interaction_payload["options"] is Array):
@@ -73,6 +76,13 @@ func get_interaction_payload() -> Dictionary:
 		return {}
 	return {"selected_option_id": _selected_option_id}
 
+func set_disabled(p_disabled: bool) -> void:
+	_disabled = p_disabled
+	_update_button_states()
+
+func is_disabled() -> bool:
+	return _disabled
+
 func _rebuild_option_buttons() -> void:
 	if _vbox == null:
 		return
@@ -90,29 +100,36 @@ func _rebuild_option_buttons() -> void:
 		var opt_id: String = String(opt["option_id"])
 		var opt_text: String = String(opt.get("text", opt_id))
 
-		var btn: Button = Button.new()
-		btn.name = "OptionButton_" + opt_id
-		btn.text = "%s. %s" % [opt_id, opt_text]
-		btn.custom_minimum_size = Vector2(240, 40)
-		btn.size_flags_horizontal = SIZE_EXPAND_FILL
+		var card: UiOptionCard = UiOptionCard.new()
+		card.name = "OptionButton_" + opt_id
+		card.text = "   %s. %s" % [opt_id, opt_text]
+		card.custom_minimum_size = Vector2(240, 48)
+		card.size_flags_horizontal = SIZE_EXPAND_FILL
+		card.focus_mode = FOCUS_ALL
+		card.mouse_filter = MOUSE_FILTER_STOP
 
-		btn.pressed.connect(func(): select_option(opt_id))
+		card.pressed.connect(func(): select_option(opt_id))
 
-		_vbox.add_child(btn)
-		_option_buttons[opt_id] = btn
+		_vbox.add_child(card)
+		_option_buttons[opt_id] = card
 
 	_update_button_states()
 
 func _update_button_states() -> void:
 	for opt_id in _option_buttons:
-		var btn: Button = _option_buttons[opt_id] as Button
-		if btn != null:
+		var card: UiOptionCard = _option_buttons[opt_id] as UiOptionCard
+		if card != null:
 			var opt_text: String = opt_id
 			for opt in _options:
 				if String(opt["option_id"]) == opt_id:
 					opt_text = String(opt.get("text", opt_id))
 					break
-			if opt_id == _selected_option_id:
-				btn.text = "[X] %s. %s" % [opt_id, opt_text]
+
+			var is_selected: bool = (opt_id == _selected_option_id)
+			card.set_selected(is_selected)
+			card.disabled = _disabled
+
+			if is_selected:
+				card.text = "[X] %s. %s" % [opt_id, opt_text]
 			else:
-				btn.text = "   %s. %s" % [opt_id, opt_text]
+				card.text = "   %s. %s" % [opt_id, opt_text]
