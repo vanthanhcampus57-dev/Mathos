@@ -171,35 +171,52 @@ func create_stage_context(is_restored: bool = false) -> Dictionary:
 	if _current_stage_id.is_empty() or _current_stage_data.is_empty():
 		return {}
 
-	var dungeon_id: String = String(_current_stage_data.get("dungeon_id", "dungeon_01"))
-	var dungeon: Dictionary = _catalog.get_dungeon(dungeon_id)
-	var dungeon_title: String = String(dungeon.get("title", dungeon_id))
+	var dungeon_id: String = String(_current_stage_data.get("dungeon_id", ""))
+	if dungeon_id.is_empty():
+		return {}
 
-	var stage_title: String = String(_current_stage_data.get("title", _current_stage_data.get("learning_objective", "Stage %s" % _current_stage_id)))
+	var dungeon: Dictionary = _catalog.get_dungeon(dungeon_id)
+	if dungeon.is_empty():
+		return {}
+
+	var dungeon_title: String = String(dungeon.get("display_name", ""))
+	if dungeon_title.is_empty():
+		return {}
+
+	var stage_title: String = String(_current_stage_data.get("title", ""))
+	if stage_title.is_empty():
+		return {}
 
 	var lesson_id: String = String(_current_stage_data.get("lesson_id", ""))
+	if lesson_id.is_empty():
+		return {}
+
 	var lesson: Dictionary = _catalog.get_lesson(lesson_id)
+	if lesson.is_empty():
+		return {}
+
 	var raw_sections: Array = lesson.get("sections", []) as Array
+	if raw_sections.is_empty():
+		return {}
 
 	var steps: Array[Dictionary] = []
-	if not raw_sections.is_empty():
-		var total: int = raw_sections.size()
-		for idx in range(total):
-			var sec: Dictionary = raw_sections[idx] as Dictionary
-			steps.append({
-				"speaker_label": String(sec.get("speaker", sec.get("header", "Guide"))),
-				"body_text": String(sec.get("body", sec.get("content", ""))),
-				"context_title": stage_title,
-				"step_index": idx + 1,
-				"total_steps": total
-			})
-	else:
+	var total: int = raw_sections.size()
+	for idx in range(total):
+		var sec_var: Variant = raw_sections[idx]
+		if not (sec_var is Dictionary):
+			return {}
+		var sec: Dictionary = sec_var as Dictionary
+		var header: String = String(sec.get("header", ""))
+		var speaker: String = String(sec.get("speaker", header))
+		var body: String = String(sec.get("body", ""))
+		if body.is_empty() or speaker.is_empty():
+			return {}
 		steps.append({
-			"speaker_label": "Guide",
-			"body_text": "Welcome to %s" % stage_title,
+			"speaker_label": speaker,
+			"body_text": body,
 			"context_title": stage_title,
-			"step_index": 1,
-			"total_steps": 1
+			"step_index": idx + 1,
+			"total_steps": total
 		})
 
 	return {

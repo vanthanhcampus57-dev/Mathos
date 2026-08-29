@@ -20,6 +20,7 @@ func _initialize() -> void:
 		{"name": "Boot Test", "func": Callable(self, "run_boot_test")},
 		{"name": "Config Test", "func": Callable(self, "run_config_test")},
 		{"name": "Content Repository", "func": Callable(TestContentRepository, "run_all_tests")},
+		{"name": "Content Schema & Presentation", "func": Callable(TestContentSchemaPresentation, "run_all_tests")},
 		{"name": "Question Runtime", "func": Callable(TestQuestionRuntime, "run_all_tests")},
 		{"name": "Reward Grant", "func": Callable(TestRewardGrant, "run_all_tests")},
 		{"name": "Player Foundation", "func": Callable(TestPlayerFoundation, "run_all_tests")},
@@ -39,6 +40,7 @@ func _initialize() -> void:
 	]
 
 	for s in bool_suites:
+		print("--- RUNNING SUITE: %s ---" % s["name"])
 		var fn: Callable = s["func"] as Callable
 		var res: bool = bool(fn.call())
 		if res:
@@ -107,6 +109,7 @@ func _count_suite_tests(name: String) -> int:
 		"Boot Test": return 1
 		"Config Test": return 1
 		"Content Repository": return 28
+		"Content Schema & Presentation": return 8
 		"Question Runtime": return 26
 		"Reward Grant": return 1
 		"Player Foundation": return 1
