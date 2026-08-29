@@ -243,6 +243,12 @@ func _validate_dungeon(item: Dictionary, fpath: String, report: ContentValidatio
 		if not item.has(field):
 			report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_MISSING_FIELD", "dungeons", id, fpath, "Missing required field '" + field + "'"))
 			valid = false
+	if item.has("display_name") and (not (item["display_name"] is String) or String(item["display_name"]).is_empty()):
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_EMPTY_STRING", "dungeons", id, fpath, "display_name must be a non-empty String"))
+		valid = false
+	if item.has("learning_objective") and (not (item["learning_objective"] is String) or String(item["learning_objective"]).is_empty()):
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_EMPTY_STRING", "dungeons", id, fpath, "learning_objective must be a non-empty String"))
+		valid = false
 	if int(item.get("schema_version", 0)) != 1:
 		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_VERSION", "dungeons", id, fpath, "schema_version must be 1"))
 		valid = false
@@ -257,11 +263,18 @@ func _validate_dungeon(item: Dictionary, fpath: String, report: ContentValidatio
 func _validate_stage(item: Dictionary, fpath: String, report: ContentValidationReport) -> bool:
 	var id: String = item.get("stage_id", "")
 	var valid: bool = true
-	var req_fields: Array[String] = ["schema_version", "stage_id", "dungeon_id", "order_in_dungeon", "learning_objective", "learning_scope", "phase_sequence", "encounter_mode", "completion_rule", "reward_id", "card_pool_ids", "intent_enabled"]
+	var req_fields: Array[String] = ["schema_version", "stage_id", "dungeon_id", "order_in_dungeon", "title", "learning_objective", "learning_scope", "phase_sequence", "encounter_mode", "completion_rule", "reward_id", "card_pool_ids", "intent_enabled"]
 	for f in req_fields:
 		if not item.has(f):
 			report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.BLOCK_STAGE, "ERR_SCHEMA_MISSING_FIELD", "stages", id, fpath, "Missing required field '" + f + "'"))
 			valid = false
+
+	if item.has("title") and (not (item["title"] is String) or String(item["title"]).is_empty()):
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.BLOCK_STAGE, "ERR_SCHEMA_EMPTY_STRING", "stages", id, fpath, "stage title must be a non-empty String"))
+		valid = false
+	if item.has("learning_objective") and (not (item["learning_objective"] is String) or String(item["learning_objective"]).is_empty()):
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.BLOCK_STAGE, "ERR_SCHEMA_EMPTY_STRING", "stages", id, fpath, "learning_objective must be a non-empty String"))
+		valid = false
 
 	if int(item.get("order_in_dungeon", 0)) < 1 or int(item.get("order_in_dungeon", 0)) > 5:
 		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.BLOCK_STAGE, "ERR_SEMANTIC_STAGE_ORDER", "stages", id, fpath, "order_in_dungeon must be 1..5"))
@@ -284,6 +297,33 @@ func _validate_lesson(item: Dictionary, fpath: String, report: ContentValidation
 		if not item.has(f):
 			report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_MISSING_FIELD", "lessons", id, fpath, "Missing required field '" + f + "'"))
 			valid = false
+
+	if item.has("title") and (not (item["title"] is String) or String(item["title"]).is_empty()):
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_EMPTY_STRING", "lessons", id, fpath, "lesson title must be a non-empty String"))
+		valid = false
+
+	if item.has("sections"):
+		var sections: Variant = item["sections"]
+		if not (sections is Array) or (sections as Array).is_empty():
+			report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_INVALID_SECTIONS", "lessons", id, fpath, "sections must be a non-empty array"))
+			valid = false
+		else:
+			for sec_idx in range((sections as Array).size()):
+				var sec_var: Variant = (sections as Array)[sec_idx]
+				if not (sec_var is Dictionary):
+					report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_INVALID_SECTION", "lessons", id, fpath, "section at index %d is not an Object" % sec_idx))
+					valid = false
+					continue
+				var sec: Dictionary = sec_var as Dictionary
+				for req_sec_f in ["header", "body"]:
+					if not sec.has(req_sec_f) or not (sec[req_sec_f] is String) or String(sec[req_sec_f]).is_empty():
+						report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_MISSING_FIELD", "lessons", id, fpath, "section at index %d requires non-empty string '%s'" % [sec_idx, req_sec_f]))
+						valid = false
+				if sec.has("speaker"):
+					if not (sec["speaker"] is String) or String(sec["speaker"]).is_empty():
+						report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_EMPTY_STRING", "lessons", id, fpath, "section speaker at index %d must be a non-empty string" % sec_idx))
+						valid = false
+
 	return valid
 
 func _validate_practice(item: Dictionary, fpath: String, report: ContentValidationReport) -> bool:
