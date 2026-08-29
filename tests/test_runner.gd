@@ -34,7 +34,8 @@ func _initialize() -> void:
 		{"name": "Question Presentation (B.1)", "func": Callable(preload("res://tests/unit/presentation/question/test_question_presentation.gd"), "run_all_tests")},
 		{"name": "Presentation Shell (B.2)", "func": Callable(preload("res://tests/unit/presentation/lesson/test_stage_presentation_shell.gd"), "run_all_tests").bind(self)},
 		{"name": "Mathos Theme (A.1)", "func": Callable(TestMathosTheme, "run_all_tests")},
-		{"name": "Shared Components (A.2)", "func": Callable(preload("res://tests/unit/presentation/test_shared_components.gd"), "run_all_tests")}
+		{"name": "Shared Components (A.2)", "func": Callable(preload("res://tests/unit/presentation/test_shared_components.gd"), "run_all_tests")},
+		{"name": "Question Interaction Visual States", "func": Callable(preload("res://tests/unit/presentation/question/test_question_interaction_visual_states.gd"), "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -45,18 +46,20 @@ func _initialize() -> void:
 		else:
 			fail_total += 1
 
-	# 2. Tri-state Presentation Integration Suites from both accepted lineages
+	# 2. Tri-state Presentation Integration Suites from accepted lineages
 	var pres_suites: Array[String] = [
 		"res://tests/integration/presentation/test_presentation_flow_integration.gd",
 		"res://tests/unit/presentation/test_presentation_integration.gd",
 		"res://tests/integration/app/test_app_root_question_request_integration.gd",
-		"res://tests/unit/presentation/ui/test_shared_ui_harness.gd"
+		"res://tests/unit/presentation/ui/test_shared_ui_harness.gd",
+		"res://tests/direct/question_ui/test_question_ui_acceptance.gd"
 	]
 
 	for script_path in pres_suites:
 		var script: GDScript = load(script_path) as GDScript
-		if script != null and script.has_script_method("run_all_tests"):
-			var tri_res: Variant = script.call("run_all_tests")
+		var method_name: String = "run_all_tests" if (script != null and script.has_script_method("run_all_tests")) else "run_all_checks"
+		if script != null and script.has_script_method(method_name):
+			var tri_res: Variant = script.call(method_name)
 			if tri_res is Signal:
 				tri_res = await tri_res
 			var tri_dict: Dictionary = tri_res as Dictionary
@@ -119,4 +122,5 @@ func _count_suite_tests(name: String) -> int:
 		"Presentation Shell (B.2)": return 17
 		"Mathos Theme (A.1)": return 6
 		"Shared Components (A.2)": return 9
+		"Question Interaction Visual States": return 4
 		_: return 1

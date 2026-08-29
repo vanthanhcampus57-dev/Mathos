@@ -1,16 +1,19 @@
 class_name DragDropView
 extends Control
 
-## UI View for rendering Drag and Drop question interactions.
+## UI View for rendering Drag and Drop question interactions consuming Mathos Shared UI Foundation.
+## Supports visual states: normal, hover, selected, focus, dragging/active, completed/placed, disabled.
 
 signal placements_changed(placements: Array)
 
 var _items: Array = []
 var _targets: Array = []
 var _placements: Dictionary = {} # item_id -> target_id
+var _disabled: bool = false
 
 var _vbox: VBoxContainer = null
 var _target_options: Dictionary = {} # item_id -> OptionButton
+var _item_cards: Dictionary = {} # item_id -> UiOptionCard
 
 func _ready() -> void:
 	_ensure_ui_built()
@@ -29,7 +32,7 @@ func _ensure_ui_built() -> void:
 	_vbox.set_anchors_preset(PRESET_FULL_RECT)
 	_vbox.size_flags_horizontal = SIZE_EXPAND_FILL
 	_vbox.size_flags_vertical = SIZE_EXPAND_FILL
-	_vbox.add_theme_constant_override("separation", 8)
+	_vbox.add_theme_constant_override("separation", MathosTokens.SPACING_SM)
 	add_child(_vbox)
 
 	_rebuild_ui()
@@ -38,7 +41,9 @@ func setup(interaction_payload: Dictionary) -> bool:
 	_items = []
 	_targets = []
 	_placements = {}
+	_disabled = false
 	_target_options.clear()
+	_item_cards.clear()
 
 	if not interaction_payload.has("items") or not (interaction_payload["items"] is Array) or not interaction_payload.has("targets") or not (interaction_payload["targets"] is Array):
 		return false
@@ -103,6 +108,13 @@ func get_placements_array() -> Array[Dictionary]:
 func get_interaction_payload() -> Dictionary:
 	return {"placements": get_placements_array()}
 
+func set_disabled(p_disabled: bool) -> void:
+	_disabled = p_disabled
+	_update_option_selections()
+
+func is_disabled() -> bool:
+	return _disabled
+
 func _rebuild_ui() -> void:
 	if _vbox == null:
 		return
@@ -114,6 +126,7 @@ func _rebuild_ui() -> void:
 		else:
 			child.free()
 	_target_options.clear()
+	_item_cards.clear()
 
 	for it_var in _items:
 		var it: Dictionary = it_var as Dictionary
@@ -123,15 +136,28 @@ func _rebuild_ui() -> void:
 		var hbox: HBoxContainer = HBoxContainer.new()
 		hbox.name = "ItemHBox_" + item_id
 		hbox.size_flags_horizontal = SIZE_EXPAND_FILL
+		hbox.add_theme_constant_override("separation", MathosTokens.SPACING_SM)
 
+		# Left Item Token Card (UiOptionCard / Draggable item)
+		var item_card: DragItemCard = DragItemCard.new(item_id, item_text, self)
+		item_card.custom_minimum_size = Vector2(160, 40)
+		hbox.add_child(item_card)
+		_item_cards[item_id] = item_card
+
+		# Fallback legacy label reference for standard inspection
 		var label: Label = Label.new()
 		label.text = "%s: " % item_text
-		label.custom_minimum_size = Vector2(120, 30)
+		label.custom_minimum_size = Vector2(80, 30)
+		label.visible = false # Hidden, item_card renders text visually
 		hbox.add_child(label)
 
+		# Right Target Selection (OptionButton)
 		var opt_btn: OptionButton = OptionButton.new()
 		opt_btn.name = "TargetOption_" + item_id
 		opt_btn.size_flags_horizontal = SIZE_EXPAND_FILL
+		opt_btn.custom_minimum_size = Vector2(160, 40)
+		opt_btn.focus_mode = FOCUS_ALL
+		opt_btn.mouse_filter = MOUSE_FILTER_STOP
 		opt_btn.add_item("-- Unassigned --", 0)
 
 		var target_ids: Array[String] = []
@@ -162,14 +188,92 @@ func _rebuild_ui() -> void:
 func _update_option_selections() -> void:
 	for item_id in _target_options:
 		var opt_btn: OptionButton = _target_options[item_id] as OptionButton
+		var item_card: DragItemCard = _item_cards.get(item_id) as DragItemCard
+
 		if opt_btn == null:
 			continue
+
+		opt_btn.disabled = _disabled
+		if item_card != null:
+			item_card.disabled = _disabled
+
 		if _placements.has(item_id):
 			var assigned_target_id: String = String(_placements[item_id])
+			var target_label: String = assigned_target_id
 			for idx in range(1, opt_btn.item_count):
 				var target_idx: int = idx - 1
 				if target_idx < _targets.size() and String((_targets[target_idx] as Dictionary)["target_id"]) == assigned_target_id:
 					opt_btn.select(idx)
+					var tg: Dictionary = _targets[target_idx] as Dictionary
+					target_label = String(tg.get("label", tg.get("text", assigned_target_id)))
 					break
+
+			if item_card != null:
+				item_card.set_placed_state(true, target_label)
 		else:
 			opt_btn.select(0)
+			if item_card != null:
+				item_card.set_placed_state(false, "")
+
+# Nested helper class for Draggable Item Card with visual states
+class DragItemCard extends UiOptionCard:
+	var item_id: String = ""
+	var base_text: String = ""
+	var owner_view: DragDropView = null
+	var is_placed: bool = false
+
+	func _init(p_id: String = "", p_text: String = "", p_owner: DragDropView = null) -> void:
+		super._init()
+		item_id = p_id
+		base_text = p_text
+		owner_view = p_owner
+		text = base_text
+		focus_mode = FOCUS_ALL
+		mouse_filter = MOUSE_FILTER_STOP
+
+	func set_placed_state(placed: bool, target_label: String) -> void:
+		is_placed = placed
+		if is_placed:
+			set_selected(true) # Completed / placed state
+			text = "[Placed] %s -> %s" % [base_text, target_label]
+		else:
+			set_selected(false) # Normal state
+			text = base_text
+
+	func _get_drag_data(_at_position: Vector2) -> Variant:
+		if disabled or owner_view == null:
+			return null
+
+		# Dragging / active visual state preview
+		var preview: PanelContainer = PanelContainer.new()
+		preview.theme_type_variation = &"MathosOption"
+		var sb: StyleBoxFlat = StyleBoxFlat.new()
+		sb.bg_color = MathosTokens.SURFACE_ELEVATED
+		sb.border_color = MathosTokens.BORDER_SELECTED
+		sb.border_width_left = 2
+		sb.border_width_top = 2
+		sb.border_width_right = 2
+		sb.border_width_bottom = 2
+		sb.corner_radius_top_left = MathosTokens.RADIUS_MD
+		sb.corner_radius_top_right = MathosTokens.RADIUS_MD
+		sb.corner_radius_bottom_right = MathosTokens.RADIUS_MD
+		sb.corner_radius_bottom_left = MathosTokens.RADIUS_MD
+		sb.content_margin_left = MathosTokens.SPACING_MD
+		sb.content_margin_top = MathosTokens.SPACING_SM
+		sb.content_margin_right = MathosTokens.SPACING_MD
+		sb.content_margin_bottom = MathosTokens.SPACING_SM
+		preview.add_theme_stylebox_override("panel", sb)
+
+		var lbl: Label = Label.new()
+		lbl.text = "[Dragging] %s" % base_text
+		lbl.add_theme_color_override("font_color", MathosTokens.TEXT_HEADING)
+		lbl.add_theme_font_size_override("font_size", MathosTokens.FONT_SIZE_BODY)
+		preview.add_child(lbl)
+
+		set_drag_preview(preview)
+
+		return {
+			"type": "mathos_drag_item",
+			"item_id": item_id,
+			"source_view": owner_view
+		}
