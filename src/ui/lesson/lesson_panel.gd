@@ -59,20 +59,21 @@ func _update_display() -> void:
 	var continue_button: Button = _get_continue_button()
 
 	if _steps.is_empty():
-		if speaker_label != null: speaker_label.text = ""
+		if speaker_label != null: speaker_label.text = "CỐ VẤN"
 		if body_label != null: body_label.text = ""
 		if context_title_label != null: context_title_label.text = ""
-		if page_indicator_label != null: page_indicator_label.text = "0 / 0"
+		if page_indicator_label != null: page_indicator_label.text = "Bước 0 / 0"
 		if continue_button != null:
-			continue_button.text = "Continue"
+			continue_button.text = "Bắt đầu giải đố"
 			continue_button.disabled = true
 		return
 
 	var step: PresentationModels.LessonStepData = _steps[_current_index]
 
 	if speaker_label != null:
-		speaker_label.text = step.speaker_label
-		speaker_label.visible = not step.speaker_label.is_empty()
+		var raw_speaker: String = step.speaker_label
+		speaker_label.text = raw_speaker if not raw_speaker.is_empty() else "CỐ VẤN"
+		speaker_label.visible = true
 
 	if body_label != null:
 		body_label.text = step.body_text
@@ -82,14 +83,14 @@ func _update_display() -> void:
 		context_title_label.visible = not step.context_title.is_empty()
 
 	if page_indicator_label != null:
-		page_indicator_label.text = "Step %d of %d" % [_current_index + 1, _steps.size()]
+		page_indicator_label.text = "Bước %d / %d" % [_current_index + 1, _steps.size()]
 
 	if continue_button != null:
 		continue_button.disabled = false
 		if _current_index == _steps.size() - 1:
-			continue_button.text = "Start Puzzle"
+			continue_button.text = "Bắt đầu giải đố"
 		else:
-			continue_button.text = "Next"
+			continue_button.text = "Tiếp tục"
 
 	step_changed.emit(_current_index, _steps.size())
 
@@ -100,16 +101,31 @@ func _on_continue_pressed() -> void:
 		pass
 
 func _get_context_title_label() -> Label:
-	return get_node_or_null("MarginContainer/PanelContainer/VBoxContainer/HeaderContainer/ContextTitleLabel") as Label
+	var lbl = get_node_or_null("MarginContainer/VBoxContainer/HeaderContainer/ContextTitleLabel")
+	if lbl == null:
+		lbl = get_node_or_null("MarginContainer/PanelContainer/VBoxContainer/HeaderContainer/ContextTitleLabel")
+	return lbl as Label
 
 func _get_speaker_label() -> Label:
-	return get_node_or_null("MarginContainer/PanelContainer/VBoxContainer/HeaderContainer/SpeakerLabel") as Label
+	var lbl = get_node_or_null("MarginContainer/VBoxContainer/HeaderContainer/SpeakerLabel")
+	if lbl == null:
+		lbl = get_node_or_null("MarginContainer/PanelContainer/VBoxContainer/HeaderContainer/SpeakerLabel")
+	return lbl as Label
 
 func _get_body_label() -> RichTextLabel:
-	return get_node_or_null("MarginContainer/PanelContainer/VBoxContainer/BodyTextLabel") as RichTextLabel
+	var lbl = get_node_or_null("MarginContainer/VBoxContainer/BodyPanel/BodyMargin/BodyTextLabel")
+	if lbl == null:
+		lbl = get_node_or_null("MarginContainer/PanelContainer/VBoxContainer/BodyTextLabel")
+	return lbl as RichTextLabel
 
 func _get_page_indicator_label() -> Label:
-	return get_node_or_null("MarginContainer/PanelContainer/VBoxContainer/FooterContainer/PageIndicatorLabel") as Label
+	var lbl = get_node_or_null("MarginContainer/VBoxContainer/FooterContainer/PageIndicatorLabel")
+	if lbl == null:
+		lbl = get_node_or_null("MarginContainer/PanelContainer/VBoxContainer/FooterContainer/PageIndicatorLabel")
+	return lbl as Label
 
 func _get_continue_button() -> Button:
-	return get_node_or_null("MarginContainer/PanelContainer/VBoxContainer/FooterContainer/ContinueButton") as Button
+	var btn = get_node_or_null("MarginContainer/VBoxContainer/FooterContainer/ContinueButton")
+	if btn == null:
+		btn = get_node_or_null("MarginContainer/PanelContainer/VBoxContainer/FooterContainer/ContinueButton")
+	return btn as Button
