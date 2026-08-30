@@ -139,4 +139,7 @@ func _count_suite_tests(name: String) -> int:
 		"Procedural QGen Foundation": return 6
 		"Demo V1 Fix-2/3 Progression & Safety": return 5
 		"Game Polish V1 UX & Safety": return 4
+		"D2 Procedural QGen": return 8
+		"D3 Procedural QGen": return 8
+		"D4 Procedural QGen": return 8
 		_: return 1
