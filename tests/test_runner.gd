@@ -43,6 +43,7 @@ func _initialize() -> void:
 		{"name": "Procedural QGen Foundation", "func": Callable(TestProceduralQGenFoundation, "run_all_tests")},
 		{"name": "Demo V1 Fix-2/3 Progression & Safety", "func": Callable(preload("res://tests/unit/presentation/test_demo_v1_fix2_progression.gd"), "run_all_tests")},
 		{"name": "Game Polish V1 UX & Safety", "func": Callable(preload("res://tests/unit/presentation/test_game_polish_v1.gd"), "run_all_tests")},
+		{"name": "D1 Procedural QGen", "func": Callable(preload("res://tests/unit/question/test_d1_procedural_qgen.gd"), "run_all_tests")},
 		{"name": "D2 Procedural QGen", "func": Callable(preload("res://tests/unit/question/test_d2_procedural_qgen.gd"), "run_all_tests")},
 		{"name": "D3 Procedural QGen", "func": Callable(preload("res://tests/unit/question/test_d3_procedural_qgen.gd"), "run_all_tests")},
 		{"name": "D4 Procedural QGen", "func": Callable(preload("res://tests/unit/question/test_d4_procedural_qgen.gd"), "run_all_tests")},
@@ -143,6 +144,7 @@ func _count_suite_tests(name: String) -> int:
 		"Procedural QGen Foundation": return 6
 		"Demo V1 Fix-2/3 Progression & Safety": return 5
 		"Game Polish V1 UX & Safety": return 4
+		"D1 Procedural QGen": return 7
 		"D2 Procedural QGen": return 8
 		"D3 Procedural QGen": return 8
 		"D4 Procedural QGen": return 8
