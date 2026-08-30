@@ -118,24 +118,58 @@ static func test_qgen_003_identity_and_determinism() -> bool:
 		print("[QGEN-GATE-003] FAIL: Parameter insertion order produced different generated_id")
 		return false
 
-	# Test B: Parameter modification (heads 2 -> 1) yields distinct variant_key & generated_id
-	var tuple_b: Dictionary = {"k": 3, "heads": 1}
-	var var_b: String = QuestionGeneratorIdentity.derive_variant_key(tuple_b)
-	var gen_id_b: String = QuestionGeneratorIdentity.build_generated_id_from_params("qspec_coin_flip", tuple_b)
-
-	if var_a1 == var_b:
-		print("[QGEN-GATE-003] FAIL: Distinct parameter tuples produced colliding variant_key")
-		return false
-	if gen_id_a1 == gen_id_b:
-		print("[QGEN-GATE-003] FAIL: Distinct parameter tuples produced colliding generated_id")
+	# Test B: Nested Dictionary Insertion Order Independence
+	var nested_1: Dictionary = {"outer": {"b": 2, "a": 1}}
+	var nested_2: Dictionary = {"outer": {"a": 1, "b": 2}}
+	if QuestionGeneratorIdentity.derive_variant_key(nested_1) != QuestionGeneratorIdentity.derive_variant_key(nested_2):
+		print("[QGEN-GATE-003] FAIL: Nested dictionary key order affected derivation")
 		return false
 
-	# Test C: Stable Derivation Across Repeated Runs
+	# Test C: Array Element Order Significance
+	var arr_1: Dictionary = {"list": [1, 2]}
+	var arr_2: Dictionary = {"list": [2, 1]}
+	if QuestionGeneratorIdentity.derive_variant_key(arr_1) == QuestionGeneratorIdentity.derive_variant_key(arr_2):
+		print("[QGEN-GATE-003] FAIL: Distinct array element ordering collapsed to same variant_key")
+		return false
+
+	# Test D: Type Collisions Proof (int vs String vs bool vs float)
+	var t_int: String = QuestionGeneratorIdentity.derive_variant_key({"x": 1})
+	var t_str: String = QuestionGeneratorIdentity.derive_variant_key({"x": "1"})
+	var t_bool: String = QuestionGeneratorIdentity.derive_variant_key({"x": true})
+	var t_bstr: String = QuestionGeneratorIdentity.derive_variant_key({"x": "true"})
+	var t_flt: String = QuestionGeneratorIdentity.derive_variant_key({"x": 3.0})
+	var t_fstr: String = QuestionGeneratorIdentity.derive_variant_key({"x": "3.0"})
+	var t_fint: String = QuestionGeneratorIdentity.derive_variant_key({"x": 3})
+
+	if t_int == t_str:
+		print("[QGEN-GATE-003] FAIL: int 1 collided with String '1'")
+		return false
+	if t_bool == t_bstr:
+		print("[QGEN-GATE-003] FAIL: bool true collided with String 'true'")
+		return false
+	if t_flt == t_fstr or t_flt == t_fint:
+		print("[QGEN-GATE-003] FAIL: float 3.0 collided with String '3.0' or int 3")
+		return false
+
+	# Test E: Delimiter Collision Proof
+	var d1: String = QuestionGeneratorIdentity.derive_variant_key({"x": "a:b"})
+	var d2: String = QuestionGeneratorIdentity.derive_variant_key({"x:a": "b"})
+	if d1 == d2:
+		print("[QGEN-GATE-003] FAIL: Delimiter string 'x':'a:b' collided with 'x:a':'b'")
+		return false
+
+	var d3: String = QuestionGeneratorIdentity.derive_variant_key({"a": 1, "b": 2})
+	var d4: String = QuestionGeneratorIdentity.derive_variant_key({"a": "1,b:2"})
+	if d3 == d4:
+		print("[QGEN-GATE-003] FAIL: Delimiter string 'a':1,'b':2 collided with 'a':'1,b:2'")
+		return false
+
+	# Test F: Stable Derivation Across Repeated Runs
 	for i in range(10):
 		var repeated_var: String = QuestionGeneratorIdentity.derive_variant_key(tuple_a1)
 		var repeated_id: String = QuestionGeneratorIdentity.build_generated_id_from_params("qspec_random_trial_mc", tuple_a1)
 		if repeated_var != var_a1 or repeated_id != gen_id_a1:
-			print("[QGEN-GATE-003] FAIL: Derivation instability detected across runs: " + repeated_id + " vs " + gen_id_a1)
+			print("[QGEN-GATE-003] FAIL: Derivation instability detected across runs")
 			return false
 
 	# Exact round-trip verification for legal examples
@@ -175,7 +209,7 @@ static func test_qgen_003_identity_and_determinism() -> bool:
 			print("[QGEN-GATE-003] FAIL: parse_generated_id accepted malformed ID: " + mid)
 			return false
 
-	# Generator Materialization with automatic parameter derivation
+	# Generator Materialization with automatic parameter derivation & signature test
 	var gen: RefCounted = QuestionGenerator.new()
 	var spec: Dictionary = {
 		"spec_id": "qspec_random_trial_mc",
@@ -193,8 +227,9 @@ static func test_qgen_003_identity_and_determinism() -> bool:
 		}
 	}
 
-	var q1: Dictionary = gen.generate_question(spec, {}, "", tuple_a1)
-	var q2: Dictionary = gen.generate_question(spec, {}, "", tuple_a2)
+	# Public production signature: generate_question(spec, pack, parameters)
+	var q1: Dictionary = gen.generate_question(spec, {}, tuple_a1)
+	var q2: Dictionary = gen.generate_question(spec, {}, tuple_a2)
 
 	if q1["question_id"] != gen_id_a1 or q2["question_id"] != gen_id_a1:
 		print("[QGEN-GATE-003] FAIL: Generator auto-derivation failed: " + String(q1["question_id"]))
@@ -228,12 +263,15 @@ static func test_qgen_010_generated_id_stability() -> bool:
 
 	var ids: Array[String] = []
 	for i in range(10):
-		var q: Dictionary = gen.generate_question(spec, {}, "variant-k4", {"k": 4})
+		var q: Dictionary = gen.generate_question(spec, {}, {"k": 4})
 		ids.append(String(q["question_id"]))
 
+	var expected_vkey: String = QuestionGeneratorIdentity.derive_variant_key({"k": 4})
+	var expected_id: String = "qgen_qspec_coin_flip_" + expected_vkey
+
 	for id_val in ids:
-		if id_val != "qgen_qspec_coin_flip_variant-k4":
-			print("[QGEN-GATE-010] FAIL: ID instability detected: " + id_val)
+		if id_val != expected_id:
+			print("[QGEN-GATE-010] FAIL: ID instability detected: " + id_val + " vs " + expected_id)
 			return false
 
 	print("[QGEN-GATE-010] PASS")

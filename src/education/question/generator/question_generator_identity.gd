@@ -18,22 +18,38 @@ static func is_valid_variant_key(variant_key: String) -> bool:
 	return true
 
 static func canonical_serialize(val: Variant) -> String:
-	if val is Dictionary:
-		var d: Dictionary = val as Dictionary
-		var keys: Array = d.keys()
-		keys.sort()
-		var parts: Array[String] = []
-		for k in keys:
-			parts.append(str(k) + ":" + canonical_serialize(d[k]))
-		return "{" + ",".join(parts) + "}"
+	if val == null:
+		return "n;"
+	elif val is bool:
+		return "b:1;" if (val as bool) else "b:0;"
+	elif val is int:
+		return "i:" + str(val) + ";"
+	elif val is float:
+		var f_val: float = val as float
+		var s: String = str(f_val)
+		if not s.contains("."):
+			s += ".0"
+		return "f:" + s + ";"
+	elif val is String:
+		var s_val: String = val as String
+		return "s:" + str(s_val.length()) + ":" + s_val + ";"
 	elif val is Array:
-		var a: Array = val as Array
-		var parts: Array[String] = []
-		for item in a:
-			parts.append(canonical_serialize(item))
-		return "[" + ",".join(parts) + "]"
+		var arr: Array = val as Array
+		var items: Array[String] = []
+		for item in arr:
+			items.append(canonical_serialize(item))
+		return "a:" + str(arr.size()) + ":[" + "".join(items) + "]"
+	elif val is Dictionary:
+		var dict: Dictionary = val as Dictionary
+		var keys: Array = dict.keys()
+		keys.sort_custom(func(a, b): return str(a) < str(b))
+		var pairs: Array[String] = []
+		for k in keys:
+			pairs.append(canonical_serialize(k) + canonical_serialize(dict[k]))
+		return "d:" + str(dict.size()) + ":{" + "".join(pairs) + "}"
 	else:
-		return str(val)
+		var str_val: String = str(val)
+		return "s:" + str(str_val.length()) + ":" + str_val + ";"
 
 static func derive_variant_key(parameters: Dictionary) -> String:
 	if parameters.is_empty():

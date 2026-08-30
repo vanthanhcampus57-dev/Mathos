@@ -8,14 +8,13 @@ const QuestionGeneratorIdentityScript = preload("res://src/education/question/ge
 func get_family_id() -> String:
 	return "base_generator"
 
-func generate_question(spec: Dictionary, pack: Dictionary, variant_key: String = "", parameters: Dictionary = {}) -> Dictionary:
+func generate_question(spec: Dictionary, pack: Dictionary, parameters: Dictionary = {}) -> Dictionary:
+	var variant_key: String = QuestionGeneratorIdentityScript.derive_variant_key(parameters)
+	return _generate_question_with_explicit_variant_for_test(spec, pack, variant_key, parameters)
+
+func _generate_question_with_explicit_variant_for_test(spec: Dictionary, pack: Dictionary, explicit_variant_key: String, parameters: Dictionary = {}) -> Dictionary:
 	var spec_id: String = String(spec.get("spec_id", "unknown_spec"))
-
-	var effective_variant: String = variant_key
-	if effective_variant.is_empty():
-		effective_variant = QuestionGeneratorIdentityScript.derive_variant_key(parameters)
-
-	var gen_id: String = QuestionGeneratorIdentityScript.build_generated_id(spec_id, effective_variant)
+	var gen_id: String = QuestionGeneratorIdentityScript.build_generated_id(spec_id, explicit_variant_key)
 
 	var dungeon_id: String = String(spec.get("dungeon_id", ""))
 	var topic_id: String = String(spec.get("topic_id", ""))
@@ -56,7 +55,7 @@ func generate_question(spec: Dictionary, pack: Dictionary, variant_key: String =
 		"adaptive_metadata": {
 			"skill_ids": [subtopic_id],
 			"generator_spec_id": spec_id,
-			"variant_key": effective_variant
+			"variant_key": explicit_variant_key
 		}
 	}
 
@@ -68,7 +67,7 @@ func generate_batch(spec: Dictionary, pack: Dictionary, parameter_tuples: Array[
 
 	for i in range(parameter_tuples.size()):
 		var params: Dictionary = parameter_tuples[i]
-		var q: Dictionary = generate_question(spec, pack, "", params)
+		var q: Dictionary = generate_question(spec, pack, params)
 		var q_id: String = String(q.get("question_id", ""))
 
 		if q_id.is_empty():
