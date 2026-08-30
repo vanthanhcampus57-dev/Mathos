@@ -1,0 +1,117 @@
+[
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d2_equally_likely",
+    "id": "mkp_d2_equally_likely",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "equally_likely",
+    "domain_variables": {
+      "sample_space_unit": "individual_objects"
+    },
+    "math_rules": {
+      "condition": "Các kết quả sơ cấp có khả năng xảy ra như nhau"
+    },
+    "forbidden_concepts": [
+      "unbalanced_physical_mechanisms"
+    ],
+    "prerequisite_concepts": [
+      "sample_space"
+    ]
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d2_classical_probability_formula",
+    "id": "mkp_d2_classical_probability_formula",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "classical_probability_formula",
+    "domain_variables": {
+      "n_A": {
+        "type": "int",
+        "min": 0,
+        "max": 36
+      },
+      "n_Omega": {
+        "type": "int",
+        "min": 1,
+        "max": 36
+      }
+    },
+    "math_rules": {
+      "formula": "P(A) = n(A) / n(Omega)"
+    },
+    "forbidden_concepts": [
+      "addition_rule",
+      "multiplication_rule"
+    ],
+    "prerequisite_concepts": [
+      "equally_likely"
+    ]
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d2_probability_representation",
+    "id": "mkp_d2_probability_representation",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "probability_representation",
+    "domain_variables": {
+      "fraction": "a / b",
+      "decimal": "float",
+      "percent": "float"
+    },
+    "math_rules": {
+      "complement_identity": "P(A_bar) = 1 - P(A)"
+    },
+    "forbidden_concepts": [
+      "rounding_37_5_to_38"
+    ],
+    "prerequisite_concepts": [
+      "classical_probability_formula"
+    ]
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d2_compare_probability",
+    "id": "mkp_d2_compare_probability",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "compare_probability",
+    "domain_variables": {
+      "urn_A": "R1, B1",
+      "urn_B": "R2, B2"
+    },
+    "math_rules": {
+      "cross_multiplication": "left = n_A * n_total_B vs right = n_B * n_total_A"
+    },
+    "forbidden_concepts": [
+      "subjective_probability"
+    ],
+    "prerequisite_concepts": [
+      "classical_probability_formula"
+    ]
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d2_multi_data_classical",
+    "id": "mkp_d2_multi_data_classical",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "multi_data_classical",
+    "domain_variables": {
+      "red": "int",
+      "blue": "int",
+      "yellow": "int"
+    },
+    "math_rules": {
+      "multi_category_sum": "n(Omega) = R + B + Y"
+    },
+    "forbidden_concepts": [
+      "combinatorics_C_n_k"
+    ],
+    "prerequisite_concepts": [
+      "compare_probability"
+    ]
+  }
+]

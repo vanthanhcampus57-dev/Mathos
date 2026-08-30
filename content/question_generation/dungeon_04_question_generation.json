@@ -1,0 +1,644 @@
+[
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d4_ind_01",
+    "id": "qspec_d4_ind_01",
+    "generator_family_id": "family_d4_multiplication_independence",
+    "pack_id": "mkp_d4_independence",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "independence",
+    "difficulty_range": {
+      "min": 1,
+      "max": 1
+    },
+    "interaction_type": "multiple_choice",
+    "template": {
+      "prompt": "Cặp biến cố nào sau đây là hai biến cố **độc lập**?",
+      "explanation": "Gieo 1 con xúc xắc 6 mặt và gieo 1 đồng xu cân đối riêng biệt là hai phép thử độc lập, kết quả phép thử này không ảnh hưởng đến phép thử kia.",
+      "learning_objective": "Nhận biết hai biến cố độc lập trong thực tế.",
+      "interaction_payload": {
+        "options": [
+          {
+            "option_id": "opt_a",
+            "text": "Gieo 1 con xúc xắc 6 mặt và gieo 1 đồng xu cân đối độc lập"
+          },
+          {
+            "option_id": "opt_b",
+            "text": "Rút 2 bi liên tiếp không hoàn lại từ túi bi"
+          },
+          {
+            "option_id": "opt_c",
+            "text": "Rút 2 lá bài liên tiếp không hoàn lại từ bộ bài 52 lá"
+          },
+          {
+            "option_id": "opt_d",
+            "text": "Chọn 2 học sinh liên tiếp từ danh sách lớp không hoàn lại"
+          }
+        ]
+      },
+      "answer_spec": {
+        "correct_option_id": "opt_a"
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d4_ind_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d4_ind_02",
+    "id": "qspec_d4_ind_02",
+    "generator_family_id": "family_d4_multiplication_independence",
+    "pack_id": "mkp_d4_independence",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "independence",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "matching",
+    "template": {
+      "prompt": "Nối mô tả tình huống với tính chất độc lập hay phụ thuộc tương ứng.",
+      "explanation": "Hai xạ thủ bắn độc lập -> Độc lập. Rút bi không hoàn lại -> Phụ thuộc. Gieo 2 đồng xu riêng biệt -> Độc lập.",
+      "learning_objective": "Nối mô tả thực tế với tính chất độc lập hay phụ thuộc.",
+      "interaction_payload": {
+        "left_items": [
+          {
+            "id": "l1",
+            "text": "Hai xạ thủ bắn độc lập vào 1 mục tiêu"
+          },
+          {
+            "id": "l2",
+            "text": "Rút 2 bi liên tiếp không hoàn lại từ hộp bi"
+          },
+          {
+            "id": "l3",
+            "text": "Gieo 2 đồng xu cân đối riêng biệt"
+          }
+        ],
+        "right_items": [
+          {
+            "id": "r1",
+            "text": "Hai biến cố độc lập"
+          },
+          {
+            "id": "r2",
+            "text": "Hai biến cố phụ thuộc"
+          },
+          {
+            "id": "r3",
+            "text": "Hai biến cố độc lập"
+          }
+        ]
+      },
+      "answer_spec": {
+        "pairs": {
+          "l1": "r1",
+          "l2": "r2",
+          "l3": "r3"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d4_ind_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d4_ind_03",
+    "id": "qspec_d4_ind_03",
+    "generator_family_id": "family_d4_multiplication_independence",
+    "pack_id": "mkp_d4_independence",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "independence",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "drag_drop",
+    "template": {
+      "prompt": "Phân loại các tình huống vào nhóm 'Hai biến cố độc lập' hoặc 'Hai biến cố phụ thuộc'.",
+      "explanation": "Phép thử lặp riêng biệt là độc lập. Phép thử chọn không hoàn lại làm thay đổi số lượng còn lại nên là phụ thuộc.",
+      "learning_objective": "Phân loại phép thử độc lập và phụ thuộc.",
+      "interaction_payload": {
+        "items": [
+          {
+            "id": "item_1",
+            "text": "Gieo con xúc xắc 2 lần liên tiếp"
+          },
+          {
+            "id": "item_2",
+            "text": "Hai người làm bài thi ở 2 phòng khác nhau"
+          },
+          {
+            "id": "item_3",
+            "text": "Rút 2 thẻ liên tiếp không hoàn lại"
+          },
+          {
+            "id": "item_4",
+            "text": "Lấy 2 quả cam từ rổ không hoàn lại"
+          }
+        ],
+        "targets": [
+          {
+            "id": "target_ind",
+            "title": "Hai biến cố độc lập"
+          },
+          {
+            "id": "target_dep",
+            "title": "Hai biến cố phụ thuộc"
+          }
+        ]
+      },
+      "answer_spec": {
+        "mappings": {
+          "item_1": "target_ind",
+          "item_2": "target_ind",
+          "item_3": "target_dep",
+          "item_4": "target_dep"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d4_ind_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d4_td_01",
+    "id": "qspec_d4_td_01",
+    "generator_family_id": "family_d4_multiplication_independence",
+    "pack_id": "mkp_d4_tree_diagram",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "tree_diagram",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "multiple_choice",
+    "template": {
+      "prompt": "Khi gieo k đồng xu cân đối độc lập liên tiếp, số kết quả sơ cấp của không gian mẫu n(Omega) = 2^k bằng bao nhiêu khi k = 3?",
+      "explanation": "Với 3 đồng xu cân đối, số kết quả sơ cấp của không gian mẫu n(Omega) = 2^3 = 8.",
+      "learning_objective": "Tính n(Omega) cho k đồng xu độc lập theo lũy thừa 2^k.",
+      "interaction_payload": {
+        "options": [
+          {
+            "option_id": "opt_a",
+            "text": "8"
+          },
+          {
+            "option_id": "opt_b",
+            "text": "6 (nhầm với 2 * 3)"
+          },
+          {
+            "option_id": "opt_c",
+            "text": "9"
+          },
+          {
+            "option_id": "opt_d",
+            "text": "16"
+          }
+        ]
+      },
+      "answer_spec": {
+        "correct_option_id": "opt_a"
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d4_td_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d4_td_02",
+    "id": "qspec_d4_td_02",
+    "generator_family_id": "family_d4_multiplication_independence",
+    "pack_id": "mkp_d4_tree_diagram",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "tree_diagram",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Cho 2 xạ thủ độc lập cùng bắn vào mục tiêu. Xạ thủ 1 bắn trúng với xác suất p1 = 0.7, xạ thủ 2 bắn trúng với xác suất p2 = 0.8. Tính xác suất P(cả 2 xạ thủ cùng bắn trượt) = (1 - p1) * (1 - p2). Nhập số thập phân.",
+      "explanation": "Xạ thủ 1 trượt có xác suất 1 - 0.7 = 0.3. Xạ thủ 2 trượt có xác suất 1 - 0.8 = 0.2. Vì 2 xạ thủ độc lập nên P(cả 2 trượt) = 0.3 * 0.2 = 0.06.",
+      "learning_objective": "Tính xác suất cả 2 trượt bằng tích biến cố đối độc lập.",
+      "interaction_payload": {
+        "input_type": "float",
+        "hint": "Nhập số thập phân"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          0.06
+        ],
+        "numeric_tolerance": 0.001
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d4_td_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d4_td_03",
+    "id": "qspec_d4_td_03",
+    "generator_family_id": "family_d4_multiplication_independence",
+    "pack_id": "mkp_d4_tree_diagram",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "tree_diagram",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "matching",
+    "template": {
+      "prompt": "Gieo 1 đồng xu cân đối 3 lần liên tiếp độc lập (n(Omega) = 2^3 = 8). Nối biến cố với giá trị xác suất tương ứng.",
+      "explanation": "Cả 3 lần sấp (SSS) -> 1/8 = 0.125; Có ít nhất 1 sấp -> 1 - (1/2)^3 = 7/8 = 0.875.",
+      "learning_objective": "Nối kết quả sơ đồ cây 3 đồng xu với xác suất tương ứng.",
+      "interaction_payload": {
+        "left_items": [
+          {
+            "id": "l1",
+            "text": "Cả 3 lần cùng xuất hiện mặt Sấp (SSS)"
+          },
+          {
+            "id": "l2",
+            "text": "Có ít nhất 1 lần xuất hiện mặt Sấp"
+          },
+          {
+            "id": "l3",
+            "text": "Lần 1 Sấp, lần 2 Ngửa, lần 3 Sấp (SNS)"
+          }
+        ],
+        "right_items": [
+          {
+            "id": "r1",
+            "text": "P(A) = 1 / 8 = 0.125"
+          },
+          {
+            "id": "r2",
+            "text": "P(A) = 7 / 8 = 0.875"
+          },
+          {
+            "id": "r3",
+            "text": "P(A) = 1 / 8 = 0.125"
+          }
+        ]
+      },
+      "answer_spec": {
+        "pairs": {
+          "l1": "r1",
+          "l2": "r2",
+          "l3": "r3"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d4_td_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d4_m2s_01",
+    "id": "qspec_d4_m2s_01",
+    "generator_family_id": "family_d4_multiplication_independence",
+    "pack_id": "mkp_d4_multiplication_two_step",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "multiplication_two_step",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Cho hai biến cố độc lập A và B có P(A) = 0.4 và P(B) = 0.5. Tính xác suất P(A ∩ B) = P(A) * P(B). Nhập số thập phân.",
+      "explanation": "Vì A và B độc lập nên P(A ∩ B) = P(A) * P(B) = 0.4 * 0.5 = 0.2.",
+      "learning_objective": "Áp dụng quy tắc nhân xác suất cho 2 biến cố độc lập.",
+      "interaction_payload": {
+        "input_type": "float",
+        "hint": "Nhập số thập phân"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          0.2
+        ],
+        "numeric_tolerance": 0.001
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d4_m2s_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d4_m2s_02",
+    "id": "qspec_d4_m2s_02",
+    "generator_family_id": "family_d4_multiplication_independence",
+    "pack_id": "mkp_d4_multiplication_two_step",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "multiplication_two_step",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Hai học sinh An và Bình cùng làm bài thi độc lập. Xác suất An làm đúng là p_an = 0.8, Bình làm đúng là p_binh = 0.9. Tính xác suất P(cả 2 em cùng làm đúng) = p_an * p_binh. Nhập số thập phân.",
+      "explanation": "Vì An và Bình làm bài độc lập nên P(cả 2 đúng) = 0.8 * 0.9 = 0.72.",
+      "learning_objective": "Tính xác suất cả 2 người cùng thành công trong phép thử độc lập.",
+      "interaction_payload": {
+        "input_type": "float",
+        "hint": "Nhập số thập phân"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          0.72
+        ],
+        "numeric_tolerance": 0.001
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d4_m2s_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d4_m2s_03",
+    "id": "qspec_d4_m2s_03",
+    "generator_family_id": "family_d4_multiplication_independence",
+    "pack_id": "mkp_d4_multiplication_two_step",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "multiplication_two_step",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "matching",
+    "template": {
+      "prompt": "Nối cặp xác suất P(A) và P(B) của hai biến cố độc lập với xác suất giao P(A ∩ B) = P(A) * P(B) tương ứng.",
+      "explanation": "0.5 & 0.6 -> 0.3; 0.4 & 0.5 -> 0.2; 0.7 & 0.8 -> 0.56.",
+      "learning_objective": "Nối các cặp xác suất thành phần với xác suất giao độc lập.",
+      "interaction_payload": {
+        "left_items": [
+          {
+            "id": "l1",
+            "text": "P(A) = 0.5 và P(B) = 0.6"
+          },
+          {
+            "id": "l2",
+            "text": "P(A) = 0.4 và P(B) = 0.5"
+          },
+          {
+            "id": "l3",
+            "text": "P(A) = 0.7 và P(B) = 0.8"
+          }
+        ],
+        "right_items": [
+          {
+            "id": "r1",
+            "text": "P(A ∩ B) = 0.30"
+          },
+          {
+            "id": "r2",
+            "text": "P(A ∩ B) = 0.20"
+          },
+          {
+            "id": "r3",
+            "text": "P(A ∩ B) = 0.56"
+          }
+        ]
+      },
+      "answer_spec": {
+        "pairs": {
+          "l1": "r1",
+          "l2": "r2",
+          "l3": "r3"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d4_m2s_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d4_mc_01",
+    "id": "qspec_d4_mc_01",
+    "generator_family_id": "family_d4_multiplication_independence",
+    "pack_id": "mkp_d4_multiplication_chain",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "multiplication_chain",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Gieo 3 con xúc xắc 6 mặt cân đối độc lập. Tính xác suất P = 1 / b = (1 / 6)^3 = 1 / 216 để cả 3 con xúc xắc cùng xuất hiện mặt 6 chấm. Nhập mẫu số b của phân số 1 / b.",
+      "explanation": "P(cả 3 mặt 6) = (1/6) * (1/6) * (1/6) = (1/6)^3 = 1 / 216. Mẫu số b = 216.",
+      "learning_objective": "Nhập mẫu số b của phân số 1/b trong quy tắc nhân 3 biến cố.",
+      "interaction_payload": {
+        "input_type": "integer",
+        "hint": "Nhập mẫu số b"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          216
+        ]
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d4_mc_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d4_mc_02",
+    "id": "qspec_d4_mc_02",
+    "generator_family_id": "family_d4_multiplication_independence",
+    "pack_id": "mkp_d4_multiplication_chain",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "multiplication_chain",
+    "difficulty_range": {
+      "min": 4,
+      "max": 4
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Một hệ thống gồm 2 linh kiện mắc song song hoạt động độc lập. Hệ thống hoạt động tốt khi có ít nhất 1 linh kiện hoạt động. Xác suất hỏng của linh kiện 1 là p1 = 0.1, linh kiện 2 là p2 = 0.2. Tính xác suất P(hệ thống hoạt động tốt) = 1 - p1 * p2. Nhập số thập phân.",
+      "explanation": "Hệ thống hỏng khi cả 2 linh kiện cùng hỏng: P(hỏng) = 0.1 * 0.2 = 0.02. P(hoạt động tốt) = 1 - 0.02 = 0.98.",
+      "learning_objective": "Tính xác suất hệ thống linh kiện mắc song song.",
+      "interaction_payload": {
+        "input_type": "float",
+        "hint": "Nhập số thập phân"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          0.98
+        ],
+        "numeric_tolerance": 0.001
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d4_mc_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d4_mc_03",
+    "id": "qspec_d4_mc_03",
+    "generator_family_id": "family_d4_multiplication_independence",
+    "pack_id": "mkp_d4_multiplication_chain",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "multiplication_chain",
+    "difficulty_range": {
+      "min": 4,
+      "max": 4
+    },
+    "interaction_type": "multiple_choice",
+    "template": {
+      "prompt": "Ba người A, B, C cùng làm bài thi độc lập. Xác suất làm đúng của A là 0.7, B là 0.8, C là 0.9. Giá trị P(cả 3 người cùng làm đúng) = 0.7 * 0.8 * 0.9 bằng bao nhiêu?",
+      "explanation": "Vì A, B, C độc lập nên P(cả 3 đúng) = 0.7 * 0.8 * 0.9 = 0.504.",
+      "learning_objective": "Tính quy tắc nhân mở rộng cho 3 biến cố độc lập.",
+      "interaction_payload": {
+        "options": [
+          {
+            "option_id": "opt_a",
+            "text": "0.504"
+          },
+          {
+            "option_id": "opt_b",
+            "text": "0.480"
+          },
+          {
+            "option_id": "opt_c",
+            "text": "0.600"
+          },
+          {
+            "option_id": "opt_d",
+            "text": "0.720"
+          }
+        ]
+      },
+      "answer_spec": {
+        "correct_option_id": "opt_a"
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d4_mc_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d4_ia_01",
+    "id": "qspec_d4_ia_01",
+    "generator_family_id": "family_d4_multiplication_independence",
+    "pack_id": "mkp_d4_independence_application",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "independence_application",
+    "difficulty_range": {
+      "min": 4,
+      "max": 4
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Gieo 2 con xúc xắc 6 mặt cân đối độc lập. Tính xác suất để con thứ nhất xuất hiện mặt chẵn (3 / 6) VÀ con thứ hai xuất hiện mặt chia hết cho 3 (2 / 6). Nhập kết quả dạng phân số tối giản a / b.",
+      "explanation": "P(con 1 chẵn) = 3/6 = 1/2. P(con 2 chia hết 3) = 2/6 = 1/3. Hai con xúc xắc độc lập nên P = (1/2) * (1/3) = 1 / 6.",
+      "learning_objective": "Vận dụng quy tắc nhân cho hai con xúc xắc độc lập với điều kiện số học.",
+      "interaction_payload": {
+        "input_type": "string",
+        "hint": "Nhập phân số a / b"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          "1 / 6"
+        ],
+        "trim_whitespace": true
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d4_ia_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d4_ia_02",
+    "id": "qspec_d4_ia_02",
+    "generator_family_id": "family_d4_multiplication_independence",
+    "pack_id": "mkp_d4_independence_application",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "independence_application",
+    "difficulty_range": {
+      "min": 5,
+      "max": 5
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Hai xạ thủ độc lập cùng bắn vào 1 mục tiêu. Xác suất trúng của người 1 là p1 = 0.8, người 2 là p2 = 0.7. Tính xác suất P(đúng 1 người bắn trúng) = p1 * (1 - p2) + (1 - p1) * p2. Nhập số thập phân.",
+      "explanation": "Đúng 1 người trúng gồm 2 trường hợp: Xạ thủ 1 trúng & 2 trượt (0.8 * 0.3 = 0.24); Xạ thủ 1 trượt & 2 trúng (0.2 * 0.7 = 0.14). Xác suất P = 0.24 + 0.14 = 0.38.",
+      "learning_objective": "Tính xác suất đúng 1 sự kiện xảy ra từ 2 sự kiện độc lập.",
+      "interaction_payload": {
+        "input_type": "float",
+        "hint": "Nhập số thập phân"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          0.38
+        ],
+        "numeric_tolerance": 0.001
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d4_ia_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d4_ia_03",
+    "id": "qspec_d4_ia_03",
+    "generator_family_id": "family_d4_multiplication_independence",
+    "pack_id": "mkp_d4_independence_application",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "independence_application",
+    "difficulty_range": {
+      "min": 5,
+      "max": 5
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "BOSS APHODIUS TUYỆT CHIÊU: Ba xạ thủ độc lập cùng bắn vào mục tiêu với xác suất trúng lần lượt là p1 = 0.6, p2 = 0.7, p3 = 0.8. Tính xác suất P(mục tiêu bị trúng đạn) = 1 - (1 - p1) * (1 - p2) * (1 - p3). Nhập số thập phân.",
+      "explanation": "Mục tiêu không bị trúng đạn khi cả 3 xạ thủ cùng bắn trượt: P(trượt cả 3) = (1 - 0.6)*(1 - 0.7)*(1 - 0.8) = 0.4 * 0.3 * 0.2 = 0.024. Xác suất trúng đạn = 1 - 0.024 = 0.976.",
+      "learning_objective": "Vận dụng tổng hợp Boss Aphodius cho bài toán 3 xạ thủ bắn độc lập.",
+      "interaction_payload": {
+        "input_type": "float",
+        "hint": "Nhập số thập phân"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          0.976
+        ],
+        "numeric_tolerance": 0.001
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d4_ia_03"
+    }
+  }
+]

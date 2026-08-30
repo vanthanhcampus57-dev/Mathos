@@ -1,0 +1,684 @@
+[
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d3_ui_01",
+    "id": "qspec_d3_ui_01",
+    "generator_family_id": "family_d3_addition_rule",
+    "pack_id": "mkp_d3_union_intersection",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "union_intersection",
+    "difficulty_range": {
+      "min": 1,
+      "max": 1
+    },
+    "interaction_type": "multiple_choice",
+    "template": {
+      "prompt": "Phát biểu nào sau đây đúng nhất về biến cố hợp A ∪ B?",
+      "explanation": "Biến cố A ∪ B xảy ra khi và chỉ khi biến cố A xảy ra hoặc biến cố B xảy ra (hoặc cả hai cùng xảy ra).",
+      "learning_objective": "Nhận biết khái niệm biến cố hợp A ∪ B.",
+      "interaction_payload": {
+        "options": [
+          {
+            "option_id": "opt_a",
+            "text": "Biến cố xảy ra khi ít nhất một trong hai biến cố A hoặc B xảy ra"
+          },
+          {
+            "option_id": "opt_b",
+            "text": "Biến cố bắt buộc cả hai biến cố A và B cùng xảy ra đồng thời"
+          },
+          {
+            "option_id": "opt_c",
+            "text": "Biến cố khi A xảy ra nhưng B không được xảy ra"
+          },
+          {
+            "option_id": "opt_d",
+            "text": "Biến cố khi cả A và B đều không xảy ra"
+          }
+        ]
+      },
+      "answer_spec": {
+        "correct_option_id": "opt_a"
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d3_ui_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d3_ui_02",
+    "id": "qspec_d3_ui_02",
+    "generator_family_id": "family_d3_addition_rule",
+    "pack_id": "mkp_d3_union_intersection",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "union_intersection",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Cho hai tập hợp biến cố A có n(A) = 12 phần tử, B có n(B) = 15 phần tử và biến cố giao A ∩ B có n(A ∩ B) = 5 phần tử. Tính số phần tử của biến cố hợp n(A ∪ B) = n(A) + n(B) - n(A ∩ B).",
+      "explanation": "Theo công thức tập hợp: n(A ∪ B) = n(A) + n(B) - n(A ∩ B) = 12 + 15 - 5 = 22.",
+      "learning_objective": "Tính số phần tử n(A ∪ B) cho hai tập hợp có phần tử chung.",
+      "interaction_payload": {
+        "input_type": "integer",
+        "hint": "Nhập n(A U B)"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          22
+        ]
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d3_ui_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d3_ui_03",
+    "id": "qspec_d3_ui_03",
+    "generator_family_id": "family_d3_addition_rule",
+    "pack_id": "mkp_d3_union_intersection",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "union_intersection",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "matching",
+    "template": {
+      "prompt": "Nối phát biểu mô tả bằng lời với ký hiệu tập hợp biến cố tương ứng.",
+      "explanation": "'Biến cố A hoặc B xảy ra' là A ∪ B; 'Biến cố A và B cùng xảy ra' là A ∩ B; 'Biến cố A không xảy ra' là A_bar.",
+      "learning_objective": "Nối các mệnh đề ngôn ngữ tự nhiên với ký hiệu tập hợp toán học.",
+      "interaction_payload": {
+        "left_items": [
+          {
+            "id": "l1",
+            "text": "Biến cố A hoặc biến cố B xảy ra"
+          },
+          {
+            "id": "l2",
+            "text": "Cả hai biến cố A và B cùng xảy ra"
+          },
+          {
+            "id": "l3",
+            "text": "Biến cố A không xảy ra"
+          }
+        ],
+        "right_items": [
+          {
+            "id": "r1",
+            "text": "Biến cố hợp A ∪ B"
+          },
+          {
+            "id": "r2",
+            "text": "Biến cố giao A ∩ B"
+          },
+          {
+            "id": "r3",
+            "text": "Biến cố đối A_bar"
+          }
+        ]
+      },
+      "answer_spec": {
+        "pairs": {
+          "l1": "r1",
+          "l2": "r2",
+          "l3": "r3"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d3_ui_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d3_me_01",
+    "id": "qspec_d3_me_01",
+    "generator_family_id": "family_d3_addition_rule",
+    "pack_id": "mkp_d3_mutually_exclusive",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "mutually_exclusive",
+    "difficulty_range": {
+      "min": 1,
+      "max": 1
+    },
+    "interaction_type": "multiple_choice",
+    "template": {
+      "prompt": "Hai biến cố A và B được gọi là **xung khắc** khi và chỉ khi điều kiện nào sau đây thỏa mãn?",
+      "explanation": "Hai biến cố A và B xung khắc khi chúng không thể cùng xảy ra, tức là tập hợp giao A ∩ B = ∅ (n(A ∩ B) = 0).",
+      "learning_objective": "Nhận biết điều kiện hai biến cố xung khắc A ∩ B = ∅.",
+      "interaction_payload": {
+        "options": [
+          {
+            "option_id": "opt_a",
+            "text": "A ∩ B = ∅ (hai biến cố không thể cùng xảy ra)"
+          },
+          {
+            "option_id": "opt_b",
+            "text": "A ∪ B = Ω (tổng bằng không gian mẫu)"
+          },
+          {
+            "option_id": "opt_c",
+            "text": "P(A) = P(B) (hai biến cố có xác suất bằng nhau)"
+          },
+          {
+            "option_id": "opt_d",
+            "text": "A ⊆ B (A là tập con của B)"
+          }
+        ]
+      },
+      "answer_spec": {
+        "correct_option_id": "opt_a"
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d3_me_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d3_me_02",
+    "id": "qspec_d3_me_02",
+    "generator_family_id": "family_d3_addition_rule",
+    "pack_id": "mkp_d3_mutually_exclusive",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "mutually_exclusive",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Cho xác suất của biến cố A là P(A) = 0.35. Tính xác suất của biến cố đối P(A_bar) = 1 - P(A). Nhập số thập phân.",
+      "explanation": "Biến cố A và biến cố đối A_bar là hai biến cố xung khắc và A ∪ A_bar = Ω. Do đó P(A_bar) = 1 - P(A) = 1 - 0.35 = 0.65.",
+      "learning_objective": "Tính xác suất biến cố đối từ tính chất xung khắc.",
+      "interaction_payload": {
+        "input_type": "float",
+        "hint": "Nhập số thập phân"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          0.65
+        ],
+        "numeric_tolerance": 0.001
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d3_me_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d3_me_03",
+    "id": "qspec_d3_me_03",
+    "generator_family_id": "family_d3_addition_rule",
+    "pack_id": "mkp_d3_mutually_exclusive",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "mutually_exclusive",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "drag_drop",
+    "template": {
+      "prompt": "Phân loại các cặp biến cố khi gieo 1 con xúc xắc 6 mặt vào nhóm 'Hai biến cố xung khắc' hoặc 'Hai biến cố không xung khắc'.",
+      "explanation": "'Mặt 1 chấm' và 'Mặt 6 chấm' không thể cùng xảy ra -> Xung khắc. 'Số chẵn' và 'Số lớn hơn 4' (số 6 cùng xảy ra) -> Không xung khắc.",
+      "learning_objective": "Phân loại cặp biến cố xung khắc và không xung khắc trong thực tế.",
+      "interaction_payload": {
+        "items": [
+          {
+            "id": "item_1",
+            "text": "Xuất hiện mặt 1 chấm và Xuất hiện mặt 6 chấm"
+          },
+          {
+            "id": "item_2",
+            "text": "Xuất hiện số chấm chẵn và Xuất hiện số chấm lẻ"
+          },
+          {
+            "id": "item_3",
+            "text": "Xuất hiện số chấm chẵn và Xuất hiện số chấm lớn hơn 4"
+          },
+          {
+            "id": "item_4",
+            "text": "Xuất hiện số chấm nhỏ hơn 3 và Xuất hiện số chấm chia hết cho 2"
+          }
+        ],
+        "targets": [
+          {
+            "id": "target_exclusive",
+            "title": "Hai biến cố xung khắc (A ∩ B = ∅)"
+          },
+          {
+            "id": "target_not_exclusive",
+            "title": "Hai biến cố không xung khắc (A ∩ B ≠ ∅)"
+          }
+        ]
+      },
+      "answer_spec": {
+        "mappings": {
+          "item_1": "target_exclusive",
+          "item_2": "target_exclusive",
+          "item_3": "target_not_exclusive",
+          "item_4": "target_not_exclusive"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d3_me_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d3_as_01",
+    "id": "qspec_d3_as_01",
+    "generator_family_id": "family_d3_addition_rule",
+    "pack_id": "mkp_d3_addition_simple",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "addition_simple",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "multiple_choice",
+    "template": {
+      "prompt": "Cho hai biến cố xung khắc A và B có P(A) = 0.2 và P(B) = 0.5. Tính xác suất P(A ∪ B) = P(A) + P(B).",
+      "explanation": "Vì A và B là hai biến cố xung khắc (A ∩ B = ∅) nên áp dụng quy tắc cộng xác suất: P(A ∪ B) = P(A) + P(B) = 0.2 + 0.5 = 0.7.",
+      "learning_objective": "Áp dụng quy tắc cộng cho 2 biến cố xung khắc.",
+      "interaction_payload": {
+        "options": [
+          {
+            "option_id": "opt_a",
+            "text": "0.7"
+          },
+          {
+            "option_id": "opt_b",
+            "text": "0.1"
+          },
+          {
+            "option_id": "opt_c",
+            "text": "0.3"
+          },
+          {
+            "option_id": "opt_d",
+            "text": "0.8"
+          }
+        ]
+      },
+      "answer_spec": {
+        "correct_option_id": "opt_a"
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d3_as_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d3_as_02",
+    "id": "qspec_d3_as_02",
+    "generator_family_id": "family_d3_addition_rule",
+    "pack_id": "mkp_d3_addition_simple",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "addition_simple",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Rút 1 lá bài từ bộ bài 52 lá cân đối. Xác suất rút được lá King (K) là 4 / 52, lá Queen (Q) là 4 / 52. Tính xác suất rút được lá King HOẶC lá Queen P(K ∪ Q) = P(K) + P(Q). Nhập kết quả dạng phân số tối giản a / b.",
+      "explanation": "Lá King và lá Queen là hai biến cố xung khắc. P(K ∪ Q) = 4/52 + 4/52 = 8/52 = 2 / 13.",
+      "learning_objective": "Tính xác suất rút bài bằng quy tắc cộng hai biến cố xung khắc.",
+      "interaction_payload": {
+        "input_type": "string",
+        "hint": "Nhập phân số a / b"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          "2 / 13"
+        ],
+        "trim_whitespace": true
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d3_as_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d3_as_03",
+    "id": "qspec_d3_as_03",
+    "generator_family_id": "family_d3_addition_rule",
+    "pack_id": "mkp_d3_addition_simple",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "addition_simple",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "matching",
+    "template": {
+      "prompt": "Một xạ thủ bắn vào bia. Xác suất đạt 10 điểm là 0.3; đạt 9 điểm là 0.4; đạt 8 điểm là 0.2. Nối biến cố với giá trị xác suất cộng tương ứng.",
+      "explanation": "Đạt 10 hoặc 9 điểm: 0.3 + 0.4 = 0.7. Đạt 10 hoặc 8 điểm: 0.3 + 0.2 = 0.5. Đạt ít nhất 8 điểm (8, 9 hoặc 10): 0.3 + 0.4 + 0.2 = 0.9.",
+      "learning_objective": "Cộng xác suất các trường hợp điểm số xung khắc.",
+      "interaction_payload": {
+        "left_items": [
+          {
+            "id": "l1",
+            "text": "Đạt 10 điểm hoặc 9 điểm (0.3 + 0.4)"
+          },
+          {
+            "id": "l2",
+            "text": "Đạt 10 điểm hoặc 8 điểm (0.3 + 0.2)"
+          },
+          {
+            "id": "l3",
+            "text": "Đạt ít nhất 8 điểm (8, 9 hoặc 10)"
+          }
+        ],
+        "right_items": [
+          {
+            "id": "r1",
+            "text": "P(A) = 0.70"
+          },
+          {
+            "id": "r2",
+            "text": "P(A) = 0.50"
+          },
+          {
+            "id": "r3",
+            "text": "P(A) = 0.90"
+          }
+        ]
+      },
+      "answer_spec": {
+        "pairs": {
+          "l1": "r1",
+          "l2": "r2",
+          "l3": "r3"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d3_as_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d3_ag_01",
+    "id": "qspec_d3_ag_01",
+    "generator_family_id": "family_d3_addition_rule",
+    "pack_id": "mkp_d3_addition_general",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "addition_general",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Cho hai biến cố A và B có P(A) = 0.6, P(B) = 0.5 và xác suất giao P(A ∩ B) = 0.3. Tính xác suất biến cố hợp P(A ∪ B) = P(A) + P(B) - P(A ∩ B). Nhập số thập phân.",
+      "explanation": "Theo quy tắc cộng tổng quát: P(A ∪ B) = P(A) + P(B) - P(A ∩ B) = 0.6 + 0.5 - 0.3 = 0.8.",
+      "learning_objective": "Tính P(A ∪ B) bằng quy tắc cộng tổng quát cho hai biến cố bất kỳ.",
+      "interaction_payload": {
+        "input_type": "float",
+        "hint": "Nhập số thập phân"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          0.8
+        ],
+        "numeric_tolerance": 0.001
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d3_ag_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d3_ag_02",
+    "id": "qspec_d3_ag_02",
+    "generator_family_id": "family_d3_addition_rule",
+    "pack_id": "mkp_d3_addition_general",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "addition_general",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "multiple_choice",
+    "template": {
+      "prompt": "Rút 1 lá bài từ bộ bài 52 lá. Tính xác suất P(Red hoặc King) = P(Red) + P(King) - P(Red ∩ King).",
+      "explanation": "P(Red) = 26/52, P(King) = 4/52, P(Red ∩ King) = 2/52. P(Red ∪ King) = (26 + 4 - 2) / 52 = 28 / 52 = 7 / 13.",
+      "learning_objective": "Áp dụng quy tắc cộng tổng quát cho bài toán lá bài.",
+      "interaction_payload": {
+        "options": [
+          {
+            "option_id": "opt_a",
+            "text": "7 / 13"
+          },
+          {
+            "option_id": "opt_b",
+            "text": "15 / 26"
+          },
+          {
+            "option_id": "opt_c",
+            "text": "1 / 2"
+          },
+          {
+            "option_id": "opt_d",
+            "text": "8 / 13"
+          }
+        ]
+      },
+      "answer_spec": {
+        "correct_option_id": "opt_a"
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d3_ag_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d3_ag_03",
+    "id": "qspec_d3_ag_03",
+    "generator_family_id": "family_d3_addition_rule",
+    "pack_id": "mkp_d3_addition_general",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "addition_general",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "drag_drop",
+    "template": {
+      "prompt": "Phân loại các phép tính xác suất đúng theo quy tắc cộng tổng quát P(A ∪ B) = P(A) + P(B) - P(A ∩ B).",
+      "explanation": "Khi A và B không xung khắc, bắt buộc phải trừ đi P(A ∩ B) để không đếm lặp.",
+      "learning_objective": "Phân biệt công thức cộng đơn giản và công thức cộng tổng quát.",
+      "interaction_payload": {
+        "items": [
+          {
+            "id": "item_1",
+            "text": "P(A ∪ B) = P(A) + P(B) - P(A ∩ B) (khi A ∩ B ≠ ∅)"
+          },
+          {
+            "id": "item_2",
+            "text": "P(A ∪ B) = P(A) + P(B) (khi A ∩ B = ∅)"
+          },
+          {
+            "id": "item_3",
+            "text": "P(A ∪ B) = P(A) * P(B) (sai lầm quy tắc nhân)"
+          }
+        ],
+        "targets": [
+          {
+            "id": "target_general",
+            "title": "Công thức cộng tổng quát"
+          },
+          {
+            "id": "target_simple",
+            "title": "Công thức cộng đơn giản (xung khắc)"
+          },
+          {
+            "id": "target_wrong",
+            "title": "Công thức sai lầm"
+          }
+        ]
+      },
+      "answer_spec": {
+        "mappings": {
+          "item_1": "target_general",
+          "item_2": "target_simple",
+          "item_3": "target_wrong"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d3_ag_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d3_asl_01",
+    "id": "qspec_d3_asl_01",
+    "generator_family_id": "family_d3_addition_rule",
+    "pack_id": "mkp_d3_addition_selection",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "addition_selection",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Gieo 1 con xúc xắc 6 mặt cân đối. Xét biến cố A: 'Số chấm chẵn' (3/6) và B: 'Số chấm chia hết cho 3' (2/6), có A ∩ B = {6} (1/6). Tính xác suất P(A ∪ B) = P(A) + P(B) - P(A ∩ B). Nhập phân số tối giản a / b.",
+      "explanation": "P(A) = 3/6, P(B) = 2/6, P(A ∩ B) = 1/6. P(A ∪ B) = 3/6 + 2/6 - 1/6 = 4/6 = 2 / 3.",
+      "learning_objective": "Áp dụng quy tắc cộng tổng quát cho phép thử gieo xúc xắc.",
+      "interaction_payload": {
+        "input_type": "string",
+        "hint": "Nhập phân số a / b"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          "2 / 3"
+        ],
+        "trim_whitespace": true
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d3_asl_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d3_asl_02",
+    "id": "qspec_d3_asl_02",
+    "generator_family_id": "family_d3_addition_rule",
+    "pack_id": "mkp_d3_addition_selection",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "addition_selection",
+    "difficulty_range": {
+      "min": 4,
+      "max": 4
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Một lớp học có 40 học sinh, trong đó có 20 em giỏi Toán, 15 em giỏi Văn và 5 em giỏi cả hai môn. Chọn ngẫu nhiên 1 học sinh. Tính xác suất chọn được học sinh giỏi Toán HOẶC giỏi Văn. Nhập kết quả dạng số thập phân.",
+      "explanation": "Số học sinh giỏi Toán hoặc Văn: n(A ∪ B) = 20 + 15 - 5 = 30. Xác suất P(A ∪ B) = 30 / 40 = 0.75.",
+      "learning_objective": "Tính xác suất hợp trong bài toán khảo sát nhóm học sinh.",
+      "interaction_payload": {
+        "input_type": "float",
+        "hint": "Nhập số thập phân"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          0.75
+        ],
+        "numeric_tolerance": 0.001
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d3_asl_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d3_asl_03",
+    "id": "qspec_d3_asl_03",
+    "generator_family_id": "family_d3_addition_rule",
+    "pack_id": "mkp_d3_addition_selection",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "addition_selection",
+    "difficulty_range": {
+      "min": 5,
+      "max": 5
+    },
+    "interaction_type": "matching",
+    "template": {
+      "prompt": "BOSS MELKOR SYNTHESIS: Gieo 2 con xúc xắc 6 mặt cân đối (n(Omega) = 36). Nối mô tả biến cố hợp với giá trị xác suất P(A ∪ B) tương ứng.",
+      "explanation": "Tổng số chấm bằng 7 hoặc 11 -> n(7)=6, n(11)=2 -> 8/36 = 2/9. Cùng chấm hoặc tổng bằng 10 -> n(cùng)=6, n(10)=3, n(giao)=1 -> (6+3-1)/36 = 8/36 = 2/9.",
+      "learning_objective": "Vận dụng tổng hợp quy tắc cộng trên không gian mẫu 2 con xúc xắc (n(Omega) = 36).",
+      "interaction_payload": {
+        "left_items": [
+          {
+            "id": "l1",
+            "text": "Tổng số chấm bằng 7 hoặc bằng 11 (xung khắc)"
+          },
+          {
+            "id": "l2",
+            "text": "Hai xúc xắc cùng chấm hoặc tổng bằng 10"
+          },
+          {
+            "id": "l3",
+            "text": "Có ít nhất 1 xúc xắc 6 chấm hoặc tổng bằng 12"
+          }
+        ],
+        "right_items": [
+          {
+            "id": "r1",
+            "text": "P(A ∪ B) = 8 / 36 = 2 / 9"
+          },
+          {
+            "id": "r2",
+            "text": "P(A ∪ B) = 8 / 36 = 2 / 9"
+          },
+          {
+            "id": "r3",
+            "text": "P(A ∪ B) = 11 / 36"
+          }
+        ]
+      },
+      "answer_spec": {
+        "pairs": {
+          "l1": "r1",
+          "l2": "r2",
+          "l3": "r3"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d3_asl_03"
+    }
+  }
+]

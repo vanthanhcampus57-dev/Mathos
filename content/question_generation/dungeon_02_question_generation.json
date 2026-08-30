@@ -1,0 +1,745 @@
+[
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d2_el_01",
+    "id": "qspec_d2_el_01",
+    "generator_family_id": "family_d2_classical_probability",
+    "pack_id": "mkp_d2_equally_likely",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "equally_likely",
+    "difficulty_range": {
+      "min": 1,
+      "max": 1
+    },
+    "interaction_type": "multiple_choice",
+    "template": {
+      "prompt": "Phép thử ngẫu nhiên nào sau đây có các kết quả sơ cấp **đồng khả năng** xảy ra?",
+      "explanation": "Gieo 1 con xúc xắc 6 mặt cân đối đồng chất có 6 kết quả sơ cấp {1, 2, 3, 4, 5, 6} với xác suất xảy ra như nhau là 1 / 6.",
+      "learning_objective": "Nhận biết điều kiện đồng khả năng trong cổ điển.",
+      "interaction_payload": {
+        "options": [
+          {
+            "option_id": "opt_a",
+            "text": "Gieo 1 con xúc xắc 6 mặt cân đối, đồng chất"
+          },
+          {
+            "option_id": "opt_b",
+            "text": "Dự báo thời tiết ngày mai có mưa hay không mưa"
+          },
+          {
+            "option_id": "opt_c",
+            "text": "Kết quả một trận thi đấu bóng đá giữa hai đội bóng bất kỳ"
+          },
+          {
+            "option_id": "opt_d",
+            "text": "Chọn 1 hạt mầm và xem hạt mầm có nảy mầm hay không"
+          }
+        ]
+      },
+      "answer_spec": {
+        "correct_option_id": "opt_a"
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d2_el_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d2_el_02",
+    "id": "qspec_d2_el_02",
+    "generator_family_id": "family_d2_classical_probability",
+    "pack_id": "mkp_d2_equally_likely",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "equally_likely",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "drag_drop",
+    "template": {
+      "prompt": "Kéo thả các tình huống vào nhóm 'Áp dụng hợp lệ công thức xác suất cổ điển' hoặc 'Không áp dụng được công thức xác suất cổ điển'.",
+      "explanation": "Công thức xác suất cổ điển P(A) = n(A) / n(Omega) chỉ áp dụng khi phép thử có hữu hạn kết quả và các kết quả sơ cấp đồng khả năng.",
+      "learning_objective": "Phân loại phạm vi áp dụng xác suất cổ điển.",
+      "interaction_payload": {
+        "items": [
+          {
+            "id": "item_1",
+            "text": "Gieo 1 đồng xu cân đối đồng chất"
+          },
+          {
+            "id": "item_2",
+            "text": "Rút 1 thẻ ngẫu nhiên từ hộp 10 thẻ đánh số từ 1 đến 10"
+          },
+          {
+            "id": "item_3",
+            "text": "Dự đoán xác suất trúng tuyển đại học của học sinh"
+          },
+          {
+            "id": "item_4",
+            "text": "Đánh giá xác suất thắng trận của đội bóng"
+          }
+        ],
+        "targets": [
+          {
+            "id": "target_valid",
+            "title": "Áp dụng hợp lệ công thức xác suất cổ điển"
+          },
+          {
+            "id": "target_invalid",
+            "title": "Không áp dụng được công thức xác suất cổ điển"
+          }
+        ]
+      },
+      "answer_spec": {
+        "mappings": {
+          "item_1": "target_valid",
+          "item_2": "target_valid",
+          "item_3": "target_invalid",
+          "item_4": "target_invalid"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d2_el_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d2_el_03",
+    "id": "qspec_d2_el_03",
+    "generator_family_id": "family_d2_classical_probability",
+    "pack_id": "mkp_d2_equally_likely",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "equally_likely",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "matching",
+    "template": {
+      "prompt": "Nối phép thử ngẫu nhiên cân đối với số kết quả sơ cấp đồng khả năng tương ứng.",
+      "explanation": "Gieo 1 đồng xu -> 2 kết quả; Gieo 1 xúc xắc -> 6 kết quả; Rút 1 bài từ bộ 52 lá -> 52 kết quả.",
+      "learning_objective": "Xác định n(Omega) cho các phép thử đồng khả năng.",
+      "interaction_payload": {
+        "left_items": [
+          {
+            "id": "l1",
+            "text": "Gieo 1 đồng xu cân đối"
+          },
+          {
+            "id": "l2",
+            "text": "Gieo 1 con xúc xắc 6 mặt cân đối"
+          },
+          {
+            "id": "l3",
+            "text": "Rút 1 lá bài từ bộ bài 52 lá cân đối"
+          }
+        ],
+        "right_items": [
+          {
+            "id": "r1",
+            "text": "2 kết quả sơ cấp"
+          },
+          {
+            "id": "r2",
+            "text": "6 kết quả sơ cấp"
+          },
+          {
+            "id": "r3",
+            "text": "52 kết quả sơ cấp"
+          }
+        ]
+      },
+      "answer_spec": {
+        "pairs": {
+          "l1": "r1",
+          "l2": "r2",
+          "l3": "r3"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d2_el_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d2_cpf_01",
+    "id": "qspec_d2_cpf_01",
+    "generator_family_id": "family_d2_classical_probability",
+    "pack_id": "mkp_d2_classical_probability_formula",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "classical_probability_formula",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Gieo 1 con xúc xắc 6 mặt cân đối. Tính xác suất P(A) = n(A) / n(Omega) của biến cố A: 'Xuất hiện mặt số chấm chia hết cho 3'. Nhập kết quả dạng phân số tối giản a / b.",
+      "explanation": "Các mặt chia hết cho 3 là {3, 6} -> n(A) = 2. Không gian mẫu n(Omega) = 6. Xác suất P(A) = 2 / 6 = 1 / 3.",
+      "learning_objective": "Tính xác suất cổ điển P(A) = n(A) / n(Omega) dạng phân số tối giản.",
+      "interaction_payload": {
+        "input_type": "string",
+        "hint": "Nhập phân số a / b"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          "1 / 3"
+        ],
+        "trim_whitespace": true
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d2_cpf_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d2_cpf_02",
+    "id": "qspec_d2_cpf_02",
+    "generator_family_id": "family_d2_classical_probability",
+    "pack_id": "mkp_d2_classical_probability_formula",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "classical_probability_formula",
+    "difficulty_range": {
+      "min": 1,
+      "max": 1
+    },
+    "interaction_type": "multiple_choice",
+    "template": {
+      "prompt": "Có 10 thẻ được đánh số từ 1 đến 10. Rút ngẫu nhiên 1 thẻ. Xác suất rút được thẻ ghi số nguyên tố bằng bao nhiêu?",
+      "explanation": "Các số nguyên tố từ 1 đến 10 là {2, 3, 5, 7} -> n(A) = 4. n(Omega) = 10 -> P(A) = 4 / 10 = 2 / 5.",
+      "learning_objective": "Tính xác suất rút thẻ có điều kiện số học.",
+      "interaction_payload": {
+        "options": [
+          {
+            "option_id": "opt_a",
+            "text": "2 / 5"
+          },
+          {
+            "option_id": "opt_b",
+            "text": "1 / 2"
+          },
+          {
+            "option_id": "opt_c",
+            "text": "3 / 10"
+          },
+          {
+            "option_id": "opt_d",
+            "text": "1 / 5"
+          }
+        ]
+      },
+      "answer_spec": {
+        "correct_option_id": "opt_a"
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d2_cpf_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d2_cpf_03",
+    "id": "qspec_d2_cpf_03",
+    "generator_family_id": "family_d2_classical_probability",
+    "pack_id": "mkp_d2_classical_probability_formula",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "classical_probability_formula",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "matching",
+    "template": {
+      "prompt": "Nối biến cố khi gieo 1 con xúc xắc 6 mặt cân đối với giá trị xác suất P(A) = n(A) / n(Omega) tương ứng.",
+      "explanation": "Số chấm chẵn {2,4,6} -> 3/6 = 1/2; Mặt 6 chấm {6} -> 1/6; Số chấm nhỏ hơn 5 {1,2,3,4} -> 4/6 = 2/3.",
+      "learning_objective": "Nối biến cố với giá trị xác suất cổ điển P(A) = n(A) / n(Omega).",
+      "interaction_payload": {
+        "left_items": [
+          {
+            "id": "l1",
+            "text": "Xuất hiện mặt số chấm chẵn"
+          },
+          {
+            "id": "l2",
+            "text": "Xuất hiện mặt 6 chấm"
+          },
+          {
+            "id": "l3",
+            "text": "Xuất hiện mặt số chấm nhỏ hơn 5"
+          }
+        ],
+        "right_items": [
+          {
+            "id": "r1",
+            "text": "P(A) = 1 / 2"
+          },
+          {
+            "id": "r2",
+            "text": "P(A) = 1 / 6"
+          },
+          {
+            "id": "r3",
+            "text": "P(A) = 2 / 3"
+          }
+        ]
+      },
+      "answer_spec": {
+        "pairs": {
+          "l1": "r1",
+          "l2": "r2",
+          "l3": "r3"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d2_cpf_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d2_pr_01",
+    "id": "qspec_d2_pr_01",
+    "generator_family_id": "family_d2_classical_probability",
+    "pack_id": "mkp_d2_probability_representation",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "probability_representation",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Biết xác suất của biến cố A là P(A) = 3 / 8. Hãy đổi xác suất P(A) sang dạng số phần trăm % (giữ nguyên giá trị thập phân dừng, không làm tròn).",
+      "explanation": "P(A) = 3 / 8 = 0.375 = 37.5%. Theo quy tắc chuẩn D2, không làm tròn 37.5% thành 38%.",
+      "learning_objective": "Biểu diễn xác suất dạng số phần trăm chính xác không làm tròn sai số.",
+      "interaction_payload": {
+        "input_type": "float",
+        "hint": "Nhập phần trăm (ví dụ: 37.5)"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          37.5
+        ],
+        "numeric_tolerance": 0.001
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d2_pr_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d2_pr_02",
+    "id": "qspec_d2_pr_02",
+    "generator_family_id": "family_d2_classical_probability",
+    "pack_id": "mkp_d2_probability_representation",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "probability_representation",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Cho biến cố A có xác suất P(A) = 0.25. Tính xác suất của biến cố đối P(A_bar) = 1 - P(A).",
+      "explanation": "Theo công thức biến cố đối, P(A_bar) = 1 - P(A) = 1 - 0.25 = 0.75.",
+      "learning_objective": "Tính xác suất biến cố đối P(A_bar) = 1 - P(A).",
+      "interaction_payload": {
+        "input_type": "float",
+        "hint": "Nhập giá trị thập phân"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          0.75
+        ],
+        "numeric_tolerance": 0.001
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d2_pr_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d2_pr_03",
+    "id": "qspec_d2_pr_03",
+    "generator_family_id": "family_d2_classical_probability",
+    "pack_id": "mkp_d2_probability_representation",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "probability_representation",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "drag_drop",
+    "template": {
+      "prompt": "Sắp xếp các giá trị xác suất vào các nhóm biểu diễn tương đương với 1 / 4, 1 / 2 và 3 / 4.",
+      "explanation": "1 / 4 = 0.25 = 25%; 1 / 2 = 0.5 = 50%; 3 / 4 = 0.75 = 75%.",
+      "learning_objective": "Chuyển đổi linh hoạt giữa phân số, số thập phân và phần trăm.",
+      "interaction_payload": {
+        "items": [
+          {
+            "id": "item_1",
+            "text": "0.25"
+          },
+          {
+            "id": "item_2",
+            "text": "25%"
+          },
+          {
+            "id": "item_3",
+            "text": "0.5"
+          },
+          {
+            "id": "item_4",
+            "text": "50%"
+          },
+          {
+            "id": "item_5",
+            "text": "0.75"
+          }
+        ],
+        "targets": [
+          {
+            "id": "target_quarter",
+            "title": "Nhóm giá trị 1 / 4"
+          },
+          {
+            "id": "target_half",
+            "title": "Nhóm giá trị 1 / 2"
+          },
+          {
+            "id": "target_three_quarter",
+            "title": "Nhóm giá trị 3 / 4"
+          }
+        ]
+      },
+      "answer_spec": {
+        "mappings": {
+          "item_1": "target_quarter",
+          "item_2": "target_quarter",
+          "item_3": "target_half",
+          "item_4": "target_half",
+          "item_5": "target_three_quarter"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d2_pr_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d2_cp_01",
+    "id": "qspec_d2_cp_01",
+    "generator_family_id": "family_d2_classical_probability",
+    "pack_id": "mkp_d2_compare_probability",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "compare_probability",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "multiple_choice",
+    "template": {
+      "prompt": "Túi A có 3 bi đỏ và 2 bi xanh. Túi B có 4 bi đỏ và 4 bi xanh. Rút ngẫu nhiên 1 bi từ mỗi túi. Khả năng rút được bi đỏ ở túi nào cao hơn?",
+      "explanation": "Túi A: P(Đỏ) = 3 / 5 = 0.6. Túi B: P(Đỏ) = 4 / 8 = 0.5. So sánh tích chéo: 3 * 8 = 24 > 4 * 5 = 20. Khả năng rút bi đỏ ở túi A cao hơn túi B.",
+      "learning_objective": "So sánh xác suất hai biến cố bằng quy tắc nhân chéo.",
+      "interaction_payload": {
+        "options": [
+          {
+            "option_id": "opt_a",
+            "text": "Khả năng rút bi đỏ ở túi A cao hơn túi B"
+          },
+          {
+            "option_id": "opt_b",
+            "text": "Khả năng rút bi đỏ ở túi B cao hơn túi A"
+          },
+          {
+            "option_id": "opt_c",
+            "text": "Khả năng rút bi đỏ ở hai túi bằng nhau"
+          },
+          {
+            "option_id": "opt_d",
+            "text": "Không thể so sánh được"
+          }
+        ]
+      },
+      "answer_spec": {
+        "correct_option_id": "opt_a"
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d2_cp_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d2_cp_02",
+    "id": "qspec_d2_cp_02",
+    "generator_family_id": "family_d2_classical_probability",
+    "pack_id": "mkp_d2_compare_probability",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "compare_probability",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "drag_drop",
+    "template": {
+      "prompt": "Sắp xếp các biến cố khi gieo 1 con xúc xắc 6 mặt theo thứ tự xác suất **tăng dần**.",
+      "explanation": "Mặt 6 chấm (1/6 = 0.167) < Số chia hết cho 3 {3,6} (2/6 = 0.333) < Số chẵn {2,4,6} (3/6 = 0.5) < Số nhỏ hơn 6 {1,2,3,4,5} (5/6 = 0.833).",
+      "learning_objective": "So sánh và sắp xếp xác suất các biến cố theo thứ tự.",
+      "interaction_payload": {
+        "items": [
+          {
+            "id": "item_1",
+            "text": "A: Xuất hiện mặt 6 chấm (P = 1 / 6)"
+          },
+          {
+            "id": "item_2",
+            "text": "B: Xuất hiện số chia hết cho 3 (P = 2 / 6)"
+          },
+          {
+            "id": "item_3",
+            "text": "C: Xuất hiện số chấm chẵn (P = 3 / 6)"
+          },
+          {
+            "id": "item_4",
+            "text": "D: Xuất hiện số nhỏ hơn 6 (P = 5 / 6)"
+          }
+        ],
+        "targets": [
+          {
+            "id": "pos_1",
+            "title": "Vị trí 1 (Xác suất nhỏ nhất)"
+          },
+          {
+            "id": "pos_2",
+            "title": "Vị trí 2"
+          },
+          {
+            "id": "pos_3",
+            "title": "Vị trí 3"
+          },
+          {
+            "id": "pos_4",
+            "title": "Vị trí 4 (Xác suất lớn nhất)"
+          }
+        ]
+      },
+      "answer_spec": {
+        "mappings": {
+          "item_1": "pos_1",
+          "item_2": "pos_2",
+          "item_3": "pos_3",
+          "item_4": "pos_4"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d2_cp_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d2_cp_03",
+    "id": "qspec_d2_cp_03",
+    "generator_family_id": "family_d2_classical_probability",
+    "pack_id": "mkp_d2_compare_probability",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "compare_probability",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "matching",
+    "template": {
+      "prompt": "Nối biến cố với mô tả khả năng xảy ra tương ứng khi rút 1 bi từ túi chứa 9 bi đỏ và 1 bi xanh.",
+      "explanation": "Rút bi đỏ (9/10 = 0.9 -> Rất có thể xảy ra); Rút bi xanh (1/10 = 0.1 -> Ít có thể xảy ra); Rút bi vàng (0/10 = 0 -> Không thể xảy ra).",
+      "learning_objective": "Mối liên hệ giữa giá trị xác suất P(A) và mô tả định tính khả năng xảy ra.",
+      "interaction_payload": {
+        "left_items": [
+          {
+            "id": "l1",
+            "text": "Rút được bi màu đỏ (P = 0.9)"
+          },
+          {
+            "id": "l2",
+            "text": "Rút được bi màu xanh (P = 0.1)"
+          },
+          {
+            "id": "l3",
+            "text": "Rút được bi màu vàng (P = 0)"
+          }
+        ],
+        "right_items": [
+          {
+            "id": "r1",
+            "text": "Rất có thể xảy ra (Likely)"
+          },
+          {
+            "id": "r2",
+            "text": "Ít có thể xảy ra (Unlikely)"
+          },
+          {
+            "id": "r3",
+            "text": "Không thể xảy ra (Impossible)"
+          }
+        ]
+      },
+      "answer_spec": {
+        "pairs": {
+          "l1": "r1",
+          "l2": "r2",
+          "l3": "r3"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d2_cp_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d2_mdc_01",
+    "id": "qspec_d2_mdc_01",
+    "generator_family_id": "family_d2_classical_probability",
+    "pack_id": "mkp_d2_multi_data_classical",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "multi_data_classical",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Một túi chứa 5 bi đỏ, 3 bi xanh và 2 bi vàng cùng kích thước. Rút ngẫu nhiên 1 bi. Tính xác suất P(A) rút được bi màu đỏ. Nhập kết quả dạng số thập phân.",
+      "explanation": "Tổng số bi n(Omega) = 5 + 3 + 2 = 10. Số bi đỏ n(A) = 5. Xác suất P(A) = 5 / 10 = 0.5.",
+      "learning_objective": "Tính xác suất cổ điển từ bảng dữ liệu nhiều danh mục bi.",
+      "interaction_payload": {
+        "input_type": "float",
+        "hint": "Nhập số thập phân"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          0.5
+        ],
+        "numeric_tolerance": 0.001
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d2_mdc_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d2_mdc_02",
+    "id": "qspec_d2_mdc_02",
+    "generator_family_id": "family_d2_classical_probability",
+    "pack_id": "mkp_d2_multi_data_classical",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "multi_data_classical",
+    "difficulty_range": {
+      "min": 4,
+      "max": 4
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Một lớp học có 18 học sinh nam và 22 học sinh nữ. Chọn ngẫu nhiên 1 học sinh làm lớp trưởng. Tính xác suất chọn được 1 học sinh nữ. Nhập kết quả dạng số thập phân.",
+      "explanation": "Tổng số học sinh n(Omega) = 18 + 22 = 40. Số nữ n(Nữ) = 22. Xác suất P(Nữ) = 22 / 40 = 11 / 20 = 0.55.",
+      "learning_objective": "Tính xác suất cổ điển từ dữ liệu thống kê lớp học.",
+      "interaction_payload": {
+        "input_type": "float",
+        "hint": "Nhập số thập phân"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          0.55
+        ],
+        "numeric_tolerance": 0.001
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d2_mdc_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d2_mdc_03",
+    "id": "qspec_d2_mdc_03",
+    "generator_family_id": "family_d2_classical_probability",
+    "pack_id": "mkp_d2_multi_data_classical",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "subtopic_id": "multi_data_classical",
+    "difficulty_range": {
+      "min": 4,
+      "max": 4
+    },
+    "interaction_type": "matching",
+    "template": {
+      "prompt": "BOSS ALEATOR SYNTHESIS: Một tập hợp 20 thẻ gồm 8 thẻ đỏ, 7 thẻ xanh và 5 thẻ vàng. Nối màu thẻ rút được với xác suất P(A) tương ứng.",
+      "explanation": "n(Omega) = 20. P(Đỏ) = 8/20 = 2/5 = 0.4; P(Xanh) = 7/20 = 0.35; P(Vàng) = 5/20 = 1/4 = 0.25.",
+      "learning_objective": "Tổng hợp xác suất cổ điển từ cấu trúc nhiều đối tượng.",
+      "interaction_payload": {
+        "left_items": [
+          {
+            "id": "l1",
+            "text": "Rút được thẻ màu đỏ (8 / 20)"
+          },
+          {
+            "id": "l2",
+            "text": "Rút được thẻ màu xanh (7 / 20)"
+          },
+          {
+            "id": "l3",
+            "text": "Rút được thẻ màu vàng (5 / 20)"
+          }
+        ],
+        "right_items": [
+          {
+            "id": "r1",
+            "text": "P(A) = 0.40"
+          },
+          {
+            "id": "r2",
+            "text": "P(A) = 0.35"
+          },
+          {
+            "id": "r3",
+            "text": "P(A) = 0.25"
+          }
+        ]
+      },
+      "answer_spec": {
+        "pairs": {
+          "l1": "r1",
+          "l2": "r2",
+          "l3": "r3"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d2_mdc_03"
+    }
+  }
+]

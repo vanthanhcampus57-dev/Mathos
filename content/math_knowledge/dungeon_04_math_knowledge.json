@@ -1,0 +1,110 @@
+[
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d4_independence",
+    "id": "mkp_d4_independence",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "independence",
+    "domain_variables": {
+      "independent_condition": "P(A n B) = P(A) * P(B)"
+    },
+    "math_rules": {
+      "definition": "Sự xảy ra của A không làm thay đổi xác suất của B"
+    },
+    "forbidden_concepts": [
+      "bayes_theorem",
+      "conditional_updates"
+    ],
+    "prerequisite_concepts": [
+      "classical_probability_formula"
+    ]
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d4_tree_diagram",
+    "id": "mkp_d4_tree_diagram",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "tree_diagram",
+    "domain_variables": {
+      "coin_flips": "k in {2, 3}",
+      "n_omega": "2^k"
+    },
+    "math_rules": {
+      "independent_complements": "P(A_bar n B_bar) = (1 - P(A)) * (1 - P(B))"
+    },
+    "forbidden_concepts": [
+      "dependent_tree_branches"
+    ],
+    "prerequisite_concepts": [
+      "independence"
+    ]
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d4_multiplication_two_step",
+    "id": "mkp_d4_multiplication_two_step",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "multiplication_two_step",
+    "domain_variables": {
+      "pA": "float",
+      "pB": "float"
+    },
+    "math_rules": {
+      "two_event_multiplication": "P(A n B) = P(A) * P(B)"
+    },
+    "forbidden_concepts": [
+      "adding_probabilities_for_and_events"
+    ],
+    "prerequisite_concepts": [
+      "independence"
+    ]
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d4_multiplication_chain",
+    "id": "mkp_d4_multiplication_chain",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "multiplication_chain",
+    "domain_variables": {
+      "shooters": 3,
+      "parallel_components": 2
+    },
+    "math_rules": {
+      "at_least_one_identity": "P(at_least_1) = 1 - (1 - p1) * (1 - p2) * ... * (1 - pk)"
+    },
+    "forbidden_concepts": [
+      "bernoulli_distribution"
+    ],
+    "prerequisite_concepts": [
+      "multiplication_two_step"
+    ]
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d4_independence_application",
+    "id": "mkp_d4_independence_application",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "subtopic_id": "independence_application",
+    "domain_variables": {
+      "p1": 0.8,
+      "p2": 0.7,
+      "p3": 0.6
+    },
+    "math_rules": {
+      "exactly_one_hit": "P = p1*(1-p2) + (1-p1)*p2",
+      "aphodius_final": "P = 1 - (1-p1)*(1-p2)*(1-p3)"
+    },
+    "forbidden_concepts": [
+      "markov_chains",
+      "expected_value"
+    ],
+    "prerequisite_concepts": [
+      "multiplication_chain"
+    ]
+  }
+]

@@ -1,0 +1,147 @@
+[
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d1_random_trial",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "random_trial",
+    "domain_variables": {
+      "experiment": {
+        "type": "string",
+        "domain": [
+          "coin",
+          "dice",
+          "cards",
+          "urn"
+        ]
+      },
+      "sample_space_size": {
+        "type": "int",
+        "min": 2,
+        "max": 36
+      }
+    },
+    "math_rules": {
+      "formula": "canonical_math_authority"
+    },
+    "forbidden_concepts": [],
+    "prerequisite_concepts": [],
+    "id": "mkp_d1_random_trial"
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d1_sample_space",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "sample_space",
+    "domain_variables": {
+      "experiment": {
+        "type": "string",
+        "domain": [
+          "coin",
+          "dice",
+          "cards",
+          "urn"
+        ]
+      },
+      "sample_space_size": {
+        "type": "int",
+        "min": 2,
+        "max": 36
+      }
+    },
+    "math_rules": {
+      "formula": "canonical_math_authority"
+    },
+    "forbidden_concepts": [],
+    "prerequisite_concepts": [],
+    "id": "mkp_d1_sample_space"
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d1_event_subset",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "event_subset",
+    "domain_variables": {
+      "experiment": {
+        "type": "string",
+        "domain": [
+          "coin",
+          "dice",
+          "cards",
+          "urn"
+        ]
+      },
+      "sample_space_size": {
+        "type": "int",
+        "min": 2,
+        "max": 36
+      }
+    },
+    "math_rules": {
+      "formula": "canonical_math_authority"
+    },
+    "forbidden_concepts": [],
+    "prerequisite_concepts": [],
+    "id": "mkp_d1_event_subset"
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d1_event_classification",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "event_classification",
+    "domain_variables": {
+      "experiment": {
+        "type": "string",
+        "domain": [
+          "coin",
+          "dice",
+          "cards",
+          "urn"
+        ]
+      },
+      "sample_space_size": {
+        "type": "int",
+        "min": 2,
+        "max": 36
+      }
+    },
+    "math_rules": {
+      "formula": "canonical_math_authority"
+    },
+    "forbidden_concepts": [],
+    "prerequisite_concepts": [],
+    "id": "mkp_d1_event_classification"
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d1_counting_outcomes",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "counting_outcomes",
+    "domain_variables": {
+      "experiment": {
+        "type": "string",
+        "domain": [
+          "coin",
+          "dice",
+          "cards",
+          "urn"
+        ]
+      },
+      "sample_space_size": {
+        "type": "int",
+        "min": 2,
+        "max": 36
+      }
+    },
+    "math_rules": {
+      "formula": "canonical_math_authority"
+    },
+    "forbidden_concepts": [],
+    "prerequisite_concepts": [],
+    "id": "mkp_d1_counting_outcomes"
+  }
+]

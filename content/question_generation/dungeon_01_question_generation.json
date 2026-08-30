@@ -1,0 +1,751 @@
+[
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d1_rt_01",
+    "id": "qspec_d1_rt_01",
+    "generator_family_id": "family_d1_trial_sample_event",
+    "pack_id": "mkp_d1_random_trial",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "random_trial",
+    "difficulty_range": {
+      "min": 1,
+      "max": 1
+    },
+    "interaction_type": "multiple_choice",
+    "template": {
+      "prompt": "Phát biểu nào sau đây đúng nhất về phép thử ngẫu nhiên?",
+      "explanation": "Phép thử ngẫu nhiên là hành động có kết quả không thể đoán trước nhưng biết trước tập tất cả các kết quả có thể.",
+      "learning_objective": "Nhận biết khái niệm phép thử ngẫu nhiên.",
+      "interaction_payload": {
+        "options": [
+          {
+            "option_id": "opt_a",
+            "text": "Hành động có kết quả không thể đoán trước nhưng biết trước tập hợp tất cả các kết quả có thể xảy ra"
+          },
+          {
+            "option_id": "opt_b",
+            "text": "Hành động luôn biết chính xác kết quả trước khi thực hiện"
+          },
+          {
+            "option_id": "opt_c",
+            "text": "Hành động không thể liệt kê được danh sách các kết quả có thể xảy ra"
+          },
+          {
+            "option_id": "opt_d",
+            "text": "Hành động không có bất kỳ kết quả nào có thể xảy ra"
+          }
+        ]
+      },
+      "answer_spec": {
+        "correct_option_id": "opt_a"
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d1_rt_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d1_rt_02",
+    "id": "qspec_d1_rt_02",
+    "generator_family_id": "family_d1_trial_sample_event",
+    "pack_id": "mkp_d1_random_trial",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "random_trial",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "matching",
+    "template": {
+      "prompt": "Nối hành động thực tế với phân loại tương ứng.",
+      "explanation": "Gieo con xúc xắc 6 mặt là phép thử ngẫu nhiên. Đun nước sôi 100 độ C là thí nghiệm xác định.",
+      "learning_objective": "Nối hành động thực tế với phân loại phép thử.",
+      "interaction_payload": {
+        "left_items": [
+          {
+            "id": "l1",
+            "text": "Gieo 1 con xúc xắc 6 mặt cân đối"
+          },
+          {
+            "id": "l2",
+            "text": "Đun nước cất ở 100 độ C trong điều kiện tiêu chuẩn"
+          },
+          {
+            "id": "l3",
+            "text": "Rút 1 lá bài từ bộ bài 52 lá"
+          }
+        ],
+        "right_items": [
+          {
+            "id": "r1",
+            "text": "Phép thử ngẫu nhiên"
+          },
+          {
+            "id": "r2",
+            "text": "Thí nghiệm xác định"
+          },
+          {
+            "id": "r3",
+            "text": "Phép thử ngẫu nhiên"
+          }
+        ]
+      },
+      "answer_spec": {
+        "pairs": {
+          "l1": "r1",
+          "l2": "r2",
+          "l3": "r3"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d1_rt_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d1_rt_03",
+    "id": "qspec_d1_rt_03",
+    "generator_family_id": "family_d1_trial_sample_event",
+    "pack_id": "mkp_d1_random_trial",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "random_trial",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "drag_drop",
+    "template": {
+      "prompt": "Phân loại các hành động vào nhóm 'Phép thử ngẫu nhiên' hoặc 'Không phải phép thử ngẫu nhiên'.",
+      "explanation": "Gieo đồng xu và rút thẻ là phép thử ngẫu nhiên. Tính 2 + 3 là phép tính xác định.",
+      "learning_objective": "Phân loại các hành động thực tế vào nhóm phép thử ngẫu nhiên.",
+      "interaction_payload": {
+        "items": [
+          {
+            "id": "item_1",
+            "text": "Gieo 1 đồng xu cân đối"
+          },
+          {
+            "id": "item_2",
+            "text": "Rút 1 thẻ ngẫu nhiên từ hộp"
+          },
+          {
+            "id": "item_3",
+            "text": "Tính tổng 2 + 3"
+          },
+          {
+            "id": "item_4",
+            "text": "Xem lịch ngày mai"
+          }
+        ],
+        "targets": [
+          {
+            "id": "target_random",
+            "title": "Phép thử ngẫu nhiên"
+          },
+          {
+            "id": "target_determ",
+            "title": "Không phải phép thử ngẫu nhiên"
+          }
+        ]
+      },
+      "answer_spec": {
+        "mappings": {
+          "item_1": "target_random",
+          "item_2": "target_random",
+          "item_3": "target_determ",
+          "item_4": "target_determ"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d1_rt_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d1_ss_01",
+    "id": "qspec_d1_ss_01",
+    "generator_family_id": "family_d1_trial_sample_event",
+    "pack_id": "mkp_d1_sample_space",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "sample_space",
+    "difficulty_range": {
+      "min": 1,
+      "max": 1
+    },
+    "interaction_type": "multiple_choice",
+    "template": {
+      "prompt": "Tập hợp tất cả các kết quả có thể xảy ra của một phép thử ngẫu nhiên được gọi là gì?",
+      "explanation": "Tập hợp tất cả các kết quả có thể xảy ra của phép thử được gọi là Không gian mẫu, ký hiệu là Ω.",
+      "learning_objective": "Nhận biết khái niệm không gian mẫu Ω.",
+      "interaction_payload": {
+        "options": [
+          {
+            "option_id": "opt_a",
+            "text": "Không gian mẫu (ký hiệu là Ω)"
+          },
+          {
+            "option_id": "opt_b",
+            "text": "Biến cố không thể"
+          },
+          {
+            "option_id": "opt_c",
+            "text": "Tập hợp rỗng"
+          },
+          {
+            "option_id": "opt_d",
+            "text": "Biến cố xung khắc"
+          }
+        ]
+      },
+      "answer_spec": {
+        "correct_option_id": "opt_a"
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d1_ss_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d1_ss_02",
+    "id": "qspec_d1_ss_02",
+    "generator_family_id": "family_d1_trial_sample_event",
+    "pack_id": "mkp_d1_sample_space",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "sample_space",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Khi gieo 3 đồng xu cân đối độc lập, số phần tử của không gian mẫu n(Omega) = 2^3 bằng bao nhiêu?",
+      "explanation": "Mỗi đồng xu có 2 khả năng (S hoặc N). Khi gieo 3 đồng xu cân đối, số phần tử không gian mẫu n(Omega) = 2^3 = 8.",
+      "learning_objective": "Tính số phần tử không gian mẫu cho k đồng xu n(Omega) = 2^k.",
+      "interaction_payload": {
+        "input_type": "integer",
+        "hint": "Nhập n(Omega)"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          8
+        ]
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d1_ss_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d1_ss_03",
+    "id": "qspec_d1_ss_03",
+    "generator_family_id": "family_d1_trial_sample_event",
+    "pack_id": "mkp_d1_sample_space",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "sample_space",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "matching",
+    "template": {
+      "prompt": "Nối phép thử ngẫu nhiên với số phần tử không gian mẫu n(Omega) tương ứng.",
+      "explanation": "1 đồng xu -> n(Omega) = 2^1 = 2; 2 đồng xu -> n(Omega) = 2^2 = 4; 1 xúc xắc -> n(Omega) = 6^1 = 6; 2 xúc xắc -> n(Omega) = 6^2 = 36.",
+      "learning_objective": "Mối liên hệ giữa phép thử lặp và n(Omega) = 2^k, 6^k.",
+      "interaction_payload": {
+        "left_items": [
+          {
+            "id": "l1",
+            "text": "Gieo 1 đồng xu cân đối (2^1)"
+          },
+          {
+            "id": "l2",
+            "text": "Gieo 2 đồng xu cân đối (2^2)"
+          },
+          {
+            "id": "l3",
+            "text": "Gieo 1 con xúc xắc 6 mặt (6^1)"
+          },
+          {
+            "id": "l4",
+            "text": "Gieo 2 con xúc xắc 6 mặt (6^2)"
+          }
+        ],
+        "right_items": [
+          {
+            "id": "r1",
+            "text": "n(Omega) = 2"
+          },
+          {
+            "id": "r2",
+            "text": "n(Omega) = 4"
+          },
+          {
+            "id": "r3",
+            "text": "n(Omega) = 6"
+          },
+          {
+            "id": "r4",
+            "text": "n(Omega) = 36"
+          }
+        ]
+      },
+      "answer_spec": {
+        "pairs": {
+          "l1": "r1",
+          "l2": "r2",
+          "l3": "r3",
+          "l4": "r4"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d1_ss_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d1_es_01",
+    "id": "qspec_d1_es_01",
+    "generator_family_id": "family_d1_trial_sample_event",
+    "pack_id": "mkp_d1_event_subset",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "event_subset",
+    "difficulty_range": {
+      "min": 1,
+      "max": 1
+    },
+    "interaction_type": "multiple_choice",
+    "template": {
+      "prompt": "Về mặt toán học, mỗi biến cố liên quan đến một phép thử ngẫu nhiên là gì của không gian mẫu Ω?",
+      "explanation": "Mỗi biến cố A là một tập con của không gian mẫu Ω, ký hiệu toán học chuẩn mực là A ⊆ Ω.",
+      "learning_objective": "Nhận biết mối quan hệ biến cố A ⊆ Ω.",
+      "interaction_payload": {
+        "options": [
+          {
+            "option_id": "opt_a",
+            "text": "Một tập con của không gian mẫu (A ⊆ Ω)"
+          },
+          {
+            "option_id": "opt_b",
+            "text": "Một phần tử thuộc tập số thực"
+          },
+          {
+            "option_id": "opt_c",
+            "text": "Tập hợp chứa tất cả các số nguyên âm"
+          },
+          {
+            "option_id": "opt_d",
+            "text": "Một giao điểm hình học"
+          }
+        ]
+      },
+      "answer_spec": {
+        "correct_option_id": "opt_a"
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d1_es_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d1_es_02",
+    "id": "qspec_d1_es_02",
+    "generator_family_id": "family_d1_trial_sample_event",
+    "pack_id": "mkp_d1_event_subset",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "event_subset",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Gieo 1 con xúc xắc 6 mặt cân đối. Xét biến cố A (A ⊆ Ω): 'Số chấm xuất hiện chia hết cho 3'. Liệt kê số lượng n(A) phần tử của biến cố A.",
+      "explanation": "Các mặt chia hết cho 3 là {3, 6}. Do đó n(A) = 2 phần tử.",
+      "learning_objective": "Xác định n(A) phần tử của biến cố A ⊆ Ω.",
+      "interaction_payload": {
+        "input_type": "integer",
+        "hint": "Nhập n(A)"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          2
+        ]
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d1_es_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d1_es_03",
+    "id": "qspec_d1_es_03",
+    "generator_family_id": "family_d1_trial_sample_event",
+    "pack_id": "mkp_d1_event_subset",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "event_subset",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "drag_drop",
+    "template": {
+      "prompt": "Phân loại các số từ 1 đến 6 vào biến cố D (D ⊆ Ω): 'Xuất hiện mặt có số chấm chia hết cho 2'.",
+      "explanation": "Các số chấm chia hết cho 2 là {2, 4, 6} thuộc biến cố D. Các số {1, 3, 5} không thuộc D.",
+      "learning_objective": "Phân loại kết quả sơ cấp vào thuộc/không thuộc tập con biến cố A ⊆ Ω.",
+      "interaction_payload": {
+        "items": [
+          {
+            "id": "item_1",
+            "text": "Mặt 2 chấm"
+          },
+          {
+            "id": "item_2",
+            "text": "Mặt 4 chấm"
+          },
+          {
+            "id": "item_3",
+            "text": "Mặt 6 chấm"
+          },
+          {
+            "id": "item_4",
+            "text": "Mặt 1 chấm"
+          },
+          {
+            "id": "item_5",
+            "text": "Mặt 3 chấm"
+          }
+        ],
+        "targets": [
+          {
+            "id": "target_in",
+            "title": "Thuộc biến cố D (D ⊆ Ω)"
+          },
+          {
+            "id": "target_out",
+            "title": "Không thuộc biến cố D"
+          }
+        ]
+      },
+      "answer_spec": {
+        "mappings": {
+          "item_1": "target_in",
+          "item_2": "target_in",
+          "item_3": "target_in",
+          "item_4": "target_out",
+          "item_5": "target_out"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d1_es_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d1_ec_01",
+    "id": "qspec_d1_ec_01",
+    "generator_family_id": "family_d1_trial_sample_event",
+    "pack_id": "mkp_d1_event_classification",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "event_classification",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "matching",
+    "template": {
+      "prompt": "Nối biến cố khi gieo con xúc xắc 6 mặt với tên gọi loại biến cố tương ứng.",
+      "explanation": "Biến cố 'Số chấm nhỏ hơn 7' là Biến cố chắc chắn (A = Ω); Biến cố 'Số chấm bằng 7' là Biến cố không thể (A = ∅); Biến cố 'Số chấm chẵn' là Biến cố ngẫu nhiên.",
+      "learning_objective": "Phân loại biến cố chắc chắn (A = Ω), biến cố không thể (A = ∅) và biến cố ngẫu nhiên.",
+      "interaction_payload": {
+        "left_items": [
+          {
+            "id": "l1",
+            "text": "Xuất hiện mặt có số chấm nhỏ hơn 7"
+          },
+          {
+            "id": "l2",
+            "text": "Xuất hiện mặt có số chấm bằng 7"
+          },
+          {
+            "id": "l3",
+            "text": "Xuất hiện mặt số chấm chẵn"
+          }
+        ],
+        "right_items": [
+          {
+            "id": "r1",
+            "text": "Biến cố chắc chắn (A = Ω)"
+          },
+          {
+            "id": "r2",
+            "text": "Biến cố không thể (A = ∅)"
+          },
+          {
+            "id": "r3",
+            "text": "Biến cố ngẫu nhiên"
+          }
+        ]
+      },
+      "answer_spec": {
+        "pairs": {
+          "l1": "r1",
+          "l2": "r2",
+          "l3": "r3"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d1_ec_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d1_ec_02",
+    "id": "qspec_d1_ec_02",
+    "generator_family_id": "family_d1_trial_sample_event",
+    "pack_id": "mkp_d1_event_classification",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "event_classification",
+    "difficulty_range": {
+      "min": 1,
+      "max": 1
+    },
+    "interaction_type": "multiple_choice",
+    "template": {
+      "prompt": "Khi gieo con xúc xắc 6 mặt cân đối, biến cố nào sau đây là **biến cố không thể** (A = ∅)?",
+      "explanation": "Con xúc xắc 6 mặt chỉ có các mặt từ 1 đến 6 chấm. Việc xuất hiện mặt 8 chấm không bao giờ xảy ra, nên là biến cố không thể (A = ∅).",
+      "learning_objective": "Nhận biết biến cố không thể (A = ∅) trong gieo xúc xắc.",
+      "interaction_payload": {
+        "options": [
+          {
+            "option_id": "opt_a",
+            "text": "Xuất hiện mặt có 8 chấm"
+          },
+          {
+            "option_id": "opt_b",
+            "text": "Xuất hiện mặt có số chấm nhỏ hơn 7"
+          },
+          {
+            "option_id": "opt_c",
+            "text": "Xuất hiện mặt số chấm chẵn"
+          },
+          {
+            "option_id": "opt_d",
+            "text": "Xuất hiện mặt số chấm lẻ"
+          }
+        ]
+      },
+      "answer_spec": {
+        "correct_option_id": "opt_a"
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d1_ec_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d1_ec_03",
+    "id": "qspec_d1_ec_03",
+    "generator_family_id": "family_d1_trial_sample_event",
+    "pack_id": "mkp_d1_event_classification",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "event_classification",
+    "difficulty_range": {
+      "min": 2,
+      "max": 2
+    },
+    "interaction_type": "drag_drop",
+    "template": {
+      "prompt": "Sắp xếp các biến cố vào nhóm 'Biến cố chắc chắn' hoặc 'Biến cố không thể' khi gieo 1 con xúc xắc 6 mặt.",
+      "explanation": "'Số chấm nhỏ hơn 10' luôn đúng (chắc chắn). 'Số chấm là 0' không bao giờ xảy ra (không thể). 'Số chấm chẵn hoặc lẻ' luôn đúng (chắc chắn). 'Số chấm là số âm' không thể.",
+      "learning_objective": "Phân loại biến cố chắc chắn và biến cố không thể.",
+      "interaction_payload": {
+        "items": [
+          {
+            "id": "item_1",
+            "text": "Xuất hiện mặt có số chấm nhỏ hơn 10"
+          },
+          {
+            "id": "item_2",
+            "text": "Xuất hiện mặt có 0 chấm"
+          },
+          {
+            "id": "item_3",
+            "text": "Xuất hiện mặt có số chấm chẵn hoặc lẻ"
+          },
+          {
+            "id": "item_4",
+            "text": "Xuất hiện mặt có số chấm là số âm"
+          }
+        ],
+        "targets": [
+          {
+            "id": "target_certain",
+            "title": "Biến cố chắc chắn (A = Ω)"
+          },
+          {
+            "id": "target_impossible",
+            "title": "Biến cố không thể (A = ∅)"
+          }
+        ]
+      },
+      "answer_spec": {
+        "mappings": {
+          "item_1": "target_certain",
+          "item_2": "target_impossible",
+          "item_3": "target_certain",
+          "item_4": "target_impossible"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d1_ec_03"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d1_co_01",
+    "id": "qspec_d1_co_01",
+    "generator_family_id": "family_d1_trial_sample_event",
+    "pack_id": "mkp_d1_counting_outcomes",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "counting_outcomes",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Gieo 2 con xúc xắc 6 mặt cân đối. Xét biến cố A (A ⊆ Ω): 'Tổng số chấm xuất hiện trên 2 con xúc xắc bằng 7'. Số phần tử n(A) bằng bao nhiêu?",
+      "explanation": "Liệt kê các cặp (x, y) thuộc {1..6}^2 có tổng x + y = 7: (1,6), (2,5), (3,4), (4,3), (5,2), (6,1). Vậy n(A) = 6.",
+      "learning_objective": "Đếm số phần tử n(A) của biến cố bằng phương pháp liệt kê cặp kết quả (x,y).",
+      "interaction_payload": {
+        "input_type": "integer",
+        "hint": "Nhập n(A)"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          6
+        ]
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d1_co_01"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d1_co_02",
+    "id": "qspec_d1_co_02",
+    "generator_family_id": "family_d1_trial_sample_event",
+    "pack_id": "mkp_d1_counting_outcomes",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "counting_outcomes",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "input",
+    "template": {
+      "prompt": "Gieo 3 đồng xu cân đối độc lập. Xét biến cố K (K ⊆ Ω): 'Có đúng 2 đồng xu xuất hiện mặt Sấp'. Số phần tử n(K) bằng bao nhiêu?",
+      "explanation": "Liệt kê các dãy kết quả thuộc {S, N}^3 có đúng 2 Sấp: (S, S, N), (S, N, S), (N, S, S). Vậy n(K) = 3.",
+      "learning_objective": "Đếm số phần tử kết quả sơ cấp cho biến cố gieo 3 đồng xu.",
+      "interaction_payload": {
+        "input_type": "integer",
+        "hint": "Nhập n(K)"
+      },
+      "answer_spec": {
+        "accepted_values": [
+          3
+        ]
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d1_co_02"
+    }
+  },
+  {
+    "schema_version": 1,
+    "spec_id": "qspec_d1_co_03",
+    "id": "qspec_d1_co_03",
+    "generator_family_id": "family_d1_trial_sample_event",
+    "pack_id": "mkp_d1_counting_outcomes",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "subtopic_id": "counting_outcomes",
+    "difficulty_range": {
+      "min": 3,
+      "max": 3
+    },
+    "interaction_type": "matching",
+    "template": {
+      "prompt": "Cho bình chứa 3 bi đỏ {R1, R2, R3} và 2 bi xanh {B1, B2}. Nối mô tả biến cố khi chọn 1 bi với số phần tử n(A) tương ứng.",
+      "explanation": "Rút 1 bi đỏ -> n(Đỏ) = 3; Rút 1 bi xanh -> n(Xanh) = 2; Rút 1 bi bất kỳ -> n(Omega) = 3 + 2 = 5.",
+      "learning_objective": "Xác định n(A) cho phép thử chọn ngẫu nhiên 1 vật thể từ bình.",
+      "interaction_payload": {
+        "left_items": [
+          {
+            "id": "l1",
+            "text": "Biến cố A: 'Chọn được bi màu đỏ'"
+          },
+          {
+            "id": "l2",
+            "text": "Biến cố B: 'Chọn được bi màu xanh'"
+          },
+          {
+            "id": "l3",
+            "text": "Không gian mẫu Ω: 'Chọn 1 bi bất kỳ'"
+          }
+        ],
+        "right_items": [
+          {
+            "id": "r1",
+            "text": "n(A) = 3"
+          },
+          {
+            "id": "r2",
+            "text": "n(B) = 2"
+          },
+          {
+            "id": "r3",
+            "text": "n(Omega) = 5"
+          }
+        ]
+      },
+      "answer_spec": {
+        "pairs": {
+          "l1": "r1",
+          "l2": "r2",
+          "l3": "r3"
+        }
+      }
+    },
+    "parameter_bindings": {
+      "authority_template_id": "T_d1_co_03"
+    }
+  }
+]

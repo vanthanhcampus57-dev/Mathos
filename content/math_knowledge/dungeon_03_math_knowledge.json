@@ -1,0 +1,110 @@
+[
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d3_union_intersection",
+    "id": "mkp_d3_union_intersection",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "union_intersection",
+    "domain_variables": {
+      "nA": "int",
+      "nB": "int",
+      "nAB": "int"
+    },
+    "math_rules": {
+      "union_size": "n(A U B) = n(A) + n(B) - n(A n B)"
+    },
+    "forbidden_concepts": [
+      "complement_notation_A_bar"
+    ],
+    "prerequisite_concepts": [
+      "event_subset"
+    ]
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d3_mutually_exclusive",
+    "id": "mkp_d3_mutually_exclusive",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "mutually_exclusive",
+    "domain_variables": {
+      "disjoint_condition": "A n B = ∅"
+    },
+    "math_rules": {
+      "intersection_zero": "n(A n B) = 0 => P(A n B) = 0"
+    },
+    "forbidden_concepts": [
+      "multiplication_independence"
+    ],
+    "prerequisite_concepts": [
+      "union_intersection"
+    ]
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d3_addition_simple",
+    "id": "mkp_d3_addition_simple",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "addition_simple",
+    "domain_variables": {
+      "pA": "float",
+      "pB": "float"
+    },
+    "math_rules": {
+      "disjoint_addition_formula": "P(A U B) = P(A) + P(B)"
+    },
+    "forbidden_concepts": [
+      "general_addition_subtraction"
+    ],
+    "prerequisite_concepts": [
+      "mutually_exclusive"
+    ]
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d3_addition_general",
+    "id": "mkp_d3_addition_general",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "addition_general",
+    "domain_variables": {
+      "pA": "float",
+      "pB": "float",
+      "pAB": "float"
+    },
+    "math_rules": {
+      "general_addition_formula": "P(A U B) = P(A) + P(B) - P(A n B)"
+    },
+    "forbidden_concepts": [
+      "combinatorial_formulas_C_n_k"
+    ],
+    "prerequisite_concepts": [
+      "addition_simple"
+    ]
+  },
+  {
+    "schema_version": 1,
+    "pack_id": "mkp_d3_addition_selection",
+    "id": "mkp_d3_addition_selection",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "subtopic_id": "addition_selection",
+    "domain_variables": {
+      "students": 40,
+      "math": 20,
+      "lit": 15,
+      "both": 5
+    },
+    "math_rules": {
+      "boss_synthesis": "P(A U B) = (n(A) + n(B) - n(A n B)) / n(Omega)"
+    },
+    "forbidden_concepts": [
+      "combinatorics_C_n_k"
+    ],
+    "prerequisite_concepts": [
+      "addition_general"
+    ]
+  }
+]
