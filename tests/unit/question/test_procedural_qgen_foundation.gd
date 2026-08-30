@@ -1,7 +1,7 @@
 class_name TestProceduralQGenFoundation
 extends RefCounted
 
-## Automated test suite covering generic Procedural Question Generation foundation (QGEN-GATE-001..012).
+## Automated test suite covering generic Procedural Question Generation foundation (QGEN-GATE-001, 002, 003, 010, 011, 012).
 
 const MathKnowledgePack = preload("res://src/content/models/math_knowledge_pack.gd")
 const QuestionGenerationSpec = preload("res://src/content/models/question_generation_spec.gd")
@@ -98,7 +98,7 @@ static func test_qgen_002_catalog_publication() -> bool:
 	return true
 
 static func test_qgen_003_identity_and_determinism() -> bool:
-	print("[QGEN-GATE-003] Testing identity format & deterministic materialization...")
+	print("[QGEN-GATE-003] Testing identity format, round-tripping & deterministic materialization...")
 	
 	var spec_id: String = "qspec_random_trial_mc"
 	var variant_key: String = "v1"
@@ -113,10 +113,42 @@ static func test_qgen_003_identity_and_determinism() -> bool:
 		print("[QGEN-GATE-003] FAIL: is_generated_id returned false")
 		return false
 
-	var parsed: Dictionary = QuestionGeneratorIdentity.parse_generated_id(generated_id)
-	if not bool(parsed.get("success", false)) or parsed.get("spec_id") != spec_id or parsed.get("variant_key") != variant_key:
-		print("[QGEN-GATE-003] FAIL: parse_generated_id failed: " + str(parsed))
-		return false
+	# Exact round-trip verification for legal examples
+	var roundtrip_cases: Array[Dictionary] = [
+		{"spec": "qspec_coin_flip", "variant": "v1", "expected": "qgen_qspec_coin_flip_v1"},
+		{"spec": "qspec_coin_flip", "variant": "k3-heads2", "expected": "qgen_qspec_coin_flip_k3-heads2"},
+		{"spec": "qspec_coin_flip", "variant": "a13f90c2", "expected": "qgen_qspec_coin_flip_a13f90c2"}
+	]
+
+	for c in roundtrip_cases:
+		var built: String = QuestionGeneratorIdentity.build_generated_id(String(c["spec"]), String(c["variant"]))
+		if built != String(c["expected"]):
+			print("[QGEN-GATE-003] FAIL: build_generated_id mismatch: " + built + " vs " + String(c["expected"]))
+			return false
+
+		var parsed: Dictionary = QuestionGeneratorIdentity.parse_generated_id(built)
+		if not bool(parsed.get("success", false)):
+			print("[QGEN-GATE-003] FAIL: parse_generated_id returned false for legal ID: " + built)
+			return false
+		if parsed.get("spec_id") != c["spec"] or parsed.get("variant_key") != c["variant"]:
+			print("[QGEN-GATE-003] FAIL: Roundtrip value mismatch: " + str(parsed))
+			return false
+
+	# Rejection of illegal variants (containing "_" or illegal chars)
+	var illegal_variants: Array[String] = ["v_1", "v_k3_heads2", "V1", "v.1", "v!1", "", "variant_key_with_underscore"]
+	for iv in illegal_variants:
+		var bad_id: String = QuestionGeneratorIdentity.build_generated_id("qspec_coin_flip", iv)
+		if bad_id != "":
+			print("[QGEN-GATE-003] FAIL: build_generated_id accepted illegal variant: " + iv)
+			return false
+
+	# Rejection of malformed IDs in parse_generated_id
+	var malformed_ids: Array[String] = ["invalid_prefix_v1", "qgen_", "qgen_nospec", "qgen__v1"]
+	for mid in malformed_ids:
+		var try_parse: Dictionary = QuestionGeneratorIdentity.parse_generated_id(mid)
+		if bool(try_parse.get("success", false)):
+			print("[QGEN-GATE-003] FAIL: parse_generated_id accepted malformed ID: " + mid)
+			return false
 
 	var gen: RefCounted = QuestionGenerator.new()
 	var spec: Dictionary = {
@@ -175,11 +207,11 @@ static func test_qgen_010_generated_id_stability() -> bool:
 	
 	var ids: Array[String] = []
 	for i in range(10):
-		var q: Dictionary = gen.generate_question(spec, {}, "variant_k4", {"k": 4})
+		var q: Dictionary = gen.generate_question(spec, {}, "variant-k4", {"k": 4})
 		ids.append(String(q["question_id"]))
 
 	for id_val in ids:
-		if id_val != "qgen_qspec_coin_flip_variant_k4":
+		if id_val != "qgen_qspec_coin_flip_variant-k4":
 			print("[QGEN-GATE-010] FAIL: ID instability detected: " + id_val)
 			return false
 
@@ -187,27 +219,58 @@ static func test_qgen_010_generated_id_stability() -> bool:
 	return true
 
 static func test_qgen_011_collision_protection() -> bool:
-	print("[QGEN-GATE-011] Testing ID collision protection & static vs generated ID separation...")
+	print("[QGEN-GATE-011] Testing collision rules: same spec/variant, distinct spec/variant & static separation...")
 	
 	var repo: ContentRepository = ContentRepository.new()
 	repo.load_and_validate("res://content")
 	var catalog: ValidatedCatalog = repo.get_catalog()
 	
+	# Static namespace separation
 	for q_id in ["q_d1_01_1", "q_d1_01_2", "q_d1_05_5", "q_d4_05_5"]:
 		if QuestionGeneratorIdentity.is_generated_id(q_id):
 			print("[QGEN-GATE-011] FAIL: Static question ID detected with generated prefix: " + q_id)
 			return false
 
-	var gen_id1: String = QuestionGeneratorIdentity.build_generated_id("spec_a", "v1")
-	var gen_id2: String = QuestionGeneratorIdentity.build_generated_id("spec_a", "v1")
-	var gen_id3: String = QuestionGeneratorIdentity.build_generated_id("spec_a", "v2")
-
-	if gen_id1 != gen_id2:
-		print("[QGEN-GATE-011] FAIL: Identical spec/variant did not collide to same ID")
+	# 1. Same spec + same legal variant -> same stable ID
+	var id1_a: String = QuestionGeneratorIdentity.build_generated_id("qspec_coin", "v1")
+	var id1_b: String = QuestionGeneratorIdentity.build_generated_id("qspec_coin", "v1")
+	if id1_a != id1_b or id1_a != "qgen_qspec_coin_v1":
+		print("[QGEN-GATE-011] FAIL: Same spec + same variant did not yield identical stable ID")
 		return false
 
-	if gen_id1 == gen_id3:
-		print("[QGEN-GATE-011] FAIL: Distinct variants generated colliding IDs")
+	# 2. Same spec + different variant -> distinct IDs
+	var id2_a: String = QuestionGeneratorIdentity.build_generated_id("qspec_coin", "v1")
+	var id2_b: String = QuestionGeneratorIdentity.build_generated_id("qspec_coin", "v2")
+	if id2_a == id2_b:
+		print("[QGEN-GATE-011] FAIL: Same spec + different variant yielded colliding IDs")
+		return false
+
+	# 3. Different spec + same variant -> distinct IDs
+	var id3_a: String = QuestionGeneratorIdentity.build_generated_id("qspec_coin_flip", "v1")
+	var id3_b: String = QuestionGeneratorIdentity.build_generated_id("qspec_dice_roll", "v1")
+	if id3_a == id3_b:
+		print("[QGEN-GATE-011] FAIL: Different spec + same variant yielded colliding IDs")
+		return false
+
+	# 4. Illegal variant containing underscore -> rejected
+	var id_illegal: String = QuestionGeneratorIdentity.build_generated_id("qspec_coin", "v_1")
+	if id_illegal != "":
+		print("[QGEN-GATE-011] FAIL: Illegal variant containing underscore was not rejected")
+		return false
+
+	# 5. Generated-vs-generated duplicate collision detection check
+	var generated_registry: Dictionary = {}
+	var pair1: Array = [["qspec_coin", "v1"], ["qspec_coin", "v1"]]
+	for p in pair1:
+		var gid: String = QuestionGeneratorIdentity.build_generated_id(p[0], p[1])
+		if generated_registry.has(gid):
+			# Duplicate collision detected cleanly
+			pass
+		else:
+			generated_registry[gid] = true
+
+	if generated_registry.size() != 1:
+		print("[QGEN-GATE-011] FAIL: Duplicate generated ID count mismatch")
 		return false
 
 	print("[QGEN-GATE-011] PASS")
