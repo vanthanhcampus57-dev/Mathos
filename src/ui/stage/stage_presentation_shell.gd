@@ -27,6 +27,8 @@ var _current_mode: ViewMode = ViewMode.MODE_ENTRY
 var _context_info: PresentationModels.StageContextInfo = null
 
 func _ready() -> void:
+	_update_background_texture()
+
 	var new_game_btn: Button = _get_new_game_button()
 	if new_game_btn != null:
 		if not new_game_btn.pressed.is_connected(_on_new_game_pressed):
@@ -54,6 +56,34 @@ func _ready() -> void:
 		q_host.child_entered_tree.connect(_on_question_host_child_entered)
 
 	set_view_mode(_current_mode)
+
+func _update_background_texture() -> void:
+	var bg_rect: TextureRect = get_node_or_null("BackgroundTextureRect") as TextureRect
+	if bg_rect == null:
+		return
+
+	var path: String = "res://assets/backgrounds/misty_forest_v1.jpg"
+	var tex: Texture2D = null
+
+	if FileAccess.file_exists(path):
+		var bytes: PackedByteArray = FileAccess.get_file_as_bytes(path)
+		if not bytes.is_empty():
+			var img: Image = Image.new()
+			var err: int = img.load_png_from_buffer(bytes)
+			if err != OK:
+				err = img.load_jpg_from_buffer(bytes)
+			if err == OK:
+				tex = ImageTexture.create_from_image(img)
+
+	if tex == null and ResourceLoader.exists(path):
+		var res: Resource = load(path)
+		if res is Texture2D:
+			tex = res as Texture2D
+
+	if tex != null:
+		bg_rect.texture = tex
+		bg_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		bg_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 
 ## Consumes caller-supplied neutral presentation data.
 func set_stage_context(data: Variant) -> void:
