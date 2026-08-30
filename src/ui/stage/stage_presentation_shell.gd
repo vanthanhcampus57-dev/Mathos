@@ -3,7 +3,7 @@ extends Control
 
 ## Main UI Presentation Shell for Mathos stages (e.g. Stage 1.1 -> 1.3).
 ## Hosts lesson dialogue, question host container, feedback host container,
-## left sidebar, and stage completion panels.
+## left icon sidebar, separate advisor panel, and stage completion panels.
 ##
 ## Pure view component. Emits presentation intents only without touching
 ## GameFlow, ProgressState, SaveService, or Combat engines.
@@ -49,6 +49,10 @@ func _ready() -> void:
 		if not stage_complete_panel.stage_continue_requested.is_connected(_on_stage_continue):
 			stage_complete_panel.stage_continue_requested.connect(_on_stage_continue)
 
+	var q_host: MarginContainer = get_question_host_container()
+	if q_host != null and not q_host.child_entered_tree.is_connected(_on_question_host_child_entered):
+		q_host.child_entered_tree.connect(_on_question_host_child_entered)
+
 	set_view_mode(_current_mode)
 
 ## Consumes caller-supplied neutral presentation data.
@@ -89,11 +93,11 @@ func set_view_mode(mode: ViewMode) -> void:
 	if lesson_panel != null:
 		lesson_panel.visible = (_current_mode == ViewMode.MODE_LESSON)
 
-	var question_host_container: MarginContainer = get_question_host_container()
-	if question_host_container != null:
-		question_host_container.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
+	var question_host: MarginContainer = get_question_host_container()
+	if question_host != null:
+		question_host.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
 		if _current_mode == ViewMode.MODE_QUESTION_HOST:
-			question_host_ready.emit(question_host_container)
+			question_host_ready.emit(question_host)
 
 	var feedback_host_container: MarginContainer = get_feedback_host_container()
 	if feedback_host_container != null:
@@ -186,6 +190,16 @@ func _on_lesson_completed() -> void:
 
 func _on_stage_continue() -> void:
 	stage_continue_requested.emit()
+
+func _on_question_host_child_entered(child: Node) -> void:
+	var panel_host: MarginContainer = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer/GameplayHBox/QuestionPanelHost") as MarginContainer
+	if panel_host != null and child != get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer/GameplayHBox"):
+		call_deferred("_reparent_question_panel", child, panel_host)
+
+func _reparent_question_panel(child: Node, panel_host: MarginContainer) -> void:
+	if is_instance_valid(child) and child.get_parent() != panel_host:
+		child.get_parent().remove_child(child)
+		panel_host.add_child(child)
 
 func _get_header_bar() -> Control:
 	return get_node_or_null("VBoxContainer/HeaderBar") as Control

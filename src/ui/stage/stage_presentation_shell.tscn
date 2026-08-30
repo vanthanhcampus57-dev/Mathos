@@ -60,56 +60,54 @@ size_flags_vertical = 3
 theme_override_constants/separation = 16
 
 [node name="LeftSidebar" type="PanelContainer" parent="VBoxContainer/MainBody/ContentHBox"]
-custom_minimum_size = Vector2(240, 0)
+custom_minimum_size = Vector2(64, 0)
 layout_mode = 2
 theme_type_variation = &"MathosCard"
 
 [node name="SidebarVBox" type="VBoxContainer" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 16
+alignment = 1
 
-[node name="SidebarTitleLabel" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+[node name="NavMapButton" type="Button" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+custom_minimum_size = Vector2(44, 44)
 layout_mode = 2
-theme_type_variation = &"MathosHeading"
-text = "Khu Rừng Mù Sương"
+size_flags_horizontal = 4
+theme_type_variation = &"MathosSecondaryButton"
+text = "🗺️"
+tooltip_text = "Bản đồ"
 
-[node name="TopicLabel" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+[node name="NavCardsButton" type="Button" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+custom_minimum_size = Vector2(44, 44)
 layout_mode = 2
-theme_type_variation = &"MathosMeta"
-text = "Chủ đề: Xác Suất Thống Kê"
+size_flags_horizontal = 4
+theme_type_variation = &"MathosSecondaryButton"
+text = "🃏"
+tooltip_text = "Hành trang"
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+[node name="NavStatsButton" type="Button" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+custom_minimum_size = Vector2(44, 44)
 layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"MathosSecondaryButton"
+text = "📊"
+tooltip_text = "Thống kê"
 
-[node name="StageListLabel" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+[node name="NavSettingsButton" type="Button" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+custom_minimum_size = Vector2(44, 44)
 layout_mode = 2
-theme_type_variation = &"MathosSubtitle"
-text = "Bản Đồ Ải"
+size_flags_horizontal = 4
+theme_type_variation = &"MathosSecondaryButton"
+text = "⚙️"
+tooltip_text = "Cài đặt"
 
-[node name="Stage1" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+[node name="NavHelpButton" type="Button" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+custom_minimum_size = Vector2(44, 44)
 layout_mode = 2
-theme_type_variation = &"MathosMeta"
-text = "▶ 1.1 Khởi Đầu (Đang làm)"
-
-[node name="Stage2" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
-layout_mode = 2
-theme_type_variation = &"MathosMeta"
-text = "🔒 1.2 Không Gian Mẫu"
-
-[node name="Stage3" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
-layout_mode = 2
-theme_type_variation = &"MathosMeta"
-text = "🔒 1.3 Biến Cố Ngẫu Nhiên"
-
-[node name="Stage4" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
-layout_mode = 2
-theme_type_variation = &"MathosMeta"
-text = "🔒 1.4 Thử Thách Ma Thuật"
-
-[node name="Stage5" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
-layout_mode = 2
-theme_type_variation = &"MathosMeta"
-text = "🔒 1.5 Trùm Stochas"
+size_flags_horizontal = 4
+theme_type_variation = &"MathosSecondaryButton"
+text = "❓"
+tooltip_text = "Trợ giúp"
 
 [node name="MainContentVBox" type="VBoxContainer" parent="VBoxContainer/MainBody/ContentHBox"]
 layout_mode = 2
@@ -164,6 +162,49 @@ visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+
+[node name="GameplayHBox" type="HBoxContainer" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="QuestionPanelHost" type="MarginContainer" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer/GameplayHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="AdvisorPanel" type="PanelContainer" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer/GameplayHBox"]
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 2
+theme_type_variation = &"MathosPanelSecondary"
+
+[node name="AdvisorVBox" type="VBoxContainer" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer/GameplayHBox/AdvisorPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AdvisorHeader" type="HBoxContainer" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer/GameplayHBox/AdvisorPanel/AdvisorVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AdvisorIconLabel" type="Label" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer/GameplayHBox/AdvisorPanel/AdvisorVBox/AdvisorHeader"]
+layout_mode = 2
+theme_type_variation = &"MathosHeading"
+text = "💡"
+
+[node name="AdvisorTitleLabel" type="Label" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer/GameplayHBox/AdvisorPanel/AdvisorVBox/AdvisorHeader"]
+layout_mode = 2
+theme_type_variation = &"MathosHeading"
+text = "CỐ VẤN"
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer/GameplayHBox/AdvisorPanel/AdvisorVBox"]
+layout_mode = 2
+
+[node name="AdvisorDialogueLabel" type="Label" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer/GameplayHBox/AdvisorPanel/AdvisorVBox"]
+layout_mode = 2
+theme_type_variation = &"MathosBody"
+text = "Phép thử ngẫu nhiên là hành động có kết quả không đoán trước được. Hãy chọn đáp án chính xác nhất!"
+autowrap_mode = 3
 
 [node name="FeedbackHostContainer" type="MarginContainer" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox"]
 visible = false

@@ -19,9 +19,9 @@ var _main_vbox: VBoxContainer = null
 var _objective_label: Label = null
 var _prompt_label: Label = null
 var _interaction_container: MarginContainer = null
-var _advisor_panel: PanelContainer = null
-var _advisor_dialogue_label: Label = null
 var _feedback_label: Label = null
+var _action_hbox: HBoxContainer = null
+var _hint_button: Button = null
 var _submit_button: Button = null
 
 func _ready() -> void:
@@ -45,12 +45,12 @@ func _ensure_ui_built() -> void:
 		_prompt_label = get_node_or_null("MainVBox/PromptLabel") as Label
 	if _interaction_container == null:
 		_interaction_container = get_node_or_null("MainVBox/InteractionContainer") as MarginContainer
-	if _advisor_panel == null:
-		_advisor_panel = get_node_or_null("MainVBox/AdvisorPanel") as PanelContainer
-	if _advisor_dialogue_label == null:
-		_advisor_dialogue_label = get_node_or_null("MainVBox/AdvisorPanel/AdvisorVBox/AdvisorDialogueLabel") as Label
 	if _feedback_label == null:
 		_feedback_label = get_node_or_null("MainVBox/FeedbackLabel") as Label
+	if _action_hbox == null:
+		_action_hbox = get_node_or_null("MainVBox/ActionHBox") as HBoxContainer
+	if _hint_button == null:
+		_hint_button = get_node_or_null("MainVBox/ActionHBox/HintButton") as Button
 	if _submit_button == null:
 		_submit_button = get_node_or_null("MainVBox/SubmitButton") as Button
 
@@ -87,37 +87,26 @@ func _ensure_ui_built() -> void:
 		_interaction_container.size_flags_vertical = SIZE_EXPAND_FILL
 		_main_vbox.add_child(_interaction_container)
 
-	if _advisor_panel == null:
-		_advisor_panel = PanelContainer.new()
-		_advisor_panel.name = "AdvisorPanel"
-		_advisor_panel.theme_type_variation = &"MathosPanelSecondary"
-		var adv_vbox = VBoxContainer.new()
-		adv_vbox.name = "AdvisorVBox"
-		var adv_hdr = HBoxContainer.new()
-		adv_hdr.name = "AdvisorHeader"
-		var adv_name = Label.new()
-		adv_name.name = "AdvisorNameLabel"
-		adv_name.theme_type_variation = &"MathosHeading"
-		adv_name.text = "🧙‍♂️ Giáo Sư Karl (Cố Vấn)"
-		adv_hdr.add_child(adv_name)
-		adv_vbox.add_child(adv_hdr)
-
-		_advisor_dialogue_label = Label.new()
-		_advisor_dialogue_label.name = "AdvisorDialogueLabel"
-		_advisor_dialogue_label.theme_type_variation = &"MathosBody"
-		_advisor_dialogue_label.text = "Phép thử ngẫu nhiên là hành động có kết quả không đoán trước được. Hãy đọc kỹ câu hỏi trước khi trả lời!"
-		_advisor_dialogue_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		adv_vbox.add_child(_advisor_dialogue_label)
-
-		_advisor_panel.add_child(adv_vbox)
-		_main_vbox.add_child(_advisor_panel)
-
 	if _feedback_label == null:
 		_feedback_label = Label.new()
 		_feedback_label.name = "FeedbackLabel"
 		_feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_feedback_label.visible = false
 		_main_vbox.add_child(_feedback_label)
+
+	if _action_hbox == null:
+		_action_hbox = HBoxContainer.new()
+		_action_hbox.name = "ActionHBox"
+		_action_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		_action_hbox.add_theme_constant_override("separation", 16)
+
+		_hint_button = Button.new()
+		_hint_button.name = "HintButton"
+		_hint_button.theme_type_variation = &"MathosSecondaryButton"
+		_hint_button.text = "Gợi ý"
+		_hint_button.custom_minimum_size = Vector2(140, 44)
+		_action_hbox.add_child(_hint_button)
+		_main_vbox.add_child(_action_hbox)
 
 	if _submit_button == null:
 		_submit_button = Button.new()
