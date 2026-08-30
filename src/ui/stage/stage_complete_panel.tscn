@@ -1,45 +1,149 @@
-[gd_scene load_steps=2 format=3 uid="uid://d1_stage_complete_panel_001"]
+[gd_scene load_steps=3 format=3 uid="uid://d1_stage_complete_panel_001"]
 
 [ext_resource type="Script" path="res://src/ui/stage/stage_complete_panel.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://mathos_theme_001" path="res://src/ui/theme/mathos_theme.tres" id="2_mtheme"]
 
-[node name="StageCompletePanel" type="Control"]
-layout_mode = 3
+[node name="StageCompletePanel" type="PanelContainer"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme = ExtResource("2_mtheme")
+theme_type_variation = &"MathosCard"
 script = ExtResource("1_script")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 2
 theme_override_constants/margin_left = 32
 theme_override_constants/margin_top = 32
 theme_override_constants/margin_right = 32
 theme_override_constants/margin_bottom = 32
 
-[node name="PanelContainer" type="PanelContainer" parent="MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/PanelContainer"]
+[node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_type_variation = &"MathosTitle"
+text = "HOÀN THÀNH ẢI"
+horizontal_alignment = 1
+
+[node name="StageNameLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_type_variation = &"MathosSubtitle"
+text = "Khởi Đầu Rừng Mù Sương"
+horizontal_alignment = 1
+
+[node name="StatsHBox" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="QuestionCountPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer/StatsHBox"]
+custom_minimum_size = Vector2(140, 60)
+layout_mode = 2
+theme_type_variation = &"MathosPanelSecondary"
+
+[node name="VBox" type="VBoxContainer" parent="MarginContainer/VBoxContainer/StatsHBox/QuestionCountPanel"]
 layout_mode = 2
 alignment = 1
 
-[node name="TitleLabel" type="Label" parent="MarginContainer/PanelContainer/VBoxContainer"]
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/StatsHBox/QuestionCountPanel/VBox"]
+layout_mode = 2
+theme_type_variation = &"MathosMeta"
+text = "Số câu hỏi"
+horizontal_alignment = 1
+
+[node name="Value" type="Label" parent="MarginContainer/VBoxContainer/StatsHBox/QuestionCountPanel/VBox"]
+layout_mode = 2
+theme_type_variation = &"MathosHeading"
+text = "0"
+horizontal_alignment = 1
+
+[node name="AccuracyPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer/StatsHBox"]
+custom_minimum_size = Vector2(140, 60)
+layout_mode = 2
+theme_type_variation = &"MathosPanelSecondary"
+
+[node name="VBox" type="VBoxContainer" parent="MarginContainer/VBoxContainer/StatsHBox/AccuracyPanel"]
+layout_mode = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/StatsHBox/AccuracyPanel/VBox"]
+layout_mode = 2
+theme_type_variation = &"MathosMeta"
+text = "Chính xác"
+horizontal_alignment = 1
+
+[node name="Value" type="Label" parent="MarginContainer/VBoxContainer/StatsHBox/AccuracyPanel/VBox"]
+layout_mode = 2
+theme_type_variation = &"MathosHeading"
+text = "0%"
+horizontal_alignment = 1
+
+[node name="RewardsPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer/StatsHBox"]
+custom_minimum_size = Vector2(160, 60)
+layout_mode = 2
+theme_type_variation = &"MathosPanelSecondary"
+
+[node name="VBox" type="VBoxContainer" parent="MarginContainer/VBoxContainer/StatsHBox/RewardsPanel"]
+layout_mode = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/StatsHBox/RewardsPanel/VBox"]
+layout_mode = 2
+theme_type_variation = &"MathosMeta"
+text = "Phần thưởng"
+horizontal_alignment = 1
+
+[node name="Value" type="Label" parent="MarginContainer/VBoxContainer/StatsHBox/RewardsPanel/VBox"]
+layout_mode = 2
+theme_type_variation = &"MathosHeading"
+text = "+XP  |  +Vàng"
+horizontal_alignment = 1
+
+[node name="LearnedPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_type_variation = &"MathosPanelSecondary"
+
+[node name="LearnedVBox" type="VBoxContainer" parent="MarginContainer/VBoxContainer/LearnedPanel"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Header" type="Label" parent="MarginContainer/VBoxContainer/LearnedPanel/LearnedVBox"]
+layout_mode = 2
+theme_type_variation = &"MathosMeta"
+text = "Bạn đã học:"
+
+[node name="Body" type="Label" parent="MarginContainer/VBoxContainer/LearnedPanel/LearnedVBox"]
+layout_mode = 2
+theme_type_variation = &"MathosBody"
+text = "• Phép thử ngẫu nhiên\n• Không gian mẫu Ω\n• Biến cố A ⊆ Ω"
+autowrap_mode = 3
+
+[node name="SummaryLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+visible = false
 layout_mode = 2
 horizontal_alignment = 1
 
-[node name="SummaryLabel" type="Label" parent="MarginContainer/PanelContainer/VBoxContainer"]
+[node name="ActionHBox" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-horizontal_alignment = 1
+theme_override_constants/separation = 16
+alignment = 1
 
-[node name="ContinueButton" type="Button" parent="MarginContainer/PanelContainer/VBoxContainer"]
-custom_minimum_size = Vector2(160, 40)
+[node name="ReviewButton" type="Button" parent="MarginContainer/VBoxContainer/ActionHBox"]
+custom_minimum_size = Vector2(140, 44)
 layout_mode = 2
-size_flags_horizontal = 4
-text = "Continue to Next Stage"
+theme_type_variation = &"MathosSecondaryButton"
+text = "Xem lại"
+
+[node name="ContinueButton" type="Button" parent="MarginContainer/VBoxContainer/ActionHBox"]
+custom_minimum_size = Vector2(180, 44)
+layout_mode = 2
+theme_type_variation = &"MathosPrimaryButton"
+text = "Ải tiếp theo"

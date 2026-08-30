@@ -7,6 +7,8 @@ extends RefCounted
 
 signal question_completed(result: Dictionary)
 signal question_failed(error: Dictionary)
+signal continue_requested()
+signal retry_requested()
 
 var _question_service: QuestionService
 var _question_panel: QuestionPanel = null
@@ -23,6 +25,10 @@ func attach_panel(panel: QuestionPanel) -> void:
 	_question_panel = panel
 	if not _question_panel.submit_requested.is_connected(submit_answer):
 		_question_panel.submit_requested.connect(submit_answer)
+	if _question_panel.has_signal("continue_requested") and not _question_panel.continue_requested.is_connected(_on_panel_continue):
+		_question_panel.continue_requested.connect(_on_panel_continue)
+	if _question_panel.has_signal("retry_requested") and not _question_panel.retry_requested.is_connected(_on_panel_retry):
+		_question_panel.retry_requested.connect(_on_panel_retry)
 
 func start_question(request: Dictionary, adaptive_recommendation: Dictionary = {}) -> Dictionary:
 	_active_session_id = ""
@@ -170,6 +176,13 @@ func is_completed() -> bool:
 
 func get_active_session_id() -> String:
 	return _active_session_id
+
+func _on_panel_continue() -> void:
+	continue_requested.emit()
+
+func _on_panel_retry() -> void:
+	_completed = false
+	retry_requested.emit()
 
 func _error(code: String, message: String) -> Dictionary:
 	return {"success": false, "error_code": code, "error_message": message}

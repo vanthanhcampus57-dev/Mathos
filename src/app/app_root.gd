@@ -17,6 +17,12 @@ var _game_flow_service: GameFlowService = null
 var _question_controller: RefCounted = null
 var _active_question_res: Dictionary = {}
 
+# Demo runtime metric state per stage/practice (Requirement 3, 4, 5)
+var _active_practice_stage_id: String = ""
+var _finalized_question_ids: Array[String] = []
+var _first_attempt_results: Dictionary = {} # question_id (String) -> is_correct (bool)
+var _current_question_id: String = ""
+
 # UI Presentation
 var _presentation_shell: Control = null
 var _bootstrap_ui: Control = null
@@ -69,6 +75,9 @@ func start_new_game() -> Dictionary:
 	if not bool(flow_res.get("success", false)):
 		return flow_res
 
+	var stage_id: String = _game_flow_service.get_current_stage_id()
+	_reset_practice_metrics(stage_id)
+
 	var context: Dictionary = _game_flow_service.get_stage_context(false)
 	if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
 		_presentation_shell.call("set_stage_context", context)
@@ -79,7 +88,7 @@ func start_new_game() -> Dictionary:
 
 	return {
 		"success": true,
-		"stage_id": _game_flow_service.get_current_stage_id(),
+		"stage_id": stage_id,
 		"stage_context": context,
 		"flow_result": flow_res
 	}
@@ -113,6 +122,9 @@ func continue_game() -> Dictionary:
 	if not bool(flow_res.get("success", false)):
 		return flow_res
 
+	var entry_stage_id: String = String(restore_res.get("entry_stage_id", ""))
+	_reset_practice_metrics(entry_stage_id)
+
 	var context: Dictionary = _game_flow_service.get_stage_context(true)
 	if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
 		_presentation_shell.call("set_stage_context", context)
@@ -123,7 +135,7 @@ func continue_game() -> Dictionary:
 
 	return {
 		"success": true,
-		"entry_stage_id": String(restore_res.get("entry_stage_id", "")),
+		"entry_stage_id": entry_stage_id,
 		"stage_context": context,
 		"restore_result": restore_res,
 		"flow_result": flow_res
@@ -195,6 +207,12 @@ func refresh_continue_availability() -> void:
 	if _presentation_shell != null and _presentation_shell.has_method("set_continue_available"):
 		_presentation_shell.call("set_continue_available", has_save)
 
+func _reset_practice_metrics(stage_id: String) -> void:
+	_active_practice_stage_id = stage_id
+	_finalized_question_ids.clear()
+	_first_attempt_results.clear()
+	_current_question_id = ""
+
 # Signal Event Handlers
 func _on_new_game_requested() -> void:
 	start_new_game()
@@ -230,6 +248,10 @@ func _on_question_host_ready(host_container: Control) -> void:
 		_question_controller.call("attach_panel", panel)
 		if _question_controller.has_signal("question_completed") and not _question_controller.is_connected("question_completed", _on_question_completed):
 			_question_controller.connect("question_completed", _on_question_completed)
+		if _question_controller.has_signal("continue_requested") and not _question_controller.is_connected("continue_requested", _on_question_continue_requested):
+			_question_controller.connect("continue_requested", _on_question_continue_requested)
+		if _question_controller.has_signal("retry_requested") and not _question_controller.is_connected("retry_requested", _on_question_retry_requested):
+			_question_controller.connect("retry_requested", _on_question_retry_requested)
 
 	_start_current_question()
 
@@ -237,22 +259,70 @@ func _on_feedback_host_ready(_host_container: Control) -> void:
 	if _presentation_shell != null and _presentation_shell.has_method("set_view_mode"):
 		_presentation_shell.call("set_view_mode", 3) # MODE_FEEDBACK_HOST
 
-func _on_question_completed(_result: Dictionary) -> void:
-	if _game_flow_service == null:
-		return
+func _on_question_completed(result: Dictionary) -> void:
+	var q_id: String = String(result.get("question_id", ""))
+	if q_id.is_empty():
+		q_id = _current_question_id
 
-	var orch: StageOrchestrator = _game_flow_service.get_orchestrator()
-	if orch != null:
-		orch.set("_current_phase", "QUESTION_COMPLETE")
-		var prep_res: Dictionary = orch.prepare_stage_clear_commit()
-		if bool(prep_res.get("success", false)):
-			var stage_id: String = String(prep_res.get("stage_id", ""))
-			var reward_grant: RewardGrant = prep_res.get("reward_grant") as RewardGrant
-			if not stage_id.is_empty() and reward_grant != null and _bridge != null:
-				_bridge.commit_stage_and_checkpoint(stage_id, reward_grant)
+	var is_correct: bool = bool(result.get("is_correct", false))
 
-	if _presentation_shell != null and _presentation_shell.has_method("set_view_mode"):
-		_presentation_shell.call("set_view_mode", 4) # MODE_STAGE_COMPLETE
+	# Requirement 4 & 6: Record FIRST-ATTEMPT result exactly once per unique question_id
+	if not q_id.is_empty() and not _first_attempt_results.has(q_id):
+		_first_attempt_results[q_id] = is_correct
+
+	# Requirement 1: An incorrect attempt MUST NOT clear stage or switch to MODE_STAGE_COMPLETE.
+	# The user stays on the question screen to view feedback and choose THỬ LẠI or TIẾP TỤC.
+
+func _on_question_continue_requested() -> void:
+	# Requirement 6: Finalize unique question when player continues
+	if not _current_question_id.is_empty() and not _finalized_question_ids.has(_current_question_id):
+		_finalized_question_ids.append(_current_question_id)
+
+	# Try fetching next question in practice scope
+	_active_question_res = {}
+	var next_res: Dictionary = _start_next_question_in_stage()
+	if not bool(next_res.get("success", false)):
+		var err_code: String = String(next_res.get("error_code", ""))
+		# REQUIREMENT 2 & SAFETY: Only genuine practice exhaustion (NO_VALID_QUESTION / NO_REACHABLE_QUESTIONS) finishes stage practice.
+		if err_code == QuestionErrorCodes.NO_VALID_QUESTION or err_code == "NO_VALID_QUESTION" or err_code == "NO_REACHABLE_QUESTIONS":
+			_finish_stage_practice()
+		else:
+			push_error("AppRoot: _on_question_continue_requested encountered unexpected question request failure code: '%s'. Aborting stage clear." % err_code)
+
+func _on_question_retry_requested() -> void:
+	# Requirement 3 & 6: Retry does NOT increase question_count, increase denominator, or alter first-attempt result.
+	# Re-bind current question session for retry.
+	_start_current_question()
+
+func _finish_stage_practice() -> void:
+	if _game_flow_service != null:
+		var orch: StageOrchestrator = _game_flow_service.get_orchestrator()
+		if orch != null:
+			orch.set("_current_phase", "QUESTION_COMPLETE")
+			var prep_res: Dictionary = orch.prepare_stage_clear_commit()
+			if bool(prep_res.get("success", false)):
+				var stage_id: String = String(prep_res.get("stage_id", ""))
+				var reward_grant: RewardGrant = prep_res.get("reward_grant") as RewardGrant
+				if not stage_id.is_empty() and reward_grant != null and _bridge != null:
+					_bridge.commit_stage_and_checkpoint(stage_id, reward_grant)
+
+	# Requirement 3: Calculate locked metric semantics
+	var unique_count: int = _finalized_question_ids.size()
+	var first_attempt_correct: int = 0
+	for qid in _finalized_question_ids:
+		if bool(_first_attempt_results.get(qid, false)):
+			first_attempt_correct += 1
+
+	var acc_pct: float = (first_attempt_correct as float / max(1, unique_count)) * 100.0
+
+	if _presentation_shell != null:
+		if _presentation_shell.has_method("get_stage_complete_panel"):
+			var complete_panel: StageCompletePanel = _presentation_shell.call("get_stage_complete_panel") as StageCompletePanel
+			if complete_panel != null:
+				complete_panel.set_stage_complete_stats(unique_count, acc_pct, "• Phép thử ngẫu nhiên\n• Không gian mẫu Ω\n• Biến cố A ⊆ Ω")
+
+		if _presentation_shell.has_method("set_view_mode"):
+			_presentation_shell.call("set_view_mode", 4) # MODE_STAGE_COMPLETE
 
 func _on_stage_continue_requested() -> void:
 	if _game_flow_service == null:
@@ -260,6 +330,9 @@ func _on_stage_continue_requested() -> void:
 
 	var adv_res: Dictionary = _game_flow_service.advance_to_next_stage()
 	if bool(adv_res.get("success", false)):
+		var next_stage_id: String = _game_flow_service.get_current_stage_id()
+		_reset_practice_metrics(next_stage_id)
+
 		var context: Dictionary = _game_flow_service.get_stage_context(false)
 		if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
 			_presentation_shell.call("set_stage_context", context)
@@ -267,12 +340,18 @@ func _on_stage_continue_requested() -> void:
 				_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
 
 func _start_current_question() -> Dictionary:
+	return _start_next_question_in_stage()
+
+func _start_next_question_in_stage() -> Dictionary:
 	if _game_flow_service == null or _question_controller == null or _catalog == null:
 		return {"success": false, "error_code": "NOT_INITIALIZED"}
 
 	var current_stage_id: String = _game_flow_service.get_current_stage_id()
 	if current_stage_id.is_empty():
 		return {"success": false, "error_code": "NO_ACTIVE_STAGE"}
+
+	if _active_practice_stage_id != current_stage_id:
+		_reset_practice_metrics(current_stage_id)
 
 	if not _active_question_res.is_empty() and bool(_active_question_res.get("success", false)):
 		var session: Dictionary = _active_question_res.get("session", {}) as Dictionary
@@ -287,14 +366,17 @@ func _start_current_question() -> Dictionary:
 	var practice_data: Dictionary = _catalog.get_practice(practice_id)
 	var scope: Dictionary = practice_data.get("question_scope", {}) as Dictionary
 
-	var exclude_ids: Array[String] = []
+	var request_id_str: String = "req_%s" % current_stage_id
+	if not _finalized_question_ids.is_empty():
+		request_id_str += "_%d" % (_finalized_question_ids.size() + 1)
+
 	var request: Dictionary = {
-		"request_id": "req_%s" % current_stage_id,
+		"request_id": request_id_str,
 		"stage_id": current_stage_id,
 		"scope": scope,
 		"context": "practice",
 		"preferred_difficulty": null,
-		"exclude_question_ids": exclude_ids
+		"exclude_question_ids": _finalized_question_ids.duplicate()
 	}
 
 	var res: Dictionary = {}
@@ -303,6 +385,8 @@ func _start_current_question() -> Dictionary:
 
 	if bool(res.get("success", false)):
 		_active_question_res = res
+		var question: Dictionary = res.get("question", {}) as Dictionary
+		_current_question_id = String(question.get("question_id", ""))
 		var orch: StageOrchestrator = _game_flow_service.get_orchestrator()
 		if orch != null:
 			var session: Dictionary = res.get("session", {}) as Dictionary

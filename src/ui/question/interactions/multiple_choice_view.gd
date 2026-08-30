@@ -2,7 +2,7 @@ class_name MultipleChoiceView
 extends Control
 
 ## UI View for rendering Multiple Choice question interactions consuming Mathos Shared UI Foundation.
-## Supports visual states: normal, hover, selected, focus, disabled.
+## Supports visual states: normal, hover, selected, focus, disabled, correct feedback, incorrect feedback.
 
 signal option_selected(option_id: String)
 
@@ -60,6 +60,8 @@ func setup(interaction_payload: Dictionary) -> bool:
 	return true
 
 func select_option(option_id: String) -> bool:
+	if _disabled:
+		return false
 	for opt in _options:
 		if String(opt["option_id"]) == option_id:
 			_selected_option_id = option_id
@@ -82,6 +84,40 @@ func set_disabled(p_disabled: bool) -> void:
 
 func is_disabled() -> bool:
 	return _disabled
+
+func reset_interaction() -> void:
+	_disabled = false
+	_selected_option_id = ""
+	_update_button_states()
+
+func show_feedback(attempt_result: Dictionary) -> void:
+	_disabled = true
+	var is_correct: bool = bool(attempt_result.get("is_correct", false))
+	var correct_opt_id: String = String(attempt_result.get("correct_option_id", ""))
+	if correct_opt_id.is_empty() and attempt_result.has("feedback_details"):
+		var details: Dictionary = attempt_result.get("feedback_details", {}) as Dictionary
+		correct_opt_id = String(details.get("correct_option_id", ""))
+
+	for opt_id in _option_buttons:
+		var card: UiOptionCard = _option_buttons[opt_id] as UiOptionCard
+		if card != null:
+			card.disabled = true
+			var raw_label: String = ""
+			for opt in _options:
+				if String(opt["option_id"]) == opt_id:
+					raw_label = "%s. %s" % [opt_id, String(opt.get("text", opt_id))]
+					break
+
+			if opt_id == _selected_option_id:
+				if is_correct:
+					card.set_selected(true) # CYAN selected state per master
+					card.text = "[✓] %s (Chính xác)" % raw_label
+				else:
+					card.set_feedback(false) # Coral/Red wrong selection
+					card.text = "[X] BẠN CHỌN: %s" % raw_label
+			elif not is_correct and not correct_opt_id.is_empty() and opt_id == correct_opt_id:
+				card.set_selected(true) # CYAN correct option per master
+				card.text = "[✓] ĐÁP ÁN ĐÚNG: %s" % raw_label
 
 func _rebuild_option_buttons() -> void:
 	if _vbox == null:

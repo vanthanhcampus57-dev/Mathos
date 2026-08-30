@@ -5,6 +5,8 @@ extends PanelContainer
 ## capturing interaction input, and displaying AttemptResult feedback.
 
 signal submit_requested(interaction_payload: Dictionary)
+signal retry_requested()
+signal continue_requested()
 
 var _question_view: Dictionary = {}
 var _active_interaction_view: Control = null
@@ -206,6 +208,9 @@ func setup_question(question_view: Dictionary) -> bool:
 
 	_ensure_ui_built()
 
+	if _submit_button != null:
+		_submit_button.text = "Xác nhận"
+
 	if _active_interaction_view != null:
 		if _active_interaction_view.get_parent() != null:
 			_active_interaction_view.get_parent().remove_child(_active_interaction_view)
@@ -236,8 +241,17 @@ func show_feedback(attempt_result: Dictionary) -> bool:
 	_ensure_ui_built()
 	if _feedback_label != null:
 		_feedback_label.theme_type_variation = &"MathosSuccess" if _is_correct else &"MathosError"
-		_feedback_label.text = "[%s] %s" % ["CORRECT" if _is_correct else "INCORRECT", _feedback_text]
+		var header_str: String = "Chính xác!" if _is_correct else "Chưa chính xác"
+		var explanation_str: String = String(attempt_result.get("explanation", ""))
+		_feedback_label.text = "[%s] %s\n%s" % [header_str, _feedback_text, explanation_str]
 		_feedback_label.visible = true
+
+	if _submit_button != null:
+		_submit_button.text = "TIẾP TỤC" if _is_correct else "THỬ LẠI"
+
+	if _active_interaction_view != null and _active_interaction_view.has_method("show_feedback"):
+		_active_interaction_view.call("show_feedback", attempt_result)
+
 	return true
 
 func get_prompt_text() -> String:
@@ -271,7 +285,25 @@ func _update_labels() -> void:
 		_feedback_label.visible = _has_feedback
 		if _has_feedback:
 			_feedback_label.theme_type_variation = &"MathosSuccess" if _is_correct else &"MathosError"
-			_feedback_label.text = "[%s] %s" % ["CORRECT" if _is_correct else "INCORRECT", _feedback_text]
+			var header_str: String = "Chính xác!" if _is_correct else "Chưa chính xác"
+			_feedback_label.text = "[%s] %s" % [header_str, _feedback_text]
 
 func _on_submit_button_pressed() -> void:
-	request_submit()
+	if _has_feedback:
+		if _is_correct or (_submit_button != null and _submit_button.text == "TIẾP TỤC"):
+			continue_requested.emit()
+		else:
+			_has_feedback = false
+			_feedback_text = ""
+			if _feedback_label != null:
+				_feedback_label.visible = false
+			if _submit_button != null:
+				_submit_button.text = "Xác nhận"
+			if _active_interaction_view != null:
+				if _active_interaction_view.has_method("reset_interaction"):
+					_active_interaction_view.call("reset_interaction")
+				elif _active_interaction_view.has_method("set_disabled"):
+					_active_interaction_view.call("set_disabled", false)
+			retry_requested.emit()
+	else:
+		request_submit()
