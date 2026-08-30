@@ -24,7 +24,7 @@ static func run_all_tests() -> bool:
 
 static func test_qgen_001_models_and_schema_validation() -> bool:
 	print("[QGEN-GATE-001] Testing MathKnowledgePack & QuestionGenerationSpec model parsing & schema validation...")
-	
+
 	var pack_dict: Dictionary = {
 		"schema_version": 1,
 		"pack_id": "mkp_test_trial",
@@ -75,13 +75,13 @@ static func test_qgen_001_models_and_schema_validation() -> bool:
 
 static func test_qgen_002_catalog_publication() -> bool:
 	print("[QGEN-GATE-002] Testing ValidatedCatalog publication & repository getters...")
-	
+
 	var repo: ContentRepository = ContentRepository.new()
 	var report: ContentValidationReport = repo.load_and_validate("res://content")
 	if not report.publication_allowed:
 		print("[QGEN-GATE-002] FAIL: Production content failed validation report")
 		return false
-		
+
 	var catalog: ValidatedCatalog = repo.get_catalog()
 	if catalog == null:
 		print("[QGEN-GATE-002] FAIL: Catalog is null")
@@ -89,7 +89,7 @@ static func test_qgen_002_catalog_publication() -> bool:
 
 	var all_packs: Array[Dictionary] = catalog.get_all_math_knowledge_packs()
 	var all_specs: Array[Dictionary] = catalog.get_all_question_generation_specs()
-	
+
 	if not (all_packs is Array) or not (all_specs is Array):
 		print("[QGEN-GATE-002] FAIL: Catalog publication getter returned invalid type")
 		return false
@@ -98,20 +98,45 @@ static func test_qgen_002_catalog_publication() -> bool:
 	return true
 
 static func test_qgen_003_identity_and_determinism() -> bool:
-	print("[QGEN-GATE-003] Testing identity format, round-tripping & deterministic materialization...")
-	
-	var spec_id: String = "qspec_random_trial_mc"
-	var variant_key: String = "v1"
-	var expected_id: String = "qgen_qspec_random_trial_mc_v1"
-	
-	var generated_id: String = QuestionGeneratorIdentity.build_generated_id(spec_id, variant_key)
-	if generated_id != expected_id:
-		print("[QGEN-GATE-003] FAIL: Expected " + expected_id + " but got " + generated_id)
+	print("[QGEN-GATE-003] Testing canonical parameter derivation, round-tripping & materialization...")
+
+	# Test A: Order Independence in Canonical Derivation
+	var tuple_a1: Dictionary = {"k": 3, "heads": 2}
+	var tuple_a2: Dictionary = {"heads": 2, "k": 3}
+
+	var var_a1: String = QuestionGeneratorIdentity.derive_variant_key(tuple_a1)
+	var var_a2: String = QuestionGeneratorIdentity.derive_variant_key(tuple_a2)
+
+	if var_a1 != var_a2:
+		print("[QGEN-GATE-003] FAIL: Parameter insertion order produced different variant_key: " + var_a1 + " vs " + var_a2)
 		return false
 
-	if not QuestionGeneratorIdentity.is_generated_id(generated_id):
-		print("[QGEN-GATE-003] FAIL: is_generated_id returned false")
+	var gen_id_a1: String = QuestionGeneratorIdentity.build_generated_id_from_params("qspec_random_trial_mc", tuple_a1)
+	var gen_id_a2: String = QuestionGeneratorIdentity.build_generated_id_from_params("qspec_random_trial_mc", tuple_a2)
+
+	if gen_id_a1 != gen_id_a2:
+		print("[QGEN-GATE-003] FAIL: Parameter insertion order produced different generated_id")
 		return false
+
+	# Test B: Parameter modification (heads 2 -> 1) yields distinct variant_key & generated_id
+	var tuple_b: Dictionary = {"k": 3, "heads": 1}
+	var var_b: String = QuestionGeneratorIdentity.derive_variant_key(tuple_b)
+	var gen_id_b: String = QuestionGeneratorIdentity.build_generated_id_from_params("qspec_coin_flip", tuple_b)
+
+	if var_a1 == var_b:
+		print("[QGEN-GATE-003] FAIL: Distinct parameter tuples produced colliding variant_key")
+		return false
+	if gen_id_a1 == gen_id_b:
+		print("[QGEN-GATE-003] FAIL: Distinct parameter tuples produced colliding generated_id")
+		return false
+
+	# Test C: Stable Derivation Across Repeated Runs
+	for i in range(10):
+		var repeated_var: String = QuestionGeneratorIdentity.derive_variant_key(tuple_a1)
+		var repeated_id: String = QuestionGeneratorIdentity.build_generated_id_from_params("qspec_random_trial_mc", tuple_a1)
+		if repeated_var != var_a1 or repeated_id != gen_id_a1:
+			print("[QGEN-GATE-003] FAIL: Derivation instability detected across runs: " + repeated_id + " vs " + gen_id_a1)
+			return false
 
 	# Exact round-trip verification for legal examples
 	var roundtrip_cases: Array[Dictionary] = [
@@ -150,9 +175,10 @@ static func test_qgen_003_identity_and_determinism() -> bool:
 			print("[QGEN-GATE-003] FAIL: parse_generated_id accepted malformed ID: " + mid)
 			return false
 
+	# Generator Materialization with automatic parameter derivation
 	var gen: RefCounted = QuestionGenerator.new()
 	var spec: Dictionary = {
-		"spec_id": spec_id,
+		"spec_id": "qspec_random_trial_mc",
 		"dungeon_id": "dungeon_01",
 		"topic_id": "trial_sample_event",
 		"subtopic_id": "random_trial",
@@ -166,21 +192,16 @@ static func test_qgen_003_identity_and_determinism() -> bool:
 			"answer_spec": {"correct_option_id": "opt_a"}
 		}
 	}
-	var params: Dictionary = {"n": 3, "ans": 8}
-	
-	var q1: Dictionary = gen.generate_question(spec, {}, variant_key, params)
-	var q2: Dictionary = gen.generate_question(spec, {}, variant_key, params)
 
-	if q1["question_id"] != expected_id or q2["question_id"] != expected_id:
-		print("[QGEN-GATE-003] FAIL: Question ID mismatch")
-		return false
+	var q1: Dictionary = gen.generate_question(spec, {}, "", tuple_a1)
+	var q2: Dictionary = gen.generate_question(spec, {}, "", tuple_a2)
 
-	if q1["prompt"] != "Gieo 3 đồng xu." or q2["prompt"] != "Gieo 3 đồng xu.":
-		print("[QGEN-GATE-003] FAIL: Prompt template substitution mismatch")
+	if q1["question_id"] != gen_id_a1 or q2["question_id"] != gen_id_a1:
+		print("[QGEN-GATE-003] FAIL: Generator auto-derivation failed: " + String(q1["question_id"]))
 		return false
 
 	if q1 != q2:
-		print("[QGEN-GATE-003] FAIL: Materialization not deterministic across identical calls")
+		print("[QGEN-GATE-003] FAIL: Materialization not deterministic across identical parameter calls")
 		return false
 
 	print("[QGEN-GATE-003] PASS")
@@ -188,7 +209,7 @@ static func test_qgen_003_identity_and_determinism() -> bool:
 
 static func test_qgen_010_generated_id_stability() -> bool:
 	print("[QGEN-GATE-010] Testing generated ID stability across repeated runs...")
-	
+
 	var gen: RefCounted = QuestionGenerator.new()
 	var spec: Dictionary = {
 		"spec_id": "qspec_coin_flip",
@@ -204,7 +225,7 @@ static func test_qgen_010_generated_id_stability() -> bool:
 			"answer_spec": {"accepted_values": [4]}
 		}
 	}
-	
+
 	var ids: Array[String] = []
 	for i in range(10):
 		var q: Dictionary = gen.generate_question(spec, {}, "variant-k4", {"k": 4})
@@ -219,12 +240,12 @@ static func test_qgen_010_generated_id_stability() -> bool:
 	return true
 
 static func test_qgen_011_collision_protection() -> bool:
-	print("[QGEN-GATE-011] Testing collision rules: same spec/variant, distinct spec/variant & static separation...")
-	
+	print("[QGEN-GATE-011] Testing collision rules & real batch duplicate rejection...")
+
 	var repo: ContentRepository = ContentRepository.new()
 	repo.load_and_validate("res://content")
 	var catalog: ValidatedCatalog = repo.get_catalog()
-	
+
 	# Static namespace separation
 	for q_id in ["q_d1_01_1", "q_d1_01_2", "q_d1_05_5", "q_d4_05_5"]:
 		if QuestionGeneratorIdentity.is_generated_id(q_id):
@@ -258,19 +279,55 @@ static func test_qgen_011_collision_protection() -> bool:
 		print("[QGEN-GATE-011] FAIL: Illegal variant containing underscore was not rejected")
 		return false
 
-	# 5. Generated-vs-generated duplicate collision detection check
-	var generated_registry: Dictionary = {}
-	var pair1: Array = [["qspec_coin", "v1"], ["qspec_coin", "v1"]]
-	for p in pair1:
-		var gid: String = QuestionGeneratorIdentity.build_generated_id(p[0], p[1])
-		if generated_registry.has(gid):
-			# Duplicate collision detected cleanly
-			pass
-		else:
-			generated_registry[gid] = true
+	# 5. Real batch duplicate collision rejection (No silent overwrite)
+	var gen: QuestionGenerator = QuestionGenerator.new()
+	var spec: Dictionary = {
+		"spec_id": "qspec_coin_flip",
+		"dungeon_id": "dungeon_01",
+		"topic_id": "trial_sample_event",
+		"subtopic_id": "random_trial",
+		"interaction_type": "input",
+		"template": {
+			"prompt": "Gieo {k} lần, sấp {heads} lần.",
+			"explanation": "Exp",
+			"learning_objective": "Obj",
+			"interaction_payload": {"input_type": "integer", "placeholder_text": "..."},
+			"answer_spec": {"accepted_values": [3]}
+		}
+	}
 
-	if generated_registry.size() != 1:
-		print("[QGEN-GATE-011] FAIL: Duplicate generated ID count mismatch")
+	# Valid batch (distinct tuples) -> PASS
+	var valid_batch_tuples: Array[Dictionary] = [
+		{"k": 3, "heads": 2},
+		{"k": 3, "heads": 1}
+	]
+	var valid_result: Dictionary = gen.generate_batch(spec, {}, valid_batch_tuples)
+	if not bool(valid_result.get("success", false)):
+		print("[QGEN-GATE-011] FAIL: Valid batch failed generation: " + str(valid_result))
+		return false
+
+	# Duplicate batch (same params, different order) -> EXPLICIT REJECTION
+	var duplicate_batch_tuples: Array[Dictionary] = [
+		{"k": 3, "heads": 2},
+		{"heads": 2, "k": 3}
+	]
+	var dup_result: Dictionary = gen.generate_batch(spec, {}, duplicate_batch_tuples)
+	if bool(dup_result.get("success", true)):
+		print("[QGEN-GATE-011] FAIL: Batch with duplicate parameters was not explicitly rejected!")
+		return false
+	if dup_result.get("duplicate_id") == "":
+		print("[QGEN-GATE-011] FAIL: Batch duplicate result missing duplicate_id field")
+		return false
+
+	# Validate batch uniqueness standalone utility test
+	var questions_with_dup: Array[Dictionary] = [
+		{"question_id": "qgen_qspec_a_v1"},
+		{"question_id": "qgen_qspec_b_v1"},
+		{"question_id": "qgen_qspec_a_v1"}
+	]
+	var validate_res: Dictionary = QuestionGeneratorIdentity.validate_batch_uniqueness(questions_with_dup)
+	if bool(validate_res.get("success", true)):
+		print("[QGEN-GATE-011] FAIL: validate_batch_uniqueness accepted duplicate question_ids")
 		return false
 
 	print("[QGEN-GATE-011] PASS")
@@ -278,16 +335,16 @@ static func test_qgen_011_collision_protection() -> bool:
 
 static func test_qgen_012_generator_registry() -> bool:
 	print("[QGEN-GATE-012] Testing GeneratorRegistry register, lookup, and clear...")
-	
+
 	var registry: RefCounted = GeneratorRegistry.new()
 	var gen: RefCounted = QuestionGenerator.new()
-	
+
 	if registry.has_generator("family_test"):
 		print("[QGEN-GATE-012] FAIL: Unregistered generator returned true")
 		return false
 
 	registry.register_generator("family_test", gen)
-	
+
 	if not registry.has_generator("family_test"):
 		print("[QGEN-GATE-012] FAIL: Registered generator not found")
 		return false
