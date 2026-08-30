@@ -183,7 +183,7 @@ static func _evaluate_input(question: Dictionary, payload: Dictionary) -> Dictio
 static func _normalize_input_value(value: Variant, input_type: String, trim_whitespace: bool, case_sensitive: bool) -> Dictionary:
 	match input_type:
 		"integer":
-			if typeof(value) == TYPE_INT:
+			if typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT:
 				return {"success": true, "value": int(value)}
 			if typeof(value) == TYPE_STRING:
 				var str_val: String = String(value)

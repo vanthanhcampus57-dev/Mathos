@@ -223,7 +223,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "6"
+        6
       ]
     },
     "allowed_contexts": [
@@ -367,7 +367,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "4"
+        4
       ]
     },
     "allowed_contexts": [
@@ -555,7 +555,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "6"
+        6
       ]
     },
     "allowed_contexts": [
@@ -646,7 +646,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "2"
+        2
       ]
     },
     "allowed_contexts": [
@@ -826,7 +826,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "4"
+        4
       ]
     },
     "allowed_contexts": [
@@ -917,7 +917,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "4"
+        4
       ]
     },
     "allowed_contexts": [
@@ -1105,7 +1105,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "21"
+        21
       ]
     },
     "allowed_contexts": [
@@ -1196,7 +1196,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "4"
+        4
       ]
     },
     "allowed_contexts": [
@@ -1368,7 +1368,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "40"
+        40
       ]
     },
     "allowed_contexts": [
@@ -1459,7 +1459,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "52"
+        52
       ]
     },
     "allowed_contexts": [
@@ -1749,7 +1749,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "15"
+        15
       ]
     },
     "allowed_contexts": [
@@ -1929,7 +1929,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "40"
+        40
       ]
     },
     "allowed_contexts": [
@@ -2299,7 +2299,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "5"
+        5
       ]
     },
     "allowed_contexts": [
@@ -2475,7 +2475,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "28"
+        28
       ]
     },
     "allowed_contexts": [
@@ -2566,7 +2566,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "6"
+        6
       ]
     },
     "allowed_contexts": [
@@ -2742,7 +2742,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "55"
+        55
       ]
     },
     "allowed_contexts": [
@@ -2833,7 +2833,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "4"
+        4
       ]
     },
     "allowed_contexts": [
@@ -3406,7 +3406,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "2"
+        2
       ]
     },
     "allowed_contexts": [
@@ -3673,7 +3673,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "14"
+        14
       ]
     },
     "allowed_contexts": [
@@ -4112,7 +4112,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "100"
+        100
       ]
     },
     "allowed_contexts": [
@@ -4203,7 +4203,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "1"
+        1
       ]
     },
     "allowed_contexts": [
@@ -4375,7 +4375,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "3"
+        3
       ]
     },
     "allowed_contexts": [
@@ -4924,7 +4924,7 @@
     },
     "answer_spec": {
       "accepted_values": [
-        "216"
+        216
       ]
     },
     "allowed_contexts": [

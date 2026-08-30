@@ -2,7 +2,7 @@
   {
     "schema_version": 1,
     "card_id": "card_strike",
-    "name": "Strike",
+    "name": "Tấn Công Ma Thuật",
     "card_type": "attack",
     "cost": 1,
     "effects": [
@@ -16,7 +16,7 @@
   {
     "schema_version": 1,
     "card_id": "card_defend",
-    "name": "Defend",
+    "name": "Lá Chắn Tri Thức",
     "card_type": "shield",
     "cost": 1,
     "effects": [
@@ -30,14 +30,14 @@
   {
     "schema_version": 1,
     "card_id": "card_heal",
-    "name": "Heal",
+    "name": "Hồi Phục Tinh Thần",
     "card_type": "heal",
-    "cost": 1,
+    "cost": 2,
     "effects": [
       {
         "effect_type": "heal",
         "target": "player",
-        "amount": 6
+        "amount": 15
       }
     ]
   }
