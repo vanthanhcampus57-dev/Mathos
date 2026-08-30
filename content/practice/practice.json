@@ -7,9 +7,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_01",
       "topic_id": "trial_sample_event",
-      "subtopics": [],
+      "subtopic_ids": [
+        "random_trial"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -21,9 +24,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_01",
       "topic_id": "trial_sample_event",
-      "subtopics": [],
+      "subtopic_ids": [
+        "sample_space"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -35,9 +41,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_01",
       "topic_id": "trial_sample_event",
-      "subtopics": [],
+      "subtopic_ids": [
+        "event_subset"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -49,9 +58,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_01",
       "topic_id": "trial_sample_event",
-      "subtopics": [],
+      "subtopic_ids": [
+        "event_classification"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -63,9 +75,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_01",
       "topic_id": "trial_sample_event",
-      "subtopics": [],
+      "subtopic_ids": [
+        "counting_outcomes"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -77,9 +92,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_02",
       "topic_id": "classical_probability",
-      "subtopics": [],
+      "subtopic_ids": [
+        "equally_likely"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -91,9 +109,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_02",
       "topic_id": "classical_probability",
-      "subtopics": [],
+      "subtopic_ids": [
+        "classical_probability_formula"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -105,9 +126,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_02",
       "topic_id": "classical_probability",
-      "subtopics": [],
+      "subtopic_ids": [
+        "probability_representation"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -119,9 +143,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_02",
       "topic_id": "classical_probability",
-      "subtopics": [],
+      "subtopic_ids": [
+        "compare_probability"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -133,9 +160,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_02",
       "topic_id": "classical_probability",
-      "subtopics": [],
+      "subtopic_ids": [
+        "multi_data_classical"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -147,9 +177,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_03",
       "topic_id": "addition_rule",
-      "subtopics": [],
+      "subtopic_ids": [
+        "union_intersection"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -161,9 +194,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_03",
       "topic_id": "addition_rule",
-      "subtopics": [],
+      "subtopic_ids": [
+        "mutually_exclusive"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -175,9 +211,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_03",
       "topic_id": "addition_rule",
-      "subtopics": [],
+      "subtopic_ids": [
+        "addition_simple"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -189,9 +228,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_03",
       "topic_id": "addition_rule",
-      "subtopics": [],
+      "subtopic_ids": [
+        "addition_general"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -203,9 +245,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_03",
       "topic_id": "addition_rule",
-      "subtopics": [],
+      "subtopic_ids": [
+        "addition_selection"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -217,9 +262,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_04",
       "topic_id": "multiplication_independence",
-      "subtopics": [],
+      "subtopic_ids": [
+        "independence"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -231,9 +279,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_04",
       "topic_id": "multiplication_independence",
-      "subtopics": [],
+      "subtopic_ids": [
+        "tree_diagram"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -245,9 +296,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_04",
       "topic_id": "multiplication_independence",
-      "subtopics": [],
+      "subtopic_ids": [
+        "multiplication_two_step"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -259,9 +313,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_04",
       "topic_id": "multiplication_independence",
-      "subtopics": [],
+      "subtopic_ids": [
+        "multiplication_chain"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   },
@@ -273,9 +330,12 @@
     "question_scope": {
       "dungeon_id": "dungeon_04",
       "topic_id": "multiplication_independence",
-      "subtopics": [],
+      "subtopic_ids": [
+        "independence_application"
+      ],
       "difficulty_min": 1,
-      "difficulty_max": 5
+      "difficulty_max": 5,
+      "interaction_types": []
     },
     "question_count": 3
   }

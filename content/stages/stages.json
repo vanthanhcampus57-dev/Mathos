@@ -9,7 +9,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_01",
       "topic_id": "trial_sample_event",
-      "subtopics": [],
+      "subtopic_ids": [
+        "random_trial"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -26,9 +28,7 @@
     "encounter_mode": "puzzle_onboarding",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_01_01",
-    "card_pool_ids": [
-      "card_d1_01"
-    ],
+    "card_pool_ids": [],
     "enemy_id": null,
     "intent_enabled": false
   },
@@ -42,7 +42,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_01",
       "topic_id": "trial_sample_event",
-      "subtopics": [],
+      "subtopic_ids": [
+        "sample_space"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -59,9 +61,7 @@
     "encounter_mode": "puzzle_onboarding",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_01_02",
-    "card_pool_ids": [
-      "card_d1_02"
-    ],
+    "card_pool_ids": [],
     "enemy_id": null,
     "intent_enabled": false
   },
@@ -75,7 +75,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_01",
       "topic_id": "trial_sample_event",
-      "subtopics": [],
+      "subtopic_ids": [
+        "event_subset"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -92,9 +94,7 @@
     "encounter_mode": "puzzle_onboarding",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_01_03",
-    "card_pool_ids": [
-      "card_d1_03"
-    ],
+    "card_pool_ids": [],
     "enemy_id": null,
     "intent_enabled": false
   },
@@ -108,7 +108,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_01",
       "topic_id": "trial_sample_event",
-      "subtopics": [],
+      "subtopic_ids": [
+        "event_classification"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -122,11 +124,13 @@
     "story_id": "story_01_04",
     "lesson_id": "lesson_01_04",
     "practice_id": "practice_01_04",
-    "encounter_mode": "puzzle_onboarding",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_01_04",
     "card_pool_ids": [
-      "card_d1_04"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": null,
     "intent_enabled": false
@@ -141,7 +145,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_01",
       "topic_id": "trial_sample_event",
-      "subtopics": [],
+      "subtopic_ids": [
+        "counting_outcomes"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -155,11 +161,13 @@
     "story_id": "story_01_05",
     "lesson_id": "lesson_01_05",
     "practice_id": "practice_01_05",
-    "encounter_mode": "boss_battle",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_01_05",
     "card_pool_ids": [
-      "card_d1_05"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": "enemy_d1_stochas",
     "intent_enabled": true
@@ -174,7 +182,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_02",
       "topic_id": "classical_probability",
-      "subtopics": [],
+      "subtopic_ids": [
+        "equally_likely"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -188,11 +198,13 @@
     "story_id": "story_02_01",
     "lesson_id": "lesson_02_01",
     "practice_id": "practice_02_01",
-    "encounter_mode": "puzzle_onboarding",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_02_01",
     "card_pool_ids": [
-      "card_d2_01"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": null,
     "intent_enabled": false
@@ -207,7 +219,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_02",
       "topic_id": "classical_probability",
-      "subtopics": [],
+      "subtopic_ids": [
+        "classical_probability_formula"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -221,11 +235,13 @@
     "story_id": "story_02_02",
     "lesson_id": "lesson_02_02",
     "practice_id": "practice_02_02",
-    "encounter_mode": "puzzle_onboarding",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_02_02",
     "card_pool_ids": [
-      "card_d2_02"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": null,
     "intent_enabled": false
@@ -240,7 +256,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_02",
       "topic_id": "classical_probability",
-      "subtopics": [],
+      "subtopic_ids": [
+        "probability_representation"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -254,11 +272,13 @@
     "story_id": "story_02_03",
     "lesson_id": "lesson_02_03",
     "practice_id": "practice_02_03",
-    "encounter_mode": "puzzle_onboarding",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_02_03",
     "card_pool_ids": [
-      "card_d2_03"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": null,
     "intent_enabled": false
@@ -273,7 +293,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_02",
       "topic_id": "classical_probability",
-      "subtopics": [],
+      "subtopic_ids": [
+        "compare_probability"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -287,11 +309,13 @@
     "story_id": "story_02_04",
     "lesson_id": "lesson_02_04",
     "practice_id": "practice_02_04",
-    "encounter_mode": "puzzle_onboarding",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_02_04",
     "card_pool_ids": [
-      "card_d2_04"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": null,
     "intent_enabled": false
@@ -306,7 +330,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_02",
       "topic_id": "classical_probability",
-      "subtopics": [],
+      "subtopic_ids": [
+        "multi_data_classical"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -320,11 +346,13 @@
     "story_id": "story_02_05",
     "lesson_id": "lesson_02_05",
     "practice_id": "practice_02_05",
-    "encounter_mode": "boss_battle",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_02_05",
     "card_pool_ids": [
-      "card_d2_05"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": "enemy_d2_aleator",
     "intent_enabled": true
@@ -339,7 +367,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_03",
       "topic_id": "addition_rule",
-      "subtopics": [],
+      "subtopic_ids": [
+        "union_intersection"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -353,11 +383,13 @@
     "story_id": "story_03_01",
     "lesson_id": "lesson_03_01",
     "practice_id": "practice_03_01",
-    "encounter_mode": "puzzle_onboarding",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_03_01",
     "card_pool_ids": [
-      "card_d3_01"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": null,
     "intent_enabled": false
@@ -372,7 +404,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_03",
       "topic_id": "addition_rule",
-      "subtopics": [],
+      "subtopic_ids": [
+        "mutually_exclusive"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -386,11 +420,13 @@
     "story_id": "story_03_02",
     "lesson_id": "lesson_03_02",
     "practice_id": "practice_03_02",
-    "encounter_mode": "puzzle_onboarding",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_03_02",
     "card_pool_ids": [
-      "card_d3_02"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": null,
     "intent_enabled": false
@@ -405,7 +441,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_03",
       "topic_id": "addition_rule",
-      "subtopics": [],
+      "subtopic_ids": [
+        "addition_simple"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -419,11 +457,13 @@
     "story_id": "story_03_03",
     "lesson_id": "lesson_03_03",
     "practice_id": "practice_03_03",
-    "encounter_mode": "puzzle_onboarding",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_03_03",
     "card_pool_ids": [
-      "card_d3_03"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": null,
     "intent_enabled": false
@@ -438,7 +478,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_03",
       "topic_id": "addition_rule",
-      "subtopics": [],
+      "subtopic_ids": [
+        "addition_general"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -452,11 +494,13 @@
     "story_id": "story_03_04",
     "lesson_id": "lesson_03_04",
     "practice_id": "practice_03_04",
-    "encounter_mode": "puzzle_onboarding",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_03_04",
     "card_pool_ids": [
-      "card_d3_04"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": null,
     "intent_enabled": false
@@ -471,7 +515,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_03",
       "topic_id": "addition_rule",
-      "subtopics": [],
+      "subtopic_ids": [
+        "addition_selection"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -485,11 +531,13 @@
     "story_id": "story_03_05",
     "lesson_id": "lesson_03_05",
     "practice_id": "practice_03_05",
-    "encounter_mode": "boss_battle",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_03_05",
     "card_pool_ids": [
-      "card_d3_05"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": "enemy_d3_melkor",
     "intent_enabled": true
@@ -504,7 +552,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_04",
       "topic_id": "multiplication_independence",
-      "subtopics": [],
+      "subtopic_ids": [
+        "independence"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -518,11 +568,13 @@
     "story_id": "story_04_01",
     "lesson_id": "lesson_04_01",
     "practice_id": "practice_04_01",
-    "encounter_mode": "puzzle_onboarding",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_04_01",
     "card_pool_ids": [
-      "card_d4_01"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": null,
     "intent_enabled": false
@@ -537,7 +589,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_04",
       "topic_id": "multiplication_independence",
-      "subtopics": [],
+      "subtopic_ids": [
+        "tree_diagram"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -551,11 +605,13 @@
     "story_id": "story_04_02",
     "lesson_id": "lesson_04_02",
     "practice_id": "practice_04_02",
-    "encounter_mode": "puzzle_onboarding",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_04_02",
     "card_pool_ids": [
-      "card_d4_02"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": null,
     "intent_enabled": false
@@ -570,7 +626,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_04",
       "topic_id": "multiplication_independence",
-      "subtopics": [],
+      "subtopic_ids": [
+        "multiplication_two_step"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -584,11 +642,13 @@
     "story_id": "story_04_03",
     "lesson_id": "lesson_04_03",
     "practice_id": "practice_04_03",
-    "encounter_mode": "puzzle_onboarding",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_04_03",
     "card_pool_ids": [
-      "card_d4_03"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": null,
     "intent_enabled": false
@@ -603,7 +663,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_04",
       "topic_id": "multiplication_independence",
-      "subtopics": [],
+      "subtopic_ids": [
+        "multiplication_chain"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -617,11 +679,13 @@
     "story_id": "story_04_04",
     "lesson_id": "lesson_04_04",
     "practice_id": "practice_04_04",
-    "encounter_mode": "puzzle_onboarding",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_04_04",
     "card_pool_ids": [
-      "card_d4_04"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": null,
     "intent_enabled": false
@@ -636,7 +700,9 @@
     "learning_scope": {
       "dungeon_id": "dungeon_04",
       "topic_id": "multiplication_independence",
-      "subtopics": [],
+      "subtopic_ids": [
+        "independence_application"
+      ],
       "difficulty_min": 1,
       "difficulty_max": 5
     },
@@ -650,11 +716,13 @@
     "story_id": "story_04_05",
     "lesson_id": "lesson_04_05",
     "practice_id": "practice_04_05",
-    "encounter_mode": "boss_battle",
+    "encounter_mode": "card_combat",
     "completion_rule": "encounter_victory",
     "reward_id": "reward_04_05",
     "card_pool_ids": [
-      "card_d4_05"
+      "card_strike",
+      "card_defend",
+      "card_heal"
     ],
     "enemy_id": "enemy_d4_aphodius",
     "intent_enabled": true

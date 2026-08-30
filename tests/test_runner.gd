@@ -36,7 +36,8 @@ func _initialize() -> void:
 		{"name": "Presentation Shell (B.2)", "func": Callable(preload("res://tests/unit/presentation/lesson/test_stage_presentation_shell.gd"), "run_all_tests").bind(self)},
 		{"name": "Mathos Theme (A.1)", "func": Callable(TestMathosTheme, "run_all_tests")},
 		{"name": "Shared Components (A.2)", "func": Callable(preload("res://tests/unit/presentation/test_shared_components.gd"), "run_all_tests")},
-		{"name": "Question Interaction Visual States", "func": Callable(preload("res://tests/unit/presentation/question/test_question_interaction_visual_states.gd"), "run_all_tests")}
+		{"name": "Question Interaction Visual States", "func": Callable(preload("res://tests/unit/presentation/question/test_question_interaction_visual_states.gd"), "run_all_tests")},
+		{"name": "Production E2E Flow", "func": Callable(TestProductionE2EFlow, "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -126,4 +127,5 @@ func _count_suite_tests(name: String) -> int:
 		"Mathos Theme (A.1)": return 6
 		"Shared Components (A.2)": return 9
 		"Question Interaction Visual States": return 4
+		"Production E2E Flow": return 1
 		_: return 1
