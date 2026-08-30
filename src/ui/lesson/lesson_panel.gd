@@ -92,6 +92,15 @@ func _update_display() -> void:
 		else:
 			continue_button.text = "Tiếp tục"
 
+	if is_inside_tree():
+		var body_panel: Node = get_node_or_null("MarginContainer/VBoxContainer/BodyPanel")
+		if body_panel is Control:
+			var c: Control = body_panel as Control
+			c.modulate.a = 0.0
+			var t: Tween = create_tween()
+			if t != null:
+				t.tween_property(c, "modulate:a", 1.0, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
 	step_changed.emit(_current_index, _steps.size())
 
 func _on_continue_pressed() -> void:

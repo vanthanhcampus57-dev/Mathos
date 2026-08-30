@@ -41,7 +41,11 @@ func _initialize() -> void:
 		{"name": "Question Interaction Visual States", "func": Callable(preload("res://tests/unit/presentation/question/test_question_interaction_visual_states.gd"), "run_all_tests")},
 		{"name": "Production E2E Flow", "func": Callable(TestProductionE2EFlow, "run_all_tests")},
 		{"name": "Procedural QGen Foundation", "func": Callable(TestProceduralQGenFoundation, "run_all_tests")},
-		{"name": "Demo V1 Fix-2/3 Progression & Safety", "func": Callable(preload("res://tests/unit/presentation/test_demo_v1_fix2_progression.gd"), "run_all_tests")}
+		{"name": "Demo V1 Fix-2/3 Progression & Safety", "func": Callable(preload("res://tests/unit/presentation/test_demo_v1_fix2_progression.gd"), "run_all_tests")},
+		{"name": "Game Polish V1 UX & Safety", "func": Callable(preload("res://tests/unit/presentation/test_game_polish_v1.gd"), "run_all_tests")},
+		{"name": "D2 Procedural QGen", "func": Callable(preload("res://tests/unit/question/test_d2_procedural_qgen.gd"), "run_all_tests")},
+		{"name": "D3 Procedural QGen", "func": Callable(preload("res://tests/unit/question/test_d3_procedural_qgen.gd"), "run_all_tests")},
+		{"name": "D4 Procedural QGen", "func": Callable(preload("res://tests/unit/question/test_d4_procedural_qgen.gd"), "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -134,4 +138,5 @@ func _count_suite_tests(name: String) -> int:
 		"Production E2E Flow": return 1
 		"Procedural QGen Foundation": return 6
 		"Demo V1 Fix-2/3 Progression & Safety": return 5
+		"Game Polish V1 UX & Safety": return 4
 		_: return 1

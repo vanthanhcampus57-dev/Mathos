@@ -119,25 +119,39 @@ func set_view_mode(mode: ViewMode) -> void:
 	if start_game_container != null:
 		start_game_container.visible = (_current_mode == ViewMode.MODE_ENTRY)
 
+	var active_target: Control = null
+
 	var lesson_panel: LessonPanel = get_lesson_panel()
 	if lesson_panel != null:
 		lesson_panel.visible = (_current_mode == ViewMode.MODE_LESSON)
+		if _current_mode == ViewMode.MODE_LESSON:
+			active_target = lesson_panel
 
 	var question_host: MarginContainer = get_question_host_container()
 	if question_host != null:
 		question_host.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
 		if _current_mode == ViewMode.MODE_QUESTION_HOST:
+			active_target = question_host
 			question_host_ready.emit(question_host)
 
 	var feedback_host_container: MarginContainer = get_feedback_host_container()
 	if feedback_host_container != null:
 		feedback_host_container.visible = (_current_mode == ViewMode.MODE_FEEDBACK_HOST)
 		if _current_mode == ViewMode.MODE_FEEDBACK_HOST:
+			active_target = feedback_host_container
 			feedback_host_ready.emit(feedback_host_container)
 
 	var stage_complete_panel: StageCompletePanel = get_stage_complete_panel()
 	if stage_complete_panel != null:
 		stage_complete_panel.visible = (_current_mode == ViewMode.MODE_STAGE_COMPLETE)
+		if _current_mode == ViewMode.MODE_STAGE_COMPLETE:
+			active_target = stage_complete_panel
+
+	if active_target != null and is_inside_tree():
+		active_target.modulate.a = 0.0
+		var t: Tween = create_tween()
+		if t != null:
+			t.tween_property(active_target, "modulate:a", 1.0, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func get_view_mode() -> ViewMode:
 	return _current_mode

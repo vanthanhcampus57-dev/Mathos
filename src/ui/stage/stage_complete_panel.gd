@@ -30,16 +30,46 @@ func set_summary_data(stage_title: String, message: String = "") -> void:
 
 func set_stage_complete_stats(question_count: int, accuracy_pct: float, learned_summary: String = "") -> void:
 	var q_val: Label = get_node_or_null("MarginContainer/VBoxContainer/StatsHBox/QuestionCountPanel/VBox/Value") as Label
-	if q_val != null:
-		q_val.text = str(question_count)
-
 	var acc_val: Label = get_node_or_null("MarginContainer/VBoxContainer/StatsHBox/AccuracyPanel/VBox/Value") as Label
-	if acc_val != null:
-		acc_val.text = "%d%%" % int(round(accuracy_pct))
-
 	var learned_body: Label = get_node_or_null("MarginContainer/VBoxContainer/LearnedPanel/LearnedVBox/Body") as Label
+
 	if learned_body != null and not learned_summary.is_empty():
 		learned_body.text = learned_summary
+
+	if not is_inside_tree():
+		if q_val != null:
+			q_val.text = str(question_count)
+		if acc_val != null:
+			acc_val.text = "%d%%" % int(round(accuracy_pct))
+		return
+
+	# Animated count up
+	var target_q: float = float(question_count)
+	var target_acc: float = float(int(round(accuracy_pct)))
+
+	var t: Tween = create_tween()
+	if t != null:
+		t.set_parallel(true)
+		t.tween_method(Callable(self, "_update_q_count_text").bind(q_val), 0.0, target_q, 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_method(Callable(self, "_update_acc_text").bind(acc_val), 0.0, target_acc, 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+	# Fade in container
+	var container: Control = get_node_or_null("MarginContainer/VBoxContainer") as Control
+	if container == null:
+		container = get_node_or_null("MarginContainer/PanelContainer/VBoxContainer") as Control
+	if container != null:
+		container.modulate.a = 0.0
+		var t_fade: Tween = create_tween()
+		if t_fade != null:
+			t_fade.tween_property(container, "modulate:a", 1.0, 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+func _update_q_count_text(val: float, label: Label) -> void:
+	if label != null:
+		label.text = str(int(round(val)))
+
+func _update_acc_text(val: float, label: Label) -> void:
+	if label != null:
+		label.text = "%d%%" % int(round(val))
 
 func _on_continue_pressed() -> void:
 	stage_continue_requested.emit()

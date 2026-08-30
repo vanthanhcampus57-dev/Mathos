@@ -15,6 +15,8 @@ var _objective_text: String = ""
 var _feedback_text: String = ""
 var _is_correct: bool = false
 var _has_feedback: bool = false
+var _is_submitting: bool = false
+var _panel_tween: Tween = null
 
 # UI Control nodes
 var _main_vbox: VBoxContainer = null
@@ -158,6 +160,7 @@ func setup_question(question_view: Dictionary) -> bool:
 	_feedback_text = ""
 	_is_correct = false
 	_has_feedback = false
+	_is_submitting = false
 
 	if not (question_view is Dictionary) or question_view.is_empty():
 		return false
@@ -218,6 +221,15 @@ func setup_question(question_view: Dictionary) -> bool:
 			_interaction_container.add_child(_active_interaction_view)
 		else:
 			add_child(_active_interaction_view)
+
+	if is_inside_tree():
+		modulate.a = 0.0
+		if _panel_tween != null and _panel_tween.is_running():
+			_panel_tween.kill()
+		_panel_tween = create_tween()
+		if _panel_tween != null:
+			_panel_tween.tween_property(self, "modulate:a", 1.0, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
 	return true
 
 func get_current_interaction_payload() -> Dictionary:
@@ -237,6 +249,7 @@ func show_feedback(attempt_result: Dictionary) -> bool:
 	_is_correct = bool(attempt_result["is_correct"])
 	_feedback_text = String(attempt_result["feedback_text"])
 	_has_feedback = true
+	_is_submitting = false
 
 	_ensure_ui_built()
 	if _feedback_label != null:
@@ -244,7 +257,11 @@ func show_feedback(attempt_result: Dictionary) -> bool:
 		var header_str: String = "Chính xác!" if _is_correct else "Chưa chính xác"
 		var explanation_str: String = String(attempt_result.get("explanation", ""))
 		_feedback_label.text = "[%s] %s\n%s" % [header_str, _feedback_text, explanation_str]
+		_feedback_label.modulate.a = 0.0
 		_feedback_label.visible = true
+		var fb_tween: Tween = create_tween()
+		if fb_tween != null:
+			fb_tween.tween_property(_feedback_label, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 	if _submit_button != null:
 		_submit_button.text = "TIẾP TỤC" if _is_correct else "THỬ LẠI"
@@ -295,6 +312,7 @@ func _on_submit_button_pressed() -> void:
 		else:
 			_has_feedback = false
 			_feedback_text = ""
+			_is_submitting = false
 			if _feedback_label != null:
 				_feedback_label.visible = false
 			if _submit_button != null:
@@ -306,4 +324,7 @@ func _on_submit_button_pressed() -> void:
 					_active_interaction_view.call("set_disabled", false)
 			retry_requested.emit()
 	else:
+		if _is_submitting:
+			return
+		_is_submitting = true
 		request_submit()
