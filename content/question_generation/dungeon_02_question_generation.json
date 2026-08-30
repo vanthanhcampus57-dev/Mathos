@@ -664,18 +664,18 @@
     },
     "interaction_type": "input",
     "template": {
-      "prompt": "Một lớp học có 18 học sinh nam và 22 học sinh nữ. Chọn ngẫu nhiên 1 học sinh làm lớp trưởng. Tính xác suất chọn được 1 học sinh nữ. Nhập kết quả dạng số thập phân.",
-      "explanation": "Tổng số học sinh n(Omega) = 18 + 22 = 40. Số nữ n(Nữ) = 22. Xác suất P(Nữ) = 22 / 40 = 11 / 20 = 0.55.",
+      "prompt": "Một lớp học có 15 học sinh nam và 20 học sinh nữ. Chọn ngẫu nhiên 1 học sinh làm lớp trưởng. Tính xác suất chọn được 1 học sinh nữ. Nhập kết quả dạng phân số tối giản a / b.",
+      "explanation": "Tổng số học sinh n(Omega) = 15 + 20 = 35. Số nữ n(Nữ) = 20. Xác suất P(Nữ) = 20 / 35 = 4 / 7.",
       "learning_objective": "Tính xác suất cổ điển từ dữ liệu thống kê lớp học.",
       "interaction_payload": {
-        "input_type": "float",
-        "hint": "Nhập số thập phân"
+        "input_type": "string",
+        "hint": "Nhập phân số a / b"
       },
       "answer_spec": {
         "accepted_values": [
-          0.55
+          "4 / 7"
         ],
-        "numeric_tolerance": 0.001
+        "trim_whitespace": true
       }
     },
     "parameter_bindings": {
