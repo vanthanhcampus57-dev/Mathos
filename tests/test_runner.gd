@@ -5,6 +5,8 @@ extends SceneTree
 ## Executes TEST-BOOT-001, TEST-SMOKE-001, TEST-CONFIG-001, CONTENT-001..028, QUESTION-001..026, Player/Reward contracts, PROGRESS-001..015, SAVE suites, FLOW-001..012, APPROOT-001..015, PRES suites, and Shared Mathos Theme suite.
 ## Implements truthful tri-state test accounting (PASS, FAIL, WAITING).
 
+const TestProceduralQGenFoundation = preload("res://tests/unit/question/test_procedural_qgen_foundation.gd")
+
 func _initialize() -> void:
 	print("==========================================")
 	print("MATHOS HEADLESS TEST HARNESS STARTING")
@@ -37,7 +39,8 @@ func _initialize() -> void:
 		{"name": "Mathos Theme (A.1)", "func": Callable(TestMathosTheme, "run_all_tests")},
 		{"name": "Shared Components (A.2)", "func": Callable(preload("res://tests/unit/presentation/test_shared_components.gd"), "run_all_tests")},
 		{"name": "Question Interaction Visual States", "func": Callable(preload("res://tests/unit/presentation/question/test_question_interaction_visual_states.gd"), "run_all_tests")},
-		{"name": "Production E2E Flow", "func": Callable(TestProductionE2EFlow, "run_all_tests")}
+		{"name": "Production E2E Flow", "func": Callable(TestProductionE2EFlow, "run_all_tests")},
+		{"name": "Procedural QGen Foundation", "func": Callable(TestProceduralQGenFoundation, "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -128,4 +131,5 @@ func _count_suite_tests(name: String) -> int:
 		"Shared Components (A.2)": return 9
 		"Question Interaction Visual States": return 4
 		"Production E2E Flow": return 1
+		"Procedural QGen Foundation": return 6
 		_: return 1

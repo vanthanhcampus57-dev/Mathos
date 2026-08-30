@@ -43,6 +43,8 @@ func validate(content_root: String) -> Dictionary:
 	var cards: Dictionary = {}
 	var enemies: Dictionary = {}
 	var rewards: Dictionary = {}
+	var math_knowledge: Dictionary = {}
+	var question_generation: Dictionary = {}
 
 	# Track global top-level IDs to ensure uniqueness across categories
 	var global_ids: Dictionary = {}
@@ -60,9 +62,12 @@ func validate(content_root: String) -> Dictionary:
 	_load_category(content_root, "cards", cards, report, global_ids, _validate_card)
 	_load_category(content_root, "enemies", enemies, report, global_ids, _validate_enemy)
 	_load_category(content_root, "rewards", rewards, report, global_ids, _validate_reward)
+	_load_category(content_root, "math_knowledge", math_knowledge, report, global_ids, _validate_math_knowledge_pack)
+	_load_category(content_root, "question_generation", question_generation, report, global_ids, _validate_question_generation_spec)
 
 	# Step 3: Validate References & Asset Refs
 	_validate_references(dungeons, stages, story, lessons, practice, questions, cards, enemies, rewards, report)
+	_validate_qgen_references(math_knowledge, question_generation, report)
 
 	# Step 4: Semantic & Cross-Content Validation
 	_validate_cross_content(dungeons, stages, story, lessons, practice, questions, cards, enemies, rewards, report)
@@ -79,7 +84,8 @@ func validate(content_root: String) -> Dictionary:
 	var catalog: ValidatedCatalog = null
 	if report.publication_allowed:
 		catalog = ValidatedCatalog.new(
-			config, dungeons, stages, story, lessons, practice, questions, cards, enemies, rewards
+			config, dungeons, stages, story, lessons, practice, questions, cards, enemies, rewards,
+			math_knowledge, question_generation
 		)
 
 	return {
@@ -653,3 +659,80 @@ func _validate_question_pools(stages: Dictionary, questions: Dictionary, min_poo
 				"ERR_QUESTION_POOL_INSUFFICIENT", "stages", st_id, "",
 				"Question pool for stage " + st_id + " has only " + str(count) + " candidates (minimum required: " + str(min_pool) + ")"
 			))
+
+# --- PROCEDURAL QUESTION GENERATION VALIDATION ---
+func _validate_math_knowledge_pack(item: Dictionary, fpath: String, report: ContentValidationReport) -> bool:
+	var id: String = String(item.get("pack_id", ""))
+	var valid: bool = true
+	var required_fields: Array[String] = [
+		"schema_version", "pack_id", "dungeon_id", "topic_id", "subtopic_id",
+		"domain_variables", "math_rules", "forbidden_concepts", "prerequisite_concepts"
+	]
+	for f in required_fields:
+		if not item.has(f):
+			report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_MISSING_FIELD", "math_knowledge", id, fpath, "Missing required field '" + f + "'"))
+			valid = false
+	if item.has("schema_version") and int(item["schema_version"]) != 1:
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_VERSION", "math_knowledge", id, fpath, "schema_version must be 1"))
+		valid = false
+	if item.has("dungeon_id"):
+		var dun: String = String(item["dungeon_id"])
+		if not CANONICAL_DUNGEONS.has(dun):
+			report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_ENUM", "math_knowledge", id, fpath, "Invalid dungeon_id: " + dun))
+			valid = false
+		elif item.has("topic_id"):
+			var top: String = String(item["topic_id"])
+			if TOPIC_MAPPING.get(dun, "") != top:
+				report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SEMANTIC_TOPIC_MISMATCH", "math_knowledge", id, fpath, "topic_id " + top + " does not match dungeon " + dun))
+				valid = false
+	return valid
+
+func _validate_question_generation_spec(item: Dictionary, fpath: String, report: ContentValidationReport) -> bool:
+	var id: String = String(item.get("spec_id", ""))
+	var valid: bool = true
+	var required_fields: Array[String] = [
+		"schema_version", "spec_id", "generator_family_id", "pack_id", "dungeon_id",
+		"topic_id", "subtopic_id", "difficulty_range", "interaction_type", "template", "parameter_bindings"
+	]
+	for f in required_fields:
+		if not item.has(f):
+			report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_MISSING_FIELD", "question_generation", id, fpath, "Missing required field '" + f + "'"))
+			valid = false
+	if item.has("schema_version") and int(item["schema_version"]) != 1:
+		report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_VERSION", "question_generation", id, fpath, "schema_version must be 1"))
+		valid = false
+	if item.has("interaction_type"):
+		var itype: String = String(item["interaction_type"])
+		if not ["multiple_choice", "input", "matching", "drag_drop"].has(itype):
+			report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_ENUM", "question_generation", id, fpath, "Invalid interaction_type: " + itype))
+			valid = false
+	if item.has("dungeon_id"):
+		var dun: String = String(item["dungeon_id"])
+		if not CANONICAL_DUNGEONS.has(dun):
+			report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SCHEMA_ENUM", "question_generation", id, fpath, "Invalid dungeon_id: " + dun))
+			valid = false
+		elif item.has("topic_id"):
+			var top: String = String(item["topic_id"])
+			if TOPIC_MAPPING.get(dun, "") != top:
+				report.add_issue(ContentValidationIssue.new(ContentValidationIssue.Severity.FATAL, "ERR_SEMANTIC_TOPIC_MISMATCH", "question_generation", id, fpath, "topic_id " + top + " does not match dungeon " + dun))
+				valid = false
+	return valid
+
+func _validate_qgen_references(math_knowledge: Dictionary, question_generation: Dictionary, report: ContentValidationReport) -> void:
+	for spec_id in question_generation:
+		var spec: Dictionary = question_generation[spec_id]
+		var pack_id: String = String(spec.get("pack_id", ""))
+		if pack_id != "" and not math_knowledge.has(pack_id):
+			report.add_issue(ContentValidationIssue.new(
+				ContentValidationIssue.Severity.FATAL,
+				"ERR_REF_MISSING_PACK", "question_generation", spec_id, "",
+				"QuestionGenerationSpec " + spec_id + " references missing MathKnowledgePack " + pack_id
+			))
+		elif math_knowledge.has(pack_id):
+			var pack: Dictionary = math_knowledge[pack_id]
+			if spec.get("dungeon_id") != pack.get("dungeon_id") or spec.get("topic_id") != pack.get("topic_id") or spec.get("subtopic_id") != pack.get("subtopic_id"):
+				report.add_issue(ContentValidationIssue.new(
+					ContentValidationIssue.Severity.FATAL,
+					"ERR_SEMANTIC_SCOPE_MISMATCH", "question_generation", spec_id, "",
+					"QuestionGenerationSpec " + spec_id + " target scope does not match referenced MathKnowledgePack " + pack_id
+				))

@@ -27,6 +27,8 @@ var _questions: Dictionary = {}# id -> Dictionary
 var _cards: Dictionary = {}    # id -> Dictionary
 var _enemies: Dictionary = {}  # id -> Dictionary
 var _rewards: Dictionary = {}  # id -> Dictionary
+var _math_knowledge: Dictionary = {} # id -> Dictionary
+var _question_generation: Dictionary = {} # id -> Dictionary
 
 func _init(
 	p_config: Dictionary,
@@ -38,7 +40,9 @@ func _init(
 	p_questions: Dictionary,
 	p_cards: Dictionary,
 	p_enemies: Dictionary,
-	p_rewards: Dictionary
+	p_rewards: Dictionary,
+	p_math_knowledge: Dictionary = {},
+	p_question_generation: Dictionary = {}
 ) -> void:
 	_config = p_config.duplicate(true)
 	_dungeons = p_dungeons.duplicate(true)
@@ -50,6 +54,8 @@ func _init(
 	_cards = p_cards.duplicate(true)
 	_enemies = p_enemies.duplicate(true)
 	_rewards = p_rewards.duplicate(true)
+	_math_knowledge = p_math_knowledge.duplicate(true)
+	_question_generation = p_question_generation.duplicate(true)
 
 func get_config() -> Dictionary:
 	return _config.duplicate(true)
@@ -98,6 +104,45 @@ func get_reward(id: String) -> Dictionary:
 	if _rewards.has(id):
 		return (_rewards[id] as Dictionary).duplicate(true)
 	return {}
+
+func get_math_knowledge_pack(id: String) -> Dictionary:
+	if _math_knowledge.has(id):
+		return (_math_knowledge[id] as Dictionary).duplicate(true)
+	return {}
+
+func get_all_math_knowledge_packs() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for key in _math_knowledge:
+		result.append((_math_knowledge[key] as Dictionary).duplicate(true))
+	return result
+
+func get_question_generation_spec(id: String) -> Dictionary:
+	if _question_generation.has(id):
+		return (_question_generation[id] as Dictionary).duplicate(true)
+	return {}
+
+func get_all_question_generation_specs() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for key in _question_generation:
+		result.append((_question_generation[key] as Dictionary).duplicate(true))
+	return result
+
+func query_question_generation_specs(scope: Dictionary) -> Array[Dictionary]:
+	var candidates: Array[Dictionary] = []
+	var req_dungeon: String = scope.get("dungeon_id", "")
+	var req_topic: String = scope.get("topic_id", "")
+	var req_subtopics: Array = scope.get("subtopic_ids", []) as Array
+
+	for spec_id in _question_generation:
+		var spec: Dictionary = _question_generation[spec_id] as Dictionary
+		if req_dungeon != "" and spec.get("dungeon_id", "") != req_dungeon:
+			continue
+		if req_topic != "" and spec.get("topic_id", "") != req_topic:
+			continue
+		if req_subtopics.size() > 0 and not req_subtopics.has(spec.get("subtopic_id", "")):
+			continue
+		candidates.append(spec.duplicate(true))
+	return candidates
 
 func get_all_dungeons() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
