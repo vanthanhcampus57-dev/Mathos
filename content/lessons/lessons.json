@@ -1,0 +1,502 @@
+[
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_01_01",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "title": "Phép Thử Ngẫu Nhiên Là Gì?",
+    "sections": [
+      {
+        "header": "Khái Niệm Phép Thử Ngẫu Nhiên",
+        "body": "Phép thử ngẫu nhiên là một hành động hay thí nghiệm mà ta không thể đoán trước chính xác kết quả nào sẽ xảy ra, nhưng ta biết trước tập hợp tất cả các kết quả có thể có.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Ví Dụ Trong Thực Tế",
+        "body": "Khi gieo một đồng xu cân đối, kết quả có thể là Mặt sấp (S) hoặc Mặt ngửa (N). Khi gieo một con xúc xắc 6 mặt, kết quả có thể là số chấm từ 1 đến 6.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Đặc Điểm Cơ Bản",
+        "body": "Phép thử ngẫu nhiên có 2 tính chất chính: (1) Kết quả xảy ra không đoán trước được; (2) Tập hợp tất cả kết quả có thể xảy ra là hoàn toàn xác định.",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_01_02",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "title": "Không Gian Mẫu $\\Omega$ và Số Phần Tử $n(\\Omega)$",
+    "sections": [
+      {
+        "header": "Định Nghĩa Không Gian Mẫu",
+        "body": "Không gian mẫu của một phép thử ngẫu nhiên là tập hợp tất cả các kết quả có thể xảy ra của phép thử đó. Kí hiệu là $\\Omega$ (Đọc là Ô-mê-ga).",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Kí Hiệu Số Phần Tử $n(\\Omega)$",
+        "body": "Số phần tử của không gian mẫu được kí hiệu là $n(\\Omega)$ hoặc $|\\Omega|$. Ví dụ: Gieo 1 đồng xu thì $\\Omega = \\{S, N\\}$ và $n(\\Omega) = 2$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Không Gian Mẫu Phép Thử Gieo 2 Đồng Xu",
+        "body": "Khi gieo 2 đồng xu phân biệt, không gian mẫu là $\\Omega = \\{SS, SN, NS, NN\\}$. Do đó $n(\\Omega) = 4$.",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_01_03",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "title": "Khái Niệm Biến Cố",
+    "sections": [
+      {
+        "header": "Biến Cố Là Tập Con Của Không Gian Mẫu",
+        "body": "Biến cố $A$ liên quan đến phép thử là một tập con của không gian mẫu $\\Omega$. Nói rằng biến cố $A$ xảy ra khi kết quả của phép thử thuộc $A$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Kết Quả Thuận Lợi $n(A)$",
+        "body": "Mỗi phần tử thuộc tập hợp $A$ được gọi là một kết quả thuận lợi cho biến cố $A$. Số phần tử của tập hợp $A$ được kí hiệu là $n(A)$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Biến Cố Không Thể và Biến Cố Chắc Chắn",
+        "body": "Tập rỗng $\\emptyset$ gọi là biến cố không thể (không bao giờ xảy ra). Tập $\\Omega$ gọi là biến cố chắc chắn (luôn luôn xảy ra).",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_01_04",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "title": "Phân Tích Phép Thử Phức Hợp Nhẹ",
+    "sections": [
+      {
+        "header": "Phép Thử Nhiều Bước",
+        "body": "Khi phép thử gồm nhiều bước nối tiếp (như gieo 2 đồng xu hoặc gieo 2 con xúc xắc), ta dùng quy tắc đếm (quy tắc nhân hoặc sơ đồ cây) để tìm $n(\\Omega)$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Liệt Kê Kết Quả Thuận Lợi Phức Hợp",
+        "body": "Đối với biến cố tổng hoặc hiệu số chấm (ví dụ: tổng số chấm 2 xúc xắc bằng 7), ta liệt kê tất cả các cặp $(x, y)$ thỏa mãn điều kiện.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Tránh Bỏ Sót Kết Quả",
+        "body": "Khi liệt kê các cặp kết quả, thứ tự có vai trò quan trọng: Cặp $(1, 6)$ khác với cặp $(6, 1)$. Phải liệt kê hệ thống để không sót và không trùng.",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_01_05",
+    "dungeon_id": "dungeon_01",
+    "topic_id": "trial_sample_event",
+    "title": "Thử Thách Của Trùm Thấu Nhãn STOCHAS",
+    "sections": [
+      {
+        "header": "Trận Chiến Tại Cửa Rừng",
+        "body": "Trùm Thấu Nhãn STOCHAS kiểm soát toàn bộ sương mù ngẫu nhiên của Dungeon 1. Để đánh bại STOCHAS, Karl phải làm chủ mọi phép thử và biến cố phức hợp.",
+        "speaker": "npc_draven"
+      },
+      {
+        "header": "Tổng Ôn Phép Thử & Không Gian Mẫu",
+        "body": "Nhớ kĩ: $n(\\Omega)$ là tổng số khả năng; $n(A)$ là số kết quả thỏa mãn điều kiện đề bài. Mọi phép toán xác suất sau này đều dựa trên nền tảng này!",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Chiến Thuật Đánh Bại STOCHAS",
+        "body": "Đọc kĩ đề bài, xác định chính xác phép thử được thực hiện theo 1 bước hay nhiều bước, rồi tính chính xác $n(\\Omega)$ và $n(A)$ để tung chiêu!",
+        "speaker": "npc_draven"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_02_01",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "title": "Tính Đồng Khả Năng Trong Phép Thử",
+    "sections": [
+      {
+        "header": "Khái Niệm Đồng Khả Năng",
+        "body": "Trong một phép thử ngẫu nhiên, các kết quả được gọi là đồng khả năng nếu không có lý do gì để tin rằng một kết quả nào đó có khả năng xảy ra cao hơn các kết quả khác.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Ví Dụ Đồng Khả Năng",
+        "body": "Gieo một đồng xu cân đối: khả năng Sấp và Ngửa là như nhau ($1/2$). Gieo một con xúc xắc 6 mặt cân đối: khả năng xuất hiện các mặt từ 1 đến 6 là bằng nhau ($1/6$).",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Điều Kiện Áp Dụng Xác Suất Cổ Điển",
+        "body": "Giả định các kết quả đồng khả năng là điều kiện tiên quyết bắt buộc để áp dụng công thức xác suất cổ điển.",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_02_02",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "title": "Đếm Số Kết Quả Thuận Lợi $n(A)$",
+    "sections": [
+      {
+        "header": "Đếm Trực Tiếp Bằng Liệt Kê",
+        "body": "Khi số phần tử nhỏ, ta liệt kê trực tiếp các kết quả thỏa mãn điều kiện của biến cố $A$ rồi đếm số lượng phần tử.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Đếm Bằng Tổ Hợp & Chỉnh Hợp",
+        "body": "Khi chọn ngẫu nhiên $k$ phần tử từ tập $n$ phần tử, số kết quả thuận lợi thường được tính bằng công thức tổ hợp $C_n^k$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Kĩ Thuật Phân Loại Trường Hợp",
+        "body": "Nếu biến cố $A$ xảy ra theo nhiều trường hợp rời nhau, số kết quả thuận lợi bằng tổng số kết quả của từng trường hợp.",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_02_03",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "title": "Công Thức Xác Suất Cổ Điển $P(A) = \\frac{n(A)}{n(\\Omega)}$",
+    "sections": [
+      {
+        "header": "Công Thức Tính Xác Suất Cổ Điển",
+        "body": "Cho phép thử ngẫu nhiên với không gian mẫu $\\Omega$ gồm các kết quả đồng khả năng. Xác suất của biến cố $A$ là $P(A) = \\frac{n(A)}{n(\\Omega)}$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Tầm Giá Trị Của Xác Suất",
+        "body": "Xác suất của một biến cố luôn nằm trong đoạn từ 0 đến 1: $0 \\le P(A) \\le 1$. Biến cố không thể có $P(\\emptyset) = 0$; biến cố chắc chắn có $P(\\Omega) = 1$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Các Bước Tính Xác Suất",
+        "body": "Bước 1: Tính $n(\\Omega)$. Bước 2: Xác định và tính $n(A)$. Bước 3: Lập tỉ số $P(A) = n(A) / n(\\Omega)$ và rút gọn phân số.",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_02_04",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "title": "Tính Xác Suất Trong Bài Toán Chọn Ngẫu Nhiên",
+    "sections": [
+      {
+        "header": "Sử Dụng Tổ Hợp Tính $n(\\Omega)$ và $n(A)$",
+        "body": "Khi chọn ngẫu nhiên $k$ vật từ nhóm $n$ vật, ta dùng công thức tổ hợp $C_n^k$ để tính số phần tử không gian mẫu $n(\\Omega)$ và số kết quả thuận lợi $n(A)$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Xác Suất Chọn Cùng Màu / Khác Màu",
+        "body": "Ví dụ chọn 2 bi từ túi có $R$ bi đỏ và $X$ bi xanh: $n(\\Omega) = C_{R+X}^2$. Chọn 2 bi cùng màu đỏ có $n(A) = C_R^2$. Xác suất $P(A) = C_R^2 / C_{R+X}^2$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Rút Gọn Phân Số Xác Suất",
+        "body": "Luôn rút gọn phân số $P(A) = n(A)/n(\\Omega)$ về phân số tối giản trước khi đưa ra kết luận cuối cùng.",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_02_05",
+    "dungeon_id": "dungeon_02",
+    "topic_id": "classical_probability",
+    "title": "Thử Thách Của Chúa Đầm Tỷ Lệ ALEATOR",
+    "sections": [
+      {
+        "header": "Trận Chiến Tại Tâm Đầm Lầy",
+        "body": "ALEATOR tấn công bằng các sóng độc ma thuật có xác suất trúng đích được tính toán chính xác. Karl cần tính đúng xác suất để tạo khiên phòng thủ!",
+        "speaker": "npc_draven"
+      },
+      {
+        "header": "Ôn Tập Xác Suất Cổ Điển",
+        "body": "Đừng quên công thức cốt lõi: $P(A) = n(A) / n(\\Omega)$. Đếm kĩ $n(\\Omega)$ bằng tổ hợp và chia nhỏ biến cố $A$ thành các trường hợp đồng khả năng.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Tuyệt Chiêu Đánh Bại ALEATOR",
+        "body": "Tính chính xác phân số xác suất và rút gọn tối giản để hóa giải đòn đánh của ALEATOR!",
+        "speaker": "npc_draven"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_03_01",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "title": "Khái Niệm Biến Cố Hợp $A \\cup B$",
+    "sections": [
+      {
+        "header": "Định Nghĩa Biến Cố Hợp",
+        "body": "Cho hai biến cố $A$ và $B$ cùng liên quan đến một phép thử. Biến cố \" $A$ hoặc $B$ xảy ra \" được gọi là biến cố hợp của $A$ và $B$, kí hiệu là $A \\cup B$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Tập Hop Hợp Trong Toán Học",
+        "body": "Tập hợp các kết quả thuận lợi cho $A \\cup B$ là hợp của hai tập hợp $A$ và $B$: $A \\cup B = \\{x \\in \\Omega \\mid x \\in A \\text{ hoặc } x \\in B\\}$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Biểu Đồ Venn Minh Họa",
+        "body": "Trực quan hóa bằng biểu đồ Venn: vùng bao phủ bởi cả hai hình tròn $A$ và $B$ chính là biến cố hợp $A \\cup B$.",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_03_02",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "title": "Biến Cố Xung Khắc và Biến Cố Đối",
+    "sections": [
+      {
+        "header": "Định Nghĩa Hai Biến Cố Xung Khắc",
+        "body": "Hai biến cố $A$ và $B$ được gọi là xung khắc nếu chúng không bao giờ cùng xảy ra trong một phép thử: $A \\cap B = \\emptyset$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Định Nghĩa Biến Cố Đối",
+        "body": "Cho biến cố $A$. Biến cố \" $A$ không xảy ra \", kí hiệu là $\\overline{A}$, được gọi là biến cố đối của $A$. Ta có $\\overline{A} = \\Omega \\setminus A$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Công Thức Xác Suất Biến Cố Đối",
+        "body": "Vì $A$ và $\\overline{A}$ xung khắc và $A \\cup \\overline{A} = \\Omega$, ta luôn có công thức quan trọng: $P(\\overline{A}) = 1 - P(A)$.",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_03_03",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "title": "Quy Tắc Cộng Xác Suất Cho Biến Cố Xung Khắc",
+    "sections": [
+      {
+        "header": "Phát Biểu Quy Tắc Cộng",
+        "body": "Nếu hai biến cố $A$ và $B$ xung khắc ($A \\cap B = \\emptyset$), thì xác suất để $A$ hoặc $B$ xảy ra bằng tổng xác suất của $A$ và $B$: $P(A \\cup B) = P(A) + P(B)$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Mở Rộng Cho Nhiều Biến Cố",
+        "body": "Nếu $A_1, A_2, \\dots, A_k$ là các biến cố đôi một xung khắc, thì $P(A_1 \\cup A_2 \\cup \\dots \\cup A_k) = P(A_1) + P(A_2) + \\dots + P(A_k)$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Lưu Ý Quan Trọng",
+        "body": "Chỉ được phép cộng trực tiếp $P(A) + P(B)$ khi đã khẳng định chắc chắn $A$ và $B$ là hai biến cố xung khắc!",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_03_04",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "title": "Quy Tắc Cộng Xác Suất Tổng Quát",
+    "sections": [
+      {
+        "header": "Công Thức Cộng Tổng Quát",
+        "body": "Cho hai biến cố bất kỳ $A$ và $B$. Xác suất của biến cố hợp được tính theo công thức: $P(A \\cup B) = P(A) + P(B) - P(A \\cap B)$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Giải Thích Bằng Số Phần Tử",
+        "body": "$n(A \\cup B) = n(A) + n(B) - n(A \\cap B)$. Khi chia cả hai vế cho $n(\\Omega)$, ta thu được công thức xác suất tổng quát trên.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Trường Hợp Đặc Biệt Xung Khắc",
+        "body": "Khi $A$ và $B$ xung khắc thì $A \\cap B = \\emptyset \\implies P(A \\cap B) = 0$. Công thức tổng quát trở về $P(A \\cup B) = P(A) + P(B)$.",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_03_05",
+    "dungeon_id": "dungeon_03",
+    "topic_id": "addition_rule",
+    "title": "Thử Thách Của Phù Thủy Hợp Nhất MELKOR",
+    "sections": [
+      {
+        "header": "Quyết Chiến Cung Điện Hợp Nhất",
+        "body": "MELKOR tạo ra các khiên ma thuật chồng chéo. Muốn phá vỡ khiên của MELKOR, Karl phải tính đúng xác suất hợp $P(A \\cup B)$!",
+        "speaker": "npc_draven"
+      },
+      {
+        "header": "Công Thức Cần Ghi Nhớ",
+        "body": "$P(A \\cup B) = P(A) + P(B)$ (nếu xung khắc); $P(A \\cup B) = P(A) + P(B) - P(A \\cap B)$ (nếu giao nhau); $P(\\overline{A}) = 1 - P(A)$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Hóa Giải Phép Thuật Của MELKOR",
+        "body": "Phân tích xem các biến cố có xung khắc hay không trước khi áp dụng công thức cộng!",
+        "speaker": "npc_draven"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_04_01",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "title": "Khái Niệm Biến Cố Giao $A \\cap B$",
+    "sections": [
+      {
+        "header": "Định Nghĩa Biến Cố Giao",
+        "body": "Cho hai biến cố $A$ và $B$. Biến cố \" Cả $A$ và $B$ cùng xảy ra \" được gọi là biến cố giao của $A$ và $B$, kí hiệu là $A \\cap B$ (hoặc $AB$).",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Tập Hợp Giao Trong Toán Học",
+        "body": "Tập hợp các kết quả thuận lợi cho $A \\cap B$ là giao của hai tập hợp $A$ và $B$: $A \\cap B = \\{x \\in \\Omega \\mid x \\in A \\text{ và } x \\in B\\}$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Biểu Đồ Venn Minh Họa",
+        "body": "Trên biểu đồ Venn, phần diện tích chung mà cả hai hình tròn $A$ và $B$ đè lên nhau chính là biến cố giao $A \\cap B$.",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_04_02",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "title": "Định Nghĩa Hai Biến Cố Độc Lập",
+    "sections": [
+      {
+        "header": "Định Nghĩa Hai Biến Cố Độc Lập",
+        "body": "Hai biến cố $A$ và $B$ được gọi là độc lập nếu việc xảy ra hay không xảy ra của biến cố này không làm ảnh hưởng đến xác suất xảy ra của biến cố kia.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Phép Thử Lặp Lại Độc Lập",
+        "body": "Khi gieo 2 đồng xu riêng biệt hoặc gieo 2 con xúc xắc, kết quả ở đợt gieo thứ nhất và thứ hai hoàn toàn độc lập với nhau.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Phân Biệt Độc Lập và Xung Khắc",
+        "body": "Biến cố xung khắc ($A \\cap B = \\emptyset$) là hai biến cố không thể cùng xảy ra. Biến cố độc lập là hai biến cố có thể cùng xảy ra nhưng không ảnh hưởng xác suất của nhau.",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_04_03",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "title": "Quy Tắc Nhân Xác Suất Cho Biến Cố Độc Lập",
+    "sections": [
+      {
+        "header": "Phát Biểu Quy Tắc Nhân",
+        "body": "Nếu hai biến cố $A$ và $B$ độc lập với nhau, thì xác suất để cả $A$ và $B$ cùng xảy ra bằng tích xác suất của $A$ và $B$: $P(A \\cap B) = P(A) \\cdot P(B)$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Mở Rộng Cho $n$ Biến Cố Độc Lập",
+        "body": "Nếu các biến cố $A_1, A_2, \\dots, A_k$ độc lập lập thành dãy, thì $P(A_1 \\cap A_2 \\cap \\dots \\cap A_k) = P(A_1) \\cdot P(A_2) \\cdots P(A_k)$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Lưu Ý Kiểm Tra Điều Kiện Độc Lập",
+        "body": "Chỉ áp dụng công thức nhân trực tiếp $P(A \\cap B) = P(A) \\cdot P(B)$ khi bài toán khẳng định các biến cố là độc lập với nhau!",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_04_04",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "title": "Vận Dụng Phức Hợp Quy Tắc Cộng và Nhân",
+    "sections": [
+      {
+        "header": "Phân Tích Bài Toán Phức Hợp",
+        "body": "Khi một bài toán có nhiều trường hợp (dùng quy tắc cộng) và trong mỗi trường hợp có nhiều bước nối tiếp độc lập (dùng quy tắc nhân), ta kết hợp cả hai quy tắc.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Kĩ Thuật Sử Dụng Biến Cố Đối Với Bài Toán \"Ít Nhất 1\"",
+        "body": "Đối với biến cố \"Có ít nhất 1 lần thành công\", ta nên tính xác suất của biến cố đối: \"Tất cả các lần đều thất bại\", rồi lấy $P = 1 - P(\\text{thất bại})$.",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Chiến Thuật Giải Nhanh",
+        "body": "Bước 1: Gọi tên các biến cố độc lập đơn lẻ. Bước 2: Biểu diễn biến cố cần tính theo các biến cố đơn lẻ. Bước 3: Áp dụng quy tắc nhân và cộng.",
+        "speaker": "npc_arithmos"
+      }
+    ],
+    "embedded_questions": []
+  },
+  {
+    "schema_version": 1,
+    "lesson_id": "lesson_04_05",
+    "dungeon_id": "dungeon_04",
+    "topic_id": "multiplication_independence",
+    "title": "Trận Chiến Quyết Định Với APHODIUS",
+    "sections": [
+      {
+        "header": "Tuyệt Đỉnh Ma Thuật Mathos",
+        "body": "Trận chiến cuối cùng đòi hỏi Karl phải kết hợp nhuần nhuyễn: Không gian mẫu $\\Omega$, Xác suất cổ điển $P(A) = n(A)/n(\\Omega)$, Quy tắc cộng $P(A \\cup B)$ và Quy tắc nhân $P(A \\cap B)$.",
+        "speaker": "npc_draven"
+      },
+      {
+        "header": "Vũ Khí Tối Thượng",
+        "body": "Phân tích kĩ lưỡng: Xung khắc hay Độc lập? Dùng biến cố đối $1 - P(A)$ cho bài toán \"ít nhất 1\". Bình tĩnh tính toán để giải mã từng tuyệt chiêu của Aphodius!",
+        "speaker": "npc_arithmos"
+      },
+      {
+        "header": "Giải Cứu Thế Giới Mathos",
+        "body": "Đánh bại Aphodius để thu hồi Mảnh Vỡ Ma Thuật 04, khôi phục Trật Tự Mathos và hoàn thành hành trình huyền thoại!",
+        "speaker": "npc_aether"
+      }
+    ],
+    "embedded_questions": []
+  }
+]

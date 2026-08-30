@@ -1,0 +1,282 @@
+[
+  {
+    "schema_version": 1,
+    "card_id": "card_d1_01",
+    "name": "Thẻ Bài Khởi Đầu Rừng Mù Sương",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 12
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d1_02",
+    "name": "Thẻ Bài Khám Phá Không Gian Mẫu",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 14
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d1_03",
+    "name": "Thẻ Bài Biến Cố và Tập Con",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 16
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d1_04",
+    "name": "Thẻ Bài Vận Dụng Phép Thử & Biến Cố",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 18
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d1_05",
+    "name": "Thẻ Bài Quyết Chiến STOCHAS",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 20
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d2_01",
+    "name": "Thẻ Bài Kết Quả Đồng Khả Năng",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 12
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d2_02",
+    "name": "Thẻ Bài Đếm Kết Quả Thuận Lợi",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 14
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d2_03",
+    "name": "Thẻ Bài Công Thức Xác Suất Cổ Điển",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 16
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d2_04",
+    "name": "Thẻ Bài Vận Dụng Tính Xác Suất Cổ Điển",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 18
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d2_05",
+    "name": "Thẻ Bài Confronting ALEATOR",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 20
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d3_01",
+    "name": "Thẻ Bài Hợp của Các Biến Cố",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 12
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d3_02",
+    "name": "Thẻ Bài Biến Cố Xung Khắc & Biến Cố Đối",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 14
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d3_03",
+    "name": "Thẻ Bài Quy Tắc Cộng Biến Cố Xung Khắc",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 16
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d3_04",
+    "name": "Thẻ Bài Quy Tắc Cộng Tổng Quát",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 18
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d3_05",
+    "name": "Thẻ Bài Khiêu Chiến MELKOR",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 20
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d4_01",
+    "name": "Thẻ Bài Giao của Các Biến Cố",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 12
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d4_02",
+    "name": "Thẻ Bài Hai Biến Cố Độc Lập",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 14
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d4_03",
+    "name": "Thẻ Bài Quy Tắc Nhân Xác Suất",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 16
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d4_04",
+    "name": "Thẻ Bài Kết Hợp Quy Tắc Cộng và Nhân",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 18
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "card_id": "card_d4_05",
+    "name": "Thẻ Bài Đại Chiến Cuối Cùng — APHODIUS",
+    "card_type": "attack",
+    "cost": 1,
+    "effects": [
+      {
+        "effect_type": "damage",
+        "target": "enemy",
+        "amount": 20
+      }
+    ]
+  }
+]

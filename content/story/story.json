@@ -1,0 +1,242 @@
+[
+  {
+    "schema_version": 1,
+    "story_id": "story_01_01",
+    "dungeon_id": "dungeon_01",
+    "stage_id": "stage_01_01",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_draven",
+        "text": "Karl! Rừng Mù Sương bị bao phủ bởi Ma Thuật Ngẫu Nhiên. Mọi hành động ở đây đều là một phép thử — ta không thể biết trước kết quả, nhưng có thể lường trước mọi khả năng!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_01_02",
+    "dungeon_id": "dungeon_01",
+    "stage_id": "stage_01_02",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_arithmos",
+        "text": "Ma thuật của rừng sương biến hóa theo mọi khả năng của Không Gian Mẫu $\\Omega$. Hãy gọi tên tất cả các kết quả để mở lối!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_01_03",
+    "dungeon_id": "dungeon_01",
+    "stage_id": "stage_01_03",
+    "dialogue_steps": [
+      {
+        "speaker": "char_karl",
+        "text": "Biến cố chính là tập hợp các khả năng mà ta mong muốn xảy ra! Nếu làm chủ được kết quả thuận lợi, ma thuật của rừng sương sẽ không thể làm ta lạc lối!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_01_04",
+    "dungeon_id": "dungeon_01",
+    "stage_id": "stage_01_04",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_aether",
+        "text": "Những sinh linh ma thuật của rừng sương đang phục kích! Hãy kết hợp phép thử và tính toán số kết quả của biến cố để phá giải trận pháp!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_01_05",
+    "dungeon_id": "dungeon_01",
+    "stage_id": "stage_01_05",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_aphodius",
+        "text": "STOCHAS! Hãy dùng ma thuật sương mù sấm sét thử thách tên học viên ngông cuồng Karl này! Cho nó thấy sự phức tạp của Không Gian Mẫu!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_02_01",
+    "dungeon_id": "dungeon_02",
+    "stage_id": "stage_02_01",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_draven",
+        "text": "Chúng ta đã tiến vào Đầm Lầy Tỷ Lệ. Nơi đây, mọi luồng ma thuật đều cân bằng khi các kết quả có cùng khả năng xảy ra — đó gọi là tính Đồng Khả Năng!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_02_02",
+    "dungeon_id": "dungeon_02",
+    "stage_id": "stage_02_02",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_aether",
+        "text": "Muốn băng qua đầm lầy, ta phải đếm chính xác có bao nhiêu con đường an toàn — đó chính là đếm số kết quả thuận lợi $n(A)$!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_02_03",
+    "dungeon_id": "dungeon_02",
+    "stage_id": "stage_02_03",
+    "dialogue_steps": [
+      {
+        "speaker": "char_karl",
+        "text": "Đã đến lúc dùng chìa khóa Ma Thuật Xác Suất: Lấy số kết quả thuận lợi chia cho tổng số kết quả không gian mẫu!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_02_04",
+    "dungeon_id": "dungeon_02",
+    "stage_id": "stage_02_04",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_draven",
+        "text": "Đầm Lầy Tỷ Lệ đang tạo ra các cạm bẫy ma thuật phức hợp. Hãy dùng công thức tổ hợp để tính xác suất giải mã!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_02_05",
+    "dungeon_id": "dungeon_02",
+    "stage_id": "stage_02_05",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_aphodius",
+        "text": "ALEATOR! Thần cai quản đầm lầy, hãy trừng phạt kẻ dám coi thường những con số xác suất!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_03_01",
+    "dungeon_id": "dungeon_03",
+    "stage_id": "stage_03_01",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_arithmos",
+        "text": "Chào mừng tới Cung Điện Hợp Nhất. Tại đây, hai luồng suy nghĩ có thể hòa làm một — đó là biến cố Hợp $A \\cup B$!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_03_02",
+    "dungeon_id": "dungeon_03",
+    "stage_id": "stage_03_02",
+    "dialogue_steps": [
+      {
+        "speaker": "char_karl",
+        "text": "Biến cố xung khắc không bao giờ xảy ra cùng lúc! Còn biến cố đối chính là mảnh ghép còn lại của cả thế giới ma thuật $\\Omega$!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_03_03",
+    "dungeon_id": "dungeon_03",
+    "stage_id": "stage_03_03",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_draven",
+        "text": "Khi hai nguồn sức mạnh không bị chồng chéo, ta có thể cộng trực tiếp sức mạnh của chúng! Đó là Quy Tắc Cộng Xác Suất!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_03_04",
+    "dungeon_id": "dungeon_03",
+    "stage_id": "stage_03_04",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_aether",
+        "text": "Khi hai trận pháp ma thuật có vùng giao nhau $A \\cap B$, ta phải trừ đi phần giao đó để không bị tính lặp hai lần!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_03_05",
+    "dungeon_id": "dungeon_03",
+    "stage_id": "stage_03_05",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_aphodius",
+        "text": "MELKOR! Hãy dùng ảo ảnh hợp nhất và quy tắc cộng xác suất để tiêu diệt kẻ xâm nhập!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_04_01",
+    "dungeon_id": "dungeon_04",
+    "stage_id": "stage_04_01",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_draven",
+        "text": "Chúng ta đang đứng trước Đỉnh Tháp Độc Lập. Nơi hai dòng chảy thời gian gặp nhau chính là biến cố Giao $A \\cap B$!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_04_02",
+    "dungeon_id": "dungeon_04",
+    "stage_id": "stage_04_02",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_aether",
+        "text": "Đỉnh Tháp Độc Lập vận hành bởi các trụ ma thuật độc lập. Kết quả của trụ này hoàn toàn không ảnh hưởng tới trụ kia!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_04_03",
+    "dungeon_id": "dungeon_04",
+    "stage_id": "stage_04_03",
+    "dialogue_steps": [
+      {
+        "speaker": "char_karl",
+        "text": "Để kích hoạt ma thuật kết hợp của hai trụ tháp độc lập, ta nhân xác suất của từng trụ lại với nhau! $P(A \\cap B) = P(A) \\cdot P(B)$!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_04_04",
+    "dungeon_id": "dungeon_04",
+    "stage_id": "stage_04_04",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_draven",
+        "text": "Chỉ còn một tầng nữa là tới đỉnh tháp! Hãy kết hợp cả phép Nhân và phép Cộng ma thuật để phá giải trận hình bảo vệ của Aphodius!"
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "story_id": "story_04_05",
+    "dungeon_id": "dungeon_04",
+    "stage_id": "stage_04_05",
+    "dialogue_steps": [
+      {
+        "speaker": "npc_aphodius",
+        "text": "Karl! Ngươi đã lên tới đỉnh Tháp Độc Lập! Nhưng ma thuật Hỗn Loạn của ta nắm giữ mọi quy tắc xác suất! Hãy nếm trải tuyệt chiêu của ta nếu ngươi dám!"
+      }
+    ]
+  }
+]

@@ -1,0 +1,106 @@
+[
+  {
+    "schema_version": 1,
+    "enemy_id": "enemy_d1_stochas",
+    "dungeon_id": "dungeon_01",
+    "role": "boss",
+    "max_hp": 100,
+    "stage_ids": [
+      "stage_01_05"
+    ],
+    "intent_selection": "fixed_sequence",
+    "intents": [
+      {
+        "intent_id": "i1",
+        "sequence_order": 0,
+        "weight": null,
+        "telegraph_text": "STOCHAS tấn công bằng Ma Thuật Ngẫu Nhiên!",
+        "effects": [
+          {
+            "effect_type": "damage",
+            "target": "player",
+            "amount": 10
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "enemy_id": "enemy_d2_aleator",
+    "dungeon_id": "dungeon_02",
+    "role": "boss",
+    "max_hp": 150,
+    "stage_ids": [
+      "stage_02_05"
+    ],
+    "intent_selection": "fixed_sequence",
+    "intents": [
+      {
+        "intent_id": "i1",
+        "sequence_order": 0,
+        "weight": null,
+        "telegraph_text": "ALEATOR tấn công bằng Tỷ Lệ Tuyệt Đối!",
+        "effects": [
+          {
+            "effect_type": "damage",
+            "target": "player",
+            "amount": 15
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "enemy_id": "enemy_d3_melkor",
+    "dungeon_id": "dungeon_03",
+    "role": "boss",
+    "max_hp": 200,
+    "stage_ids": [
+      "stage_03_05"
+    ],
+    "intent_selection": "fixed_sequence",
+    "intents": [
+      {
+        "intent_id": "i1",
+        "sequence_order": 0,
+        "weight": null,
+        "telegraph_text": "MELKOR thi triển Phù Thủy Hợp Nhất!",
+        "effects": [
+          {
+            "effect_type": "damage",
+            "target": "player",
+            "amount": 20
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "enemy_id": "enemy_d4_aphodius",
+    "dungeon_id": "dungeon_04",
+    "role": "boss",
+    "max_hp": 300,
+    "stage_ids": [
+      "stage_04_05"
+    ],
+    "intent_selection": "fixed_sequence",
+    "intents": [
+      {
+        "intent_id": "i1",
+        "sequence_order": 0,
+        "weight": null,
+        "telegraph_text": "APHODIUS giáng Sấm Sét Độc Lập!",
+        "effects": [
+          {
+            "effect_type": "damage",
+            "target": "player",
+            "amount": 25
+          }
+        ]
+      }
+    ]
+  }
+]

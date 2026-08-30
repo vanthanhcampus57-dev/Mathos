@@ -1,0 +1,662 @@
+[
+  {
+    "schema_version": 1,
+    "stage_id": "stage_01_01",
+    "dungeon_id": "dungeon_01",
+    "order_in_dungeon": 1,
+    "title": "Khởi Đầu Rừng Mù Sương",
+    "learning_objective": "Nhận biết phép thử ngẫu nhiên và liệt kê các kết quả có thể xảy ra của hành động ngẫu nhiên đơn giản.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_01",
+      "topic_id": "trial_sample_event",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_01_01",
+    "lesson_id": "lesson_01_01",
+    "practice_id": "practice_01_01",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_01_01",
+    "card_pool_ids": [
+      "card_d1_01"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_01_02",
+    "dungeon_id": "dungeon_01",
+    "order_in_dungeon": 2,
+    "title": "Khám Phá Không Gian Mẫu",
+    "learning_objective": "Định nghĩa không gian mẫu $\\Omega$, viết tập hợp các kết quả có thể xảy ra và tính số phần tử $n(\\Omega)$.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_01",
+      "topic_id": "trial_sample_event",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_01_02",
+    "lesson_id": "lesson_01_02",
+    "practice_id": "practice_01_02",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_01_02",
+    "card_pool_ids": [
+      "card_d1_02"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_01_03",
+    "dungeon_id": "dungeon_01",
+    "order_in_dungeon": 3,
+    "title": "Biến Cố và Tập Con",
+    "learning_objective": "Khái niệm biến cố $A$ là tập con của $\\Omega$, xác định kết quả thuận lợi $n(A)$, biến cố không thể và biến cố chắc chắn.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_01",
+      "topic_id": "trial_sample_event",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_01_03",
+    "lesson_id": "lesson_01_03",
+    "practice_id": "practice_01_03",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_01_03",
+    "card_pool_ids": [
+      "card_d1_03"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_01_04",
+    "dungeon_id": "dungeon_01",
+    "order_in_dungeon": 4,
+    "title": "Vận Dụng Phép Thử & Biến Cố",
+    "learning_objective": "Phân tích phép thử phức hợp nhẹ, xác định không gian mẫu và tính số kết quả thuận lợi cho biến cố phức tạp hơn.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_01",
+      "topic_id": "trial_sample_event",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_01_04",
+    "lesson_id": "lesson_01_04",
+    "practice_id": "practice_01_04",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_01_04",
+    "card_pool_ids": [
+      "card_d1_04"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_01_05",
+    "dungeon_id": "dungeon_01",
+    "order_in_dungeon": 5,
+    "title": "Quyết Chiến STOCHAS",
+    "learning_objective": "Tổng hợp toàn bộ kiến thức về phép thử, không gian mẫu và biến cố để vượt qua bài kiểm tra của Boss STOCHAS và nhận Mảnh Vỡ Ma Thuật 01.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_01",
+      "topic_id": "trial_sample_event",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_01_05",
+    "lesson_id": "lesson_01_05",
+    "practice_id": "practice_01_05",
+    "encounter_mode": "boss_battle",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_01_05",
+    "card_pool_ids": [
+      "card_d1_05"
+    ],
+    "enemy_id": "enemy_d1_stochas",
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_02_01",
+    "dungeon_id": "dungeon_02",
+    "order_in_dungeon": 1,
+    "title": "Kết Quả Đồng Khả Năng",
+    "learning_objective": "Nhận biết các kết quả đồng khả năng trong phép thử ngẫu nhiên và ý nghĩa của việc chia đều khả năng xuất hiện.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_02",
+      "topic_id": "classical_probability",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_02_01",
+    "lesson_id": "lesson_02_01",
+    "practice_id": "practice_02_01",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_02_01",
+    "card_pool_ids": [
+      "card_d2_01"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_02_02",
+    "dungeon_id": "dungeon_02",
+    "order_in_dungeon": 2,
+    "title": "Đếm Kết Quả Thuận Lợi",
+    "learning_objective": "Xác định và đếm chính xác số kết quả thuận lợi $n(A)$ cho các biến cố trong phép thử nhiều khả năng.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_02",
+      "topic_id": "classical_probability",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_02_02",
+    "lesson_id": "lesson_02_02",
+    "practice_id": "practice_02_02",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_02_02",
+    "card_pool_ids": [
+      "card_d2_02"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_02_03",
+    "dungeon_id": "dungeon_02",
+    "order_in_dungeon": 3,
+    "title": "Công Thức Xác Suất Cổ Điển",
+    "learning_objective": "Sử dụng công thức $P(A) = \\frac{n(A)}{n(\\Omega)}$ để tính xác suất của biến cố và nắm vững các tính chất $0 \\le P(A) \\le 1$.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_02",
+      "topic_id": "classical_probability",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_02_03",
+    "lesson_id": "lesson_02_03",
+    "practice_id": "practice_02_03",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_02_03",
+    "card_pool_ids": [
+      "card_d2_03"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_02_04",
+    "dungeon_id": "dungeon_02",
+    "order_in_dungeon": 4,
+    "title": "Vận Dụng Tính Xác Suất Cổ Điển",
+    "learning_objective": "Tính xác suất cổ điển trong các phép thử chọn tổ hợp ngẫu nhiên nhiều phần tử từ tập hợp.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_02",
+      "topic_id": "classical_probability",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_02_04",
+    "lesson_id": "lesson_02_04",
+    "practice_id": "practice_02_04",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_02_04",
+    "card_pool_ids": [
+      "card_d2_04"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_02_05",
+    "dungeon_id": "dungeon_02",
+    "order_in_dungeon": 5,
+    "title": "Confronting ALEATOR",
+    "learning_objective": "Vận dụng tổng hợp công thức xác suất cổ điển, kĩ thuật đếm tổ hợp để đánh bại Chúa Đầm Tỷ Lệ ALEATOR và thu thập Mảnh Vỡ Ma Thuật 02.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_02",
+      "topic_id": "classical_probability",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_02_05",
+    "lesson_id": "lesson_02_05",
+    "practice_id": "practice_02_05",
+    "encounter_mode": "boss_battle",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_02_05",
+    "card_pool_ids": [
+      "card_d2_05"
+    ],
+    "enemy_id": "enemy_d2_aleator",
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_03_01",
+    "dungeon_id": "dungeon_03",
+    "order_in_dungeon": 1,
+    "title": "Hợp của Các Biến Cố",
+    "learning_objective": "Nhận biết khái niệm hợp của hai biến cố $A \\cup B$ và biểu diễn biến cố hợp dưới dạng tập hợp.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_03",
+      "topic_id": "addition_rule",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_03_01",
+    "lesson_id": "lesson_03_01",
+    "practice_id": "practice_03_01",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_03_01",
+    "card_pool_ids": [
+      "card_d3_01"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_03_02",
+    "dungeon_id": "dungeon_03",
+    "order_in_dungeon": 2,
+    "title": "Biến Cố Xung Khắc & Biến Cố Đối",
+    "learning_objective": "Nhận biết hai biến cố xung khắc ($A \\cap B = \\emptyset$), biến cố đối $\\overline{A}$ và công thức $P(\\overline{A}) = 1 - P(A)$.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_03",
+      "topic_id": "addition_rule",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_03_02",
+    "lesson_id": "lesson_03_02",
+    "practice_id": "practice_03_02",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_03_02",
+    "card_pool_ids": [
+      "card_d3_02"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_03_03",
+    "dungeon_id": "dungeon_03",
+    "order_in_dungeon": 3,
+    "title": "Quy Tắc Cộng Biến Cố Xung Khắc",
+    "learning_objective": "Áp dụng quy tắc cộng xác suất $P(A \\cup B) = P(A) + P(B)$ cho hai biến cố xung khắc.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_03",
+      "topic_id": "addition_rule",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_03_03",
+    "lesson_id": "lesson_03_03",
+    "practice_id": "practice_03_03",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_03_03",
+    "card_pool_ids": [
+      "card_d3_03"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_03_04",
+    "dungeon_id": "dungeon_03",
+    "order_in_dungeon": 4,
+    "title": "Quy Tắc Cộng Tổng Quát",
+    "learning_objective": "Áp dụng quy tắc cộng xác suất tổng quát $P(A \\cup B) = P(A) + P(B) - P(A \\cap B)$ cho hai biến cố không xung khắc.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_03",
+      "topic_id": "addition_rule",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_03_04",
+    "lesson_id": "lesson_03_04",
+    "practice_id": "practice_03_04",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_03_04",
+    "card_pool_ids": [
+      "card_d3_04"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_03_05",
+    "dungeon_id": "dungeon_03",
+    "order_in_dungeon": 5,
+    "title": "Khiêu Chiến MELKOR",
+    "learning_objective": "Vận dụng linh hoạt quy tắc cộng xác suất (xung khắc và tổng quát) cùng biến cố đối để đánh bại Phù Thủy Hợp Nhất MELKOR và lấy Mảnh Vỡ Ma Thuật 03.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_03",
+      "topic_id": "addition_rule",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_03_05",
+    "lesson_id": "lesson_03_05",
+    "practice_id": "practice_03_05",
+    "encounter_mode": "boss_battle",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_03_05",
+    "card_pool_ids": [
+      "card_d3_05"
+    ],
+    "enemy_id": "enemy_d3_melkor",
+    "intent_enabled": true
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_04_01",
+    "dungeon_id": "dungeon_04",
+    "order_in_dungeon": 1,
+    "title": "Giao của Các Biến Cố",
+    "learning_objective": "Nhận biết khái niệm giao của hai biến cố $A \\cap B$ và biểu diễn biến cố giao dưới dạng tập hợp.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_04",
+      "topic_id": "multiplication_independence",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_04_01",
+    "lesson_id": "lesson_04_01",
+    "practice_id": "practice_04_01",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_04_01",
+    "card_pool_ids": [
+      "card_d4_01"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_04_02",
+    "dungeon_id": "dungeon_04",
+    "order_in_dungeon": 2,
+    "title": "Hai Biến Cố Độc Lập",
+    "learning_objective": "Nhận biết hai biến cố độc lập và phân biệt giữa hai biến cố độc lập với hai biến cố xung khắc.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_04",
+      "topic_id": "multiplication_independence",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_04_02",
+    "lesson_id": "lesson_04_02",
+    "practice_id": "practice_04_02",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_04_02",
+    "card_pool_ids": [
+      "card_d4_02"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_04_03",
+    "dungeon_id": "dungeon_04",
+    "order_in_dungeon": 3,
+    "title": "Quy Tắc Nhân Xác Suất",
+    "learning_objective": "Hiểu và áp dụng quy tắc nhân xác suất $P(A \\cap B) = P(A) \\cdot P(B)$ cho hai biến cố độc lập.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_04",
+      "topic_id": "multiplication_independence",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_04_03",
+    "lesson_id": "lesson_04_03",
+    "practice_id": "practice_04_03",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_04_03",
+    "card_pool_ids": [
+      "card_d4_03"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_04_04",
+    "dungeon_id": "dungeon_04",
+    "order_in_dungeon": 4,
+    "title": "Kết Hợp Quy Tắc Cộng và Nhân",
+    "learning_objective": "Vận dụng linh hoạt cả quy tắc cộng và quy tắc nhân xác suất để giải bài toán xác suất tổng hợp phức tạp (bài toán ít nhất 1 thành công, bài toán mạch điện/mục tiêu).",
+    "learning_scope": {
+      "dungeon_id": "dungeon_04",
+      "topic_id": "multiplication_independence",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_04_04",
+    "lesson_id": "lesson_04_04",
+    "practice_id": "practice_04_04",
+    "encounter_mode": "puzzle_onboarding",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_04_04",
+    "card_pool_ids": [
+      "card_d4_04"
+    ],
+    "enemy_id": null,
+    "intent_enabled": false
+  },
+  {
+    "schema_version": 1,
+    "stage_id": "stage_04_05",
+    "dungeon_id": "dungeon_04",
+    "order_in_dungeon": 5,
+    "title": "Đại Chiến Cuối Cùng — APHODIUS",
+    "learning_objective": "Tổng hợp toàn bộ kiến thức đại cương xác suất (Phép thử, Không gian mẫu, Xác suất cổ điển, Quy tắc cộng và Quy tắc nhân) để tiêu diệt Đại Ma Vương APHODIUS, giải cứu thế giới Mathos và hoàn thành trò chơi.",
+    "learning_scope": {
+      "dungeon_id": "dungeon_04",
+      "topic_id": "multiplication_independence",
+      "subtopics": [],
+      "difficulty_min": 1,
+      "difficulty_max": 5
+    },
+    "phase_sequence": [
+      "story",
+      "lesson",
+      "practice",
+      "combat",
+      "reward"
+    ],
+    "story_id": "story_04_05",
+    "lesson_id": "lesson_04_05",
+    "practice_id": "practice_04_05",
+    "encounter_mode": "boss_battle",
+    "completion_rule": "encounter_victory",
+    "reward_id": "reward_04_05",
+    "card_pool_ids": [
+      "card_d4_05"
+    ],
+    "enemy_id": "enemy_d4_aphodius",
+    "intent_enabled": true
+  }
+]

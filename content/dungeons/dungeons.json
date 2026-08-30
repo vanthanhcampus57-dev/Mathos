@@ -1,0 +1,78 @@
+[
+  {
+    "schema_version": 1,
+    "dungeon_id": "dungeon_01",
+    "order": 1,
+    "display_name": "Khu Rừng Mù Sương",
+    "topic_id": "trial_sample_event",
+    "learning_objective": "Học về Phép thử ngẫu nhiên, Không gian mẫu và Biến cố cơ bản.",
+    "stage_ids": [
+      "stage_01_01",
+      "stage_01_02",
+      "stage_01_03",
+      "stage_01_04",
+      "stage_01_05"
+    ],
+    "boss_enemy_id": "enemy_d1_stochas",
+    "fragment_id": "fragment_01",
+    "prerequisite_dungeon_id": null,
+    "asset_refs": []
+  },
+  {
+    "schema_version": 1,
+    "dungeon_id": "dungeon_02",
+    "order": 2,
+    "display_name": "Đầm Lầy Tỷ Lệ",
+    "topic_id": "classical_probability",
+    "learning_objective": "Học về Định nghĩa xác suất cổ điển, Tính chất xác suất và Biến cố đối.",
+    "stage_ids": [
+      "stage_02_01",
+      "stage_02_02",
+      "stage_02_03",
+      "stage_02_04",
+      "stage_02_05"
+    ],
+    "boss_enemy_id": "enemy_d2_aleator",
+    "fragment_id": "fragment_02",
+    "prerequisite_dungeon_id": "dungeon_01",
+    "asset_refs": []
+  },
+  {
+    "schema_version": 1,
+    "dungeon_id": "dungeon_03",
+    "order": 3,
+    "display_name": "Cung Điện Hợp Nhất",
+    "topic_id": "addition_rule",
+    "learning_objective": "Học về Biến cố xung khắc và Quy tắc cộng xác suất.",
+    "stage_ids": [
+      "stage_03_01",
+      "stage_03_02",
+      "stage_03_03",
+      "stage_03_04",
+      "stage_03_05"
+    ],
+    "boss_enemy_id": "enemy_d3_melkor",
+    "fragment_id": "fragment_03",
+    "prerequisite_dungeon_id": "dungeon_02",
+    "asset_refs": []
+  },
+  {
+    "schema_version": 1,
+    "dungeon_id": "dungeon_04",
+    "order": 4,
+    "display_name": "Đỉnh Tháp Độc Lập",
+    "topic_id": "multiplication_independence",
+    "learning_objective": "Học về Biến cố độc lập và Quy tắc nhân xác suất.",
+    "stage_ids": [
+      "stage_04_01",
+      "stage_04_02",
+      "stage_04_03",
+      "stage_04_04",
+      "stage_04_05"
+    ],
+    "boss_enemy_id": "enemy_d4_aphodius",
+    "fragment_id": "fragment_04",
+    "prerequisite_dungeon_id": "dungeon_03",
+    "asset_refs": []
+  }
+]
