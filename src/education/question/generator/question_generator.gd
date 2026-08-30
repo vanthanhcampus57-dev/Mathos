@@ -10,11 +10,8 @@ func get_family_id() -> String:
 
 func generate_question(spec: Dictionary, pack: Dictionary, parameters: Dictionary = {}) -> Dictionary:
 	var variant_key: String = QuestionGeneratorIdentityScript.derive_variant_key(parameters)
-	return _generate_question_with_explicit_variant_for_test(spec, pack, variant_key, parameters)
-
-func _generate_question_with_explicit_variant_for_test(spec: Dictionary, pack: Dictionary, explicit_variant_key: String, parameters: Dictionary = {}) -> Dictionary:
 	var spec_id: String = String(spec.get("spec_id", "unknown_spec"))
-	var gen_id: String = QuestionGeneratorIdentityScript.build_generated_id(spec_id, explicit_variant_key)
+	var gen_id: String = QuestionGeneratorIdentityScript.build_generated_id(spec_id, variant_key)
 
 	var dungeon_id: String = String(spec.get("dungeon_id", ""))
 	var topic_id: String = String(spec.get("topic_id", ""))
@@ -55,7 +52,7 @@ func _generate_question_with_explicit_variant_for_test(spec: Dictionary, pack: D
 		"adaptive_metadata": {
 			"skill_ids": [subtopic_id],
 			"generator_spec_id": spec_id,
-			"variant_key": explicit_variant_key
+			"variant_key": variant_key
 		}
 	}
 

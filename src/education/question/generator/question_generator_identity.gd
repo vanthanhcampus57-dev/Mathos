@@ -17,7 +17,37 @@ static func is_valid_variant_key(variant_key: String) -> bool:
 			return false
 	return true
 
+static func is_valid_parameter_value(val: Variant) -> bool:
+	if val == null:
+		return true
+	elif val is bool:
+		return true
+	elif val is int:
+		return true
+	elif val is float:
+		var f_val: float = val as float
+		return not (is_nan(f_val) or is_inf(f_val))
+	elif val is String:
+		return true
+	elif val is Array:
+		var arr: Array = val as Array
+		for item in arr:
+			if not is_valid_parameter_value(item):
+				return false
+		return true
+	elif val is Dictionary:
+		var dict: Dictionary = val as Dictionary
+		for k in dict.keys():
+			if not (k is String):
+				return false
+			if not is_valid_parameter_value(dict[k]):
+				return false
+		return true
+	return false
+
 static func canonical_serialize(val: Variant) -> String:
+	if not is_valid_parameter_value(val):
+		return ""
 	if val == null:
 		return "n;"
 	elif val is bool:
@@ -37,24 +67,34 @@ static func canonical_serialize(val: Variant) -> String:
 		var arr: Array = val as Array
 		var items: Array[String] = []
 		for item in arr:
-			items.append(canonical_serialize(item))
+			var ser: String = canonical_serialize(item)
+			if ser.is_empty():
+				return ""
+			items.append(ser)
 		return "a:" + str(arr.size()) + ":[" + "".join(items) + "]"
 	elif val is Dictionary:
 		var dict: Dictionary = val as Dictionary
 		var keys: Array = dict.keys()
-		keys.sort_custom(func(a, b): return str(a) < str(b))
+		keys.sort()
 		var pairs: Array[String] = []
 		for k in keys:
-			pairs.append(canonical_serialize(k) + canonical_serialize(dict[k]))
+			var ser_k: String = canonical_serialize(k)
+			var ser_v: String = canonical_serialize(dict[k])
+			if ser_k.is_empty() or ser_v.is_empty():
+				return ""
+			pairs.append(ser_k + ser_v)
 		return "d:" + str(dict.size()) + ":{" + "".join(pairs) + "}"
 	else:
-		var str_val: String = str(val)
-		return "s:" + str(str_val.length()) + ":" + str_val + ";"
+		return ""
 
 static func derive_variant_key(parameters: Dictionary) -> String:
 	if parameters.is_empty():
 		return "v-default"
+	if not is_valid_parameter_value(parameters):
+		return ""
 	var serialized: String = canonical_serialize(parameters)
+	if serialized.is_empty():
+		return ""
 	var md5_hash: String = serialized.md5_text().to_lower()
 	return "v-" + md5_hash.substr(0, 12)
 

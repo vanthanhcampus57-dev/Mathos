@@ -131,5 +131,5 @@ func _count_suite_tests(name: String) -> int:
 		"Shared Components (A.2)": return 9
 		"Question Interaction Visual States": return 4
 		"Production E2E Flow": return 1
-		"Procedural QGen Foundation": return 6
+		"Procedural QGen Foundation": return 7
 		_: return 1

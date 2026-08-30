@@ -19,6 +19,7 @@ static func run_all_tests() -> bool:
 	all_ok = test_qgen_010_generated_id_stability() and all_ok
 	all_ok = test_qgen_011_collision_protection() and all_ok
 	all_ok = test_qgen_012_generator_registry() and all_ok
+	all_ok = test_qgen_013_parameter_contract_and_non_finite_rejection() and all_ok
 
 	return all_ok
 
@@ -397,4 +398,112 @@ static func test_qgen_012_generator_registry() -> bool:
 		return false
 
 	print("[QGEN-GATE-012] PASS")
+	return true
+
+static func test_qgen_013_parameter_contract_and_non_finite_rejection() -> bool:
+	print("[QGEN-GATE-013] Testing parameter key contract, non-finite rejection, and absence of explicit variant helper...")
+
+	# 1. Prove normal production caller has no explicit variant API on QuestionGenerator
+	var gen: QuestionGenerator = QuestionGenerator.new()
+	var gen_script: GDScript = QuestionGenerator as GDScript
+	if gen.has_method("_generate_question_with_explicit_variant_for_test") or gen_script.has_script_method("_generate_question_with_explicit_variant_for_test"):
+		print("[QGEN-GATE-013] FAIL: QuestionGenerator still exposes _generate_question_with_explicit_variant_for_test")
+		return false
+
+	var spec: Dictionary = {
+		"spec_id": "qspec_contract_test",
+		"dungeon_id": "dungeon_01",
+		"topic_id": "topic_01",
+		"subtopic_id": "subtopic_01",
+		"interaction_type": "multiple_choice",
+		"template": {
+			"prompt": "Test prompt {val}",
+			"explanation": "Exp",
+			"learning_objective": "Obj",
+			"interaction_payload": {"options": []},
+			"answer_spec": {}
+		}
+	}
+
+	# 2. String-key parameters PASS
+	var valid_str_params: Dictionary = {"k": 3, "heads": 2, "label": "test"}
+	var valid_vkey: String = QuestionGeneratorIdentity.derive_variant_key(valid_str_params)
+	if valid_vkey.is_empty() or not QuestionGeneratorIdentity.is_valid_variant_key(valid_vkey):
+		print("[QGEN-GATE-013] FAIL: String-key parameters failed variant derivation")
+		return false
+	var valid_q: Dictionary = gen.generate_question(spec, {}, valid_str_params)
+	if String(valid_q.get("question_id", "")).is_empty():
+		print("[QGEN-GATE-013] FAIL: Question generation with String-key parameters returned empty question_id")
+		return false
+
+	# 3. non-String dictionary key FAIL
+	var bad_key_params: Dictionary = {123: "value"}
+	if QuestionGeneratorIdentity.derive_variant_key(bad_key_params) != "":
+		print("[QGEN-GATE-013] FAIL: non-String dictionary key produced non-empty variant_key")
+		return false
+	if QuestionGeneratorIdentity.build_generated_id_from_params("qspec_test", bad_key_params) != "":
+		print("[QGEN-GATE-013] FAIL: non-String dictionary key produced non-empty generated_id")
+		return false
+	var bad_key_q: Dictionary = gen.generate_question(spec, {}, bad_key_params)
+	if String(bad_key_q.get("question_id", "")) != "":
+		print("[QGEN-GATE-013] FAIL: QuestionGenerator generated non-empty question_id for non-String key parameters")
+		return false
+	var bad_key_batch: Dictionary = gen.generate_batch(spec, {}, [bad_key_params])
+	if bool(bad_key_batch.get("success", true)):
+		print("[QGEN-GATE-013] FAIL: generate_batch succeeded for non-String dictionary key parameters")
+		return false
+
+	# 4. nested non-String key FAIL
+	var nested_bad_key_params: Dictionary = {"outer": {456: "value"}}
+	if QuestionGeneratorIdentity.derive_variant_key(nested_bad_key_params) != "":
+		print("[QGEN-GATE-013] FAIL: nested non-String key produced non-empty variant_key")
+		return false
+	var nested_bad_batch: Dictionary = gen.generate_batch(spec, {}, [nested_bad_key_params])
+	if bool(nested_bad_batch.get("success", true)):
+		print("[QGEN-GATE-013] FAIL: generate_batch succeeded for nested non-String key parameters")
+		return false
+
+	# 5. NaN FAIL
+	var nan_params: Dictionary = {"val": NAN}
+	if QuestionGeneratorIdentity.derive_variant_key(nan_params) != "":
+		print("[QGEN-GATE-013] FAIL: NaN float parameter produced non-empty variant_key")
+		return false
+	var nan_q: Dictionary = gen.generate_question(spec, {}, nan_params)
+	if String(nan_q.get("question_id", "")) != "":
+		print("[QGEN-GATE-013] FAIL: QuestionGenerator generated non-empty question_id for NaN parameter")
+		return false
+	var nan_batch: Dictionary = gen.generate_batch(spec, {}, [nan_params])
+	if bool(nan_batch.get("success", true)):
+		print("[QGEN-GATE-013] FAIL: generate_batch succeeded for NaN parameter")
+		return false
+
+	# 6. +INF FAIL
+	var inf_params: Dictionary = {"val": INF}
+	if QuestionGeneratorIdentity.derive_variant_key(inf_params) != "":
+		print("[QGEN-GATE-013] FAIL: +INF float parameter produced non-empty variant_key")
+		return false
+	var inf_q: Dictionary = gen.generate_question(spec, {}, inf_params)
+	if String(inf_q.get("question_id", "")) != "":
+		print("[QGEN-GATE-013] FAIL: QuestionGenerator generated non-empty question_id for +INF parameter")
+		return false
+	var inf_batch: Dictionary = gen.generate_batch(spec, {}, [inf_params])
+	if bool(inf_batch.get("success", true)):
+		print("[QGEN-GATE-013] FAIL: generate_batch succeeded for +INF parameter")
+		return false
+
+	# 7. -INF FAIL
+	var neg_inf_params: Dictionary = {"val": -INF}
+	if QuestionGeneratorIdentity.derive_variant_key(neg_inf_params) != "":
+		print("[QGEN-GATE-013] FAIL: -INF float parameter produced non-empty variant_key")
+		return false
+	var neg_inf_q: Dictionary = gen.generate_question(spec, {}, neg_inf_params)
+	if String(neg_inf_q.get("question_id", "")) != "":
+		print("[QGEN-GATE-013] FAIL: QuestionGenerator generated non-empty question_id for -INF parameter")
+		return false
+	var neg_inf_batch: Dictionary = gen.generate_batch(spec, {}, [neg_inf_params])
+	if bool(neg_inf_batch.get("success", true)):
+		print("[QGEN-GATE-013] FAIL: generate_batch succeeded for -INF parameter")
+		return false
+
+	print("[QGEN-GATE-013] PASS")
 	return true
