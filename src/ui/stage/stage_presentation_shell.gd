@@ -1,33 +1,50 @@
 class_name StagePresentationShell
 extends Control
 
-## Main UI Presentation Shell for Mathos stages (e.g. Stage 1.1 -> 1.3).
+## Main UI Presentation Shell for Mathos stages (e.g. Stage 1.1 -> 4.5).
 ## Hosts lesson dialogue, question host container, feedback host container,
-## left icon sidebar, separate advisor panel, and stage completion panels.
-##
-## Pure view component. Emits presentation intents only without touching
-## GameFlow, ProgressState, SaveService, or Combat engines.
+## left icon sidebar, advisor panel, stage completion panels,
+## Game Victory Panel, Dungeon Stage Map Panel, and Pause Menu Overlay.
 
 enum ViewMode {
 	MODE_ENTRY = 0,
 	MODE_LESSON = 1,
 	MODE_QUESTION_HOST = 2,
 	MODE_FEEDBACK_HOST = 3,
-	MODE_STAGE_COMPLETE = 4
+	MODE_STAGE_COMPLETE = 4,
+	MODE_VICTORY = 5,
+	MODE_MAP = 6
 }
 
 signal new_game_requested()
 signal continue_game_requested()
+signal show_map_requested()
+signal return_to_main_menu_requested()
 signal lesson_continue_requested()
 signal question_host_ready(container: Control)
 signal feedback_host_ready(container: Control)
 signal stage_continue_requested()
+signal stage_selected(stage_id: String)
+signal pause_requested()
+signal resume_requested()
 
 var _current_mode: ViewMode = ViewMode.MODE_ENTRY
+var _previous_mode: ViewMode = ViewMode.MODE_LESSON
 var _context_info: PresentationModels.StageContextInfo = null
+
+# Sub-components
+var _victory_panel: GameVictoryPanel = null
+var _stage_map_panel: DungeonStageMapPanel = null
+var _pause_overlay: PauseMenuOverlay = null
+
+# Buttons in Main Menu
+var _journey_map_button: Button = null
+var _save_summary_label: Label = null
+var _pause_button: Button = null
 
 func _ready() -> void:
 	_update_background_texture()
+	_ensure_sub_components()
 
 	var new_game_btn: Button = _get_new_game_button()
 	if new_game_btn != null:
@@ -38,6 +55,10 @@ func _ready() -> void:
 	if continue_game_btn != null:
 		if not continue_game_btn.pressed.is_connected(_on_continue_game_pressed):
 			continue_game_btn.pressed.connect(_on_continue_game_pressed)
+
+	if _journey_map_button != null:
+		if not _journey_map_button.pressed.is_connected(_on_journey_map_pressed):
+			_journey_map_button.pressed.connect(_on_journey_map_pressed)
 
 	var lesson_panel: LessonPanel = get_lesson_panel()
 	if lesson_panel != null:
@@ -55,7 +76,88 @@ func _ready() -> void:
 	if q_host != null and not q_host.child_entered_tree.is_connected(_on_question_host_child_entered):
 		q_host.child_entered_tree.connect(_on_question_host_child_entered)
 
+	var sidebar_map_btn: Button = get_node_or_null("VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox/NavMapButton") as Button
+	if sidebar_map_btn != null and not sidebar_map_btn.pressed.is_connected(_on_journey_map_pressed):
+		sidebar_map_btn.pressed.connect(_on_journey_map_pressed)
+
 	set_view_mode(_current_mode)
+
+func _ensure_sub_components() -> void:
+	var main_content: Control = _get_main_content_vbox()
+
+	# Victory Panel
+	if _victory_panel == null and main_content != null:
+		_victory_panel = main_content.get_node_or_null("GameVictoryPanel") as GameVictoryPanel
+		if _victory_panel == null:
+			_victory_panel = GameVictoryPanel.new()
+			_victory_panel.name = "GameVictoryPanel"
+			main_content.add_child(_victory_panel)
+		if not _victory_panel.return_to_main_menu_requested.is_connected(_on_victory_return):
+			_victory_panel.return_to_main_menu_requested.connect(_on_victory_return)
+
+	# Stage Map Panel
+	if _stage_map_panel == null and main_content != null:
+		_stage_map_panel = main_content.get_node_or_null("DungeonStageMapPanel") as DungeonStageMapPanel
+		if _stage_map_panel == null:
+			_stage_map_panel = DungeonStageMapPanel.new()
+			_stage_map_panel.name = "DungeonStageMapPanel"
+			main_content.add_child(_stage_map_panel)
+		if not _stage_map_panel.stage_selected.is_connected(_on_map_stage_selected):
+			_stage_map_panel.stage_selected.connect(_on_map_stage_selected)
+		if not _stage_map_panel.back_requested.is_connected(_on_map_back):
+			_stage_map_panel.back_requested.connect(_on_map_back)
+
+	# Pause Menu Overlay
+	if _pause_overlay == null:
+		_pause_overlay = get_node_or_null("PauseMenuOverlay") as PauseMenuOverlay
+		if _pause_overlay == null:
+			_pause_overlay = PauseMenuOverlay.new()
+			_pause_overlay.name = "PauseMenuOverlay"
+			add_child(_pause_overlay)
+		if not _pause_overlay.resume_requested.is_connected(_on_pause_resume):
+			_pause_overlay.resume_requested.connect(_on_pause_resume)
+		if not _pause_overlay.stage_map_requested.is_connected(_on_pause_stage_map):
+			_pause_overlay.stage_map_requested.connect(_on_pause_stage_map)
+		if not _pause_overlay.main_menu_requested.is_connected(_on_pause_main_menu):
+			_pause_overlay.main_menu_requested.connect(_on_pause_main_menu)
+
+	# Main Menu Journey Map Button & Save Summary Label
+	var start_vbox: VBoxContainer = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer") as VBoxContainer
+	if start_vbox != null:
+		if _journey_map_button == null:
+			_journey_map_button = start_vbox.get_node_or_null("JourneyMapButton") as Button
+			if _journey_map_button == null:
+				_journey_map_button = Button.new()
+				_journey_map_button.name = "JourneyMapButton"
+				_journey_map_button.custom_minimum_size = Vector2(280, 48)
+				_journey_map_button.size_flags_horizontal = SIZE_SHRINK_CENTER
+				_journey_map_button.theme_type_variation = &"MathosSecondaryButton"
+				_journey_map_button.text = "Bản đồ hành trình"
+				start_vbox.add_child(_journey_map_button)
+
+		if _save_summary_label == null:
+			_save_summary_label = start_vbox.get_node_or_null("SaveSummaryLabel") as Label
+			if _save_summary_label == null:
+				_save_summary_label = Label.new()
+				_save_summary_label.name = "SaveSummaryLabel"
+				_save_summary_label.theme_type_variation = &"MathosMeta"
+				_save_summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				_save_summary_label.visible = false
+				start_vbox.add_child(_save_summary_label)
+
+	# Pause Button in HeaderBar
+	var header_bar: HBoxContainer = _get_header_bar() as HBoxContainer
+	if header_bar != null and _pause_button == null:
+		_pause_button = header_bar.get_node_or_null("PauseButton") as Button
+		if _pause_button == null:
+			_pause_button = Button.new()
+			_pause_button.name = "PauseButton"
+			_pause_button.custom_minimum_size = Vector2(100, 36)
+			_pause_button.theme_type_variation = &"MathosSecondaryButton"
+			_pause_button.text = "Tạm dừng"
+			header_bar.add_child(_pause_button)
+			if not _pause_button.pressed.is_connected(toggle_pause):
+				_pause_button.pressed.connect(toggle_pause)
 
 func _update_background_texture() -> void:
 	var bg_rect: TextureRect = get_node_or_null("BackgroundTextureRect") as TextureRect
@@ -85,7 +187,6 @@ func _update_background_texture() -> void:
 		bg_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		bg_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 
-## Consumes caller-supplied neutral presentation data.
 func set_stage_context(data: Variant) -> void:
 	if data is PresentationModels.StageContextInfo:
 		_context_info = data as PresentationModels.StageContextInfo
@@ -104,16 +205,88 @@ func set_stage_context(data: Variant) -> void:
 	if stage_complete_panel != null and _context_info != null:
 		stage_complete_panel.set_summary_data(_context_info.stage_title)
 
+func set_continue_available(available: bool, summary_data: Dictionary = {}) -> void:
+	_ensure_sub_components()
+	var continue_btn: Button = _get_continue_game_button()
+	if continue_btn != null:
+		continue_btn.visible = available
+		continue_btn.disabled = not available
+		if available:
+			continue_btn.text = "Tiếp tục"
+			continue_btn.theme_type_variation = &"MathosPrimaryButton"
+
+	var new_game_btn: Button = _get_new_game_button()
+	if new_game_btn != null:
+		new_game_btn.text = "Bắt đầu mới"
+		if available:
+			new_game_btn.theme_type_variation = &"MathosSecondaryButton"
+		else:
+			new_game_btn.theme_type_variation = &"MathosPrimaryButton"
+
+	var summary_lbl: Label = _get_save_summary_label()
+	if summary_lbl != null:
+		if available and not summary_data.is_empty():
+			var title_str: String = String(summary_data.get("stage_title", summary_data.get("stage_id", "")))
+			summary_lbl.text = "Tiến độ đã lưu: %s" % title_str
+			summary_lbl.visible = true
+		else:
+			summary_lbl.visible = false
+			summary_lbl.text = ""
+
+func show_game_victory(player_gold: int = 0, player_xp: int = 0) -> void:
+	_ensure_sub_components()
+	if _victory_panel != null:
+		_victory_panel.set_victory_data(player_gold, player_xp)
+	set_view_mode(ViewMode.MODE_VICTORY)
+
+func show_stage_map(map_data: Dictionary = {}) -> void:
+	_ensure_sub_components()
+	if _stage_map_panel != null:
+		_stage_map_panel.set_map_data(map_data)
+	set_view_mode(ViewMode.MODE_MAP)
+
+func toggle_pause() -> void:
+	_ensure_sub_components()
+	if _pause_overlay == null:
+		return
+
+	# Only allow pausing during active stage gameplay
+	var is_gameplay: bool = (_current_mode == ViewMode.MODE_LESSON or _current_mode == ViewMode.MODE_QUESTION_HOST or _current_mode == ViewMode.MODE_FEEDBACK_HOST or _current_mode == ViewMode.MODE_STAGE_COMPLETE)
+	if not is_gameplay and not _pause_overlay.is_paused():
+		return
+
+	_pause_overlay.toggle_pause()
+
+func show_pause() -> void:
+	_ensure_sub_components()
+	if _pause_overlay != null:
+		_pause_overlay.show_pause()
+
+func hide_pause() -> void:
+	_ensure_sub_components()
+	if _pause_overlay != null:
+		_pause_overlay.hide_pause()
+
+func is_paused() -> bool:
+	return _pause_overlay != null and _pause_overlay.is_paused()
+
 func set_view_mode(mode: ViewMode) -> void:
+	_ensure_sub_components()
+
+	if _current_mode != ViewMode.MODE_MAP and _current_mode != ViewMode.MODE_VICTORY and _current_mode != ViewMode.MODE_ENTRY:
+		_previous_mode = _current_mode
+
 	_current_mode = mode
+
+	var is_gameplay: bool = (_current_mode == ViewMode.MODE_LESSON or _current_mode == ViewMode.MODE_QUESTION_HOST or _current_mode == ViewMode.MODE_FEEDBACK_HOST or _current_mode == ViewMode.MODE_STAGE_COMPLETE)
 
 	var header_bar: Control = _get_header_bar()
 	if header_bar != null:
-		header_bar.visible = (_current_mode != ViewMode.MODE_ENTRY)
+		header_bar.visible = is_gameplay
 
 	var left_sidebar: Control = _get_left_sidebar()
 	if left_sidebar != null:
-		left_sidebar.visible = (_current_mode != ViewMode.MODE_ENTRY)
+		left_sidebar.visible = is_gameplay
 
 	var start_game_container: Control = _get_start_game_container()
 	if start_game_container != null:
@@ -147,6 +320,17 @@ func set_view_mode(mode: ViewMode) -> void:
 		if _current_mode == ViewMode.MODE_STAGE_COMPLETE:
 			active_target = stage_complete_panel
 
+	if _victory_panel != null:
+		_victory_panel.visible = (_current_mode == ViewMode.MODE_VICTORY)
+		if _current_mode == ViewMode.MODE_VICTORY:
+			active_target = _victory_panel
+
+	if _stage_map_panel != null:
+		_stage_map_panel.visible = (_current_mode == ViewMode.MODE_MAP)
+		if _current_mode == ViewMode.MODE_MAP:
+			active_target = _stage_map_panel
+
+	# Game Polish: smooth mode transition tween
 	if active_target != null and is_inside_tree():
 		active_target.modulate.a = 0.0
 		var t: Tween = create_tween()
@@ -156,94 +340,58 @@ func set_view_mode(mode: ViewMode) -> void:
 func get_view_mode() -> ViewMode:
 	return _current_mode
 
+func get_victory_panel() -> GameVictoryPanel:
+	_ensure_sub_components()
+	return _victory_panel
+
+func get_stage_map_panel() -> DungeonStageMapPanel:
+	_ensure_sub_components()
+	return _stage_map_panel
+
+func get_pause_menu_overlay() -> PauseMenuOverlay:
+	_ensure_sub_components()
+	return _pause_overlay
+
 func get_question_host_container() -> MarginContainer:
 	var node = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer")
-	if node == null:
-		node = get_node_or_null("VBoxContainer/MainBody/QuestionHostContainer")
-	return node as MarginContainer
+	if node != null:
+		return node as MarginContainer
+	return null
 
 func get_feedback_host_container() -> MarginContainer:
 	var node = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/FeedbackHostContainer")
-	if node == null:
-		node = get_node_or_null("VBoxContainer/MainBody/FeedbackHostContainer")
-	return node as MarginContainer
+	if node != null:
+		return node as MarginContainer
+	return null
 
 func get_lesson_panel() -> LessonPanel:
 	var node = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/LessonPanel")
-	if node == null:
-		node = get_node_or_null("VBoxContainer/MainBody/LessonPanel")
-	return node as LessonPanel
+	if node != null:
+		return node as LessonPanel
+	return null
 
 func get_stage_complete_panel() -> StageCompletePanel:
 	var node = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StageCompletePanel")
-	if node == null:
-		node = get_node_or_null("VBoxContainer/MainBody/StageCompletePanel")
-	return node as StageCompletePanel
+	if node != null:
+		return node as StageCompletePanel
+	return null
 
-func show_feedback(data: Variant) -> void:
-	var info: PresentationModels.FeedbackInfo = null
-	if data is PresentationModels.FeedbackInfo:
-		info = data as PresentationModels.FeedbackInfo
-	elif data is Dictionary:
-		info = PresentationModels.FeedbackInfo.from_dict(data as Dictionary)
+func _get_start_game_container() -> Control:
+	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer") as Control
 
-	var feedback_label: Label = _get_feedback_label()
-	if info != null and feedback_label != null:
-		feedback_label.text = "[%s] %s\n%s" % [
-			"CORRECT" if info.is_correct else "INCORRECT",
-			info.title if not info.title.is_empty() else info.message,
-			info.detail_text
-		]
+func _get_new_game_button() -> Button:
+	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer/NewGameButton") as Button
 
-	set_view_mode(ViewMode.MODE_FEEDBACK_HOST)
+func _get_continue_game_button() -> Button:
+	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer/ContinueButton") as Button
 
-func is_restored_context_displayed() -> bool:
-	return _context_info != null and _context_info.is_restored_context
+func _get_journey_map_button() -> Button:
+	_ensure_sub_components()
+	return _journey_map_button
 
-func _update_header() -> void:
-	var stage_title_label: Label = _get_stage_title_label()
-	if stage_title_label != null:
-		stage_title_label.text = _context_info.stage_title if _context_info != null else ""
-
-	var dungeon_title_label: Label = _get_dungeon_title_label()
-	if dungeon_title_label != null:
-		dungeon_title_label.text = _context_info.dungeon_title if _context_info != null else ""
-
-	var restored_badge_label: Label = _get_restored_badge_label()
-	if restored_badge_label != null:
-		var is_restored: bool = _context_info != null and _context_info.is_restored_context
-		restored_badge_label.visible = is_restored
-		restored_badge_label.text = "[RESTORED STATE]" if is_restored else ""
-
-func set_continue_available(available: bool) -> void:
-	var continue_btn: Button = _get_continue_game_button()
-	if continue_btn != null:
-		continue_btn.visible = available
-
-func _on_new_game_pressed() -> void:
-	new_game_requested.emit()
-
-func _on_continue_game_pressed() -> void:
-	continue_game_requested.emit()
-
-func _on_lesson_continue() -> void:
-	lesson_continue_requested.emit()
-
-func _on_lesson_completed() -> void:
-	set_view_mode(ViewMode.MODE_QUESTION_HOST)
-
-func _on_stage_continue() -> void:
-	stage_continue_requested.emit()
-
-func _on_question_host_child_entered(child: Node) -> void:
-	var panel_host: MarginContainer = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer/GameplayHBox/QuestionPanelHost") as MarginContainer
-	if panel_host != null and child != get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer/GameplayHBox"):
-		call_deferred("_reparent_question_panel", child, panel_host)
-
-func _reparent_question_panel(child: Node, panel_host: MarginContainer) -> void:
-	if is_instance_valid(child) and child.get_parent() != panel_host:
-		child.get_parent().remove_child(child)
-		panel_host.add_child(child)
+func _get_save_summary_label() -> Label:
+	_ensure_sub_components()
+	return _save_summary_label
 
 func _get_header_bar() -> Control:
 	return get_node_or_null("VBoxContainer/HeaderBar") as Control
@@ -251,39 +399,88 @@ func _get_header_bar() -> Control:
 func _get_left_sidebar() -> Control:
 	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/LeftSidebar") as Control
 
+func _get_main_content_vbox() -> Control:
+	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox") as Control
+
+func _update_header() -> void:
+	if _context_info == null:
+		return
+
+	var d_label: Label = get_node_or_null("VBoxContainer/HeaderBar/DungeonTitleLabel") as Label
+	if d_label != null:
+		d_label.text = _context_info.dungeon_title
+
+	var s_label: Label = get_node_or_null("VBoxContainer/HeaderBar/StageTitleLabel") as Label
+	if s_label != null:
+		s_label.text = _context_info.stage_title
+
+	var r_label: Label = get_node_or_null("VBoxContainer/HeaderBar/RestoredBadgeLabel") as Label
+	if r_label != null:
+		r_label.visible = _context_info.is_restored_context
+
+func _on_new_game_pressed() -> void:
+	new_game_requested.emit()
+
+func _on_continue_game_pressed() -> void:
+	continue_game_requested.emit()
+
+func _on_journey_map_pressed() -> void:
+	show_map_requested.emit()
+
+func show_feedback(data: Variant = null) -> void:
+	set_view_mode(ViewMode.MODE_FEEDBACK_HOST)
+
+func is_restored_context_displayed() -> bool:
+	return _context_info != null and _context_info.is_restored_context
+
+func _get_restored_badge_label() -> Label:
+	return get_node_or_null("VBoxContainer/HeaderBar/RestoredBadgeLabel") as Label
+
 func _get_stage_title_label() -> Label:
 	return get_node_or_null("VBoxContainer/HeaderBar/StageTitleLabel") as Label
 
 func _get_dungeon_title_label() -> Label:
 	return get_node_or_null("VBoxContainer/HeaderBar/DungeonTitleLabel") as Label
 
-func _get_restored_badge_label() -> Label:
-	return get_node_or_null("VBoxContainer/HeaderBar/RestoredBadgeLabel") as Label
+func _on_lesson_continue() -> void:
+	lesson_continue_requested.emit()
 
-func _get_start_game_container() -> Control:
-	var node = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer")
-	if node == null:
-		node = get_node_or_null("VBoxContainer/MainBody/StartGameContainer")
-	return node as Control
+func _on_lesson_completed() -> void:
+	lesson_continue_requested.emit()
+	set_view_mode(ViewMode.MODE_QUESTION_HOST)
 
-func _get_new_game_button() -> Button:
-	var btn: Button = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer/NewGameButton") as Button
-	if btn == null:
-		btn = get_node_or_null("VBoxContainer/MainBody/StartGameContainer/VBoxContainer/NewGameButton") as Button
-	if btn == null:
-		btn = get_node_or_null("VBoxContainer/MainBody/StartGameContainer/NewGameButton") as Button
-	return btn
+func _on_stage_continue() -> void:
+	stage_continue_requested.emit()
 
-func _get_continue_game_button() -> Button:
-	var btn: Button = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer/ContinueButton") as Button
-	if btn == null:
-		btn = get_node_or_null("VBoxContainer/MainBody/StartGameContainer/VBoxContainer/ContinueButton") as Button
-	if btn == null:
-		btn = get_node_or_null("VBoxContainer/MainBody/StartGameContainer/ContinueButton") as Button
-	return btn
+func _on_question_host_child_entered(node: Node) -> void:
+	pass
 
-func _get_feedback_label() -> Label:
-	var lbl = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/FeedbackHostContainer/FeedbackPanel/FeedbackLabel")
-	if lbl == null:
-		lbl = get_node_or_null("VBoxContainer/MainBody/FeedbackHostContainer/FeedbackPanel/FeedbackLabel")
-	return lbl as Label
+func _on_map_stage_selected(stage_id: String) -> void:
+	stage_selected.emit(stage_id)
+
+func _on_map_back() -> void:
+	return_to_main_menu_requested.emit()
+
+func _on_victory_return() -> void:
+	return_to_main_menu_requested.emit()
+
+func _on_pause_resume() -> void:
+	hide_pause()
+	resume_requested.emit()
+
+func _on_pause_stage_map() -> void:
+	hide_pause()
+	show_map_requested.emit()
+
+func _on_pause_main_menu() -> void:
+	hide_pause()
+	return_to_main_menu_requested.emit()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not is_inside_tree():
+		return
+	if event.is_action_pressed("ui_cancel") or (event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE):
+		var is_gameplay: bool = (_current_mode == ViewMode.MODE_LESSON or _current_mode == ViewMode.MODE_QUESTION_HOST or _current_mode == ViewMode.MODE_FEEDBACK_HOST or _current_mode == ViewMode.MODE_STAGE_COMPLETE)
+		if is_gameplay or (_pause_overlay != null and _pause_overlay.is_paused()):
+			toggle_pause()
+			get_viewport().set_input_as_handled()

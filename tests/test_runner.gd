@@ -45,7 +45,10 @@ func _initialize() -> void:
 		{"name": "Game Polish V1 UX & Safety", "func": Callable(preload("res://tests/unit/presentation/test_game_polish_v1.gd"), "run_all_tests")},
 		{"name": "D2 Procedural QGen", "func": Callable(preload("res://tests/unit/question/test_d2_procedural_qgen.gd"), "run_all_tests")},
 		{"name": "D3 Procedural QGen", "func": Callable(preload("res://tests/unit/question/test_d3_procedural_qgen.gd"), "run_all_tests")},
-		{"name": "D4 Procedural QGen", "func": Callable(preload("res://tests/unit/question/test_d4_procedural_qgen.gd"), "run_all_tests")}
+		{"name": "D4 Procedural QGen", "func": Callable(preload("res://tests/unit/question/test_d4_procedural_qgen.gd"), "run_all_tests")},
+		{"name": "Finished Game Flow Batch 1", "func": Callable(preload("res://tests/unit/presentation/test_finished_game_flow_batch1.gd"), "run_all_tests")},
+		{"name": "Batch 2A Components", "func": Callable(preload("res://tests/unit/presentation/test_batch_2a_components.gd"), "run_all_tests")},
+		{"name": "Batch 2B Game Finish Flow Wiring", "func": Callable(preload("res://tests/unit/presentation/test_game_finish_flow_batch2b.gd"), "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -55,6 +58,7 @@ func _initialize() -> void:
 		if res:
 			pass_total += _count_suite_tests(s["name"])
 		else:
+			print("SUITE FAILED: %s" % s["name"])
 			fail_total += 1
 
 	# 2. Tri-state Presentation Integration Suites from accepted lineages
@@ -142,4 +146,7 @@ func _count_suite_tests(name: String) -> int:
 		"D2 Procedural QGen": return 8
 		"D3 Procedural QGen": return 8
 		"D4 Procedural QGen": return 8
+		"Finished Game Flow Batch 1": return 5
+		"Batch 2A Components": return 5
+		"Batch 2B Game Finish Flow Wiring": return 7
 		_: return 1

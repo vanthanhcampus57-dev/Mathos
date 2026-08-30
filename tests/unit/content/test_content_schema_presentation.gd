@@ -169,7 +169,7 @@ static func test_stage_orchestrator_uses_schema_fields_not_raw_ids() -> bool:
 		return false
 
 	var q_service: QuestionService = QuestionService.new(catalog)
-	var p_state: PlayerPersistentState = PlayerPersistentState.new("p1", 0, 0)
+	var p_state: PlayerPersistentState = PlayerPersistentState.new(PlayerPersistentState.CANONICAL_PLAYER_ID, 0, 0)
 	var p_service: ProgressService = ProgressService.new(catalog, p_state)
 	var orch: StageOrchestrator = StageOrchestrator.new(catalog, q_service, p_service)
 
@@ -208,7 +208,7 @@ static func test_stage_orchestrator_no_synthetic_copy() -> bool:
 	var catalog: ValidatedCatalog = ValidatedCatalog.new(config, dungeons, stages, {}, {}, {}, {}, {}, {}, {})
 
 	var q_service: QuestionService = QuestionService.new(catalog)
-	var p_state: PlayerPersistentState = PlayerPersistentState.new("p1", 0, 0)
+	var p_state: PlayerPersistentState = PlayerPersistentState.new(PlayerPersistentState.CANONICAL_PLAYER_ID, 0, 0)
 	var p_service: ProgressService = ProgressService.new(catalog, p_state)
 	var orch: StageOrchestrator = StageOrchestrator.new(catalog, q_service, p_service)
 	orch.initialize_stage("stage_01_01")

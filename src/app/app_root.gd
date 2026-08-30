@@ -17,7 +17,7 @@ var _game_flow_service: GameFlowService = null
 var _question_controller: RefCounted = null
 var _active_question_res: Dictionary = {}
 
-# Demo runtime metric state per stage/practice (Requirement 3, 4, 5)
+# Demo runtime metric state per stage/practice
 var _active_practice_stage_id: String = ""
 var _finalized_question_ids: Array[String] = []
 var _first_attempt_results: Dictionary = {} # question_id (String) -> is_correct (bool)
@@ -95,8 +95,8 @@ func start_new_game() -> Dictionary:
 
 ## Restores committed save state via ProgressSaveBridge and initializes GameFlow stage context.
 func continue_game() -> Dictionary:
-	if _bridge == null:
-		return {"success": false, "error_code": "NOT_INITIALIZED"}
+	if _bridge == null or _save_service == null or not _save_service.has_save():
+		return {"success": false, "error_code": "NO_SAVE_FOUND"}
 
 	var restore_res: Dictionary = _bridge.restore_from_save()
 	if not bool(restore_res.get("success", false)):
@@ -140,6 +140,74 @@ func continue_game() -> Dictionary:
 		"restore_result": restore_res,
 		"flow_result": flow_res
 	}
+
+## Section D: MAP -> GAME Validation.
+## Validates unlock / replay eligibility through existing progression services before entering stage.
+func select_stage(stage_id: String) -> Dictionary:
+	if stage_id.is_empty():
+		return {"success": false, "error_code": "INVALID_STAGE_ID"}
+
+	if _progress_service == null or not _progress_service.can_enter(stage_id):
+		push_warning("AppRoot: Stage '%s' is locked and cannot be entered." % stage_id)
+		return {"success": false, "error_code": "STAGE_LOCKED", "message": "Stage is locked"}
+
+	if _game_flow_service == null:
+		return {"success": false, "error_code": "NOT_INITIALIZED"}
+
+	var flow_res: Dictionary = _game_flow_service.start_stage(stage_id)
+	if not bool(flow_res.get("success", false)):
+		return flow_res
+
+	_reset_practice_metrics(stage_id)
+
+	var is_cleared: bool = _progress_service.create_snapshot_view().cleared_stage_ids.has(stage_id)
+	var context: Dictionary = _game_flow_service.get_stage_context(is_cleared)
+
+	if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
+		_presentation_shell.call("set_stage_context", context)
+		if _presentation_shell.has_method("set_view_mode"):
+			_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
+		if _bootstrap_ui != null:
+			_bootstrap_ui.visible = false
+
+	return {
+		"success": true,
+		"stage_id": stage_id,
+		"stage_context": context,
+		"flow_result": flow_res
+	}
+
+## Opens Dungeon Stage Map Panel with live progress data
+func show_stage_map() -> void:
+	var unlocked_ids: Array[String] = ["stage_01_01"]
+	var cleared_ids: Array[String] = []
+	var curr_stage: String = "stage_01_01"
+
+	if _progress_service != null:
+		var snapshot: ProgressState = _progress_service.create_snapshot_view()
+		if snapshot != null:
+			unlocked_ids = snapshot.unlocked_stage_ids.duplicate()
+			cleared_ids = snapshot.cleared_stage_ids.duplicate()
+
+	if _game_flow_service != null:
+		var flow_curr: String = _game_flow_service.get_current_stage_id()
+		if not flow_curr.is_empty():
+			curr_stage = flow_curr
+
+	var map_data: Dictionary = {
+		"unlocked_stages": unlocked_ids,
+		"completed_stages": cleared_ids,
+		"current_stage_id": curr_stage
+	}
+
+	if _presentation_shell != null and _presentation_shell.has_method("show_stage_map"):
+		_presentation_shell.call("show_stage_map", map_data)
+
+## Safely returns to Main Menu
+func return_to_main_menu() -> void:
+	refresh_continue_availability()
+	if _presentation_shell != null and _presentation_shell.has_method("set_view_mode"):
+		_presentation_shell.call("set_view_mode", 0) # MODE_ENTRY
 
 # Service Accessors
 func get_catalog() -> ValidatedCatalog:
@@ -188,6 +256,12 @@ func _setup_presentation_shell() -> void:
 			_presentation_shell.connect("new_game_requested", _on_new_game_requested)
 		if _presentation_shell.has_signal("continue_game_requested") and not _presentation_shell.is_connected("continue_game_requested", _on_continue_game_requested):
 			_presentation_shell.connect("continue_game_requested", _on_continue_game_requested)
+		if _presentation_shell.has_signal("show_map_requested") and not _presentation_shell.is_connected("show_map_requested", show_stage_map):
+			_presentation_shell.connect("show_map_requested", show_stage_map)
+		if _presentation_shell.has_signal("return_to_main_menu_requested") and not _presentation_shell.is_connected("return_to_main_menu_requested", return_to_main_menu):
+			_presentation_shell.connect("return_to_main_menu_requested", return_to_main_menu)
+		if _presentation_shell.has_signal("stage_selected") and not _presentation_shell.is_connected("stage_selected", select_stage):
+			_presentation_shell.connect("stage_selected", select_stage)
 		if _presentation_shell.has_signal("lesson_continue_requested") and not _presentation_shell.is_connected("lesson_continue_requested", _on_lesson_continue_requested):
 			_presentation_shell.connect("lesson_continue_requested", _on_lesson_continue_requested)
 		if _presentation_shell.has_signal("question_host_ready") and not _presentation_shell.is_connected("question_host_ready", _on_question_host_ready):
@@ -201,11 +275,21 @@ func _setup_presentation_shell() -> void:
 
 func refresh_continue_availability() -> void:
 	var has_save: bool = false
+	var summary_data: Dictionary = {}
 	if _save_service != null:
 		has_save = _save_service.has_save()
+		if has_save and _bridge != null:
+			var restore_res: Dictionary = _bridge.restore_from_save()
+			if bool(restore_res.get("success", false)):
+				var entry_stage_id: String = String(restore_res.get("entry_stage_id", ""))
+				if _catalog != null and not entry_stage_id.is_empty():
+					var stage_info: Dictionary = _catalog.get_stage(entry_stage_id)
+					summary_data["stage_id"] = entry_stage_id
+					summary_data["stage_title"] = String(stage_info.get("title", entry_stage_id))
+					summary_data["dungeon_id"] = String(stage_info.get("dungeon_id", ""))
 
 	if _presentation_shell != null and _presentation_shell.has_method("set_continue_available"):
-		_presentation_shell.call("set_continue_available", has_save)
+		_presentation_shell.call("set_continue_available", has_save, summary_data)
 
 func _reset_practice_metrics(stage_id: String) -> void:
 	_active_practice_stage_id = stage_id
@@ -219,6 +303,16 @@ func _on_new_game_requested() -> void:
 
 func _on_continue_game_requested() -> void:
 	continue_game()
+
+func _show_game_victory() -> void:
+	var gold: int = 0
+	var xp: int = 0
+	if _player_persistent != null:
+		gold = _player_persistent.coin_balance
+		xp = _player_persistent.exp_total
+
+	if _presentation_shell != null and _presentation_shell.has_method("show_game_victory"):
+		_presentation_shell.call("show_game_victory", gold, xp)
 
 func _on_lesson_continue_requested() -> void:
 	if _game_flow_service != null:
@@ -266,32 +360,23 @@ func _on_question_completed(result: Dictionary) -> void:
 
 	var is_correct: bool = bool(result.get("is_correct", false))
 
-	# Requirement 4 & 6: Record FIRST-ATTEMPT result exactly once per unique question_id
 	if not q_id.is_empty() and not _first_attempt_results.has(q_id):
 		_first_attempt_results[q_id] = is_correct
 
-	# Requirement 1: An incorrect attempt MUST NOT clear stage or switch to MODE_STAGE_COMPLETE.
-	# The user stays on the question screen to view feedback and choose THỬ LẠI or TIẾP TỤC.
-
 func _on_question_continue_requested() -> void:
-	# Requirement 6: Finalize unique question when player continues
 	if not _current_question_id.is_empty() and not _finalized_question_ids.has(_current_question_id):
 		_finalized_question_ids.append(_current_question_id)
 
-	# Try fetching next question in practice scope
 	_active_question_res = {}
 	var next_res: Dictionary = _start_next_question_in_stage()
 	if not bool(next_res.get("success", false)):
 		var err_code: String = String(next_res.get("error_code", ""))
-		# REQUIREMENT 2 & SAFETY: Only genuine practice exhaustion (NO_VALID_QUESTION / NO_REACHABLE_QUESTIONS) finishes stage practice.
 		if err_code == QuestionErrorCodes.NO_VALID_QUESTION or err_code == "NO_VALID_QUESTION" or err_code == "NO_REACHABLE_QUESTIONS":
 			_finish_stage_practice()
 		else:
 			push_error("AppRoot: _on_question_continue_requested encountered unexpected question request failure code: '%s'. Aborting stage clear." % err_code)
 
 func _on_question_retry_requested() -> void:
-	# Requirement 3 & 6: Retry does NOT increase question_count, increase denominator, or alter first-attempt result.
-	# Re-bind current question session for retry.
 	_start_current_question()
 
 func _finish_stage_practice() -> void:
@@ -306,7 +391,6 @@ func _finish_stage_practice() -> void:
 				if not stage_id.is_empty() and reward_grant != null and _bridge != null:
 					_bridge.commit_stage_and_checkpoint(stage_id, reward_grant)
 
-	# Requirement 3: Calculate locked metric semantics
 	var unique_count: int = _finalized_question_ids.size()
 	var first_attempt_correct: int = 0
 	for qid in _finalized_question_ids:
@@ -330,6 +414,10 @@ func _on_stage_continue_requested() -> void:
 
 	var adv_res: Dictionary = _game_flow_service.advance_to_next_stage()
 	if bool(adv_res.get("success", false)):
+		if bool(adv_res.get("game_completed", false)):
+			_show_game_victory()
+			return
+
 		var next_stage_id: String = _game_flow_service.get_current_stage_id()
 		_reset_practice_metrics(next_stage_id)
 

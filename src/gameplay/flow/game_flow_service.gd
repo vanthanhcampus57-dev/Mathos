@@ -114,10 +114,22 @@ func advance_to_next_stage() -> Dictionary:
 	else:
 		target_stage_id = _find_next_sequential_stage(_current_stage_id)
 
-	if target_stage_id.is_empty() or not _progress_service.can_enter(target_stage_id):
+	if target_stage_id.is_empty():
+		_flow_state = "GAME_COMPLETE"
+		return {
+			"success": true,
+			"game_completed": true,
+			"flow_state": "GAME_COMPLETE",
+			"last_stage_id": _current_stage_id
+		}
+
+	if not _progress_service.can_enter(target_stage_id):
 		return _error(FlowErrorCodes.STAGE_LOCKED, "Next stage is locked or unavailable")
 
 	return start_stage(target_stage_id)
+
+func is_game_completed() -> bool:
+	return _flow_state == "GAME_COMPLETE"
 
 func get_stage_context(is_restored: bool = false) -> Dictionary:
 	return _orchestrator.create_stage_context(is_restored)
