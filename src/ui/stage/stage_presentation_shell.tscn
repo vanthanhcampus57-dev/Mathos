@@ -28,14 +28,14 @@ theme_override_constants/separation = 16
 [node name="DungeonTitleLabel" type="Label" parent="VBoxContainer/HeaderBar"]
 layout_mode = 2
 theme_type_variation = &"MathosSubtitle"
-text = "Dungeon Title"
+text = "Khu Rừng Mù Sương"
 vertical_alignment = 1
 
 [node name="StageTitleLabel" type="Label" parent="VBoxContainer/HeaderBar"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"MathosHeading"
-text = "Stage Title"
+text = "Khởi Đầu Rừng Mù Sương"
 vertical_alignment = 1
 
 [node name="RestoredBadgeLabel" type="Label" parent="VBoxContainer/HeaderBar"]
@@ -48,30 +48,94 @@ vertical_alignment = 1
 [node name="MainBody" type="MarginContainer" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 32
-theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 32
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
 
-[node name="StartGameContainer" type="PanelContainer" parent="VBoxContainer/MainBody"]
+[node name="ContentHBox" type="HBoxContainer" parent="VBoxContainer/MainBody"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="LeftSidebar" type="PanelContainer" parent="VBoxContainer/MainBody/ContentHBox"]
+custom_minimum_size = Vector2(240, 0)
+layout_mode = 2
+theme_type_variation = &"MathosCard"
+
+[node name="SidebarVBox" type="VBoxContainer" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SidebarTitleLabel" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+layout_mode = 2
+theme_type_variation = &"MathosHeading"
+text = "Khu Rừng Mù Sương"
+
+[node name="TopicLabel" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+layout_mode = 2
+theme_type_variation = &"MathosMeta"
+text = "Chủ đề: Xác Suất Thống Kê"
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+layout_mode = 2
+
+[node name="StageListLabel" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+layout_mode = 2
+theme_type_variation = &"MathosSubtitle"
+text = "Bản Đồ Ải"
+
+[node name="Stage1" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+layout_mode = 2
+theme_type_variation = &"MathosMeta"
+text = "▶ 1.1 Khởi Đầu (Đang làm)"
+
+[node name="Stage2" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+layout_mode = 2
+theme_type_variation = &"MathosMeta"
+text = "🔒 1.2 Không Gian Mẫu"
+
+[node name="Stage3" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+layout_mode = 2
+theme_type_variation = &"MathosMeta"
+text = "🔒 1.3 Biến Cố Ngẫu Nhiên"
+
+[node name="Stage4" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+layout_mode = 2
+theme_type_variation = &"MathosMeta"
+text = "🔒 1.4 Thử Thách Ma Thuật"
+
+[node name="Stage5" type="Label" parent="VBoxContainer/MainBody/ContentHBox/LeftSidebar/SidebarVBox"]
+layout_mode = 2
+theme_type_variation = &"MathosMeta"
+text = "🔒 1.5 Trùm Stochas"
+
+[node name="MainContentVBox" type="VBoxContainer" parent="VBoxContainer/MainBody/ContentHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="StartGameContainer" type="PanelContainer" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox"]
 custom_minimum_size = Vector2(480, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 theme_type_variation = &"MathosCard"
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainBody/StartGameContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer"]
 layout_mode = 2
 theme_override_constants/separation = 16
 alignment = 1
 
-[node name="TitleLabel" type="Label" parent="VBoxContainer/MainBody/StartGameContainer/VBoxContainer"]
+[node name="TitleLabel" type="Label" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer"]
 layout_mode = 2
 theme_type_variation = &"MathosTitle"
 text = "Mathos"
 horizontal_alignment = 1
 
-[node name="ContinueButton" type="Button" parent="VBoxContainer/MainBody/StartGameContainer/VBoxContainer"]
+[node name="ContinueButton" type="Button" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer"]
 visible = false
 custom_minimum_size = Vector2(280, 48)
 layout_mode = 2
@@ -79,40 +143,44 @@ size_flags_horizontal = 4
 theme_type_variation = &"MathosPrimaryButton"
 text = "Continue"
 
-[node name="NewGameButton" type="Button" parent="VBoxContainer/MainBody/StartGameContainer/VBoxContainer"]
+[node name="NewGameButton" type="Button" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer"]
 custom_minimum_size = Vector2(280, 48)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_type_variation = &"MathosSecondaryButton"
 text = "Start New Game"
 
-[node name="VersionLabel" type="Label" parent="VBoxContainer/MainBody/StartGameContainer/VBoxContainer"]
+[node name="VersionLabel" type="Label" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer"]
 layout_mode = 2
 theme_type_variation = &"MathosMeta"
 text = "0.1.0-dev"
 horizontal_alignment = 1
 
-[node name="LessonPanel" parent="VBoxContainer/MainBody" instance=ExtResource("3_lesson")]
+[node name="LessonPanel" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox" instance=ExtResource("3_lesson")]
 layout_mode = 2
 
-[node name="QuestionHostContainer" type="MarginContainer" parent="VBoxContainer/MainBody"]
+[node name="QuestionHostContainer" type="MarginContainer" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox"]
 visible = false
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 
-[node name="FeedbackHostContainer" type="MarginContainer" parent="VBoxContainer/MainBody"]
+[node name="FeedbackHostContainer" type="MarginContainer" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox"]
 visible = false
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 
-[node name="FeedbackPanel" type="PanelContainer" parent="VBoxContainer/MainBody/FeedbackHostContainer"]
+[node name="FeedbackPanel" type="PanelContainer" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/FeedbackHostContainer"]
 layout_mode = 2
 theme_type_variation = &"MathosCard"
 
-[node name="FeedbackLabel" type="Label" parent="VBoxContainer/MainBody/FeedbackHostContainer/FeedbackPanel"]
+[node name="FeedbackLabel" type="Label" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/FeedbackHostContainer/FeedbackPanel"]
 layout_mode = 2
 theme_type_variation = &"MathosHeading"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="StageCompletePanel" parent="VBoxContainer/MainBody" instance=ExtResource("4_complete")]
+[node name="StageCompletePanel" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox" instance=ExtResource("4_complete")]
 visible = false
 layout_mode = 2

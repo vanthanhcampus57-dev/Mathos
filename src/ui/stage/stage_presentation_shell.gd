@@ -3,7 +3,7 @@ extends Control
 
 ## Main UI Presentation Shell for Mathos stages (e.g. Stage 1.1 -> 1.3).
 ## Hosts lesson dialogue, question host container, feedback host container,
-## and stage completion panels.
+## left sidebar, and stage completion panels.
 ##
 ## Pure view component. Emits presentation intents only without touching
 ## GameFlow, ProgressState, SaveService, or Combat engines.
@@ -77,6 +77,10 @@ func set_view_mode(mode: ViewMode) -> void:
 	if header_bar != null:
 		header_bar.visible = (_current_mode != ViewMode.MODE_ENTRY)
 
+	var left_sidebar: Control = _get_left_sidebar()
+	if left_sidebar != null:
+		left_sidebar.visible = (_current_mode != ViewMode.MODE_ENTRY)
+
 	var start_game_container: Control = _get_start_game_container()
 	if start_game_container != null:
 		start_game_container.visible = (_current_mode == ViewMode.MODE_ENTRY)
@@ -105,16 +109,28 @@ func get_view_mode() -> ViewMode:
 	return _current_mode
 
 func get_question_host_container() -> MarginContainer:
-	return get_node_or_null("VBoxContainer/MainBody/QuestionHostContainer") as MarginContainer
+	var node = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer")
+	if node == null:
+		node = get_node_or_null("VBoxContainer/MainBody/QuestionHostContainer")
+	return node as MarginContainer
 
 func get_feedback_host_container() -> MarginContainer:
-	return get_node_or_null("VBoxContainer/MainBody/FeedbackHostContainer") as MarginContainer
+	var node = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/FeedbackHostContainer")
+	if node == null:
+		node = get_node_or_null("VBoxContainer/MainBody/FeedbackHostContainer")
+	return node as MarginContainer
 
 func get_lesson_panel() -> LessonPanel:
-	return get_node_or_null("VBoxContainer/MainBody/LessonPanel") as LessonPanel
+	var node = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/LessonPanel")
+	if node == null:
+		node = get_node_or_null("VBoxContainer/MainBody/LessonPanel")
+	return node as LessonPanel
 
 func get_stage_complete_panel() -> StageCompletePanel:
-	return get_node_or_null("VBoxContainer/MainBody/StageCompletePanel") as StageCompletePanel
+	var node = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StageCompletePanel")
+	if node == null:
+		node = get_node_or_null("VBoxContainer/MainBody/StageCompletePanel")
+	return node as StageCompletePanel
 
 func show_feedback(data: Variant) -> void:
 	var info: PresentationModels.FeedbackInfo = null
@@ -166,7 +182,6 @@ func _on_lesson_continue() -> void:
 	lesson_continue_requested.emit()
 
 func _on_lesson_completed() -> void:
-	# Advance sequence to Question Host area (PRES-009)
 	set_view_mode(ViewMode.MODE_QUESTION_HOST)
 
 func _on_stage_continue() -> void:
@@ -174,6 +189,9 @@ func _on_stage_continue() -> void:
 
 func _get_header_bar() -> Control:
 	return get_node_or_null("VBoxContainer/HeaderBar") as Control
+
+func _get_left_sidebar() -> Control:
+	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/LeftSidebar") as Control
 
 func _get_stage_title_label() -> Label:
 	return get_node_or_null("VBoxContainer/HeaderBar/StageTitleLabel") as Label
@@ -185,19 +203,29 @@ func _get_restored_badge_label() -> Label:
 	return get_node_or_null("VBoxContainer/HeaderBar/RestoredBadgeLabel") as Label
 
 func _get_start_game_container() -> Control:
-	return get_node_or_null("VBoxContainer/MainBody/StartGameContainer") as Control
+	var node = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer")
+	if node == null:
+		node = get_node_or_null("VBoxContainer/MainBody/StartGameContainer")
+	return node as Control
 
 func _get_new_game_button() -> Button:
-	var btn: Button = get_node_or_null("VBoxContainer/MainBody/StartGameContainer/NewGameButton") as Button
+	var btn: Button = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer/NewGameButton") as Button
 	if btn == null:
 		btn = get_node_or_null("VBoxContainer/MainBody/StartGameContainer/VBoxContainer/NewGameButton") as Button
+	if btn == null:
+		btn = get_node_or_null("VBoxContainer/MainBody/StartGameContainer/NewGameButton") as Button
 	return btn
 
 func _get_continue_game_button() -> Button:
-	var btn: Button = get_node_or_null("VBoxContainer/MainBody/StartGameContainer/ContinueButton") as Button
+	var btn: Button = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer/ContinueButton") as Button
 	if btn == null:
 		btn = get_node_or_null("VBoxContainer/MainBody/StartGameContainer/VBoxContainer/ContinueButton") as Button
+	if btn == null:
+		btn = get_node_or_null("VBoxContainer/MainBody/StartGameContainer/ContinueButton") as Button
 	return btn
 
 func _get_feedback_label() -> Label:
-	return get_node_or_null("VBoxContainer/MainBody/FeedbackHostContainer/FeedbackPanel/FeedbackLabel") as Label
+	var lbl = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/FeedbackHostContainer/FeedbackPanel/FeedbackLabel")
+	if lbl == null:
+		lbl = get_node_or_null("VBoxContainer/MainBody/FeedbackHostContainer/FeedbackPanel/FeedbackLabel")
+	return lbl as Label

@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://c8qpanel001"]
 
 [ext_resource type="Script" path="res://src/ui/question/question_panel.gd" id="1_qpanel"]
-[ext_resource type="Theme" path="res://src/ui/theme/mathos_theme.tres" id="2_mtheme"]
+[ext_resource type="Theme" uid="uid://mathos_theme_001" path="res://src/ui/theme/mathos_theme.tres" id="2_mtheme"]
 
 [node name="QuestionPanel" type="PanelContainer"]
 anchors_preset = 15
@@ -19,7 +19,7 @@ script = ExtResource("1_qpanel")
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 16
+theme_override_constants/separation = 12
 
 [node name="ObjectiveLabel" type="Label" parent="MainVBox"]
 visible = false
@@ -37,8 +37,31 @@ autowrap_mode = 3
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="AdvisorPanel" type="PanelContainer" parent="MainVBox"]
+layout_mode = 2
+theme_type_variation = &"MathosPanelSecondary"
+
+[node name="AdvisorVBox" type="VBoxContainer" parent="MainVBox/AdvisorPanel"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="AdvisorHeader" type="HBoxContainer" parent="MainVBox/AdvisorPanel/AdvisorVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AdvisorNameLabel" type="Label" parent="MainVBox/AdvisorPanel/AdvisorVBox/AdvisorHeader"]
+layout_mode = 2
+theme_type_variation = &"MathosHeading"
+text = "🧙‍♂️ Giáo Sư Karl (Cố Vấn)"
+
+[node name="AdvisorDialogueLabel" type="Label" parent="MainVBox/AdvisorPanel/AdvisorVBox"]
+layout_mode = 2
+theme_type_variation = &"MathosBody"
+text = "Phép thử ngẫu nhiên là hành động có kết quả không đoán trước được. Hãy đọc kỹ câu hỏi trước khi trả lời!"
+autowrap_mode = 3
 
 [node name="FeedbackLabel" type="Label" parent="MainVBox"]
 visible = false
@@ -50,4 +73,4 @@ custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_type_variation = &"MathosPrimaryButton"
-text = "Submit Answer"
+text = "Xác nhận"
