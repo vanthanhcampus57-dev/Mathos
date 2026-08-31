@@ -73,7 +73,7 @@ static func check_panel_instantiation() -> bool:
 	if prog_panel.get_node_or_null("MainVBox/PromptLabel") == null:
 		print("  - Programmatic QuestionPanel missing PromptLabel")
 		return false
-	if prog_panel.get_node_or_null("MainVBox/SubmitButton") == null:
+	if prog_panel.get_node_or_null("MainVBox/SubmitButton") == null and prog_panel.get_node_or_null("MainVBox/FooterVBox/SubmitButton") == null:
 		print("  - Programmatic QuestionPanel missing SubmitButton")
 		return false
 
@@ -90,10 +90,10 @@ static func check_panel_instantiation() -> bool:
 	if scene_panel.get_node_or_null("MainVBox/PromptLabel") == null:
 		print("  - Scene QuestionPanel missing PromptLabel")
 		return false
-	if scene_panel.get_node_or_null("MainVBox/InteractionContainer") == null:
+	if scene_panel.get_node_or_null("MainVBox/InteractionContainer") == null and scene_panel.get_node_or_null("MainVBox/InteractionScrollContainer/InteractionContainer") == null:
 		print("  - Scene QuestionPanel missing InteractionContainer")
 		return false
-	if scene_panel.get_node_or_null("MainVBox/SubmitButton") == null:
+	if scene_panel.get_node_or_null("MainVBox/SubmitButton") == null and scene_panel.get_node_or_null("MainVBox/FooterVBox/SubmitButton") == null:
 		print("  - Scene QuestionPanel missing SubmitButton")
 		return false
 

@@ -53,15 +53,23 @@ func _ensure_ui_built() -> void:
 		if _interaction_container == null:
 			_interaction_container = get_node_or_null("MainVBox/InteractionContainer") as MarginContainer
 	if _feedback_label == null:
-		_feedback_label = get_node_or_null("MainVBox/FeedbackLabel") as Label
+		_feedback_label = get_node_or_null("MainVBox/FooterVBox/FeedbackLabel") as Label
+		if _feedback_label == null:
+			_feedback_label = get_node_or_null("MainVBox/FeedbackLabel") as Label
 	if _action_hbox == null:
-		_action_hbox = get_node_or_null("MainVBox/ActionHBox") as HBoxContainer
+		_action_hbox = get_node_or_null("MainVBox/FooterVBox/ActionHBox") as HBoxContainer
+		if _action_hbox == null:
+			_action_hbox = get_node_or_null("MainVBox/ActionHBox") as HBoxContainer
 	if _hint_button == null:
-		_hint_button = get_node_or_null("MainVBox/ActionHBox/HintButton") as Button
+		_hint_button = get_node_or_null("MainVBox/FooterVBox/ActionHBox/HintButton") as Button
+		if _hint_button == null:
+			_hint_button = get_node_or_null("MainVBox/ActionHBox/HintButton") as Button
 	if _submit_button == null:
-		_submit_button = get_node_or_null("MainVBox/SubmitButton") as Button
+		_submit_button = get_node_or_null("MainVBox/FooterVBox/SubmitButton") as Button
 		if _submit_button == null:
-			_submit_button = get_node_or_null("MainVBox/ActionHBox/SubmitButton") as Button
+			_submit_button = get_node_or_null("MainVBox/SubmitButton") as Button
+			if _submit_button == null:
+				_submit_button = get_node_or_null("MainVBox/ActionHBox/SubmitButton") as Button
 
 	# Fallback programmatic node creation if instantiated programmatically without .tscn scene hierarchy
 	if _main_vbox == null:
@@ -108,19 +116,28 @@ func _ensure_ui_built() -> void:
 		else:
 			_main_vbox.add_child(_interaction_container)
 
+	var footer_vbox: VBoxContainer = _main_vbox.get_node_or_null("FooterVBox") as VBoxContainer
+	if footer_vbox == null:
+		footer_vbox = VBoxContainer.new()
+		footer_vbox.name = "FooterVBox"
+		footer_vbox.size_flags_horizontal = SIZE_EXPAND_FILL
+		footer_vbox.size_flags_vertical = SIZE_SHRINK_END
+		footer_vbox.add_theme_constant_override("separation", 8)
+		_main_vbox.add_child(footer_vbox)
+
 	if _feedback_label == null:
 		_feedback_label = Label.new()
 		_feedback_label.name = "FeedbackLabel"
 		_feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_feedback_label.visible = false
-		_main_vbox.add_child(_feedback_label)
+		footer_vbox.add_child(_feedback_label)
 
 	if _action_hbox == null:
 		_action_hbox = HBoxContainer.new()
 		_action_hbox.name = "ActionHBox"
 		_action_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 		_action_hbox.add_theme_constant_override("separation", 16)
-		_main_vbox.add_child(_action_hbox)
+		footer_vbox.add_child(_action_hbox)
 
 	if _hint_button == null:
 		_hint_button = Button.new()
@@ -137,7 +154,7 @@ func _ensure_ui_built() -> void:
 		_submit_button.text = "Xác nhận"
 		_submit_button.custom_minimum_size = Vector2(160, 44)
 		_submit_button.size_flags_horizontal = SIZE_SHRINK_CENTER
-		_main_vbox.add_child(_submit_button)
+		footer_vbox.add_child(_submit_button)
 
 	# Ensure theme variations and layout properties on existing scene nodes
 	if _objective_label != null:
@@ -158,11 +175,13 @@ func _ensure_ui_built() -> void:
 
 	_update_labels()
 
-	if _active_interaction_view != null and _interaction_container != null:
-		if _active_interaction_view.get_parent() != _interaction_container:
+	if _active_interaction_view != null:
+		var scroll_target: Control = get_interaction_scroll_container()
+		var target_parent: Node = scroll_target if scroll_target != null else _interaction_container
+		if target_parent != null and _active_interaction_view.get_parent() != target_parent:
 			if _active_interaction_view.get_parent() != null:
 				_active_interaction_view.get_parent().remove_child(_active_interaction_view)
-			_interaction_container.add_child(_active_interaction_view)
+			target_parent.add_child(_active_interaction_view)
 
 func setup_question(question_view: Dictionary) -> bool:
 	_question_view = {}
@@ -405,10 +424,25 @@ func on_submission_failed(error_info: Dictionary = {}) -> void:
 		_active_interaction_view.call("set_disabled", false)
 
 	var msg: String = String(error_info.get("error_message", "")).strip_edges()
-	if msg.is_empty():
-		msg = "Không thể gửi câu trả lời. Vui lòng thử lại."
+	var code: int = int(error_info.get("error_code", 0))
 
-	_feedback_text = "⚠️ %s" % sanitize_presentation_text(msg)
+	# Player-facing localized Vietnamese translation for internal validation keys
+	var player_facing_msg: String = ""
+	if msg.contains("must_place_all") or msg.contains("every item"):
+		player_facing_msg = "Hãy phân loại tất cả các mục trước khi xác nhận."
+	elif msg.contains("matching payload") or msg.contains("pairs"):
+		player_facing_msg = "Vui lòng chọn ghép đôi cho tất cả các mục trước khi xác nhận."
+	elif msg.contains("input payload") or msg.contains("value"):
+		player_facing_msg = "Vui lòng nhập câu trả lời trước khi xác nhận."
+	elif not msg.is_empty() and not msg.contains("requires") and not msg.contains("definition"):
+		player_facing_msg = sanitize_presentation_text(msg)
+	else:
+		player_facing_msg = "Hãy hoàn tất tất cả các mục trước khi xác nhận."
+
+	if not msg.is_empty():
+		push_warning("[QuestionPanel] Diagnostic submission failure (code %d): %s" % [code, msg])
+
+	_feedback_text = "⚠️ %s" % player_facing_msg
 	_has_feedback = true
 
 	if _feedback_label != null:

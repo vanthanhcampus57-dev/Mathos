@@ -48,23 +48,29 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="FeedbackLabel" type="Label" parent="MainVBox"]
+[node name="FooterVBox" type="VBoxContainer" parent="MainVBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 8
+theme_override_constants/separation = 8
+
+[node name="FeedbackLabel" type="Label" parent="MainVBox/FooterVBox"]
 visible = false
 layout_mode = 2
 autowrap_mode = 3
 
-[node name="ActionHBox" type="HBoxContainer" parent="MainVBox"]
+[node name="ActionHBox" type="HBoxContainer" parent="MainVBox/FooterVBox"]
 layout_mode = 2
 theme_override_constants/separation = 16
 alignment = 1
 
-[node name="HintButton" type="Button" parent="MainVBox/ActionHBox"]
+[node name="HintButton" type="Button" parent="MainVBox/FooterVBox/ActionHBox"]
 custom_minimum_size = Vector2(140, 44)
 layout_mode = 2
 theme_type_variation = &"MathosSecondaryButton"
 text = "Gợi ý"
 
-[node name="SubmitButton" type="Button" parent="MainVBox"]
+[node name="SubmitButton" type="Button" parent="MainVBox/FooterVBox"]
 custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
 size_flags_horizontal = 4

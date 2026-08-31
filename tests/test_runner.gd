@@ -56,7 +56,8 @@ func _initialize() -> void:
 		{"name": "RC4 Initial Session Binding & Submission Recovery", "func": Callable(preload("res://tests/integration/app/test_rc4_initial_session_binding_fix.gd"), "run_all_tests")},
 		{"name": "RC4 Live GUI Multi-Resolution Layout QA", "func": Callable(preload("res://tests/unit/presentation/test_rc4_live_gui_layout_verification.gd"), "run_all_tests")},
 		{"name": "RC4 Live GUI Vertical Composition QA", "func": Callable(preload("res://tests/unit/presentation/test_rc4_vertical_composition_verification.gd"), "run_all_tests")},
-		{"name": "RC4 QA Answer Reveal Cheat", "func": Callable(preload("res://tests/unit/presentation/test_qa_answer_reveal_cheat.gd"), "run_all_tests")}
+		{"name": "RC4 QA Answer Reveal Cheat", "func": Callable(preload("res://tests/unit/presentation/test_qa_answer_reveal_cheat.gd"), "run_all_tests")},
+		{"name": "RC4 Live Interaction UX & Composition QA", "func": Callable(preload("res://tests/unit/presentation/test_rc4_live_interaction_ux_verification.gd"), "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -165,4 +166,5 @@ func _count_suite_tests(name: String) -> int:
 		"RC4 Live GUI Multi-Resolution Layout QA": return 4
 		"RC4 Live GUI Vertical Composition QA": return 4
 		"RC4 QA Answer Reveal Cheat": return 10
+		"RC4 Live Interaction UX & Composition QA": return 9
 		_: return 1

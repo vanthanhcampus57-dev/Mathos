@@ -113,7 +113,9 @@ static func _verify_vertical_composition(app: AppRoot, size_label: String) -> bo
 
 	var prompt_label: Label = main_vbox.get_node_or_null("PromptLabel") as Label
 	var scroll_container: ScrollContainer = q_panel.get_interaction_scroll_container()
-	var action_hbox: Control = main_vbox.get_node_or_null("ActionHBox") as Control
+	var action_hbox: Control = main_vbox.get_node_or_null("FooterVBox/ActionHBox") as Control
+	if action_hbox == null:
+		action_hbox = main_vbox.get_node_or_null("ActionHBox") as Control
 
 	if prompt_label == null or scroll_container == null or action_hbox == null:
 		print("[%s] FAIL: 3-tier layout missing required tier (Prompt: %s, Scroll: %s, ActionHBox: %s)" % [size_label, prompt_label != null, scroll_container != null, action_hbox != null])

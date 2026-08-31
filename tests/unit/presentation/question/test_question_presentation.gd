@@ -379,7 +379,11 @@ static func pres_012_question_mount_and_ui_visibility_regression() -> bool:
 		return false
 
 	# Verify Submit Button
-	var submit_btn: Button = panel.get_node_or_null("MainVBox/SubmitButton") as Button
+	var submit_btn: Button = panel.get_node_or_null("MainVBox/FooterVBox/SubmitButton") as Button
+	if submit_btn == null:
+		submit_btn = panel.get_node_or_null("MainVBox/SubmitButton") as Button
+	if submit_btn == null:
+		submit_btn = panel.get_node_or_null("MainVBox/ActionHBox/SubmitButton") as Button
 	if submit_btn == null or not submit_btn.visible:
 		print("[PRES-012] FAIL: QuestionPanel does not have a visible SubmitButton path")
 		if added_to_root: tree.root.remove_child(host)

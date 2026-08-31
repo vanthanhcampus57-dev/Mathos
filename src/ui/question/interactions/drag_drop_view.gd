@@ -184,6 +184,8 @@ func _rebuild_ui() -> void:
 		_target_options[item_id] = opt_btn
 
 	_update_option_selections()
+	var calculated_min_height: float = float(_items.size()) * 48.0 + float(maxi(0, _items.size() - 1)) * MathosTokens.SPACING_SM + 16.0
+	custom_minimum_size = Vector2(0, maxf(100.0, calculated_min_height))
 
 func _update_option_selections() -> void:
 	for item_id in _target_options:
