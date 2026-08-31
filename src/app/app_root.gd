@@ -559,6 +559,7 @@ func _start_next_question_in_stage() -> Dictionary:
 		_active_question_res = res
 		var question: Dictionary = res.get("question", {}) as Dictionary
 		_current_question_id = String(question.get("question_id", ""))
+		if _qa_overlay != null: _qa_overlay.on_question_changed(_current_question_id)
 		var orch: StageOrchestrator = _game_flow_service.get_orchestrator()
 		if orch != null:
 			var session: Dictionary = res.get("session", {}) as Dictionary

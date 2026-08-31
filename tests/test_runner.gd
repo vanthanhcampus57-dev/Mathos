@@ -166,7 +166,7 @@ func _count_suite_tests(name: String) -> int:
 		"RC4 Initial Session Binding & Submission Recovery": return 5
 		"RC4 Live GUI Multi-Resolution Layout QA": return 4
 		"RC4 Live GUI Vertical Composition QA": return 4
-		"RC4 QA Answer Reveal Cheat": return 12
+		"RC4 QA Answer Reveal Cheat": return 13
 		"RC4 Live Interaction UX & Composition QA": return 9
 		"RC4 Live Placed Row Layout QA": return 7
 		_: return 1

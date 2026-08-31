@@ -1,7 +1,7 @@
 class_name TestQaAnswerRevealCheat
 extends SceneTree
 
-## Unit test suite for QA-only Correct Answer Reveal Cheat (QA-CHEAT-001..012)
+## Unit test suite for QA-only Correct Answer Reveal Cheat (QA-CHEAT-001..013)
 
 func _initialize() -> void:
 	var ok: bool = run_all_tests()
@@ -27,7 +27,7 @@ static func _create_and_mount_app() -> AppRoot:
 	return app
 
 static func run_all_tests() -> bool:
-	print("--- RUNNING QA ANSWER REVEAL CHEAT TEST SUITE (QA-CHEAT-001..012) ---")
+	print("--- RUNNING QA ANSWER REVEAL CHEAT TEST SUITE (QA-CHEAT-001..013) ---")
 	var passes: int = 0
 	if test_qa_cheat_001_absent_without_flag(): passes += 1
 	if test_qa_cheat_002_available_with_flag(): passes += 1
@@ -41,9 +41,10 @@ static func run_all_tests() -> bool:
 	if test_qa_cheat_010_retry_session_unchanged(): passes += 1
 	if test_qa_cheat_011_runtime_tree_and_visibility(): passes += 1
 	if test_qa_cheat_012_question_transition_no_duplication(): passes += 1
+	if test_qa_cheat_013_type_aware_transition_rebind(): passes += 1
 
-	print("[QA-CHEAT-HARNESS] %d / 12 test scenarios passed" % passes)
-	return passes == 12
+	print("[QA-CHEAT-HARNESS] %d / 13 test scenarios passed" % passes)
+	return passes == 13
 
 static func test_qa_cheat_001_absent_without_flag() -> bool:
 	print("[QA-CHEAT-001] Testing QA cheat control absent/hidden when --qa-cheats flag is absent...")
@@ -95,21 +96,29 @@ static func test_qa_cheat_002_available_with_flag() -> bool:
 	return true
 
 static func test_qa_cheat_003_multiple_choice_format() -> bool:
-	print("[QA-CHEAT-003] Testing Multiple Choice correct answer formatting...")
+	print("[QA-CHEAT-003] Testing Multiple Choice correct answer formatting without raw IDs...")
 	var answer_spec: Dictionary = {
-		"correct_option_id": "opt_a",
-		"options": [
-			{"id": "opt_a", "text": "Phép thử ngẫu nhiên gieo con xúc xắc", "is_correct": true},
-			{"id": "opt_b", "text": "Phép thử tính xác suất 100%", "is_correct": false}
-		]
+		"correct_option_id": "opt_a"
+	}
+	var question_dict: Dictionary = {
+		"interaction_payload": {
+			"options": [
+				{"option_id": "opt_a", "text": "Gieo một con xúc xắc cân đối và quan sát số chấm."},
+				{"option_id": "opt_b", "text": "Cho nước vào tủ lạnh ở -10°C."}
+			]
+		}
 	}
 
-	var formatted: String = QaAnswerFormatter.format_answer("multiple_choice", answer_spec)
-	if not formatted.contains("ĐÁP ÁN ĐÚNG") or not formatted.contains("[opt_a]") or not formatted.contains("gieo con xúc xắc"):
+	var formatted: String = QaAnswerFormatter.format_answer("multiple_choice", answer_spec, question_dict)
+	if not formatted.contains("ĐÁP ÁN ĐÚNG") or not formatted.contains("A. Gieo một con xúc xắc"):
 		print("[QA-CHEAT-003] FAIL: Formatting failed for multiple_choice: %s" % formatted)
 		return false
 
-	print("[QA-CHEAT-003] PASS: Multiple choice correct option ID and text formatted accurately!")
+	if formatted.contains("[opt_a]") or formatted.contains("opt_a"):
+		print("[QA-CHEAT-003] FAIL: Raw implementation ID 'opt_a' leaked in multiple_choice reveal: %s" % formatted)
+		return false
+
+	print("[QA-CHEAT-003] PASS: Multiple choice option ID resolved to human-readable text 'A. Gieo một con xúc xắc...' without raw IDs!")
 	return true
 
 static func test_qa_cheat_004_input_format() -> bool:
@@ -137,46 +146,74 @@ static func test_qa_cheat_004_input_format() -> bool:
 	return true
 
 static func test_qa_cheat_005_matching_format() -> bool:
-	print("[QA-CHEAT-005] Testing Matching correct pairs formatting...")
+	print("[QA-CHEAT-005] Testing Matching correct pairs formatting without raw IDs...")
 	var answer_spec: Dictionary = {
-		"correct_pairs": [
-			{"left": "Tập hợp kết quả", "right": "Không gian mẫu"},
-			{"left": "Xác suất không thể", "right": "0"}
+		"pairs": [
+			{"left_id": "item_l1", "right_id": "item_r1"},
+			{"left_id": "item_l2", "right_id": "item_r2"}
 		]
 	}
+	var question_dict: Dictionary = {
+		"interaction_payload": {
+			"left_items": [
+				{"item_id": "item_l1", "text": "Gieo 1 đồng xu cân đối"},
+				{"item_id": "item_l2", "text": "Gieo 1 con xúc xắc 6 mặt"}
+			],
+			"right_items": [
+				{"item_id": "item_r1", "text": "2 kết quả"},
+				{"item_id": "item_r2", "text": "6 kết quả"}
+			]
+		}
+	}
 
-	var formatted: String = QaAnswerFormatter.format_answer("matching", answer_spec)
-	if not formatted.contains("Tập hợp kết quả") or not formatted.contains("➔") or not formatted.contains("Không gian mẫu"):
+	var formatted: String = QaAnswerFormatter.format_answer("matching", answer_spec, question_dict)
+	if not formatted.contains("Gieo 1 đồng xu cân đối") or not formatted.contains("➔") or not formatted.contains("2 kết quả"):
 		print("[QA-CHEAT-005] FAIL: Matching pairs formatting failed: %s" % formatted)
 		return false
 
-	print("[QA-CHEAT-005] PASS: Matching pairs formatted accurately as Left ➔ Right!")
+	if formatted.contains("item_l1") or formatted.contains("item_r1"):
+		print("[QA-CHEAT-005] FAIL: Raw IDs 'item_l1' leaked in matching reveal: %s" % formatted)
+		return false
+
+	print("[QA-CHEAT-005] PASS: Matching internal IDs resolved to human-readable Left ➔ Right texts!")
 	return true
 
 static func test_qa_cheat_006_drag_drop_format() -> bool:
-	print("[QA-CHEAT-006] Testing Drag/Drop / Classification mapping formatting...")
+	print("[QA-CHEAT-006] Testing Drag/Drop / Classification mapping formatting without raw IDs...")
 	var answer_spec: Dictionary = {
-		"item_targets": [
-			{"item": "Gieo đồng xu", "target": "Phép thử ngẫu nhiên"},
-			{"item": "Mặt ngửa", "target": "Biến cố"}
+		"mappings": [
+			{"item_id": "item_1", "target_id": "target_1"},
+			{"item_id": "item_2", "target_id": "target_2"}
 		]
 	}
+	var question_dict: Dictionary = {
+		"interaction_payload": {
+			"items": [
+				{"item_id": "item_1", "text": "Bốc ngẫu nhiên 1 viên bi"},
+				{"item_id": "item_2", "text": "Thả một viên đá vào nước"}
+			],
+			"targets": [
+				{"target_id": "target_1", "label": "Phép thử ngẫu nhiên"},
+				{"target_id": "target_2", "label": "Kết quả tất nhiên"}
+			]
+		}
+	}
 
-	var formatted: String = QaAnswerFormatter.format_answer("drag_drop", answer_spec)
-	if not formatted.contains("Gieo đồng xu") or not formatted.contains("➔") or not formatted.contains("Phép thử ngẫu nhiên"):
+	var formatted: String = QaAnswerFormatter.format_answer("drag_drop", answer_spec, question_dict)
+	if not formatted.contains("Bốc ngẫu nhiên 1 viên bi") or not formatted.contains("➔") or not formatted.contains("Phép thử ngẫu nhiên"):
 		print("[QA-CHEAT-006] FAIL: Drag drop mapping formatting failed: %s" % formatted)
 		return false
 
-	print("[QA-CHEAT-006] PASS: Drag drop / classification mapping formatted accurately!")
+	if formatted.contains("item_1") or formatted.contains("target_1"):
+		print("[QA-CHEAT-006] FAIL: Raw IDs 'item_1' or 'target_1' leaked in drag_drop reveal: %s" % formatted)
+		return false
+
+	print("[QA-CHEAT-006] PASS: Classification mapping resolved to human-readable Item ➔ Category texts!")
 	return true
 
 static func test_qa_cheat_007_no_session_mutation() -> bool:
 	print("[QA-CHEAT-007] Testing reveal action does not mutate QuestionSession...")
-	var app_scene: PackedScene = load("res://src/app/app_root.tscn") as PackedScene
-	var root: Window = (Engine.get_main_loop() as SceneTree).root
-	var app: AppRoot = app_scene.instantiate() as AppRoot
-	root.add_child(app)
-	app.bootstrap_runtime()
+	var app: AppRoot = _create_and_mount_app()
 	app.start_new_game()
 	app._on_lesson_continue_requested()
 
@@ -207,11 +244,7 @@ static func test_qa_cheat_007_no_session_mutation() -> bool:
 
 static func test_qa_cheat_008_no_submit_or_evaluation() -> bool:
 	print("[QA-CHEAT-008] Testing reveal action does not submit or call QuestionEvaluator...")
-	var app_scene: PackedScene = load("res://src/app/app_root.tscn") as PackedScene
-	var root: Window = (Engine.get_main_loop() as SceneTree).root
-	var app: AppRoot = app_scene.instantiate() as AppRoot
-	root.add_child(app)
-	app.bootstrap_runtime()
+	var app: AppRoot = _create_and_mount_app()
 	app.start_new_game()
 	app._on_lesson_continue_requested()
 
@@ -243,7 +276,7 @@ static func test_qa_cheat_009_question_change_clears_display() -> bool:
 		return false
 	overlay.set_qa_cheats_enabled(true)
 	overlay._current_question_id = "q_test_1"
-	overlay._answer_label.text = "ĐÁP ÁN ĐÚNG: [opt_a]"
+	overlay._answer_label.text = "ĐÁP ÁN ĐÚNG: A. Gieo một con xúc xắc"
 	overlay._answer_panel.show()
 	overlay._is_revealed = true
 
@@ -270,11 +303,7 @@ static func test_qa_cheat_009_question_change_clears_display() -> bool:
 
 static func test_qa_cheat_010_retry_session_unchanged() -> bool:
 	print("[QA-CHEAT-010] Testing retry session behavior remains unchanged when cheat overlay exists...")
-	var app_scene: PackedScene = load("res://src/app/app_root.tscn") as PackedScene
-	var root: Window = (Engine.get_main_loop() as SceneTree).root
-	var app: AppRoot = app_scene.instantiate() as AppRoot
-	root.add_child(app)
-	app.bootstrap_runtime()
+	var app: AppRoot = _create_and_mount_app()
 	app.start_new_game()
 	app._on_lesson_continue_requested()
 
@@ -344,11 +373,7 @@ static func test_qa_cheat_011_runtime_tree_and_visibility() -> bool:
 
 static func test_qa_cheat_012_question_transition_no_duplication() -> bool:
 	print("[QA-CHEAT-012] Testing question transitions do not duplicate overlay nodes...")
-	var app_scene: PackedScene = load("res://src/app/app_root.tscn") as PackedScene
-	var root: Window = (Engine.get_main_loop() as SceneTree).root
-	var app: AppRoot = app_scene.instantiate() as AppRoot
-	root.add_child(app)
-	app.bootstrap_runtime()
+	var app: AppRoot = _create_and_mount_app()
 	app.start_new_game()
 	app._on_lesson_continue_requested()
 
@@ -370,5 +395,64 @@ static func test_qa_cheat_012_question_transition_no_duplication() -> bool:
 		return false
 
 	print("[QA-CHEAT-012] PASS: Zero overlay duplication across question transitions verified!")
+	app.queue_free()
+	return true
+
+static func test_qa_cheat_013_type_aware_transition_rebind() -> bool:
+	print("[QA-CHEAT-013] Testing type-aware answer reveal across question transitions...")
+	var app: AppRoot = _create_and_mount_app()
+	app.start_new_game()
+	app._on_lesson_continue_requested()
+
+	var q_svc: QuestionService = app.get_question_service()
+	var overlay: Control = app.get_qa_overlay()
+	overlay.call("set_qa_cheats_enabled", true)
+
+	for step in range(3):
+		var active_q: Dictionary = q_svc.get_active_question()
+		var qid: String = String(active_q.get("question_id", ""))
+		var itype: String = String(active_q.get("interaction_type", ""))
+
+		# Reset overlay revealed state if previously revealed
+		if bool(overlay.call("is_revealed")):
+			overlay.call("_on_cheat_button_pressed")
+
+		overlay.call("_on_cheat_button_pressed")
+		var revealed_text: String = String(overlay.call("get_formatted_answer"))
+
+		# Assert human readable and no raw IDs
+		if revealed_text.is_empty() or revealed_text.contains("[opt_") or revealed_text.contains("item_l") or revealed_text.contains("target_1"):
+			print("[QA-CHEAT-013] FAIL: Step %d (qid: %s, type: %s) leaked raw IDs or failed: %s" % [step + 1, qid, itype, revealed_text])
+			app.queue_free()
+			return false
+
+		if not revealed_text.contains("ĐÁP ÁN ĐÚNG"):
+			print("[QA-CHEAT-013] FAIL: Step %d (qid: %s, type: %s) missing header: %s" % [step + 1, qid, itype, revealed_text])
+			app.queue_free()
+			return false
+
+		# Complete current session to advance cleanly
+		var sess: Dictionary = q_svc.get_active_session()
+		var sess_id: String = String(sess.get("session_id", ""))
+		if not sess_id.is_empty():
+			var correct_payload: Dictionary = {}
+			var spec: Dictionary = active_q.get("answer_spec", {}) as Dictionary
+			if itype == "multiple_choice":
+				correct_payload = {"selected_option_id": String(spec.get("correct_option_id", "opt_a"))}
+			elif itype == "matching":
+				correct_payload = {"pairs": spec.get("pairs", spec.get("correct_pairs", []))}
+			elif itype == "drag_drop" or itype == "classification":
+				correct_payload = {"mappings": spec.get("mappings", spec.get("item_targets", []))}
+			elif itype == "input":
+				correct_payload = {"value": spec.get("target_value", 42)}
+
+			q_svc.submit_answer({
+				"session_id": sess_id,
+				"interaction_type": itype,
+				"payload": correct_payload
+			})
+			app._on_question_continue_requested()
+
+	print("[QA-CHEAT-013] PASS: Type-aware reveal across question transitions verified with ZERO raw IDs!")
 	app.queue_free()
 	return true

@@ -193,38 +193,50 @@ func _fetch_and_format_current_answer() -> String:
 	var answer_spec: Dictionary = {}
 	var interaction_type: String = "multiple_choice"
 
-	# 1. Check if AppRoot holds active question resource (e.g. static or procedurally generated QGen)
+	# 1. Fetch current question_id dynamically from AppRoot or QuestionService if available
 	if _app_root != null:
-		var q_res: Dictionary = _app_root.get("_active_question_res") if _app_root.get("_active_question_res") is Dictionary else {}
-		if not q_res.is_empty():
-			var q_def: Resource = q_res.get("question_definition") as Resource
-			if q_def != null and q_def.get("answer_spec") is Dictionary:
-				var itype: Variant = q_def.get("interaction_type")
-				if itype != null:
-					interaction_type = String(itype)
-				if qid.is_empty():
-					var def_qid: Variant = q_def.get("question_id")
-					if def_qid != null:
-						qid = String(def_qid)
+		var app_qid: Variant = _app_root.get("_current_question_id")
+		if app_qid != null and not String(app_qid).is_empty():
+			qid = String(app_qid)
 
-	# 2. Separate QA lookup path: Query catalog directly by question_id
+		if qid.is_empty() and _app_root.has_method("get_question_service"):
+			var q_svc: RefCounted = _app_root.call("get_question_service") as RefCounted
+			if q_svc != null and q_svc.has_method("get_active_session"):
+				var sess: Dictionary = q_svc.call("get_active_session") as Dictionary
+				var sess_qid: String = String(sess.get("question_id", ""))
+				if not sess_qid.is_empty():
+					qid = sess_qid
+
+	# 2. Check QuestionService active_question directly (handles QGen procedural and static active questions)
+	if _app_root != null and _app_root.has_method("get_question_service"):
+		var q_svc: RefCounted = _app_root.call("get_question_service") as RefCounted
+		if q_svc != null and q_svc.has_method("get_active_question"):
+			var active_q: Dictionary = q_svc.call("get_active_question") as Dictionary
+			if not active_q.is_empty():
+				var active_qid: String = String(active_q.get("question_id", ""))
+				if qid.is_empty() or qid == active_qid:
+					q_dict = active_q
+					qid = active_qid
+					answer_spec = q_dict.get("answer_spec", {}) as Dictionary
+					interaction_type = String(q_dict.get("interaction_type", "multiple_choice"))
+
+	# 3. Query catalog directly by qid if q_dict was not retrieved from QuestionService
 	if answer_spec.is_empty() and not qid.is_empty() and _catalog != null and _catalog.has_method("get_question"):
 		q_dict = _catalog.call("get_question", qid) as Dictionary
 		if not q_dict.is_empty():
 			answer_spec = q_dict.get("answer_spec", {}) as Dictionary
 			interaction_type = String(q_dict.get("interaction_type", "multiple_choice"))
 
-	# 3. Fallback: Check QuestionService active session question ID if catalog has it
-	if answer_spec.is_empty() and _app_root != null and _app_root.has_method("get_question_service"):
-		var q_svc: RefCounted = _app_root.call("get_question_service") as RefCounted
-		if q_svc != null and q_svc.has_method("get_active_session"):
-			var sess: Dictionary = q_svc.call("get_active_session") as Dictionary
-			var sess_qid: String = String(sess.get("question_id", ""))
-			if not sess_qid.is_empty() and _catalog != null and _catalog.has_method("get_question"):
-				q_dict = _catalog.call("get_question", sess_qid) as Dictionary
-				if not q_dict.is_empty():
-					answer_spec = q_dict.get("answer_spec", {}) as Dictionary
-					interaction_type = String(q_dict.get("interaction_type", "multiple_choice"))
+	# 4. Fallback check for Resource-based questions in _active_question_res
+	if answer_spec.is_empty() and _app_root != null:
+		var q_res: Dictionary = _app_root.get("_active_question_res") if _app_root.get("_active_question_res") is Dictionary else {}
+		if not q_res.is_empty():
+			var q_def: Resource = q_res.get("question_definition") as Resource
+			if q_def != null and q_def.get("answer_spec") is Dictionary:
+				answer_spec = q_def.get("answer_spec") as Dictionary
+				var itype: Variant = q_def.get("interaction_type")
+				if itype != null:
+					interaction_type = String(itype)
 
 	if answer_spec.is_empty():
 		return "⚠️ Không tìm thấy đáp án hợp lệ cho câu hỏi hiện tại (id: '%s')" % qid
