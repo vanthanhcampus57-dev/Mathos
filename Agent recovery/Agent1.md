@@ -3,88 +3,82 @@
 > Canonical recovery note for Agent1. This file is maintained as a complete, authoritative state ledger for Agent1.
 
 ## 1. CURRENT TASK
-- TASK_ID: MATHOS-RC4-QA-CHEAT-TYPE-AWARE-ANSWER-REVEAL-FIX-003
-- TITLE: Type-Aware and Human-Readable QA Answer Reveal Fix
+- TASK_ID: MATHOS-RC4-QA-CHEAT-INPUT-ANSWER-REVEAL-FIX-004
+- TITLE: Input/Integer QA Answer Reveal Fix & Player Technical Text Removal
 - FROM: M1
 - PRIORITY: P0
 - STATUS: READY_FOR_INDEPENDENT_REQA
-- PROMPT_RECEIVED_AT: 2026-08-31T23:40:49+07:00
-- ACTIVE_GOAL: Make QA answer reveal cheat 100% type-aware and human-readable for all supported interaction types (multiple choice, input, matching, classification/drag_drop). Ensure canonical answer resolution never leaks raw implementation IDs (e.g. `[opt_a]`, internal option/target/item IDs) or serialized DTO structures, and always reflects the CURRENT active question without stale answer retention across transitions.
+- PROMPT_RECEIVED_AT: 2026-09-01T00:40:54+07:00
+- ACTIVE_GOAL: Trace real project data schema for input/integer/numeric/text questions; ensure QA answer reveal outputs canonical input answers cleanly (e.g. `ĐÁP ÁN ĐÚNG: 6`) without missing-answer warnings; remove player-facing technical string `"Input response type: integer"`.
 
 ## 2. WORKSPACE / GIT
 - PROJECT: Mathos
 - WORKTREE: d:\Mathos
-- BRANCH: detached HEAD (at a40a7d0dc871b9187a42b3ca4e406d0a3dc23288)
-- START_HEAD: 21c6cdc389f5c764301c82d1fb96ce8f52cac619 (Base HEAD)
-- CURRENT_HEAD: a40a7d0dc871b9187a42b3ca4e406d0a3dc23288
+- BRANCH: detached HEAD (at 6539273a9b200422fd647a936b96a2dd9027532a)
+- START_HEAD: b547266dd737f45bc3e213c1496c85c957b160db (Base HEAD)
+- CURRENT_HEAD: 6539273a9b200422fd647a936b96a2dd9027532a
 - CANONICAL_BASE: 48ede1db891e334a04e679bb906cfbebfe3d135c (Release Candidate 1 Base)
 - WORKTREE_CLEAN: TRUE
 
 ## 3. EXACT PROMPT / INTENT SUMMARY
-- GOAL: Make QA answer reveal TYPE-AWARE and HUMAN-READABLE for every supported question type.
+- GOAL: Fix Input/Integer QA answer reveal warning and remove technical text `"Input response type: integer"` from Question UI.
 - ACCEPTANCE_GATES:
-  1. Base commit is 21c6cdc389f5c764301c82d1fb96ce8f52cac619.
-  2. Canonical answer resolution for multiple choice / single choice, matching, classification / drag_drop, and input.
-  3. Never display raw implementation IDs (e.g. `[opt_a]`, internal option/target/item IDs, or serialized answer_spec structures).
-  4. Single-choice: Show human-readable option label/text (e.g. `ĐÁP ÁN ĐÚNG: A. Gieo một con xúc xắc...`).
-  5. Classification/matching: Show complete readable mapping with bullet points (`• Item ➔ Category`).
-  6. Rebound to CURRENT question with zero stale answer retention across transitions (MCQ ➔ classification, classification ➔ MCQ, question ➔ next question, stage transition).
-  7. Reveal remains strictly QA-only (no auto-select, no auto-submit, no evaluator mutation, no progress/reward/save mutation, no normal-mode answer leak).
-  8. New regression tests specifically proving option ID resolution to text, complete item-category mappings, complete pair mappings, no stale answers across question switches, and no raw IDs visible.
+  1. Base commit is b547266dd737f45bc3e213c1496c85c957b160db.
+  2. Trace exact authoritative answer schema for input/integer questions across project catalog/QGen files.
+  3. QA reveal shows `ĐÁP ÁN ĐÚNG: 6` (or canonical answer) without missing-answer warning `⚠️ Không tìm thấy đáp án hợp lệ cho câu hỏi điền số`.
+  4. Trace and remove/localize player-facing technical string `Input response type: integer` from Question UI.
+  5. QA reveal remains display-only with zero input auto-fill, auto-submit, evaluator call, session mutation, or progress/save mutation.
+  6. Add real regression test for input integer question with canonical answer 6, asserting no missing-answer warning, no raw answer_spec, no internal field name, no stale answer, no automatic mutation.
+  7. Assert player-facing Question UI does NOT contain `Input response type:` or `integer`.
+  8. Run full verification suite (QA cheat, input presentation/evaluator, vertical/horizontal layout, live UX, session recovery, full runner, git diff --check).
   9. Do NOT touch assets/backgrounds, do NOT merge main, do NOT build Windows yet.
-- DEPENDENCIES: Base commit 21c6cdc389f5c764301c82d1fb96ce8f52cac619.
+- DEPENDENCIES: Base commit b547266dd737f45bc3e213c1496c85c957b160db.
 
 ## 4. SCOPE
-- IN_SCOPE: `src/ui/qa/qa_answer_formatter.gd`, `src/ui/qa/qa_answer_reveal_overlay.gd`, `src/app/app_root.gd`, `tests/unit/presentation/test_qa_answer_reveal_cheat.gd`, `tests/test_runner.gd`, `Agent recovery/Agent1.md`.
+- IN_SCOPE: `src/ui/qa/qa_answer_formatter.gd`, `src/ui/question/interactions/input_view.gd`, `tests/unit/presentation/test_qa_answer_reveal_cheat.gd`, `tests/test_runner.gd`, `Agent recovery/Agent1.md`.
 - OUT_OF_SCOPE: Gameplay evaluators, content definitions, assets, backgrounds.
 - FILES_ALLOWED:
   - src/ui/qa/qa_answer_formatter.gd
-  - src/ui/qa/qa_answer_reveal_overlay.gd
-  - src/app/app_root.gd
+  - src/ui/question/interactions/input_view.gd
   - tests/unit/presentation/test_qa_answer_reveal_cheat.gd
   - tests/test_runner.gd
   - Agent recovery/Agent1.md
 - FILES_CHANGED:
-  - src/app/app_root.gd
   - src/ui/qa/qa_answer_formatter.gd
-  - src/ui/qa/qa_answer_reveal_overlay.gd
-  - tests/test_runner.gd
+  - src/ui/question/interactions/input_view.gd
   - tests/unit/presentation/test_qa_answer_reveal_cheat.gd
+  - tests/test_runner.gd
   - Agent recovery/Agent1.md
 
 ## 5. PROGRESS
 - COMPLETED:
-  - Checked out base commit 21c6cdc389f5c764301c82d1fb96ce8f52cac619
-  - Traced root cause of raw `[opt_a]` display and stale question answer retention
-  - Added `_qa_overlay.on_question_changed(_current_question_id)` call in `AppRoot._start_next_question_in_stage()`
-  - Refactored `QaAnswerRevealOverlay._fetch_and_format_current_answer()` to dynamically inspect `QuestionService.get_active_question()` and `_catalog.get_question(qid)` for full question definition and `answer_spec`
-  - Refactored `QaAnswerFormatter`:
-    - Resolved `multiple_choice` option IDs (`opt_a`, `opt_b`) to human-readable letter prefixes and option texts (`A. Gieo một con xúc xắc...`)
-    - Resolved `matching` item IDs (`item_l1`, `item_r1`) to human-readable left and right item texts (`• Gieo 1 đồng xu cân đối ➔ 2 kết quả`)
-    - Resolved `classification` / `drag_drop` item & target IDs (`item_1`, `target_1`) to human-readable item texts and category labels (`• Bốc ngẫu nhiên 1 viên bi ➔ Phép thử ngẫu nhiên`)
-  - Added test scenario `QA-CHEAT-013` (type-aware answer reveal across question transitions with zero raw IDs and zero stale data)
-  - Updated test runner registration for `RC4 QA Answer Reveal Cheat` suite from 12 to 13 tests
-  - Re-ran targeted QA cheat test suite (`test_qa_answer_reveal_cheat.gd`): 13 / 13 PASS
-  - Re-ran full canonical test runner (`test_runner.gd`): 437 PASS / 0 FAIL / 0 WAITING
+  - Checked out base commit b547266dd737f45bc3e213c1496c85c957b160db
+  - Traced exact root cause of input question reveal missing-answer warning (`_format_input` checked `acceptable_values` instead of canonical `accepted_values` key)
+  - Traced technical player-facing text `"Input response type: integer"` to `InputView._label` (`InputMetaLabel`)
+  - Updated `QaAnswerFormatter._format_input` to support `accepted_values`, `acceptable_values`, `answers`, `expected`, `numeric_value`, `target_value`, `value`, `exact`, `correct_answer`, `numeric_tolerance`, and `tolerance`
+  - Updated `InputView`: set `_label.text = ""` and `_label.visible = false` while preserving node structure for unit tests, and localized `placeholder_text` using `interaction_payload.get("placeholder_text")` or fallback `"Nhập câu trả lời..."`
+  - Added test scenario `QA-CHEAT-014` testing canonical answer `6` reveal with zero warning and verifying zero technical copy in `InputView` player UI
+  - Updated test runner registration for `RC4 QA Answer Reveal Cheat` suite from 13 to 14 tests
+  - Re-ran targeted QA cheat test suite (`test_qa_answer_reveal_cheat.gd`): 14 / 14 PASS
+  - Re-ran full canonical test runner (`test_runner.gd`): 438 PASS / 0 FAIL / 0 WAITING
   - Verified `git diff --check`: Exit code 0 (clean)
-  - Committed candidate HEAD `a40a7d0dc871b9187a42b3ca4e406d0a3dc23288`
+  - Committed candidate HEAD `6539273a9b200422fd647a936b96a2dd9027532a`
 - IN_PROGRESS: None.
 - NOT_STARTED: None.
 
 ## 6. FINDINGS / DECISIONS
 - ROOT_CAUSE:
-  1. In `QaAnswerRevealOverlay._fetch_and_format_current_answer()`, when `q_res` from `AppRoot` was checked, `q_def.get("answer_spec")` was checked for dictionary type but was never assigned to `answer_spec`. Additionally, presentation-safe DTO `question` objects strip `answer_spec`. If catalog lookup failed or if dynamic QGen questions were active, `answer_spec` remained empty and `QaAnswerFormatter` fell back to raw ID formatting.
-  2. In `AppRoot._start_next_question_in_stage()`, `_qa_overlay.on_question_changed(_current_question_id)` was not invoked when starting a new question. Consequently, `_qa_overlay` retained the stale `_current_question_id` from the previous question.
-  3. `QaAnswerFormatter` lacked helper maps to resolve internal item IDs (`item_1`, `target_1`, `item_l1`, `item_r1`) to human-readable text labels (`Bốc ngẫu nhiên 1 viên bi ➔ Phép thử ngẫu nhiên`).
+  1. `QaAnswerFormatter._format_input()` checked `answer_spec.has("acceptable_values")` (spelled with an 'a' and 'able') instead of the canonical `accepted_values` (spelled with 'ed') key used by `QuestionEvaluator` and question JSON content (`q_d1_01_4`). As a result, input questions with `accepted_values: [6]` fell through to `return "⚠️ Không tìm thấy đáp án hợp lệ cho câu hỏi điền số"`.
+  2. `InputView` instantiated `_label` (`InputMetaLabel`) with `_label.text = "Input response type: %s" % _input_type`, rendering `"Input response type: integer"` on the player's Question screen.
 - ARCHITECTURE_DECISIONS:
-  - `QaAnswerRevealOverlay` queries `QuestionService.get_active_question()` directly to obtain the unstripped authoritative question dictionary (including `answer_spec` and `interaction_payload`).
-  - `QaAnswerFormatter` accepts both `answer_spec` and `question_dict` to build lookup tables mapping internal IDs to human-readable Vietnamese text labels for `multiple_choice`, `matching`, and `drag_drop` / `classification`.
+  - `QaAnswerFormatter._format_input()` accepts both `accepted_values` (canonical) and legacy fallback keys (`acceptable_values`, `answers`, `expected`, `numeric_value`, `target_value`, `value`, `exact`), formatted with `numeric_tolerance` (e.g. `ĐÁP ÁN ĐÚNG: 6`).
+  - `InputView` keeps node `InputMetaLabel` present in the node tree to satisfy existing contract assertions, but sets `visible = false` and `text = ""` to eliminate all technical copy from player UI.
 
 ## 7. TEST / VERIFICATION EVIDENCE
 - TARGETED_TESTS:
-  - `tests/unit/presentation/test_qa_answer_reveal_cheat.gd`: 13 / 13 PASS
+  - `tests/unit/presentation/test_qa_answer_reveal_cheat.gd`: 14 / 14 PASS
 - FULL_REGRESSION:
-  - `tests/test_runner.gd`: 437 PASS / 0 FAIL / 0 WAITING
+  - `tests/test_runner.gd`: 438 PASS / 0 FAIL / 0 WAITING
 - DIFF_CHECK: Clean (`git diff --check` returned 0).
 
 ## 8. BLOCKERS / AUTHORITY
@@ -95,31 +89,30 @@
 
 ## 9. LATEST REPORT / DELIVERABLE
 - REPORT_STATUS: READY_FOR_INDEPENDENT_REQA
-- BASE_HEAD: 21c6cdc389f5c764301c82d1fb96ce8f52cac619
-- FINAL_HEAD: a40a7d0dc871b9187a42b3ca4e406d0a3dc23288
+- BASE_HEAD: b547266dd737f45bc3e213c1496c85c957b160db
+- FINAL_HEAD: 6539273a9b200422fd647a936b96a2dd9027532a
 - WORKTREE_CLEAN: YES
-- QA_CHEAT_TESTS: 13/13 PASS
-- FULL: 437 PASS / 0 FAIL / 0 WAITING
+- QA_CHEAT_TESTS: 14/14 PASS
+- FULL: 438 PASS / 0 FAIL / 0 WAITING
 - DIFF_CHECK: CLEAN
 - FILES_CHANGED:
-  - src/app/app_root.gd
   - src/ui/qa/qa_answer_formatter.gd
-  - src/ui/qa/qa_answer_reveal_overlay.gd
+  - src/ui/question/interactions/input_view.gd
   - tests/unit/presentation/test_qa_answer_reveal_cheat.gd
   - tests/test_runner.gd
-- ROOT_CAUSE: `QaAnswerRevealOverlay` retained stale question IDs on `_start_next_question_in_stage()`, and `QaAnswerFormatter` printed raw internal IDs (`[opt_a]`) due to missing payload lookup maps for item/target texts.
+- ROOT_CAUSE: `QaAnswerFormatter` checked `acceptable_values` instead of canonical `accepted_values`, producing a missing-answer warning for input questions; `InputView._label` exposed `"Input response type: integer"` debug text in player UI.
 
 ## 10. RECOVERY HANDOFF
 - NEXT_ACTION: Independent Re-QA audit or Windows release build export.
-- DO_NOT_REPEAT: Do not output raw internal IDs. Always resolve item/target IDs to human-readable text.
+- DO_NOT_REPEAT: Do not expose technical debug copy to player UI. Check canonical `accepted_values` key for input question answer_spec.
 - LAST_UPDATED_BY: Agent1
-- LAST_UPDATED_AT: 2026-08-31T23:44:20+07:00
+- LAST_UPDATED_AT: 2026-09-01T00:50:23+07:00
 
 ## 11. RECENT PROMPT LOG
 
-### Prompt 17
-- RECEIVED_AT: 2026-08-31T23:40:49+07:00
-- TASK_ID: MATHOS-RC4-QA-CHEAT-TYPE-AWARE-ANSWER-REVEAL-FIX-003
-- ONE_LINE_INTENT: Make QA answer reveal type-aware and human-readable for all question types without raw internal IDs into candidate HEAD a40a7d0dc871b9187a42b3ca4e406d0a3dc23288.
-- RESULT / CURRENT_STATE: READY_FOR_INDEPENDENT_REQA (13/13 QA Cheat PASS, 437/437 Full Suite PASS, git diff --check clean).
-- HEAD_AFTER_WORK: a40a7d0dc871b9187a42b3ca4e406d0a3dc23288
+### Prompt 18
+- RECEIVED_AT: 2026-09-01T00:40:54+07:00
+- TASK_ID: MATHOS-RC4-QA-CHEAT-INPUT-ANSWER-REVEAL-FIX-004
+- ONE_LINE_INTENT: Fix Input/Integer QA answer reveal warning and remove technical string "Input response type: integer" from Question UI into candidate HEAD 6539273a9b200422fd647a936b96a2dd9027532a.
+- RESULT / CURRENT_STATE: READY_FOR_INDEPENDENT_REQA (14/14 QA Cheat PASS, 438/438 Full Suite PASS, git diff --check clean).
+- HEAD_AFTER_WORK: 6539273a9b200422fd647a936b96a2dd9027532a

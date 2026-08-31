@@ -80,22 +80,38 @@ static func _convert_option_id_to_letter(opt_id: String) -> String:
 	return opt_id
 
 static func _format_input(answer_spec: Dictionary) -> String:
-	if answer_spec.has("acceptable_values") and answer_spec["acceptable_values"] is Array:
-		var vals: Array = answer_spec["acceptable_values"] as Array
+	var vals: Array = []
+	if answer_spec.has("accepted_values") and answer_spec["accepted_values"] is Array:
+		vals = answer_spec["accepted_values"] as Array
+	elif answer_spec.has("acceptable_values") and answer_spec["acceptable_values"] is Array:
+		vals = answer_spec["acceptable_values"] as Array
+	elif answer_spec.has("answers") and answer_spec["answers"] is Array:
+		vals = answer_spec["answers"] as Array
+	elif answer_spec.has("expected") and answer_spec["expected"] is Array:
+		vals = answer_spec["expected"] as Array
+
+	var tol_val: Variant = answer_spec.get("numeric_tolerance", answer_spec.get("tolerance", null))
+	var tol_str: String = ""
+	if tol_val != null and (tol_val is int or tol_val is float) and float(tol_val) > 0.0:
+		tol_str = " (±%s)" % str(tol_val)
+
+	if not vals.is_empty():
 		var str_vals: Array[String] = []
 		for v in vals:
 			str_vals.append(str(v))
-		return "ĐÁP ÁN ĐÚNG: " + ", ".join(str_vals)
+		return "ĐÁP ÁN ĐÚNG: %s%s" % [", ".join(str_vals), tol_str]
+	elif answer_spec.has("numeric_value"):
+		return "ĐÁP ÁN ĐÚNG: %s%s" % [str(answer_spec["numeric_value"]), tol_str]
 	elif answer_spec.has("target_value"):
-		var target: Variant = answer_spec["target_value"]
-		var tol: Variant = answer_spec.get("tolerance", null)
-		if tol != null:
-			return "ĐÁP ÁN ĐÚNG: %s (±%s)" % [str(target), str(tol)]
-		return "ĐÁP ÁN ĐÚNG: %s" % str(target)
+		return "ĐÁP ÁN ĐÚNG: %s%s" % [str(answer_spec["target_value"]), tol_str]
 	elif answer_spec.has("value"):
-		return "ĐÁP ÁN ĐÚNG: %s" % str(answer_spec["value"])
+		return "ĐÁP ÁN ĐÚNG: %s%s" % [str(answer_spec["value"]), tol_str]
+	elif answer_spec.has("exact"):
+		return "ĐÁP ÁN ĐÚNG: %s%s" % [str(answer_spec["exact"]), tol_str]
+	elif answer_spec.has("expected"):
+		return "ĐÁP ÁN ĐÚNG: %s%s" % [str(answer_spec["expected"]), tol_str]
 	elif answer_spec.has("correct_answer"):
-		return "ĐÁP ÁN ĐÚNG: %s" % str(answer_spec["correct_answer"])
+		return "ĐÁP ÁN ĐÚNG: %s%s" % [str(answer_spec["correct_answer"]), tol_str]
 
 	return "⚠️ Không tìm thấy đáp án hợp lệ cho câu hỏi điền số"
 

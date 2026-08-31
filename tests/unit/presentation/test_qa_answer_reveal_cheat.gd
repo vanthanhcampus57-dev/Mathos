@@ -1,7 +1,7 @@
 class_name TestQaAnswerRevealCheat
 extends SceneTree
 
-## Unit test suite for QA-only Correct Answer Reveal Cheat (QA-CHEAT-001..013)
+## Unit test suite for QA-only Correct Answer Reveal Cheat (QA-CHEAT-001..014)
 
 func _initialize() -> void:
 	var ok: bool = run_all_tests()
@@ -27,7 +27,7 @@ static func _create_and_mount_app() -> AppRoot:
 	return app
 
 static func run_all_tests() -> bool:
-	print("--- RUNNING QA ANSWER REVEAL CHEAT TEST SUITE (QA-CHEAT-001..013) ---")
+	print("--- RUNNING QA ANSWER REVEAL CHEAT TEST SUITE (QA-CHEAT-001..014) ---")
 	var passes: int = 0
 	if test_qa_cheat_001_absent_without_flag(): passes += 1
 	if test_qa_cheat_002_available_with_flag(): passes += 1
@@ -42,9 +42,10 @@ static func run_all_tests() -> bool:
 	if test_qa_cheat_011_runtime_tree_and_visibility(): passes += 1
 	if test_qa_cheat_012_question_transition_no_duplication(): passes += 1
 	if test_qa_cheat_013_type_aware_transition_rebind(): passes += 1
+	if test_qa_cheat_014_input_integer_6_and_no_player_tech_text(): passes += 1
 
-	print("[QA-CHEAT-HARNESS] %d / 13 test scenarios passed" % passes)
-	return passes == 13
+	print("[QA-CHEAT-HARNESS] %d / 14 test scenarios passed" % passes)
+	return passes == 14
 
 static func test_qa_cheat_001_absent_without_flag() -> bool:
 	print("[QA-CHEAT-001] Testing QA cheat control absent/hidden when --qa-cheats flag is absent...")
@@ -123,26 +124,26 @@ static func test_qa_cheat_003_multiple_choice_format() -> bool:
 
 static func test_qa_cheat_004_input_format() -> bool:
 	print("[QA-CHEAT-004] Testing Input correct answer formatting...")
+	var answer_spec_acc: Dictionary = {
+		"accepted_values": [6]
+	}
 	var answer_spec_val: Dictionary = {
 		"target_value": 42,
 		"tolerance": 0.1
 	}
-	var answer_spec_acc: Dictionary = {
-		"acceptable_values": ["42", "forty-two"]
-	}
 
-	var formatted1: String = QaAnswerFormatter.format_answer("input", answer_spec_val)
-	var formatted2: String = QaAnswerFormatter.format_answer("input", answer_spec_acc)
+	var formatted1: String = QaAnswerFormatter.format_answer("input", answer_spec_acc)
+	var formatted2: String = QaAnswerFormatter.format_answer("input", answer_spec_val)
 
-	if not formatted1.contains("42") or not formatted1.contains("±0.1"):
-		print("[QA-CHEAT-004] FAIL: Target/tolerance formatting failed: %s" % formatted1)
+	if formatted1 != "ĐÁP ÁN ĐÚNG: 6":
+		print("[QA-CHEAT-004] FAIL: accepted_values [6] formatting failed: %s" % formatted1)
 		return false
 
-	if not formatted2.contains("42") or not formatted2.contains("forty-two"):
-		print("[QA-CHEAT-004] FAIL: Acceptable values formatting failed: %s" % formatted2)
+	if not formatted2.contains("42") or not formatted2.contains("±0.1"):
+		print("[QA-CHEAT-004] FAIL: Target/tolerance formatting failed: %s" % formatted2)
 		return false
 
-	print("[QA-CHEAT-004] PASS: Input correct value and tolerance/acceptable values formatted accurately!")
+	print("[QA-CHEAT-004] PASS: Input correct value and tolerance/accepted values formatted accurately!")
 	return true
 
 static func test_qa_cheat_005_matching_format() -> bool:
@@ -444,7 +445,7 @@ static func test_qa_cheat_013_type_aware_transition_rebind() -> bool:
 			elif itype == "drag_drop" or itype == "classification":
 				correct_payload = {"mappings": spec.get("mappings", spec.get("item_targets", []))}
 			elif itype == "input":
-				correct_payload = {"value": spec.get("target_value", 42)}
+				correct_payload = {"value": (spec.get("accepted_values", [6]) as Array)[0]}
 
 			q_svc.submit_answer({
 				"session_id": sess_id,
@@ -455,4 +456,41 @@ static func test_qa_cheat_013_type_aware_transition_rebind() -> bool:
 
 	print("[QA-CHEAT-013] PASS: Type-aware reveal across question transitions verified with ZERO raw IDs!")
 	app.queue_free()
+	return true
+
+static func test_qa_cheat_014_input_integer_6_and_no_player_tech_text() -> bool:
+	print("[QA-CHEAT-014] Testing input/integer question q_d1_01_4 canonical answer '6' reveal & no player tech text...")
+	# 1. Test canonical answer_spec with accepted_values = [6]
+	var spec_6: Dictionary = {
+		"accepted_values": [6]
+	}
+	var formatted_6: String = QaAnswerFormatter.format_answer("input", spec_6)
+	if formatted_6 != "ĐÁP ÁN ĐÚNG: 6":
+		print("[QA-CHEAT-014] FAIL: Expected 'ĐÁP ÁN ĐÚNG: 6' but got '%s'" % formatted_6)
+		return false
+
+	if formatted_6.contains("⚠️") or formatted_6.contains("Không tìm thấy đáp án"):
+		print("[QA-CHEAT-014] FAIL: Missing-answer warning produced for input question!")
+		return false
+
+	# 2. Test InputView player UI contains ZERO technical strings ("Input response type:", "integer")
+	var inp_view: InputView = InputView.new()
+	var payload: Dictionary = {"input_type": "integer", "placeholder_text": "Nhập kết quả..."}
+	inp_view.setup(payload)
+
+	var line_edit: LineEdit = inp_view.get_node_or_null("InputVBox/ValueLineEdit") as LineEdit
+	var meta_lbl: UiMetaLabel = inp_view.get_node_or_null("InputVBox/InputMetaLabel") as UiMetaLabel
+
+	if meta_lbl != null and meta_lbl.visible and not meta_lbl.text.is_empty():
+		print("[QA-CHEAT-014] FAIL: InputMetaLabel visible with text '%s'" % meta_lbl.text)
+		inp_view.free()
+		return false
+
+	if line_edit == null or line_edit.placeholder_text.contains("Input response type") or line_edit.placeholder_text.contains("Enter integer answer"):
+		print("[QA-CHEAT-014] FAIL: ValueLineEdit placeholder text contains technical string: '%s'" % (line_edit.placeholder_text if line_edit != null else "null"))
+		inp_view.free()
+		return false
+
+	print("[QA-CHEAT-014] PASS: Input integer 6 reveal clean & player technical copy eliminated!")
+	inp_view.free()
 	return true
