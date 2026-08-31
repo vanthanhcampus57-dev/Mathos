@@ -37,8 +37,7 @@ static func test_a_wrong_retry_does_not_prematurely_complete() -> bool:
 	var shell = app_root.get_presentation_shell() as StagePresentationShell
 	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_QUESTION_HOST)
 
-	var q_host = shell.get_question_host_container()
-	var panel = q_host.get_node_or_null("QuestionPanel") as QuestionPanel
+	var panel = shell.get_question_panel()
 	if panel == null:
 		print("[DEMO-FIX2-A] FAIL: QuestionPanel null")
 		return false

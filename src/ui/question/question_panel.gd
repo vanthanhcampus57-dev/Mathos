@@ -135,6 +135,8 @@ func _ensure_ui_built() -> void:
 
 	if _submit_button != null and not _submit_button.pressed.is_connected(_on_submit_button_pressed):
 		_submit_button.pressed.connect(_on_submit_button_pressed)
+	if _hint_button != null and not _hint_button.pressed.is_connected(_on_hint_button_pressed):
+		_hint_button.pressed.connect(_on_hint_button_pressed)
 
 	_update_labels()
 
@@ -335,3 +337,25 @@ func _on_submit_button_pressed() -> void:
 			return
 		_is_submitting = true
 		request_submit()
+
+func _on_hint_button_pressed() -> void:
+	var hint: String = String(_question_view.get("hint", "")).strip_edges()
+	if hint.is_empty():
+		hint = String(_question_view.get("explanation", "")).strip_edges()
+	hint = sanitize_presentation_text(hint)
+
+	if hint.is_empty():
+		hint = "Đọc kỹ các giả thiết và phân tích không gian mẫu hoặc các biến cố độc lập để chọn đáp án."
+
+	_feedback_text = "💡 Gợi ý: %s" % hint
+	_has_feedback = true
+	_ensure_ui_built()
+
+	if _feedback_label != null:
+		_feedback_label.theme_type_variation = &"MathosMeta"
+		_feedback_label.text = _feedback_text
+		_feedback_label.modulate.a = 0.0
+		_feedback_label.visible = true
+		var fb_tween: Tween = create_tween()
+		if fb_tween != null:
+			fb_tween.tween_property(_feedback_label, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)

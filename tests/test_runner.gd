@@ -51,7 +51,8 @@ func _initialize() -> void:
 		{"name": "Batch 2A Components", "func": Callable(preload("res://tests/unit/presentation/test_batch_2a_components.gd"), "run_all_tests")},
 		{"name": "Batch 2B Game Finish Flow Wiring", "func": Callable(preload("res://tests/unit/presentation/test_game_finish_flow_batch2b.gd"), "run_all_tests")},
 		{"name": "Final Player Polish V2 UX & Safety", "func": Callable(preload("res://tests/unit/presentation/test_final_player_polish_v2.gd"), "run_all_tests")},
-		{"name": "RC1 Playtest Bug Fixes (RC1-001..004)", "func": Callable(preload("res://tests/unit/presentation/test_rc1_playtest_fixes.gd"), "run_all_tests")}
+		{"name": "RC1 Playtest Bug Fixes (RC1-001..004)", "func": Callable(preload("res://tests/unit/presentation/test_rc1_playtest_fixes.gd"), "run_all_tests")},
+		{"name": "RC3 Full AppRoot Integration & Asset QA", "func": Callable(preload("res://tests/integration/app/test_rc3_full_approot_integration.gd"), "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -155,4 +156,5 @@ func _count_suite_tests(name: String) -> int:
 		"Batch 2B Game Finish Flow Wiring": return 7
 		"Final Player Polish V2 UX & Safety": return 6
 		"RC1 Playtest Bug Fixes (RC1-001..004)": return 6
+		"RC3 Full AppRoot Integration & Asset QA": return 6
 		_: return 1

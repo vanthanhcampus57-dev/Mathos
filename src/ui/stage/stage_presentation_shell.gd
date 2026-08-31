@@ -172,20 +172,26 @@ func _update_background_texture() -> void:
 	var path: String = "res://assets/backgrounds/misty_forest_v1.jpg"
 	var tex: Texture2D = null
 
-	if FileAccess.file_exists(path):
-		var bytes: PackedByteArray = FileAccess.get_file_as_bytes(path)
-		if not bytes.is_empty():
-			var img: Image = Image.new()
-			var err: int = img.load_png_from_buffer(bytes)
-			if err != OK:
-				err = img.load_jpg_from_buffer(bytes)
-			if err == OK:
-				tex = ImageTexture.create_from_image(img)
-
-	if tex == null and ResourceLoader.exists(path):
+	if ResourceLoader.exists(path):
 		var res: Resource = load(path)
 		if res is Texture2D:
 			tex = res as Texture2D
+
+	if tex == null and FileAccess.file_exists(path):
+		var bytes: PackedByteArray = FileAccess.get_file_as_bytes(path)
+		if not bytes.is_empty():
+			var img: Image = Image.new()
+			var err: int = OK
+			if path.to_lower().ends_with(".jpg") or path.to_lower().ends_with(".jpeg"):
+				err = img.load_jpg_from_buffer(bytes)
+				if err != OK:
+					err = img.load_png_from_buffer(bytes)
+			else:
+				err = img.load_png_from_buffer(bytes)
+				if err != OK:
+					err = img.load_jpg_from_buffer(bytes)
+			if err == OK:
+				tex = ImageTexture.create_from_image(img)
 
 	if tex != null:
 		bg_rect.texture = tex
@@ -407,6 +413,17 @@ func get_question_host_container() -> MarginContainer:
 	var node = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer")
 	if node != null:
 		return node as MarginContainer
+	return null
+
+func get_question_panel() -> QuestionPanel:
+	var host: Control = get_question_host_container()
+	if host != null:
+		var panel: Control = host.get_node_or_null("GameplayHBox/QuestionPanelHost/QuestionPanel") as Control
+		if panel != null:
+			return panel as QuestionPanel
+		panel = host.get_node_or_null("QuestionPanel") as Control
+		if panel != null:
+			return panel as QuestionPanel
 	return null
 
 func get_feedback_host_container() -> MarginContainer:

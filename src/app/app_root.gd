@@ -326,17 +326,27 @@ func _on_question_host_ready(host_container: Control) -> void:
 	if host_container == null:
 		return
 
-	var panel: Control = host_container.get_node_or_null("QuestionPanel") as Control
+	var target_container: Control = host_container.get_node_or_null("GameplayHBox/QuestionPanelHost") as Control
+	if target_container == null:
+		push_error("AppRoot._on_question_host_ready: Missing required mount host 'GameplayHBox/QuestionPanelHost' under QuestionHostContainer")
+		return
+
+	var panel: Control = target_container.get_node_or_null("QuestionPanel") as Control
 	if panel == null:
-		var scene_res: Resource = load("res://src/ui/question/question_panel.tscn")
-		if scene_res is PackedScene:
-			panel = (scene_res as PackedScene).instantiate() as Control
-			host_container.add_child(panel)
+		if host_container.has_node("QuestionPanel"):
+			panel = host_container.get_node("QuestionPanel") as Control
+			host_container.remove_child(panel)
+			target_container.add_child(panel)
 		else:
-			var script_res: Resource = load("res://src/ui/question/question_panel.gd")
-			if script_res is GDScript:
-				panel = (script_res as GDScript).new() as Control
-				host_container.add_child(panel)
+			var scene_res: Resource = load("res://src/ui/question/question_panel.tscn")
+			if scene_res is PackedScene:
+				panel = (scene_res as PackedScene).instantiate() as Control
+				target_container.add_child(panel)
+			else:
+				var script_res: Resource = load("res://src/ui/question/question_panel.gd")
+				if script_res is GDScript:
+					panel = (script_res as GDScript).new() as Control
+					target_container.add_child(panel)
 
 	if panel != null and _question_controller != null and _question_controller.has_method("attach_panel"):
 		_question_controller.call("attach_panel", panel)
@@ -348,6 +358,11 @@ func _on_question_host_ready(host_container: Control) -> void:
 			_question_controller.connect("retry_requested", _on_question_retry_requested)
 
 	_start_current_question()
+
+func get_question_panel() -> QuestionPanel:
+	if _presentation_shell != null and _presentation_shell.has_method("get_question_panel"):
+		return _presentation_shell.call("get_question_panel") as QuestionPanel
+	return null
 
 func _on_feedback_host_ready(_host_container: Control) -> void:
 	if _presentation_shell != null and _presentation_shell.has_method("set_view_mode"):
@@ -376,7 +391,10 @@ func _on_question_continue_requested() -> void:
 		else:
 			push_error("AppRoot: _on_question_continue_requested encountered unexpected question request failure code: '%s'. Aborting stage clear." % err_code)
 
+var _retry_question_id: String = ""
+
 func _on_question_retry_requested() -> void:
+	_retry_question_id = _current_question_id
 	_active_question_res = {}
 	_start_current_question()
 
@@ -462,13 +480,22 @@ func _start_next_question_in_stage() -> Dictionary:
 	if not _finalized_question_ids.is_empty():
 		request_id_str += "_%d" % (_finalized_question_ids.size() + 1)
 
+	var excludes: Array = _finalized_question_ids.duplicate()
+	if not _retry_question_id.is_empty():
+		var scope_candidates: Array[Dictionary] = _catalog.query_questions(scope, "practice")
+		for cand in scope_candidates:
+			var qid: String = String(cand.get("question_id", ""))
+			if qid != _retry_question_id and not excludes.has(qid):
+				excludes.append(qid)
+		_retry_question_id = ""
+
 	var request: Dictionary = {
 		"request_id": request_id_str,
 		"stage_id": current_stage_id,
 		"scope": scope,
 		"context": "practice",
 		"preferred_difficulty": null,
-		"exclude_question_ids": _finalized_question_ids.duplicate()
+		"exclude_question_ids": excludes
 	}
 
 	var res: Dictionary = {}

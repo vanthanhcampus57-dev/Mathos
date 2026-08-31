@@ -58,8 +58,7 @@ static func test_rc1_003_retry_submit_succeeds_end_to_end() -> bool:
 
 	app.get_question_controller().submit_answer({"selected_option_id": wrong_opt})
 
-	var host: MarginContainer = app.get_presentation_shell().get_question_host_container()
-	var q_panel: QuestionPanel = host.get_node_or_null("QuestionPanel") as QuestionPanel
+	var q_panel: QuestionPanel = app.get_question_panel()
 	if q_panel == null or not q_panel.has_feedback():
 		print("[RC1-003-01] FAIL: QuestionPanel does not show feedback after wrong answer")
 		app.free()
