@@ -47,8 +47,31 @@ var _notification_banner: PanelContainer = null
 var _notification_label: Label = null
 var _notification_tween: Tween = null
 
+const D1_BG_PATH: String = "res://assets/backgrounds/d1_misty_forest_bg.png"
+const D1_BG_ALT_PATH: String = "res://assets/backgrounds/dungeon_1/d1_misty_forest_bg.png"
+
+const D1_FOG_PATH: String = "res://assets/backgrounds/d1_misty_forest_fog_8f.png"
+const D1_FOG_ALT_PATH: String = "res://assets/backgrounds/dungeon_1/d1_misty_forest_fog_8f.png"
+
+const BRAND_LOGO_MAIN_PATH: String = "res://assets/branding/mathos_logo_main.png"
+const BRAND_LOGO_EMBLEM_PATH: String = "res://assets/branding/mathos_logo_emblem.png"
+
+const FOG_FPS: float = 2.0
+const FOG_COLS: int = 4
+const FOG_ROWS: int = 2
+const FOG_FRAME_WIDTH: int = 512
+const FOG_FRAME_HEIGHT: int = 288
+
+var _fog_source_texture: Texture2D = null
+var _fog_frames: Array[AtlasTexture] = []
+var _fog_frame_timer: float = 0.0
+var _fog_current_frame: int = 0
+
 func _ready() -> void:
+	set_process(true)
+	_ensure_visual_nodes()
 	_update_background_texture()
+	_update_branding_logos()
 	_ensure_sub_components()
 
 	var new_game_btn: Button = _get_new_game_button()
@@ -164,39 +187,143 @@ func _ensure_sub_components() -> void:
 			if not _pause_button.pressed.is_connected(toggle_pause):
 				_pause_button.pressed.connect(toggle_pause)
 
-func _update_background_texture() -> void:
+func _process(delta: float) -> void:
+	_update_fog_animation(delta)
+
+func _ensure_visual_nodes() -> void:
 	var bg_rect: TextureRect = get_node_or_null("BackgroundTextureRect") as TextureRect
-	if bg_rect == null:
+	if bg_rect != null:
+		bg_rect.mouse_filter = MOUSE_FILTER_IGNORE
+		bg_rect.texture_filter = TEXTURE_FILTER_NEAREST
+
+	var fog_rect: TextureRect = get_node_or_null("FogOverlayTextureRect") as TextureRect
+	if fog_rect != null:
+		fog_rect.mouse_filter = MOUSE_FILTER_IGNORE
+		fog_rect.texture_filter = TEXTURE_FILTER_NEAREST
+
+func _is_dungeon_1_context() -> bool:
+	if _context_info == null:
+		return true
+	var d_title: String = _context_info.dungeon_title.to_lower()
+	var s_id: String = _context_info.stage_id.to_lower()
+	if d_title.is_empty() and s_id.is_empty():
+		return true
+	if d_title.contains("rừng mù sương") or d_title.contains("dungeon 1") or d_title.contains("d1"):
+		return true
+	if s_id.begins_with("stage_1") or s_id.begins_with("d1"):
+		return true
+	return false
+
+func _update_background_texture() -> void:
+	_ensure_visual_nodes()
+
+	var bg_rect: TextureRect = get_node_or_null("BackgroundTextureRect") as TextureRect
+	var fog_rect: TextureRect = get_node_or_null("FogOverlayTextureRect") as TextureRect
+
+	if not _is_dungeon_1_context():
+		if fog_rect != null:
+			fog_rect.visible = false
 		return
 
-	var path: String = "res://assets/backgrounds/misty_forest_v1.jpg"
-	var tex: Texture2D = null
-
-	if ResourceLoader.exists(path):
-		var res: Resource = load(path)
-		if res is Texture2D:
-			tex = res as Texture2D
-
-	if tex == null and FileAccess.file_exists(path):
-		var bytes: PackedByteArray = FileAccess.get_file_as_bytes(path)
-		if not bytes.is_empty():
-			var img: Image = Image.new()
-			var err: int = OK
-			if path.to_lower().ends_with(".jpg") or path.to_lower().ends_with(".jpeg"):
-				err = img.load_jpg_from_buffer(bytes)
-				if err != OK:
-					err = img.load_png_from_buffer(bytes)
-			else:
-				err = img.load_png_from_buffer(bytes)
-				if err != OK:
-					err = img.load_jpg_from_buffer(bytes)
-			if err == OK:
-				tex = ImageTexture.create_from_image(img)
-
-	if tex != null:
-		bg_rect.texture = tex
+	var bg_tex: Texture2D = _load_texture_from_paths([D1_BG_PATH, D1_BG_ALT_PATH, "res://assets/backgrounds/misty_forest_v1.jpg"])
+	if bg_rect != null and bg_tex != null:
+		bg_rect.texture = bg_tex
 		bg_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		bg_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+
+	_init_fog_frames()
+	if fog_rect != null and not _fog_frames.is_empty():
+		fog_rect.visible = true
+		fog_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		fog_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		fog_rect.texture = _fog_frames[_fog_current_frame]
+
+func get_fog_frames() -> Array[AtlasTexture]:
+	_init_fog_frames()
+	return _fog_frames
+
+func _init_fog_frames() -> void:
+	if not _fog_frames.is_empty():
+		return
+
+	_fog_source_texture = _load_texture_from_paths([D1_FOG_PATH, D1_FOG_ALT_PATH])
+	if _fog_source_texture == null:
+		return
+
+	_fog_frames.clear()
+	for row in range(FOG_ROWS):
+		for col in range(FOG_COLS):
+			var atlas_tex: AtlasTexture = AtlasTexture.new()
+			atlas_tex.atlas = _fog_source_texture
+			atlas_tex.region = Rect2(float(col * FOG_FRAME_WIDTH), float(row * FOG_FRAME_HEIGHT), float(FOG_FRAME_WIDTH), float(FOG_FRAME_HEIGHT))
+			_fog_frames.append(atlas_tex)
+
+func _update_fog_animation(delta: float) -> void:
+	var fog_rect: TextureRect = get_node_or_null("FogOverlayTextureRect") as TextureRect
+	if fog_rect == null or not fog_rect.visible or _fog_frames.is_empty():
+		return
+
+	_fog_frame_timer += delta
+	var frame_dur: float = 1.0 / FOG_FPS
+	if _fog_frame_timer >= frame_dur:
+		_fog_frame_timer = fmod(_fog_frame_timer, frame_dur)
+		_fog_current_frame = (_fog_current_frame + 1) % _fog_frames.size()
+		fog_rect.texture = _fog_frames[_fog_current_frame]
+
+func _update_branding_logos() -> void:
+	var logo_main_tex: Texture2D = _load_texture_from_paths([BRAND_LOGO_MAIN_PATH])
+	var start_vbox: VBoxContainer = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer") as VBoxContainer
+	if start_vbox != null and logo_main_tex != null:
+		var logo_rect: TextureRect = start_vbox.get_node_or_null("MainLogoTextureRect") as TextureRect
+		if logo_rect == null:
+			logo_rect = TextureRect.new()
+			logo_rect.name = "MainLogoTextureRect"
+			logo_rect.custom_minimum_size = Vector2(360, 120)
+			logo_rect.size_flags_horizontal = SIZE_SHRINK_CENTER
+			logo_rect.mouse_filter = MOUSE_FILTER_IGNORE
+			logo_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			logo_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			start_vbox.add_child(logo_rect)
+			start_vbox.move_child(logo_rect, 0)
+		logo_rect.texture = logo_main_tex
+		var title_lbl: Label = start_vbox.get_node_or_null("TitleLabel") as Label
+		if title_lbl != null:
+			title_lbl.visible = false
+
+func _load_texture_from_paths(paths: Array) -> Texture2D:
+	for p in paths:
+		var p_str: String = String(p)
+		if ResourceLoader.exists(p_str):
+			var res: Resource = load(p_str)
+			if res is Texture2D:
+				return res as Texture2D
+
+		var global_p: String = ProjectSettings.globalize_path(p_str)
+		var img: Image = Image.new()
+		if img.load(global_p) == OK:
+			var tex: ImageTexture = ImageTexture.create_from_image(img)
+			if tex != null:
+				return tex
+		if img.load(p_str) == OK:
+			var tex2: ImageTexture = ImageTexture.create_from_image(img)
+			if tex2 != null:
+				return tex2
+
+		var bytes: PackedByteArray = FileAccess.get_file_as_bytes(p_str)
+		if bytes.is_empty() and FileAccess.file_exists(global_p):
+			bytes = FileAccess.get_file_as_bytes(global_p)
+
+		if not bytes.is_empty():
+			var img_buf: Image = Image.new()
+			var err: Error = img_buf.load_png_from_buffer(bytes)
+			if err != OK:
+				err = img_buf.load_jpg_from_buffer(bytes)
+			if err == OK:
+				var tex3: ImageTexture = ImageTexture.create_from_image(img_buf)
+				if tex3 != null:
+					return tex3
+
+	return null
 
 func set_stage_context(data: Variant) -> void:
 	if data is PresentationModels.StageContextInfo:
@@ -207,6 +334,7 @@ func set_stage_context(data: Variant) -> void:
 		_context_info = PresentationModels.StageContextInfo.new()
 
 	_update_header()
+	_update_background_texture()
 
 	var lesson_panel: LessonPanel = get_lesson_panel()
 	if lesson_panel != null and _context_info != null:
