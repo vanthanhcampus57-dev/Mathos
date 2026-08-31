@@ -286,15 +286,36 @@ static func test_visual_008_fog_live_runtime_visibility_and_opacity_boost() -> b
 
 static func test_visual_009_application_icon_configuration() -> bool:
 	print("[VIS-009] Verifying Godot project application branding icon configuration...")
-	var icon_setting: String = String(ProjectSettings.get_setting("application/config/icon", ""))
-	if icon_setting != "res://assets/branding/mathos_logo_emblem.png":
-		print("[VIS-009] FAIL: application/config/icon is '%s', expected 'res://assets/branding/mathos_logo_emblem.png'" % icon_setting)
+	var runtime_icon: String = String(ProjectSettings.get_setting("application/config/icon", ""))
+	if runtime_icon != "res://assets/branding/mathos_logo_emblem.png":
+		print("[VIS-009] FAIL: application/config/icon is '%s', expected 'res://assets/branding/mathos_logo_emblem.png'" % runtime_icon)
 		return false
 
-	var file_exists: bool = FileAccess.file_exists(icon_setting) or ResourceLoader.exists(icon_setting)
-	if not file_exists:
-		print("[VIS-009] FAIL: Configured icon asset missing at '%s'" % icon_setting)
+	var png_exists: bool = FileAccess.file_exists(runtime_icon) or ResourceLoader.exists(runtime_icon)
+	if not png_exists:
+		print("[VIS-009] FAIL: Configured runtime icon asset missing at '%s'" % runtime_icon)
 		return false
 
-	print("[VIS-009] PASS: Application branding icon correctly configured!")
+	var export_presets_path: String = "res://export_presets.cfg"
+	var global_presets: String = ProjectSettings.globalize_path(export_presets_path)
+	var cfg_bytes: PackedByteArray = FileAccess.get_file_as_bytes(export_presets_path)
+	if cfg_bytes.is_empty() and FileAccess.file_exists(global_presets):
+		cfg_bytes = FileAccess.get_file_as_bytes(global_presets)
+
+	var cfg_text: String = cfg_bytes.get_string_from_utf8()
+	if not cfg_text.contains('application/icon="res://assets/branding/mathos_logo_emblem.ico"'):
+		print("[VIS-009] FAIL: export_presets.cfg does not configure application/icon=\"res://assets/branding/mathos_logo_emblem.ico\"")
+		return false
+
+	var ico_path: String = "res://assets/branding/mathos_logo_emblem.ico"
+	var ico_bytes: PackedByteArray = FileAccess.get_file_as_bytes(ico_path)
+	if ico_bytes.is_empty():
+		var global_ico: String = ProjectSettings.globalize_path(ico_path)
+		ico_bytes = FileAccess.get_file_as_bytes(global_ico)
+
+	if ico_bytes.size() < 6:
+		print("[VIS-009] FAIL: Windows emblem ICO file missing or invalid size")
+		return false
+
+	print("[VIS-009] PASS: Application runtime PNG and Windows executable ICO icons correctly configured!")
 	return true
