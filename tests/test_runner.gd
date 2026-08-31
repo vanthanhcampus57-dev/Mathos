@@ -59,7 +59,8 @@ func _initialize() -> void:
 		{"name": "RC4 QA Answer Reveal Cheat", "func": Callable(preload("res://tests/unit/presentation/test_qa_answer_reveal_cheat.gd"), "run_all_tests")},
 		{"name": "RC4 Live Interaction UX & Composition QA", "func": Callable(preload("res://tests/unit/presentation/test_rc4_live_interaction_ux_verification.gd"), "run_all_tests")},
 		{"name": "RC4 Live Placed Row Layout QA", "func": Callable(preload("res://tests/unit/presentation/test_rc4_live_placed_row_layout_verification.gd"), "run_all_tests")},
-		{"name": "RC4 D1 Pixel-Art Visual & Branding QA", "func": Callable(preload("res://tests/unit/presentation/test_d1_visual_branding_integration.gd"), "run_all_tests")}
+		{"name": "RC4 D1 Pixel-Art Visual & Branding QA", "func": Callable(preload("res://tests/unit/presentation/test_d1_visual_branding_integration.gd"), "run_all_tests")},
+		{"name": "Visual Lab QA Harness", "func": Callable(preload("res://tests/unit/dev/test_visual_lab.gd"), "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -171,4 +172,5 @@ func _count_suite_tests(name: String) -> int:
 		"RC4 Live Interaction UX & Composition QA": return 9
 		"RC4 Live Placed Row Layout QA": return 7
 		"RC4 D1 Pixel-Art Visual & Branding QA": return 9
+		"Visual Lab QA Harness": return 12
 		_: return 1

@@ -29,6 +29,7 @@ const QaAnswerRevealOverlayClass = preload("res://src/ui/qa/qa_answer_reveal_ove
 var _presentation_shell: Control = null
 var _bootstrap_ui: Control = null
 var _qa_overlay: Control = null
+var _visual_lab_instance: Control = null
 
 func _ready() -> void:
 	_bootstrap_ui = get_node_or_null("BootstrapUI") as Control
@@ -255,7 +256,42 @@ func get_presentation_shell() -> Control:
 	return _presentation_shell
 
 # Internal Helper Methods
+func _is_visual_lab_mode() -> bool:
+	var args: PackedStringArray = OS.get_cmdline_args()
+	for a in args:
+		if a == "--visual-lab":
+			return true
+	var uargs: PackedStringArray = OS.get_cmdline_user_args()
+	for ua in uargs:
+		if ua == "--visual-lab":
+			return true
+	return false
+
+func _setup_visual_lab() -> void:
+	if _visual_lab_instance != null:
+		return
+
+	var lab_scene: Resource = load("res://dev/visual_lab/visual_lab.tscn")
+	if lab_scene is PackedScene:
+		_visual_lab_instance = (lab_scene as PackedScene).instantiate() as Control
+		add_child(_visual_lab_instance)
+	else:
+		var script_res: Resource = load("res://dev/visual_lab/visual_lab.gd")
+		if script_res is GDScript:
+			_visual_lab_instance = (script_res as GDScript).new() as Control
+			add_child(_visual_lab_instance)
+
+	if _bootstrap_ui != null:
+		_bootstrap_ui.visible = false
+
+func get_visual_lab() -> Control:
+	return _visual_lab_instance
+
 func _setup_presentation_shell() -> void:
+	if _is_visual_lab_mode():
+		_setup_visual_lab()
+		return
+
 	if _presentation_shell == null:
 		_presentation_shell = get_node_or_null("StagePresentationShell") as Control
 
