@@ -1,22 +1,24 @@
 extends SceneTree
 
-## Targeted Verification Test Suite for MATHOS-VISUAL-LAB-FOG-HARNESS-001
+## Targeted Verification Test Suite for MATHOS-VISUAL-LAB-PROCEDURAL-FOG-COMPARE-002
 ## Verifies:
 ## 1. CLI flag routing for --visual-lab.
 ## 2. Normal boot un-affected when flag absent.
 ## 3. VisualLab scene and script loading.
-## 4. Real D1 background and real production fog sheet atlas (8 frames).
+## 4. Real D1 background, old atlas (8 frames), and new procedural fog layer loading.
 ## 5. Manual frame 0..7 stepping & bounds safety.
 ## 6. Play/Pause toggle state.
 ## 7. FPS and Opacity controls.
 ## 8. Compare mode (side-by-side) layout toggle.
-## 9. Zero save data / progression mutation.
+## 9. Procedural fog controls: Opacity, Drift, Speed, Distortion, Breathing, Layer Count (1/2/3).
+## 10. Compare Old vs New side-by-side mode.
+## 11. Zero save data / progression mutation.
 
 const AppRootClass = preload("res://src/app/app_root.gd")
 const VisualLabClass = preload("res://dev/visual_lab/visual_lab.gd")
 
 func _initialize() -> void:
-	print("--- RUNNING MATHOS VISUAL LAB QA HARNESS (VIS-LAB-001..012) ---")
+	print("--- RUNNING MATHOS VISUAL LAB QA HARNESS (VIS-LAB-001..017) ---")
 	var ok: bool = run_all_tests()
 	if ok:
 		print("MATHOS VISUAL LAB QA HARNESS: PASS!")
@@ -39,9 +41,14 @@ static func run_all_tests() -> bool:
 	if test_vislab_010_reset_defaults(): passes += 1
 	if test_vislab_011_zero_save_or_progression_mutation(): passes += 1
 	if test_vislab_012_normal_boot_unaffected(): passes += 1
+	if test_vislab_013_new_procedural_fog_layer_loading_and_dimensions(): passes += 1
+	if test_vislab_014_fog_source_selector_switching(): passes += 1
+	if test_vislab_015_procedural_fog_controls(): passes += 1
+	if test_vislab_016_procedural_fog_layer_count_1_2_3(): passes += 1
+	if test_vislab_017_compare_old_vs_new_mode(): passes += 1
 
-	print("[VIS-LAB-HARNESS] %d / 12 test scenarios passed" % passes)
-	return passes == 12
+	print("[VIS-LAB-HARNESS] %d / 17 test scenarios passed" % passes)
+	return passes == 17
 
 static func _create_lab() -> VisualLab:
 	var scene: PackedScene = load("res://dev/visual_lab/visual_lab.tscn") as PackedScene
@@ -290,4 +297,127 @@ static func test_vislab_012_normal_boot_unaffected() -> bool:
 
 	print("[VIS-LAB-012] PASS: Normal boot unaffected when flag is absent!")
 	app.queue_free()
+	return true
+
+static func test_vislab_013_new_procedural_fog_layer_loading_and_dimensions() -> bool:
+	print("[VIS-LAB-013] Verifying new procedural fog layer asset loading...")
+	var lab: VisualLab = _create_lab()
+	Engine.get_main_loop().root.add_child(lab)
+
+	var proc_tex: Texture2D = lab.get_procedural_texture()
+	if proc_tex == null:
+		print("[VIS-LAB-013] FAIL: Procedural fog texture is null")
+		lab.queue_free()
+		return false
+
+	var w: int = proc_tex.get_width()
+	var h: int = proc_tex.get_height()
+	if w <= 0 or h <= 0:
+		print("[VIS-LAB-013] FAIL: Procedural fog dimensions invalid (%dx%d)" % [w, h])
+		lab.queue_free()
+		return false
+
+	print("[VIS-LAB-013] PASS: Procedural fog layer texture verified (%dx%d)!" % [w, h])
+	lab.queue_free()
+	return true
+
+static func test_vislab_014_fog_source_selector_switching() -> bool:
+	print("[VIS-LAB-014] Verifying Fog Source selector switching (Old Atlas vs New Procedural)...")
+	var lab: VisualLab = _create_lab()
+	Engine.get_main_loop().root.add_child(lab)
+
+	if lab.get_fog_source_mode() != VisualLab.FogSourceMode.NEW_PROCEDURAL_LAYER:
+		print("[VIS-LAB-014] FAIL: Default fog source mode expected NEW_PROCEDURAL_LAYER")
+		lab.queue_free()
+		return false
+
+	lab.set_fog_source_mode(VisualLab.FogSourceMode.OLD_ATLAS_8F)
+	if lab.get_fog_source_mode() != VisualLab.FogSourceMode.OLD_ATLAS_8F:
+		print("[VIS-LAB-014] FAIL: Fog source mode expected OLD_ATLAS_8F")
+		lab.queue_free()
+		return false
+
+	print("[VIS-LAB-014] PASS: Fog Source selector switching verified!")
+	lab.queue_free()
+	return true
+
+static func test_vislab_015_procedural_fog_controls() -> bool:
+	print("[VIS-LAB-015] Verifying procedural fog controls (Opacity, Drift, Speed, Distortion, Breathing)...")
+	var lab: VisualLab = _create_lab()
+	Engine.get_main_loop().root.add_child(lab)
+
+	lab.set_procedural_opacity(0.45)
+	lab.set_drift_amount(200.0)
+	lab.set_drift_speed(0.25)
+	lab.set_distortion(0.15)
+	lab.set_breathing(0.12)
+
+	if abs(lab.get_procedural_opacity() - 0.45) > 0.01:
+		print("[VIS-LAB-015] FAIL: Procedural opacity set failed")
+		lab.queue_free()
+		return false
+
+	if abs(lab.get_drift_amount() - 200.0) > 0.01:
+		print("[VIS-LAB-015] FAIL: Drift amount set failed")
+		lab.queue_free()
+		return false
+
+	if abs(lab.get_drift_speed() - 0.25) > 0.01:
+		print("[VIS-LAB-015] FAIL: Drift speed set failed")
+		lab.queue_free()
+		return false
+
+	if abs(lab.get_distortion() - 0.15) > 0.01:
+		print("[VIS-LAB-015] FAIL: Distortion set failed")
+		lab.queue_free()
+		return false
+
+	if abs(lab.get_breathing() - 0.12) > 0.01:
+		print("[VIS-LAB-015] FAIL: Breathing set failed")
+		lab.queue_free()
+		return false
+
+	print("[VIS-LAB-015] PASS: All procedural fog controls verified!")
+	lab.queue_free()
+	return true
+
+static func test_vislab_016_procedural_fog_layer_count_1_2_3() -> bool:
+	print("[VIS-LAB-016] Verifying procedural fog layer count (1, 2, 3)...")
+	var lab: VisualLab = _create_lab()
+	Engine.get_main_loop().root.add_child(lab)
+
+	lab.set_layer_count(1)
+	if lab.get_layer_count() != 1:
+		print("[VIS-LAB-016] FAIL: Layer count set to 1 failed")
+		lab.queue_free()
+		return false
+
+	lab.set_layer_count(3)
+	if lab.get_layer_count() != 3:
+		print("[VIS-LAB-016] FAIL: Layer count set to 3 failed")
+		lab.queue_free()
+		return false
+
+	print("[VIS-LAB-016] PASS: Procedural fog layer count switching verified!")
+	lab.queue_free()
+	return true
+
+static func test_vislab_017_compare_old_vs_new_mode() -> bool:
+	print("[VIS-LAB-017] Verifying Compare Old vs New side-by-side mode toggle...")
+	var lab: VisualLab = _create_lab()
+	Engine.get_main_loop().root.add_child(lab)
+
+	if lab.is_compare_old_vs_new_mode():
+		print("[VIS-LAB-017] FAIL: Initial compare old vs new mode expected false")
+		lab.queue_free()
+		return false
+
+	lab.set_compare_old_vs_new_mode(true)
+	if not lab.is_compare_old_vs_new_mode():
+		print("[VIS-LAB-017] FAIL: Compare old vs new mode expected true after toggle")
+		lab.queue_free()
+		return false
+
+	print("[VIS-LAB-017] PASS: Compare Old vs New side-by-side mode verified!")
+	lab.queue_free()
 	return true
