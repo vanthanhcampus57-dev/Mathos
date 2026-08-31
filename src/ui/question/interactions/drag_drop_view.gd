@@ -25,7 +25,7 @@ func _ensure_ui_built() -> void:
 	set_anchors_preset(PRESET_FULL_RECT)
 	size_flags_horizontal = SIZE_EXPAND_FILL
 	size_flags_vertical = SIZE_EXPAND_FILL
-	custom_minimum_size = Vector2(300, 150)
+	custom_minimum_size = Vector2(0, 100)
 
 	_vbox = VBoxContainer.new()
 	_vbox.name = "DragDropVBox"

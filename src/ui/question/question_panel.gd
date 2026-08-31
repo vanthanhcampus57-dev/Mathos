@@ -35,7 +35,8 @@ func _ensure_ui_built() -> void:
 	set_anchors_preset(PRESET_FULL_RECT)
 	size_flags_horizontal = SIZE_EXPAND_FILL
 	size_flags_vertical = SIZE_EXPAND_FILL
-	custom_minimum_size = Vector2(400, 300)
+	custom_minimum_size = Vector2(0, 300)
+	clip_contents = true
 
 	if theme == null:
 		theme = load("res://src/ui/theme/mathos_theme.tres")

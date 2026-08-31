@@ -47,6 +47,9 @@ func _init() -> void:
 func _ready() -> void:
 	theme_type_variation = &"MathosOption"
 	toggle_mode = true
+	autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	alignment = HORIZONTAL_ALIGNMENT_LEFT
+	clip_text = false
 	if not toggled.is_connected(_on_toggled):
 		toggled.connect(_on_toggled)
 	_update_labels()

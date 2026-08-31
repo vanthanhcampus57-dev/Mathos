@@ -24,7 +24,7 @@ func _ensure_ui_built() -> void:
 	set_anchors_preset(PRESET_FULL_RECT)
 	size_flags_horizontal = SIZE_EXPAND_FILL
 	size_flags_vertical = SIZE_EXPAND_FILL
-	custom_minimum_size = Vector2(300, 150)
+	custom_minimum_size = Vector2(240, 100)
 
 	_vbox = VBoxContainer.new()
 	_vbox.name = "OptionsVBox"
@@ -154,8 +154,11 @@ func _rebuild_option_buttons() -> void:
 		var card: UiOptionCard = UiOptionCard.new()
 		card.name = "OptionButton_" + opt_id
 		card.text = "   %s. %s" % [letter, opt_text]
-		card.custom_minimum_size = Vector2(240, 48)
+		card.custom_minimum_size = Vector2(240, 44)
 		card.size_flags_horizontal = SIZE_EXPAND_FILL
+		card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		card.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		card.clip_text = false
 		card.focus_mode = FOCUS_ALL
 		card.mouse_filter = MOUSE_FILTER_STOP
 

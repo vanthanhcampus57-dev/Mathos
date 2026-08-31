@@ -53,7 +53,8 @@ func _initialize() -> void:
 		{"name": "Final Player Polish V2 UX & Safety", "func": Callable(preload("res://tests/unit/presentation/test_final_player_polish_v2.gd"), "run_all_tests")},
 		{"name": "RC1 Playtest Bug Fixes (RC1-001..004)", "func": Callable(preload("res://tests/unit/presentation/test_rc1_playtest_fixes.gd"), "run_all_tests")},
 		{"name": "RC3 Full AppRoot Integration & Asset QA", "func": Callable(preload("res://tests/integration/app/test_rc3_full_approot_integration.gd"), "run_all_tests")},
-		{"name": "RC4 Initial Session Binding & Submission Recovery", "func": Callable(preload("res://tests/integration/app/test_rc4_initial_session_binding_fix.gd"), "run_all_tests")}
+		{"name": "RC4 Initial Session Binding & Submission Recovery", "func": Callable(preload("res://tests/integration/app/test_rc4_initial_session_binding_fix.gd"), "run_all_tests")},
+		{"name": "RC4 Live GUI Multi-Resolution Layout QA", "func": Callable(preload("res://tests/unit/presentation/test_rc4_live_gui_layout_verification.gd"), "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -159,4 +160,5 @@ func _count_suite_tests(name: String) -> int:
 		"RC1 Playtest Bug Fixes (RC1-001..004)": return 6
 		"RC3 Full AppRoot Integration & Asset QA": return 6
 		"RC4 Initial Session Binding & Submission Recovery": return 5
+		"RC4 Live GUI Multi-Resolution Layout QA": return 4
 		_: return 1
