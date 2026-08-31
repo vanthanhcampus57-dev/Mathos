@@ -26,6 +26,7 @@ var _current_question_id: String = ""
 # UI Presentation
 var _presentation_shell: Control = null
 var _bootstrap_ui: Control = null
+var _qa_overlay: QaAnswerRevealOverlay = null
 
 func _ready() -> void:
 	_bootstrap_ui = get_node_or_null("BootstrapUI") as Control
@@ -62,9 +63,21 @@ func bootstrap_runtime(custom_content_root: String = "") -> bool:
 		_question_controller = (q_ctrl_script as GDScript).new(_question_service)
 
 	_setup_presentation_shell()
+	_ensure_qa_overlay()
 	refresh_continue_availability()
 	print("[AppRoot] Runtime services and composition root initialized cleanly.")
 	return true
+
+func _ensure_qa_overlay() -> void:
+	if _qa_overlay == null:
+		_qa_overlay = QaAnswerRevealOverlay.new()
+		_qa_overlay.set_catalog(_catalog)
+		_qa_overlay.set_app_root(self)
+		add_child(_qa_overlay)
+
+func get_qa_overlay() -> QaAnswerRevealOverlay:
+	_ensure_qa_overlay()
+	return _qa_overlay
 
 ## Starts a fresh New Game sequence from configured initial stage.
 func start_new_game() -> Dictionary:
@@ -474,6 +487,7 @@ func _start_next_question_in_stage() -> Dictionary:
 				bind_res = _active_question_res
 			if bool(bind_res.get("success", false)):
 				_current_question_id = String(question.get("question_id", ""))
+				if _qa_overlay != null: _qa_overlay.on_question_changed(_current_question_id)
 				var orch: StageOrchestrator = _game_flow_service.get_orchestrator()
 				if orch != null:
 					orch.set("_current_phase", "QUESTION_ACTIVE")
@@ -496,6 +510,7 @@ func _start_next_question_in_stage() -> Dictionary:
 				bind_res = _active_question_res
 			if bool(bind_res.get("success", false)):
 				_current_question_id = String(active_q.get("question_id", ""))
+				if _qa_overlay != null: _qa_overlay.on_question_changed(_current_question_id)
 				var orch: StageOrchestrator = _game_flow_service.get_orchestrator()
 				if orch != null:
 					orch.set("_current_phase", "QUESTION_ACTIVE")
