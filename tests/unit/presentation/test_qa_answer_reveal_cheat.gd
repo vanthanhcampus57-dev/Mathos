@@ -1,7 +1,14 @@
 class_name TestQaAnswerRevealCheat
-extends RefCounted
+extends SceneTree
 
 ## Unit test suite for QA-only Correct Answer Reveal Cheat (QA-CHEAT-001..010)
+
+func _initialize() -> void:
+	var ok: bool = run_all_tests()
+	if ok:
+		quit(0)
+	else:
+		quit(1)
 
 static func run_all_tests() -> bool:
 	print("--- RUNNING QA ANSWER REVEAL CHEAT TEST SUITE (QA-CHEAT-001..010) ---")

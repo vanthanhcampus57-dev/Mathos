@@ -26,6 +26,7 @@ func _ready() -> void:
 	set_qa_cheats_enabled(OS.get_cmdline_args().has("--qa-cheats"))
 
 func set_qa_cheats_enabled(enabled: bool) -> void:
+	_ensure_ui_built()
 	_qa_cheats_enabled = enabled
 	visible = enabled
 	if _cheat_button != null:
@@ -142,10 +143,13 @@ func _fetch_and_format_current_answer() -> String:
 		if not q_res.is_empty():
 			var q_def: Resource = q_res.get("question_definition") as Resource
 			if q_def != null and q_def.get("answer_spec") is Dictionary:
-				answer_spec = q_def.get("answer_spec") as Dictionary
-				interaction_type = String(q_def.get("interaction_type", "multiple_choice"))
+				var itype: Variant = q_def.get("interaction_type")
+				if itype != null:
+					interaction_type = String(itype)
 				if qid.is_empty():
-					qid = String(q_def.get("question_id", ""))
+					var def_qid: Variant = q_def.get("question_id")
+					if def_qid != null:
+						qid = String(def_qid)
 
 	# 2. Separate QA lookup path: Query catalog directly by question_id
 	if answer_spec.is_empty() and not qid.is_empty() and _catalog != null and _catalog.has_method("get_question"):

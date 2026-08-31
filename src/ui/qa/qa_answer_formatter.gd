@@ -51,20 +51,20 @@ static func _format_input(answer_spec: Dictionary) -> String:
 		var vals: Array = answer_spec["acceptable_values"] as Array
 		var str_vals: Array[String] = []
 		for v in vals:
-			str_vals.append(String(v))
+			str_vals.append(str(v))
 		return "ĐÁP ÁN ĐÚNG (Chấp nhận):\n" + ", ".join(str_vals)
 	elif answer_spec.has("target_value"):
 		var target: Variant = answer_spec["target_value"]
 		var tol: Variant = answer_spec.get("tolerance", null)
 		if tol != null:
-			return "ĐÁP ÁN ĐÚNG: %s (Sai số ±%s)" % [String(target), String(tol)]
-		return "ĐÁP ÁN ĐÚNG: %s" % String(target)
+			return "ĐÁP ÁN ĐÚNG: %s (Sai số ±%s)" % [str(target), str(tol)]
+		return "ĐÁP ÁN ĐÚNG: %s" % str(target)
 	elif answer_spec.has("value"):
-		return "ĐÁP ÁN ĐÚNG: %s" % String(answer_spec["value"])
+		return "ĐÁP ÁN ĐÚNG: %s" % str(answer_spec["value"])
 	elif answer_spec.has("correct_answer"):
-		return "ĐÁP ÁN ĐÚNG: %s" % String(answer_spec["correct_answer"])
+		return "ĐÁP ÁN ĐÚNG: %s" % str(answer_spec["correct_answer"])
 
-	return "QA answer format unsupported input spec: %s" % String(answer_spec)
+	return "QA answer format unsupported input spec: %s" % str(answer_spec)
 
 static func _format_matching(answer_spec: Dictionary) -> String:
 	var pairs: Array = answer_spec.get("correct_pairs", answer_spec.get("pairs", [])) as Array
