@@ -195,11 +195,14 @@ func _ensure_visual_nodes() -> void:
 	if bg_rect != null:
 		bg_rect.mouse_filter = MOUSE_FILTER_IGNORE
 		bg_rect.texture_filter = TEXTURE_FILTER_NEAREST
+		bg_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var fog_rect: TextureRect = get_node_or_null("FogOverlayTextureRect") as TextureRect
 	if fog_rect != null:
 		fog_rect.mouse_filter = MOUSE_FILTER_IGNORE
 		fog_rect.texture_filter = TEXTURE_FILTER_NEAREST
+		fog_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		fog_rect.modulate = Color(1.15, 1.25, 1.35, 2.2)
 
 func _is_dungeon_1_context() -> bool:
 	if _context_info == null:
@@ -236,6 +239,7 @@ func _update_background_texture() -> void:
 		fog_rect.visible = true
 		fog_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		fog_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		fog_rect.modulate = Color(1.15, 1.25, 1.35, 2.2)
 		fog_rect.texture = _fog_frames[_fog_current_frame]
 
 func get_fog_frames() -> Array[AtlasTexture]:
@@ -457,6 +461,7 @@ func is_paused() -> bool:
 
 func set_view_mode(mode: ViewMode) -> void:
 	_ensure_sub_components()
+	_update_background_texture()
 
 	if _current_mode != ViewMode.MODE_MAP and _current_mode != ViewMode.MODE_VICTORY and _current_mode != ViewMode.MODE_ENTRY:
 		_previous_mode = _current_mode

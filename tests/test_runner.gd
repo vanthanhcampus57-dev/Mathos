@@ -170,5 +170,5 @@ func _count_suite_tests(name: String) -> int:
 		"RC4 QA Answer Reveal Cheat": return 14
 		"RC4 Live Interaction UX & Composition QA": return 9
 		"RC4 Live Placed Row Layout QA": return 7
-		"RC4 D1 Pixel-Art Visual & Branding QA": return 7
+		"RC4 D1 Pixel-Art Visual & Branding QA": return 9
 		_: return 1

@@ -31,9 +31,11 @@ static func run_all_tests() -> bool:
 	if test_visual_005_fog_lifecycle_and_single_instance(): passes += 1
 	if test_visual_006_viewport_resolutions_1280x720_and_1024x600(): passes += 1
 	if test_visual_007_dungeon_1_scoping(): passes += 1
+	if test_visual_008_fog_live_runtime_visibility_and_opacity_boost(): passes += 1
+	if test_visual_009_application_icon_configuration(): passes += 1
 
-	print("[D1-VISUAL-HARNESS] %d / 7 test scenarios passed" % passes)
-	return passes == 7
+	print("[D1-VISUAL-HARNESS] %d / 9 test scenarios passed" % passes)
+	return passes == 9
 
 static func _create_app(vp_size: Vector2 = Vector2(1280, 720)) -> AppRoot:
 	var tree: SceneTree = Engine.get_main_loop() as SceneTree
@@ -239,4 +241,60 @@ static func test_visual_007_dungeon_1_scoping() -> bool:
 
 	print("[VIS-007] PASS: Dungeon 1 scoping correctly enforced!")
 	app.queue_free()
+	return true
+
+static func test_visual_008_fog_live_runtime_visibility_and_opacity_boost() -> bool:
+	print("[VIS-008] Verifying live runtime fog visibility, texture, opacity boost, and animation tick...")
+	var app: AppRoot = _create_app(Vector2(1280, 720))
+	var shell: StagePresentationShell = app.get_node_or_null("StagePresentationShell") as StagePresentationShell
+	shell._update_background_texture()
+
+	var fog_rect: TextureRect = shell.get_node_or_null("FogOverlayTextureRect") as TextureRect
+
+	if fog_rect == null:
+		print("[VIS-008] FAIL: FogOverlayTextureRect not found")
+		app.queue_free()
+		return false
+
+	if not fog_rect.visible:
+		print("[VIS-008] FAIL: FogOverlayTextureRect is not visible")
+		app.queue_free()
+		return false
+
+	if fog_rect.texture == null:
+		print("[VIS-008] FAIL: FogOverlayTextureRect texture is null")
+		app.queue_free()
+		return false
+
+	if fog_rect.modulate.a < 2.0:
+		print("[VIS-008] FAIL: Fog overlay modulate alpha (%f) insufficient for human visibility" % fog_rect.modulate.a)
+		app.queue_free()
+		return false
+
+	var initial_frame: int = shell._fog_current_frame
+	shell._process(0.6) # Advance timer past 0.5s (2 FPS)
+	var next_frame: int = shell._fog_current_frame
+
+	if next_frame == initial_frame:
+		print("[VIS-008] FAIL: Fog frame index did not advance after animation tick (remained %d)" % initial_frame)
+		app.queue_free()
+		return false
+
+	print("[VIS-008] PASS: Live fog visibility, texture, modulate boost (a=%f), and animation tick verified!" % fog_rect.modulate.a)
+	app.queue_free()
+	return true
+
+static func test_visual_009_application_icon_configuration() -> bool:
+	print("[VIS-009] Verifying Godot project application branding icon configuration...")
+	var icon_setting: String = String(ProjectSettings.get_setting("application/config/icon", ""))
+	if icon_setting != "res://assets/branding/mathos_logo_emblem.png":
+		print("[VIS-009] FAIL: application/config/icon is '%s', expected 'res://assets/branding/mathos_logo_emblem.png'" % icon_setting)
+		return false
+
+	var file_exists: bool = FileAccess.file_exists(icon_setting) or ResourceLoader.exists(icon_setting)
+	if not file_exists:
+		print("[VIS-009] FAIL: Configured icon asset missing at '%s'" % icon_setting)
+		return false
+
+	print("[VIS-009] PASS: Application branding icon correctly configured!")
 	return true
