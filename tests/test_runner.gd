@@ -158,5 +158,5 @@ func _count_suite_tests(name: String) -> int:
 		"Final Player Polish V2 UX & Safety": return 6
 		"RC1 Playtest Bug Fixes (RC1-001..004)": return 6
 		"RC3 Full AppRoot Integration & Asset QA": return 6
-		"RC4 Initial Session Binding & Submission Recovery": return 4
+		"RC4 Initial Session Binding & Submission Recovery": return 5
 		_: return 1
