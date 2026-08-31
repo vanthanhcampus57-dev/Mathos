@@ -18,6 +18,13 @@ func _ready() -> void:
 			btn.pressed.connect(_on_continue_pressed)
 	_update_display()
 
+static func get_player_facing_speaker_name(raw_speaker: String, display_name: String = "") -> String:
+	if not display_name.is_empty() and not display_name.begins_with("npc_"):
+		return display_name
+	if raw_speaker.is_empty() or raw_speaker.begins_with("npc_"):
+		return "CỐ VẤN"
+	return raw_speaker
+
 func set_lesson_data(steps: Array) -> void:
 	_steps.clear()
 	for s in steps:
@@ -64,6 +71,7 @@ func _update_display() -> void:
 		if context_title_label != null: context_title_label.text = ""
 		if page_indicator_label != null: page_indicator_label.text = "Bước 0 / 0"
 		if continue_button != null:
+			continue_button.focus_mode = FOCUS_ALL
 			continue_button.text = "Bắt đầu giải đố"
 			continue_button.disabled = true
 		return
@@ -72,7 +80,7 @@ func _update_display() -> void:
 
 	if speaker_label != null:
 		var raw_speaker: String = step.speaker_label
-		speaker_label.text = raw_speaker if not raw_speaker.is_empty() else "CỐ VẤN"
+		speaker_label.text = get_player_facing_speaker_name(raw_speaker)
 		speaker_label.visible = true
 
 	if body_label != null:
@@ -86,6 +94,7 @@ func _update_display() -> void:
 		page_indicator_label.text = "Bước %d / %d" % [_current_index + 1, _steps.size()]
 
 	if continue_button != null:
+		continue_button.focus_mode = FOCUS_ALL
 		continue_button.disabled = false
 		if _current_index == _steps.size() - 1:
 			continue_button.text = "Bắt đầu giải đố"
@@ -101,40 +110,38 @@ func _update_display() -> void:
 			if t != null:
 				t.tween_property(c, "modulate:a", 1.0, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
-	step_changed.emit(_current_index, _steps.size())
-
 func _on_continue_pressed() -> void:
-	continue_requested.emit()
 	if not next_step():
-		# Completed all steps
-		pass
-
-func _get_context_title_label() -> Label:
-	var lbl = get_node_or_null("MarginContainer/VBoxContainer/HeaderContainer/ContextTitleLabel")
-	if lbl == null:
-		lbl = get_node_or_null("MarginContainer/PanelContainer/VBoxContainer/HeaderContainer/ContextTitleLabel")
-	return lbl as Label
+		continue_requested.emit()
 
 func _get_speaker_label() -> Label:
-	var lbl = get_node_or_null("MarginContainer/VBoxContainer/HeaderContainer/SpeakerLabel")
-	if lbl == null:
-		lbl = get_node_or_null("MarginContainer/PanelContainer/VBoxContainer/HeaderContainer/SpeakerLabel")
-	return lbl as Label
+	var node = get_node_or_null("MarginContainer/VBoxContainer/HeaderHBox/SpeakerLabel")
+	if node == null:
+		node = get_node_or_null("MarginContainer/VBoxContainer/HeaderContainer/SpeakerLabel")
+	return node as Label
 
 func _get_body_label() -> RichTextLabel:
-	var lbl = get_node_or_null("MarginContainer/VBoxContainer/BodyPanel/BodyMargin/BodyTextLabel")
-	if lbl == null:
-		lbl = get_node_or_null("MarginContainer/PanelContainer/VBoxContainer/BodyTextLabel")
-	return lbl as RichTextLabel
+	var node = get_node_or_null("MarginContainer/VBoxContainer/BodyPanel/MarginContainer/BodyLabel")
+	if node == null:
+		node = get_node_or_null("MarginContainer/VBoxContainer/BodyPanel/BodyMargin/BodyTextLabel")
+	if node == null:
+		node = get_node_or_null("MarginContainer/VBoxContainer/BodyPanel/MarginContainer/BodyTextLabel")
+	return node as RichTextLabel
+
+func _get_context_title_label() -> Label:
+	var node = get_node_or_null("MarginContainer/VBoxContainer/HeaderHBox/ContextTitleLabel")
+	if node == null:
+		node = get_node_or_null("MarginContainer/VBoxContainer/HeaderContainer/ContextTitleLabel")
+	return node as Label
 
 func _get_page_indicator_label() -> Label:
-	var lbl = get_node_or_null("MarginContainer/VBoxContainer/FooterContainer/PageIndicatorLabel")
-	if lbl == null:
-		lbl = get_node_or_null("MarginContainer/PanelContainer/VBoxContainer/FooterContainer/PageIndicatorLabel")
-	return lbl as Label
+	var node = get_node_or_null("MarginContainer/VBoxContainer/FooterHBox/PageIndicatorLabel")
+	if node == null:
+		node = get_node_or_null("MarginContainer/VBoxContainer/FooterContainer/PageIndicatorLabel")
+	return node as Label
 
 func _get_continue_button() -> Button:
-	var btn = get_node_or_null("MarginContainer/VBoxContainer/FooterContainer/ContinueButton")
-	if btn == null:
-		btn = get_node_or_null("MarginContainer/PanelContainer/VBoxContainer/FooterContainer/ContinueButton")
-	return btn as Button
+	var node = get_node_or_null("MarginContainer/VBoxContainer/FooterHBox/ContinueButton")
+	if node == null:
+		node = get_node_or_null("MarginContainer/VBoxContainer/FooterContainer/ContinueButton")
+	return node as Button

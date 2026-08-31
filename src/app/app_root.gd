@@ -377,6 +377,7 @@ func _on_question_continue_requested() -> void:
 			push_error("AppRoot: _on_question_continue_requested encountered unexpected question request failure code: '%s'. Aborting stage clear." % err_code)
 
 func _on_question_retry_requested() -> void:
+	_active_question_res = {}
 	_start_current_question()
 
 func _finish_stage_practice() -> void:

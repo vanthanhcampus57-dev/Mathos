@@ -3,6 +3,7 @@ extends Control
 
 ## UI View for rendering Multiple Choice question interactions consuming Mathos Shared UI Foundation.
 ## Supports visual states: normal, hover, selected, focus, disabled, correct feedback, incorrect feedback.
+## Format player-facing option prefixes as A., B., C., D. while preserving underlying option_id in payloads.
 
 signal option_selected(option_id: String)
 
@@ -34,6 +35,20 @@ func _ensure_ui_built() -> void:
 	add_child(_vbox)
 
 	_rebuild_option_buttons()
+
+static func get_option_letter(opt_id: String, index: int) -> String:
+	var clean: String = opt_id.to_lower()
+	if clean.begins_with("opt_"):
+		var suffix: String = clean.trim_prefix("opt_")
+		if suffix.length() == 1 and suffix[0] >= 'a' and suffix[0] <= 'z':
+			return suffix.to_upper()
+		elif suffix.is_valid_int():
+			var num: int = suffix.to_int()
+			if num >= 1 and num <= 26:
+				return String.chr(64 + num)
+	if index >= 0 and index < 26:
+		return String.chr(65 + index)
+	return opt_id
 
 func setup(interaction_payload: Dictionary) -> bool:
 	_options = []
@@ -98,25 +113,24 @@ func show_feedback(attempt_result: Dictionary) -> void:
 		var details: Dictionary = attempt_result.get("feedback_details", {}) as Dictionary
 		correct_opt_id = String(details.get("correct_option_id", ""))
 
-	for opt_id in _option_buttons:
-		var card: UiOptionCard = _option_buttons[opt_id] as UiOptionCard
+	for i in range(_options.size()):
+		var opt: Dictionary = _options[i] as Dictionary
+		var opt_id: String = String(opt["option_id"])
+		var letter: String = get_option_letter(opt_id, i)
+		var card: UiOptionCard = _option_buttons.get(opt_id) as UiOptionCard
 		if card != null:
 			card.disabled = true
-			var raw_label: String = ""
-			for opt in _options:
-				if String(opt["option_id"]) == opt_id:
-					raw_label = "%s. %s" % [opt_id, String(opt.get("text", opt_id))]
-					break
+			var raw_label: String = "%s. %s" % [letter, String(opt.get("text", opt_id))]
 
 			if opt_id == _selected_option_id:
 				if is_correct:
-					card.set_selected(true) # CYAN selected state per master
+					card.set_selected(true)
 					card.text = "[✓] %s (Chính xác)" % raw_label
 				else:
-					card.set_feedback(false) # Coral/Red wrong selection
+					card.set_feedback(false)
 					card.text = "[X] BẠN CHỌN: %s" % raw_label
 			elif not is_correct and not correct_opt_id.is_empty() and opt_id == correct_opt_id:
-				card.set_selected(true) # CYAN correct option per master
+				card.set_selected(true)
 				card.text = "[✓] ĐÁP ÁN ĐÚNG: %s" % raw_label
 
 func _rebuild_option_buttons() -> void:
@@ -131,14 +145,15 @@ func _rebuild_option_buttons() -> void:
 			child.free()
 	_option_buttons.clear()
 
-	for opt_var in _options:
-		var opt: Dictionary = opt_var as Dictionary
+	for i in range(_options.size()):
+		var opt: Dictionary = _options[i] as Dictionary
 		var opt_id: String = String(opt["option_id"])
 		var opt_text: String = String(opt.get("text", opt_id))
+		var letter: String = get_option_letter(opt_id, i)
 
 		var card: UiOptionCard = UiOptionCard.new()
 		card.name = "OptionButton_" + opt_id
-		card.text = "   %s. %s" % [opt_id, opt_text]
+		card.text = "   %s. %s" % [letter, opt_text]
 		card.custom_minimum_size = Vector2(240, 48)
 		card.size_flags_horizontal = SIZE_EXPAND_FILL
 		card.focus_mode = FOCUS_ALL
@@ -152,20 +167,19 @@ func _rebuild_option_buttons() -> void:
 	_update_button_states()
 
 func _update_button_states() -> void:
-	for opt_id in _option_buttons:
-		var card: UiOptionCard = _option_buttons[opt_id] as UiOptionCard
-		if card != null:
-			var opt_text: String = opt_id
-			for opt in _options:
-				if String(opt["option_id"]) == opt_id:
-					opt_text = String(opt.get("text", opt_id))
-					break
+	for i in range(_options.size()):
+		var opt: Dictionary = _options[i] as Dictionary
+		var opt_id: String = String(opt["option_id"])
+		var opt_text: String = String(opt.get("text", opt_id))
+		var letter: String = get_option_letter(opt_id, i)
+		var card: UiOptionCard = _option_buttons.get(opt_id) as UiOptionCard
 
+		if card != null:
 			var is_selected: bool = (opt_id == _selected_option_id)
 			card.set_selected(is_selected)
 			card.disabled = _disabled
 
 			if is_selected:
-				card.text = "[X] %s. %s" % [opt_id, opt_text]
+				card.text = "[X] %s. %s" % [letter, opt_text]
 			else:
-				card.text = "   %s. %s" % [opt_id, opt_text]
+				card.text = "   %s. %s" % [letter, opt_text]

@@ -183,8 +183,8 @@ func setup_question(question_view: Dictionary) -> bool:
 		return false
 
 	_question_view = question_view.duplicate(true)
-	_prompt_text = String(question_view["prompt"])
-	_objective_text = String(question_view.get("learning_objective", ""))
+	_prompt_text = sanitize_presentation_text(String(question_view["prompt"]))
+	_objective_text = sanitize_presentation_text(String(question_view.get("learning_objective", "")))
 
 	# Create interaction view child according to interaction_type
 	match interaction_type:
@@ -270,6 +270,13 @@ func show_feedback(attempt_result: Dictionary) -> bool:
 		_active_interaction_view.call("show_feedback", attempt_result)
 
 	return true
+
+static func sanitize_presentation_text(text: String) -> String:
+	if text.is_empty():
+		return ""
+	var regex := RegEx.new()
+	regex.compile("\\s*q_d\\d+_\\d+_\\d+\\b|\\s*q_[a-zA-Z0-9_]+\\b")
+	return regex.sub(text, "", true).strip_edges()
 
 func get_prompt_text() -> String:
 	return _prompt_text
