@@ -49,7 +49,9 @@ func _ensure_ui_built() -> void:
 	if _prompt_label == null:
 		_prompt_label = get_node_or_null("MainVBox/PromptLabel") as Label
 	if _interaction_container == null:
-		_interaction_container = get_node_or_null("MainVBox/InteractionContainer") as MarginContainer
+		_interaction_container = get_node_or_null("MainVBox/InteractionScrollContainer/InteractionContainer") as MarginContainer
+		if _interaction_container == null:
+			_interaction_container = get_node_or_null("MainVBox/InteractionContainer") as MarginContainer
 	if _feedback_label == null:
 		_feedback_label = get_node_or_null("MainVBox/FeedbackLabel") as Label
 	if _action_hbox == null:
@@ -58,6 +60,8 @@ func _ensure_ui_built() -> void:
 		_hint_button = get_node_or_null("MainVBox/ActionHBox/HintButton") as Button
 	if _submit_button == null:
 		_submit_button = get_node_or_null("MainVBox/SubmitButton") as Button
+		if _submit_button == null:
+			_submit_button = get_node_or_null("MainVBox/ActionHBox/SubmitButton") as Button
 
 	# Fallback programmatic node creation if instantiated programmatically without .tscn scene hierarchy
 	if _main_vbox == null:
@@ -66,7 +70,7 @@ func _ensure_ui_built() -> void:
 		_main_vbox.set_anchors_preset(PRESET_FULL_RECT)
 		_main_vbox.size_flags_horizontal = SIZE_EXPAND_FILL
 		_main_vbox.size_flags_vertical = SIZE_EXPAND_FILL
-		_main_vbox.add_theme_constant_override("separation", 12)
+		_main_vbox.add_theme_constant_override("separation", 8)
 		add_child(_main_vbox)
 
 	if _objective_label == null:
@@ -81,16 +85,28 @@ func _ensure_ui_built() -> void:
 		_prompt_label.name = "PromptLabel"
 		_prompt_label.theme_type_variation = &"MathosHeading"
 		_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_prompt_label.custom_minimum_size = Vector2(0, 44)
+		_prompt_label.custom_minimum_size = Vector2(0, 36)
 		_prompt_label.size_flags_horizontal = SIZE_EXPAND_FILL
 		_main_vbox.add_child(_prompt_label)
+
+	var scroll_container: ScrollContainer = _main_vbox.get_node_or_null("InteractionScrollContainer") as ScrollContainer
+	if scroll_container == null and _interaction_container == null:
+		scroll_container = ScrollContainer.new()
+		scroll_container.name = "InteractionScrollContainer"
+		scroll_container.size_flags_horizontal = SIZE_EXPAND_FILL
+		scroll_container.size_flags_vertical = SIZE_EXPAND_FILL
+		scroll_container.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		_main_vbox.add_child(scroll_container)
 
 	if _interaction_container == null:
 		_interaction_container = MarginContainer.new()
 		_interaction_container.name = "InteractionContainer"
 		_interaction_container.size_flags_horizontal = SIZE_EXPAND_FILL
 		_interaction_container.size_flags_vertical = SIZE_EXPAND_FILL
-		_main_vbox.add_child(_interaction_container)
+		if scroll_container != null:
+			scroll_container.add_child(_interaction_container)
+		else:
+			_main_vbox.add_child(_interaction_container)
 
 	if _feedback_label == null:
 		_feedback_label = Label.new()
@@ -104,14 +120,15 @@ func _ensure_ui_built() -> void:
 		_action_hbox.name = "ActionHBox"
 		_action_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 		_action_hbox.add_theme_constant_override("separation", 16)
+		_main_vbox.add_child(_action_hbox)
 
+	if _hint_button == null:
 		_hint_button = Button.new()
 		_hint_button.name = "HintButton"
 		_hint_button.theme_type_variation = &"MathosSecondaryButton"
 		_hint_button.text = "Gợi ý"
 		_hint_button.custom_minimum_size = Vector2(140, 44)
 		_action_hbox.add_child(_hint_button)
-		_main_vbox.add_child(_action_hbox)
 
 	if _submit_button == null:
 		_submit_button = Button.new()
@@ -220,7 +237,10 @@ func setup_question(question_view: Dictionary) -> bool:
 	if _active_interaction_view != null:
 		if _active_interaction_view.get_parent() != null:
 			_active_interaction_view.get_parent().remove_child(_active_interaction_view)
-		if _interaction_container != null:
+		var scroll_target: Control = get_interaction_scroll_container()
+		if scroll_target != null:
+			scroll_target.add_child(_active_interaction_view)
+		elif _interaction_container != null:
 			_interaction_container.add_child(_active_interaction_view)
 		else:
 			add_child(_active_interaction_view)
@@ -241,6 +261,17 @@ func get_current_interaction_payload() -> Dictionary:
 	if _active_interaction_view.has_method("get_interaction_payload"):
 		return _active_interaction_view.call("get_interaction_payload") as Dictionary
 	return {}
+
+func get_interaction_scroll_container() -> ScrollContainer:
+	if _interaction_container != null:
+		var sc: ScrollContainer = _interaction_container.get_node_or_null("InteractionScrollContainer") as ScrollContainer
+		if sc != null: return sc
+	if _main_vbox != null:
+		var sc2: ScrollContainer = _main_vbox.get_node_or_null("InteractionContainer/InteractionScrollContainer") as ScrollContainer
+		if sc2 != null: return sc2
+		var sc3: ScrollContainer = _main_vbox.get_node_or_null("InteractionScrollContainer") as ScrollContainer
+		if sc3 != null: return sc3
+	return get_node_or_null("MainVBox/InteractionContainer/InteractionScrollContainer") as ScrollContainer
 
 func request_submit() -> void:
 	var payload: Dictionary = get_current_interaction_payload()
