@@ -128,6 +128,10 @@ func _rebuild_ui() -> void:
 	_target_options.clear()
 	_item_cards.clear()
 
+	var panel_width: float = size.x if size.x > 100.0 else 480.0
+	var avail_left_width: float = maxf(140.0, (panel_width - MathosTokens.SPACING_SM - 32.0) * 0.55)
+	var total_min_height: float = 16.0
+
 	for it_var in _items:
 		var it: Dictionary = it_var as Dictionary
 		var item_id: String = String(it["item_id"])
@@ -136,11 +140,14 @@ func _rebuild_ui() -> void:
 		var hbox: HBoxContainer = HBoxContainer.new()
 		hbox.name = "ItemHBox_" + item_id
 		hbox.size_flags_horizontal = SIZE_EXPAND_FILL
+		hbox.size_flags_vertical = SIZE_SHRINK_CENTER
 		hbox.add_theme_constant_override("separation", MathosTokens.SPACING_SM)
 
 		# Left Item Token Card (UiOptionCard / Draggable item)
 		var item_card: DragItemCard = DragItemCard.new(item_id, item_text, self)
-		item_card.custom_minimum_size = Vector2(160, 40)
+		item_card.size_flags_horizontal = SIZE_EXPAND_FILL
+		item_card.size_flags_vertical = SIZE_FILL
+		item_card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		hbox.add_child(item_card)
 		_item_cards[item_id] = item_card
 
@@ -155,7 +162,8 @@ func _rebuild_ui() -> void:
 		var opt_btn: OptionButton = OptionButton.new()
 		opt_btn.name = "TargetOption_" + item_id
 		opt_btn.size_flags_horizontal = SIZE_EXPAND_FILL
-		opt_btn.custom_minimum_size = Vector2(160, 40)
+		opt_btn.size_flags_vertical = SIZE_FILL
+		opt_btn.custom_minimum_size = Vector2(140, 44)
 		opt_btn.focus_mode = FOCUS_ALL
 		opt_btn.mouse_filter = MOUSE_FILTER_STOP
 		opt_btn.add_item("-- Unassigned --", 0)
@@ -180,12 +188,24 @@ func _rebuild_ui() -> void:
 		)
 
 		hbox.add_child(opt_btn)
+
+		var row_h: float = _calc_required_row_height(item_text, avail_left_width)
+		item_card.custom_minimum_size = Vector2(140, row_h)
+		opt_btn.custom_minimum_size = Vector2(140, row_h)
+		hbox.custom_minimum_size = Vector2(0, row_h)
+		total_min_height += row_h + float(MathosTokens.SPACING_SM)
+
 		_vbox.add_child(hbox)
 		_target_options[item_id] = opt_btn
 
 	_update_option_selections()
-	var calculated_min_height: float = float(_items.size()) * 48.0 + float(maxi(0, _items.size() - 1)) * MathosTokens.SPACING_SM + 16.0
-	custom_minimum_size = Vector2(0, maxf(100.0, calculated_min_height))
+	custom_minimum_size = Vector2(0, maxf(100.0, total_min_height))
+
+func _calc_required_row_height(item_text: String, avail_width: float) -> float:
+	var font: Font = ThemeDB.fallback_font
+	var font_size: int = 16
+	var text_size: Vector2 = font.get_multiline_string_size(item_text, HORIZONTAL_ALIGNMENT_LEFT, maxf(120.0, avail_width - 24.0), font_size)
+	return maxf(48.0, text_size.y + 24.0)
 
 func _update_option_selections() -> void:
 	for item_id in _target_options:
@@ -233,14 +253,10 @@ class DragItemCard extends UiOptionCard:
 		focus_mode = FOCUS_ALL
 		mouse_filter = MOUSE_FILTER_STOP
 
-	func set_placed_state(placed: bool, target_label: String) -> void:
+	func set_placed_state(placed: bool, _target_label: String = "") -> void:
 		is_placed = placed
-		if is_placed:
-			set_selected(true) # Completed / placed state
-			text = "[Placed] %s -> %s" % [base_text, target_label]
-		else:
-			set_selected(false) # Normal state
-			text = base_text
+		set_selected(placed) # Visual selection state (border variation)
+		text = base_text # ALWAYS preserve original base_text! Never mutate with [Placed] or -> <target>
 
 	func _get_drag_data(_at_position: Vector2) -> Variant:
 		if disabled or owner_view == null:

@@ -3,36 +3,46 @@
 > Canonical recovery note for Agent2. This file must be updated every time Agent2 receives a prompt, and updated again before sending a report if state changed.
 
 ## 1. CURRENT TASK
-- TASK_ID: MATHOS-RC4-LIVE-INTERACTION-WINDOWS-REBUILD-002
-- TITLE: Waiting on New Fix HEAD from Agent3 and Agent5 Authorization
+- TASK_ID: MATHOS-RC4-LIVE-INTERACTION-WINDOWS-REBUILD-003
+- TITLE: Fresh Windows x86_64 Release Rebuild from Authorized Candidate aed1275
 - FROM: M1
 - PRIORITY: P0
-- STATUS: WAITING_ON_DEPENDENCY
-- PROMPT_RECEIVED_AT: 2026-08-31T20:56:24+07:00
+- STATUS: READY_FOR_USER_LIVE_GUI_REQA
+- PROMPT_RECEIVED_AT: 2026-08-31T21:25:02+07:00
 
 ## 2. WORKSPACE / GIT
 - PROJECT: Mathos
-- WORKTREE: D:\Mathos_Worktrees\MATHOS-RC4-COMBINED-WINDOWS-REBUILD-001
-- BRANCH: release/mathos-rc4-combined-rebuild-001
-- START_HEAD: e27d732045cec5920ba61ae800dbf6487b30fdbc (Previous combined HEAD)
-- CURRENT_HEAD: e27d732045cec5920ba61ae800dbf6487b30fdbc
+- WORKTREE: D:\Mathos_Worktrees\MATHOS-RC4-LIVE-INTERACTION-WINDOWS-REBUILD-003
+- BRANCH: release/mathos-rc4-live-interaction-rebuild-003
+- START_HEAD: aed12759e6a8761601930c544d3d49b41506c78d
+- CURRENT_HEAD: aed12759e6a8761601930c544d3d49b41506c78d
 - CANONICAL_BASE: 12a5261e2dc0f46908fe9bf5c5ddd834e846dbe9
 - WORKTREE_CLEAN: Clean (git status --short output empty)
 
 ## 3. EXACT PROMPT / INTENT SUMMARY
-- GOAL: Await explicit M1 prompt delivering (1) NEW fix HEAD from Agent3 and (2) Agent5 READY_FOR_WINDOWS_REBUILD clearance before creating a fresh isolated release worktree, running regression tests, exporting Windows x86_64 release package into a NEW output folder, performing normal + --qa-cheats boot smoke checks, and staging clean distribution without overwriting historical builds.
-- REQUIRED_OUTPUT: Acknowledge dependency wait status and update Agent2.md state ledger without altering code or running builds.
+- GOAL: Perform a fresh Windows x86_64 release rebuild from exact authorized candidate HEAD aed12759e6a8761601930c544d3d49b41506c78d for live GUI interaction/layout re-QA.
+- REQUIRED_OUTPUT: Fresh exported release binaries Mathos.exe & Mathos.pck in build/windows_rc4_live_interaction_reqa/ and clean user-playtest distribution directory Mathos_Windows_x64_RC4_LIVE_INTERACTION_REQA containing ONLY Mathos.exe and Mathos.pck.
 - ACCEPTANCE_GATES:
-  1. Preserved historical builds (Mathos_Windows_x64_RC4_COMBINED_REQA, Mathos_Windows_x64_RC4_LIVE_GUI, Mathos_Windows_x64_RC4).
-  2. Zero export or rebuild executed prior to receiving NEW Agent3 fix HEAD + Agent5 READY_FOR_WINDOWS_REBUILD status.
-  3. Status correctly recorded as WAITING_ON_DEPENDENCY.
-  4. Agent recovery/Agent2.md updated per mandatory recovery rule.
-- DO_NOT: Do NOT rebuild e27d732, do NOT overwrite previous builds, do NOT alter gameplay code, do NOT merge to main.
-- DEPENDENCIES: Downstream delivery of NEW fix HEAD from Agent3 and Agent5 READY_FOR_WINDOWS_REBUILD authorization.
+  1. Source Guard: Exact HEAD aed12759e6a8761601930c544d3d49b41506c78d, clean worktree, zero local/stale changes, no pixel assets/backgrounds added/modified, do NOT reuse binary/package of e27d732.
+  2. Targeted Test Gates:
+     - Vertical composition: 4/4 PASS
+     - Horizontal layout: 4/4 PASS
+     - Session/recovery: 5/5 PASS
+     - QA answer reveal: 10/10 PASS
+     - Live interaction UX: 9/9 PASS
+  3. Canonical Regression Gate: 427 PASS / 0 FAIL / 0 WAITING across 32 registered suites.
+  4. Git Diff Check: Clean (0 errors).
+  5. Windows Release Export: Godot 4.7.1 release export exit code 0 to build/windows_rc4_live_interaction_reqa/.
+  6. Binary Verification: Non-zero Mathos.exe (109,071,360 bytes) and Mathos.pck (2,516,792 bytes), SHA-256 computed.
+  7. Clean Distro Staging: Mathos_Windows_x64_RC4_LIVE_INTERACTION_REQA containing ONLY Mathos.exe & Mathos.pck.
+  8. Clean Boot Smoke: Dual launch (normal + --qa-cheats) boot cleanly, zero fatal parse/resource/startup errors.
+  9. Manual QA Boundary: Final status must be READY_FOR_USER_LIVE_GUI_REQA.
+- DO_NOT: Do NOT merge main, do NOT add/modify assets, do NOT overwrite previous packages (e27d732, 3c5400e, 7ff4c08), do NOT claim LIVE GUI PASS.
+- DEPENDENCIES: Official Godot 4.7.1 Windows x86_64 export templates (%APPDATA%\Godot\export_templates\4.7.1.stable\).
 
 ## 4. SCOPE
-- IN_SCOPE: State recovery note update, dependency wait posture maintenance, artifact preservation.
-- OUT_OF_SCOPE: Source code modifications, build exports, main branch merging.
+- IN_SCOPE: Source lineage audit, targeted test suite executions (vertical, layout, session, QA reveal, live interaction UX), canonical regression runner execution, release packaging to build/windows_rc4_live_interaction_reqa/, SHA-256 calculation, clean distro staging to Mathos_Windows_x64_RC4_LIVE_INTERACTION_REQA, dual boot smoke check (normal + --qa-cheats), recovery note maintenance.
+- OUT_OF_SCOPE: Source code modification, asset modification/addition, production release build overwriting, main branch merging.
 - FILES_ALLOWED:
   - Agent recovery/Agent2.md
 - FILES_CHANGED:
@@ -40,48 +50,77 @@
 
 ## 5. PROGRESS
 - COMPLETED:
-  1. Previous build e27d732 completed and preserved.
-  2. Prompt received and dependency wait posture established.
-  3. Pre-report and post-report Agent recovery/Agent2.md recovery note updates performed.
-- IN_PROGRESS: None (Waiting on Agent3 fix HEAD + Agent5 clearance).
-- NOT_STARTED: Fresh worktree creation and Windows release export for new fix candidate.
+  1. Source HEAD verification (aed12759e6a8761601930c544d3d49b41506c78d).
+  2. Isolated worktree creation (D:\Mathos_Worktrees\MATHOS-RC4-LIVE-INTERACTION-WINDOWS-REBUILD-003).
+  3. Pre-execution recovery note update in Agent recovery/Agent2.md.
+  4. Targeted Vertical Composition suite execution (4/4 PASS).
+  5. Targeted Horizontal Layout suite execution (4/4 PASS).
+  6. Targeted Session/Recovery suite execution (5/5 PASS).
+  7. Targeted QA Answer Reveal Cheat suite execution (10/10 PASS).
+  8. Targeted Live Interaction UX suite execution (9/9 PASS).
+  9. Full canonical regression runner execution (427 PASS / 0 FAIL / 0 WAITING across 32 registered suites).
+  10. Git diff check clean (0 errors).
+  11. Windows x86_64 release export to build/windows_rc4_live_interaction_reqa/ (exit code 0).
+  12. Artifact SHA-256 computation (Mathos.exe: a6a05964..., Mathos.pck: 0d9af8b9...).
+  13. Clean distribution staging into Mathos_Windows_x64_RC4_LIVE_INTERACTION_REQA (C:\Users\Admin\.gemini\antigravity\brain\aaf2843f-ce58-4ec3-b652-098c40a83a22\scratch\Mathos_Windows_x64_RC4_LIVE_INTERACTION_REQA).
+  14. Dual boot smoke check (normal launch PASS, --qa-cheats launch PASS, stderr empty).
+  15. Final recovery note update in Agent recovery/Agent2.md.
+- IN_PROGRESS: None.
+- NOT_STARTED: Live user GUI re-QA.
 
 ## 6. FINDINGS / DECISIONS
 - KEY_FINDINGS:
-  - Agent2 is on standby awaiting Agent3's new fix HEAD to address live GUI interaction issues and Agent5 to clear READY_FOR_WINDOWS_REBUILD.
-  - Previous build e27d732 (Mathos_Windows_x64_RC4_COMBINED_REQA) remains intact for reference and must not be overwritten.
+  - Authorized Candidate aed12759e6a8761601930c544d3d49b41506c78d incorporates Agent3's fixes for classification/matching layout overlap, localized validation messages, and selection state persistence.
+  - All 5 targeted test suites passed 100% (Vertical: 4/4, Layout: 4/4, Session: 5/5, QA Cheat: 10/10, Live UX: 9/9).
+  - Full canonical regression suite passes 427 PASS / 0 FAIL / 0 WAITING (100% green).
+  - Standalone release binary Mathos.exe launches cleanly from isolated folder Mathos_Windows_x64_RC4_LIVE_INTERACTION_REQA under both normal execution and --qa-cheats without script errors or missing resource warnings.
 - ARCHITECTURE_DECISIONS:
-  - Strict dependency gating: No rebuilds will be started for e27d732 or any commit until Agent3's fix HEAD + Agent5 authorization are explicitly provided.
-- ASSUMPTIONS: M1 will supply the new commit SHA and Agent5 clearance in a subsequent prompt.
-- RISKS: None.
+  - Isolated build directory build/windows_rc4_live_interaction_reqa/ and distro package Mathos_Windows_x64_RC4_LIVE_INTERACTION_REQA to preserve historical outputs (build/windows_rc4/, build/windows_rc4_live_gui/, build/windows_rc4_combined_reqa/).
+- ASSUMPTIONS: User/tester will launch Mathos.exe from C:\Users\Admin\.gemini\antigravity\brain\aaf2843f-ce58-4ec3-b652-098c40a83a22\scratch\Mathos_Windows_x64_RC4_LIVE_INTERACTION_REQA\ for live GUI re-QA.
+- RISKS: Rendered pixel gate remains VISIBLE_NOT_VERIFIED until live user Windows GUI playtest is performed.
 
 ## 7. TEST / VERIFICATION EVIDENCE
-- TARGETED_TESTS: N/A (Awaiting new fix HEAD)
-- FULL_REGRESSION: N/A (Awaiting new fix HEAD)
-- DIFF_CHECK: Clean (0 errors).
+- TARGETED_VERTICAL_COMPOSITION: 4 PASS / 0 FAIL / 0 WAITING (res://tests/unit/presentation/test_rc4_vertical_composition_verification.gd)
+- TARGETED_HORIZONTAL_LAYOUT: 4 PASS / 0 FAIL / 0 WAITING (res://tests/unit/presentation/test_rc4_live_gui_layout_verification.gd)
+- TARGETED_SESSION_RECOVERY: 5 PASS / 0 FAIL / 0 WAITING (res://tests/integration/app/test_rc4_initial_session_binding_fix.gd)
+- TARGETED_QA_ANSWER_REVEAL: 10 PASS / 0 FAIL / 0 WAITING (res://tests/unit/presentation/test_qa_answer_reveal_cheat.gd)
+- TARGETED_LIVE_INTERACTION_UX: 9 PASS / 0 FAIL / 0 WAITING (res://tests/unit/presentation/test_rc4_live_interaction_ux_verification.gd)
+- FULL_REGRESSION: 427 PASS / 0 FAIL / 0 WAITING (res://tests/test_runner.gd across 32 test suites)
+- DIFF_CHECK: git diff --check clean (0 output/errors).
 - OTHER_VALIDATION:
-  - Preserved e27d732 Mathos.exe SHA-256: a6a05964c6637fd4731f1fd11d71e0a3b0e5507fdc02030e2da64369540e146c
-  - Preserved e27d732 Mathos.pck SHA-256: f91fb71b31fbe062c644d3358fe6b2b9ebff0c192818dd737d761794a6d24205
+  - Mathos.exe size: 109,071,360 bytes
+  - Mathos.exe SHA-256: a6a05964c6637fd4731f1fd11d71e0a3b0e5507fdc02030e2da64369540e146c
+  - Mathos.pck size: 2,516,792 bytes
+  - Mathos.pck SHA-256: 0d9af8b9fd0f6c3e4643c19eabd56e462f41ef8413d9e48d77b1302a2cd2f1ef
+  - Boot smoke normal: STDOUT: [AppRoot] Runtime services and composition root initialized cleanly., STDERR: (empty)
+  - Boot smoke --qa-cheats: STDOUT: [AppRoot] Runtime services and composition root initialized cleanly., STDERR: (empty)
 
 ## 8. BLOCKERS / AUTHORITY
-- BLOCKED: Yes (WAITING_ON_DEPENDENCY)
-- EXACT_BLOCKER: Awaiting NEW fix HEAD from Agent3 AND Agent5 READY_FOR_WINDOWS_REBUILD clearance.
-- BLOCKER_OWNER: M1 / Agent3 / Agent5
-- M1_DECISION_REQUIRED: Supply approved Agent3 new fix HEAD + Agent5 clearance to initiate fresh rebuild.
+- BLOCKED: No
+- EXACT_BLOCKER: None
+- BLOCKER_OWNER: N/A
+- M1_DECISION_REQUIRED: Live GUI user re-QA execution.
 
 ## 9. LATEST REPORT / DELIVERABLE
-- REPORT_STATUS: WAITING_ON_DEPENDENCY
-- FINAL_HEAD: e27d732045cec5920ba61ae800dbf6487b30fdbc (Historical HEAD)
-- REPORT_SUMMARY: Agent2 has entered WAITING_ON_DEPENDENCY posture. Historical builds preserved untouched. Awaiting Agent3 new fix HEAD + Agent5 clearance.
+- REPORT_STATUS: READY_FOR_USER_LIVE_GUI_REQA
+- FINAL_HEAD: aed12759e6a8761601930c544d3d49b41506c78d
+- REPORT_SUMMARY: Created fresh Windows x86_64 release rebuild Mathos_Windows_x64_RC4_LIVE_INTERACTION_REQA from Authorized Candidate aed1275. Verified 4/4 vertical composition, 4/4 horizontal layout, 5/5 session recovery, 10/10 QA answer reveal cheat, 9/9 live interaction UX tests, 427/0/0 canonical regression runner, exit code 0 release export, non-zero file SHA-256 hashes, and dual boot smoke (normal + --qa-cheats).
 
 ## 10. RECOVERY HANDOFF
-- NEXT_ACTION: Await prompt from M1 containing the new Agent3 fix HEAD and Agent5 READY_FOR_WINDOWS_REBUILD clearance. Upon receipt, create a fresh isolated worktree, verify targeted & canonical tests, export to a new build directory, stage clean distro package, and perform normal + --qa-cheats boot smoke checks.
-- DO_NOT_REPEAT: Do not rebuild e27d732. Do not overwrite Mathos_Windows_x64_RC4_COMBINED_REQA or previous builds.
-- IMPORTANT_CONTEXT: Standby posture for task MATHOS-RC4-LIVE-INTERACTION-WINDOWS-REBUILD-002.
+- NEXT_ACTION: User/tester executes live interactive Windows GUI re-QA using Mathos.exe in C:\Users\Admin\.gemini\antigravity\brain\aaf2843f-ce58-4ec3-b652-098c40a83a22\scratch\Mathos_Windows_x64_RC4_LIVE_INTERACTION_REQA\ (optionally passing --qa-cheats for QA answer reveal).
+- DO_NOT_REPEAT: Do not merge to main, do not alter gameplay code, do not add/modify assets, do not overwrite historical RC4 release packages.
+- IMPORTANT_CONTEXT: Candidate aed1275 is verified regression-free (427 PASS) and packaged in Mathos_Windows_x64_RC4_LIVE_INTERACTION_REQA for live GUI re-QA.
 - LAST_UPDATED_BY: Agent2
-- LAST_UPDATED_AT: 2026-08-31T20:57:00+07:00
+- LAST_UPDATED_AT: 2026-08-31T21:27:30+07:00
 
 ## 11. RECENT PROMPT LOG
+
+### Prompt Entry 14
+- RECEIVED_AT: 2026-08-31T21:25:02+07:00
+- TASK_ID: MATHOS-RC4-LIVE-INTERACTION-WINDOWS-REBUILD-003
+- ONE_LINE_INTENT: Perform fresh Windows x86_64 release rebuild from authorized Candidate aed1275.
+- RESULT / CURRENT_STATE: READY_FOR_USER_LIVE_GUI_REQA (4/4 vert, 4/4 layout, 5/5 session, 10/10 QA cheat, 9/9 live UX, 427 PASS canonical)
+- HEAD_AFTER_WORK: aed12759e6a8761601930c544d3d49b41506c78d
 
 ### Prompt Entry 13
 - RECEIVED_AT: 2026-08-31T20:56:24+07:00
@@ -89,17 +128,3 @@
 - ONE_LINE_INTENT: Enter WAITING_ON_DEPENDENCY posture awaiting new fix HEAD from Agent3 and Agent5 clearance.
 - RESULT / CURRENT_STATE: WAITING_ON_DEPENDENCY (Historical build e27d732 preserved)
 - HEAD_AFTER_WORK: e27d732045cec5920ba61ae800dbf6487b30fdbc
-
-### Prompt Entry 12
-- RECEIVED_AT: 2026-08-31T20:42:59+07:00
-- TASK_ID: MATHOS-RC4-COMBINED-WINDOWS-REBUILD-001
-- ONE_LINE_INTENT: Perform fresh Windows x86_64 release rebuild from Combined Candidate e27d732.
-- RESULT / CURRENT_STATE: READY_FOR_POSTBUILD_REQA (4/4 vert, 4/4 layout, 5/5 session, 10/10 QA cheat, 418 PASS canonical)
-- HEAD_AFTER_WORK: e27d732045cec5920ba61ae800dbf6487b30fdbc
-
-### Prompt Entry 11
-- RECEIVED_AT: 2026-08-31T18:04:37+07:00
-- TASK_ID: MATHOS-RC4-LIVE-GUI-WINDOWS-REBUILD-001
-- ONE_LINE_INTENT: Perform fresh Windows x86_64 release rebuild from authorized Candidate 3c5400e.
-- RESULT / CURRENT_STATE: READY_FOR_USER_LIVE_GUI_REQA (4 PASS layout, 5 PASS session, 404 PASS canonical)
-- HEAD_AFTER_WORK: 3c5400e6185b6d655736042af0c16c01e235b8c0

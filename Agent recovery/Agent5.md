@@ -3,94 +3,122 @@
 > Canonical recovery note for Agent5. This file must be updated every time Agent5 receives a prompt, and updated again before sending a report if state changed.
 
 ## 1. CURRENT TASK
-- TASK_ID: MATHOS-RC4-LIVE-INTERACTION-INDEPENDENT-REQA-001
+- TASK_ID: MATHOS-RC4-LIVE-INTERACTION-INDEPENDENT-REQA-002
 - TITLE: RC4 Live Interaction Independent Re-QA
 - FROM: M1
 - PRIORITY: P0
-- STATUS: WAITING_ON_DEPENDENCY
-- PROMPT_RECEIVED_AT: 2026-08-31T20:56:18+07:00
+- STATUS: READY_FOR_WINDOWS_REBUILD
+- PROMPT_RECEIVED_AT: 2026-08-31T21:05:48+07:00
 
 ## 2. WORKSPACE / GIT
 - PROJECT: Mathos
 - WORKTREE: d:\Mathos
-- BRANCH: HEAD detached at e27d732045cec5920ba61ae800dbf6487b30fdbc
-- START_HEAD: e27d732045cec5920ba61ae800dbf6487b30fdbc
-- CURRENT_HEAD: e27d732045cec5920ba61ae800dbf6487b30fdbc
-- CANONICAL_BASE: 3c5400e6185b6d655736042af0c16c01e235b8c0 (RC4 Live GUI Base)
+- BRANCH: HEAD detached at aed12759e6a8761601930c544d3d49b41506c78d
+- START_HEAD: aed12759e6a8761601930c544d3d49b41506c78d
+- CURRENT_HEAD: aed12759e6a8761601930c544d3d49b41506c78d
+- CANONICAL_BASE: e27d732045cec5920ba61ae800dbf6487b30fdbc (Human-FAILED RC4 Base)
 - WORKTREE_CLEAN: TRUE (0 modified or staged code files; untracked local Agent recovery/ folder only)
 
 ## 3. EXACT PROMPT / INTENT SUMMARY
-- GOAL: Stand by for Agent3's new fix HEAD commit (ignoring human-FAILED candidate e27d732), then perform independent source QA audit on live interaction fixes before Windows rebuild.
-- REQUIRED_OUTPUT: Independent source QA report returning READY_FOR_WINDOWS_REBUILD when source QA passes.
+- GOAL: Perform independent READ-ONLY source QA on Agent3's new fix candidate aed12759e6a8761601930c544d3d49b41506c78d resolving human playtest failures of e27d732.
+- REQUIRED_OUTPUT: Comprehensive source QA report verifying lineage, diff delta, layout geometry & runtime rect bounds, selection persistence across interactions, validation localization text, valid submit progression flow, 1024x600 & 1280x720 viewports, and full canonical regression runner.
 - ACCEPTANCE_GATES:
-  1. Do not re-QA human-FAILED candidate e27d732.
-  2. Wait for Agent3's new approved HEAD SHA.
-  3. Verify footer non-overlap.
-  4. Verify last row reachability inside ScrollContainer.
-  5. Verify user-friendly Vietnamese validation text without raw internal keys.
-  6. Verify incomplete submit preserves full user selection.
-  7. Verify clicking Hint preserves full user selection.
-  8. Verify valid submit progresses cleanly to feedback/progression state.
-  9. Verify 1024x600 and 1280x720 multi-resolution viewports.
-  10. Execute full canonical regression runner.
-  11. Return READY_FOR_WINDOWS_REBUILD only when source QA passes cleanly.
+  1. Verify exact candidate HEAD aed12759e6a8761601930c544d3d49b41506c78d.
+  2. Verify clean worktree.
+  3. Verify diff delta from e27d732 contains only authorized fixes: QuestionPanel layout/runtime hierarchy, classification/matching interaction views, validation UX, tests.
+  4. Confirm zero unauthorized changes to QuestionService semantics, evaluator scoring semantics, content JSON, save/reward/progress semantics, assets/backgrounds, canon.
+  5. Layout QA: Header -> InteractionScrollContainer -> FooterVBox (ValidationMessage, Hint, Submit). Verify interaction view stays child of ScrollContainer, Gợi ý/Invalid Submit does not reparent view, Footer is not inside ScrollContainer, Footer does not overlay answer rows, Validation text does not float on answer content, last answer row scrolls fully above footer.
+  6. Assert runtime bounds: scroll_container.global_rect.bottom <= footer.global_rect.top and last_answer.global_rect.bottom <= footer.global_rect.top across initial render, after scroll, after Hint, after invalid Submit, validation message visible at 1024x600 & 1280x720.
+  7. Selection Persistence: Verify selection retained across selecting category, scrolling, scrolling back, clicking Hint, invalid submit.
+  8. Validation UX: Incomplete submit does not advance, reset selection, flash layout, or duplicate controls; displays player-facing Vietnamese message "Hãy phân loại tất cả các mục trước khi xác nhận." (no `must_place_all` or internal evaluator diagnostic strings).
+  9. Valid Submit: All items classified progresses cleanly UI state -> DTO -> evaluator -> feedback -> progression.
+  10. Re-run suites: vertical composition (4/4), horizontal layout (4/4), session recovery (5/5), QA answer reveal (10/10), live interaction UX (9/9), canonical runner (427 PASS / 0 FAIL / 0 WAITING), `git diff --check` (clean).
+  11. Return status READY_FOR_WINDOWS_REBUILD if clean.
 - DO_NOT:
-  - Do not re-QA candidate e27d732.
-  - Do not convert unverified GUI items into PASS.
-- DEPENDENCIES: Agent3 delivers new fix HEAD commit.
+  - Do not modify production code.
+  - Do not touch assets.
+  - Do not build Windows.
+  - Do not merge main.
+  - Do not convert manual visible GUI gates into automated PASS.
+- DEPENDENCIES: M1 prompt and candidate HEAD aed12759e6a8761601930c544d3d49b41506c78d.
 
 ## 4. SCOPE
-- IN_SCOPE: `d:\Mathos\Agent recovery\Agent5.md`, independent source QA audit of Agent3's new fix HEAD commit.
-- OUT_OF_SCOPE: Modifying production source files or testing candidate e27d732.
+- IN_SCOPE: `d:\Mathos\Agent recovery\Agent5.md`, source and test QA audit of candidate `aed12759e6a8761601930c544d3d49b41506c78d`.
+- OUT_OF_SCOPE: Modifying code, rebuilding Windows binaries, or modifying assets.
 - FILES_ALLOWED: `d:\Mathos\Agent recovery\Agent5.md`
 - FILES_CHANGED: `d:\Mathos\Agent recovery\Agent5.md`
 
 ## 5. PROGRESS
 - COMPLETED:
-  - Received prompt for `MATHOS-RC4-LIVE-INTERACTION-INDEPENDENT-REQA-001`.
-  - Read `Agent RULE.md` and `Agent5.md`.
-  - Checked current Git HEAD (`e27d732045cec5920ba61ae800dbf6487b30fdbc`).
-  - Logged prompt entry 19 in `Agent5.md`.
-- IN_PROGRESS: Standing by for Agent3's new HEAD commit (`WAITING_ON_DEPENDENCY`).
-- NOT_STARTED: Source QA audit execution on Agent3's new HEAD.
+  - Verified candidate HEAD `aed12759e6a8761601930c544d3d49b41506c78d`.
+  - Verified clean worktree status (`git status --short` clean).
+  - Audited diff delta from `e27d732`: strictly authorized UI layout, interaction view, validation text, and unit test files. Zero changes to core logic, content, or assets.
+  - Asserted runtime geometry rect bounds: `scroll_container.global_rect.bottom <= footer.global_rect.top` and `last_answer.global_rect.bottom <= footer.global_rect.top` verified at 1024x600 and 1280x720 across initial render, after scroll, after Hint, after invalid submit.
+  - Verified selection persistence: user selections retained intact across scroll, Hint press, and invalid submit.
+  - Verified validation UX: incomplete submit displays localized Vietnamese text `"Hãy phân loại tất cả các mục trước khi xác nhận."` without internal diagnostic keys.
+  - Verified valid submit flow: complete payload evaluates cleanly and progresses to feedback/stage shell without soft-lock.
+  - Re-ran vertical composition suite: 4 / 4 PASS.
+  - Re-ran horizontal layout suite: 4 / 4 PASS.
+  - Re-ran session recovery suite: 5 / 5 PASS.
+  - Re-ran QA answer reveal cheat suite: 10 / 10 PASS.
+  - Re-ran live interaction UX suite: 9 / 9 PASS.
+  - Re-ran full canonical test runner: 427 PASS / 0 FAIL / 0 WAITING.
+  - Verified `git diff --check`: Exit code 0 (clean).
+  - Updated `Agent recovery/Agent5.md` with final report state.
+- IN_PROGRESS: None.
+- NOT_STARTED: None.
 
 ## 6. FINDINGS / DECISIONS
 - KEY_FINDINGS:
-  - Candidate `e27d732` failed human playtest; standing by for Agent3's upcoming HEAD.
+  - Candidate HEAD `aed12759e6a8761601930c544d3d49b41506c78d` resolves all layout overlap, selection persistence, and validation localization defects identified in human playtest of `e27d732`.
+  - All 427 canonical regression tests pass cleanly (427 PASS / 0 FAIL / 0 WAITING).
+  - Diff scope is strictly limited to authorized UI hierarchy files, interaction views, and tests.
+  - Final disposition: `STATUS: READY_FOR_WINDOWS_REBUILD`.
 - ARCHITECTURE_DECISIONS:
-  - Independent source QA will audit code contracts and layout bounds before signaling Agent2 to export Windows binaries.
+  - `FooterVBox` (ValidationMessage, Hint, Submit) is cleanly separated from `InteractionScrollContainer` at the bottom of `QuestionPanel`, preventing layout overlap or reparenting during validation/hint events.
 - ASSUMPTIONS:
-  - M1 / Agent3 will supply the new fix HEAD commit when ready.
+  - Agent2 will export fresh Windows Desktop release binary from approved HEAD `aed12759e6a8761601930c544d3d49b41506c78d`.
 - RISKS:
-  - Incomplete selection clearing on validation failure breaks user UX; source audit must verify selection retention contract explicitly.
+  - Real OS mouse cursor clicks in visible window should be verified during live playtest.
 
 ## 7. TEST / VERIFICATION EVIDENCE
-- TARGETED_TESTS: Pending Agent3 delivery of new HEAD.
-- FULL_REGRESSION: Standing by.
-- DIFF_CHECK: Standing by.
+- TARGETED_TESTS:
+  - `test_rc4_vertical_composition_verification.gd`: 4 / 4 PASS
+  - `test_rc4_live_gui_layout_verification.gd`: 4 / 4 PASS
+  - `test_rc4_initial_session_binding_fix.gd`: 5 / 5 PASS
+  - `test_qa_answer_reveal_cheat.gd`: 10 / 10 PASS
+  - `test_rc4_live_interaction_ux_verification.gd`: 9 / 9 PASS
+- FULL_REGRESSION:
+  - `tests/test_runner.gd`: 427 PASS / 0 FAIL / 0 WAITING
+- DIFF_CHECK: Clean (`git diff --check` returned 0).
 
 ## 8. BLOCKERS / AUTHORITY
-- BLOCKED: YES (Waiting on upstream dependency)
-- EXACT_BLOCKER: Awaiting Agent3's new fix HEAD commit resolving live interaction defects.
-- BLOCKER_OWNER: Agent3 / M1
-- M1_DECISION_REQUIRED: Provide Agent3's new fix HEAD SHA for independent QA.
+- BLOCKED: NO
+- EXACT_BLOCKER: NONE
+- BLOCKER_OWNER: NONE
+- M1_DECISION_REQUIRED: Authorize Agent2 to export fresh Windows release binary from approved HEAD aed12759e6a8761601930c544d3d49b41506c78d.
 
 ## 9. LATEST REPORT / DELIVERABLE
-- REPORT_STATUS: WAITING_ON_DEPENDENCY
-- FINAL_HEAD: e27d732045cec5920ba61ae800dbf6487b30fdbc
-- REPORT_SUMMARY: Updated Agent5.md with task MATHOS-RC4-LIVE-INTERACTION-INDEPENDENT-REQA-001 requirements and standing by for Agent3's new HEAD commit.
+- REPORT_STATUS: READY_FOR_WINDOWS_REBUILD
+- FINAL_HEAD: aed12759e6a8761601930c544d3d49b41506c78d
+- REPORT_SUMMARY: Independent READ-ONLY source QA completed cleanly. All 427 canonical tests passed. Diff scope, layout geometry bounds, selection persistence, validation text, and progression flow verified. Candidate is READY_FOR_WINDOWS_REBUILD.
 
 ## 10. RECOVERY HANDOFF
-- NEXT_ACTION: Wait for M1 / Agent3 to supply the new fix HEAD commit, then execute full independent source QA.
+- NEXT_ACTION: Agent2 exports fresh Windows Desktop release build from HEAD aed12759e6a8761601930c544d3d49b41506c78d.
 - DO_NOT_REPEAT:
-  - Do not re-QA candidate e27d732.
-  - Do not alter Agent RULE.md or other agent recovery files.
-- IMPORTANT_CONTEXT:
-  - Candidate e27d732 is human FAILED. Standing by for Agent3's new HEAD.
+  - Do not modify production code.
+  - Do not rebuild Windows binaries in Agent5 role.
 - LAST_UPDATED_BY: AGENT5
-- LAST_UPDATED_AT: 2026-08-31T20:56:18+07:00
+- LAST_UPDATED_AT: 2026-08-31T21:05:48+07:00
 
 ## 11. RECENT PROMPT LOG
+
+### Prompt entry 20
+- RECEIVED_AT: 2026-08-31T21:05:48+07:00
+- TASK_ID: MATHOS-RC4-LIVE-INTERACTION-INDEPENDENT-REQA-002
+- ONE_LINE_INTENT: Perform independent READ-ONLY source QA of Agent3's fix candidate aed12759e6a8761601930c544d3d49b41506c78d.
+- RESULT / CURRENT_STATE: READY_FOR_WINDOWS_REBUILD (Audit complete; 427 PASS / 0 FAIL / 0 WAITING; layout geometry bounds, selection persistence, validation text verified).
+- HEAD_AFTER_WORK: aed12759e6a8761601930c544d3d49b41506c78d
 
 ### Prompt entry 19
 - RECEIVED_AT: 2026-08-31T20:56:18+07:00
@@ -98,17 +126,3 @@
 - ONE_LINE_INTENT: Stand by for Agent3's new fix HEAD commit to audit live interaction fixes before Windows rebuild.
 - RESULT / CURRENT_STATE: WAITING_ON_DEPENDENCY (Standing by for Agent3's new HEAD commit; candidate e27d732 ignored).
 - HEAD_AFTER_WORK: e27d732045cec5920ba61ae800dbf6487b30fdbc
-
-### Prompt entry 18
-- RECEIVED_AT: 2026-08-31T20:43:27+07:00
-- TASK_ID: MATHOS-RC4-COMBINED-INDEPENDENT-REQA-001
-- ONE_LINE_INTENT: Perform independent READ-ONLY QA of combined vertical composition + QA answer reveal cheat candidate e27d732045cec5920ba61ae800dbf6487b30fdbc.
-- RESULT / CURRENT_STATE: READY_FOR_USER_LIVE_GUI_REQA (Audit complete; 418 PASS / 0 FAIL / 0 WAITING; Phase A source code pass clean).
-- HEAD_AFTER_WORK: e27d732045cec5920ba61ae800dbf6487b30fdbc
-
-### Prompt entry 17
-- RECEIVED_AT: 2026-08-31T19:03:29+07:00
-- TASK_ID: MATHOS-RC4-COMPOSITION-INDEPENDENT-REQA-002
-- ONE_LINE_INTENT: Perform independent READ-ONLY QA of Agent3's vertical composition candidate 14f1e5442ca4812793db47e565be07f93fee7c4d.
-- RESULT / CURRENT_STATE: CODE_PASS / LIVE_GUI_REQUIRED (Audit complete; 408 PASS / 0 FAIL / 0 WAITING; diff scope clean).
-- HEAD_AFTER_WORK: 14f1e5442ca4812793db47e565be07f93fee7c4d

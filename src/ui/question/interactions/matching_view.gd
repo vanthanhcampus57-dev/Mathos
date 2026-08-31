@@ -142,6 +142,10 @@ func _rebuild_ui() -> void:
 	_right_options.clear()
 	_left_cards.clear()
 
+	var panel_width: float = size.x if size.x > 100.0 else 480.0
+	var avail_left_width: float = maxf(140.0, (panel_width - 32.0 - MathosTokens.SPACING_SM * 2.0) * 0.45)
+	var total_min_height: float = 16.0
+
 	for l_var in _left_items:
 		var l: Dictionary = l_var as Dictionary
 		var left_id: String = String(l["item_id"])
@@ -150,12 +154,15 @@ func _rebuild_ui() -> void:
 		var hbox: HBoxContainer = HBoxContainer.new()
 		hbox.name = "LeftItemHBox_" + left_id
 		hbox.size_flags_horizontal = SIZE_EXPAND_FILL
+		hbox.size_flags_vertical = SIZE_SHRINK_CENTER
 		hbox.add_theme_constant_override("separation", MathosTokens.SPACING_SM)
 
 		# Left Item Card (UiOptionCard)
 		var left_card: UiOptionCard = UiOptionCard.new()
 		left_card.text = left_text
-		left_card.custom_minimum_size = Vector2(160, 40)
+		left_card.size_flags_horizontal = SIZE_EXPAND_FILL
+		left_card.size_flags_vertical = SIZE_FILL
+		left_card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		left_card.focus_mode = FOCUS_ALL
 		left_card.mouse_filter = MOUSE_FILTER_STOP
 
@@ -184,7 +191,8 @@ func _rebuild_ui() -> void:
 		var opt_btn: OptionButton = OptionButton.new()
 		opt_btn.name = "RightOption_" + left_id
 		opt_btn.size_flags_horizontal = SIZE_EXPAND_FILL
-		opt_btn.custom_minimum_size = Vector2(160, 40)
+		opt_btn.size_flags_vertical = SIZE_FILL
+		opt_btn.custom_minimum_size = Vector2(140, 44)
 		opt_btn.focus_mode = FOCUS_ALL
 		opt_btn.mouse_filter = MOUSE_FILTER_STOP
 		opt_btn.add_item("-- Unmatched --", 0)
@@ -208,12 +216,24 @@ func _rebuild_ui() -> void:
 		)
 
 		hbox.add_child(opt_btn)
+
+		var row_h: float = _calc_required_row_height(left_text, avail_left_width)
+		left_card.custom_minimum_size = Vector2(140, row_h)
+		opt_btn.custom_minimum_size = Vector2(140, row_h)
+		hbox.custom_minimum_size = Vector2(0, row_h)
+		total_min_height += row_h + float(MathosTokens.SPACING_SM)
+
 		_vbox.add_child(hbox)
 		_right_options[left_id] = opt_btn
 
 	_update_option_selections()
-	var calculated_min_height: float = float(_left_items.size()) * 48.0 + float(maxi(0, _left_items.size() - 1)) * MathosTokens.SPACING_SM + 16.0
-	custom_minimum_size = Vector2(0, maxf(100.0, calculated_min_height))
+	custom_minimum_size = Vector2(0, maxf(100.0, total_min_height))
+
+func _calc_required_row_height(left_text: String, avail_width: float) -> float:
+	var font: Font = ThemeDB.fallback_font
+	var font_size: int = 16
+	var text_size: Vector2 = font.get_multiline_string_size(left_text, HORIZONTAL_ALIGNMENT_LEFT, maxf(120.0, avail_width - 24.0), font_size)
+	return maxf(48.0, text_size.y + 24.0)
 
 func _update_option_selections() -> void:
 	for left_id in _right_options:
@@ -234,23 +254,18 @@ func _update_option_selections() -> void:
 
 		if _pairs.has(left_id):
 			var assigned_right_id: String = String(_pairs[left_id])
-			var right_text: String = assigned_right_id
 			for idx in range(1, opt_btn.item_count):
 				var right_idx: int = idx - 1
 				if right_idx < _right_items.size() and String((_right_items[right_idx] as Dictionary)["item_id"]) == assigned_right_id:
 					opt_btn.select(idx)
-					right_text = String((_right_items[right_idx] as Dictionary).get("text", assigned_right_id))
 					break
 
 			if left_card != null:
-				left_card.set_selected(true) # Completed / matched pair state
-				left_card.text = "[Matched] %s -> %s" % [left_text, right_text]
+				left_card.set_selected(true) # Completed / matched pair visual state (border variation)
+				left_card.text = left_text # ALWAYS preserve original left_text! Never mutate with [Matched]
 		else:
 			opt_btn.select(0)
 			if left_card != null:
 				var is_active: bool = (left_id == _active_left_id)
 				left_card.set_selected(is_active)
-				if is_active:
-					left_card.text = "[Selecting] %s" % left_text
-				else:
-					left_card.text = left_text
+				left_card.text = left_text # ALWAYS preserve original left_text! Never mutate with [Selecting]
