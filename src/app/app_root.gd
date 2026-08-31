@@ -23,10 +23,12 @@ var _finalized_question_ids: Array[String] = []
 var _first_attempt_results: Dictionary = {} # question_id (String) -> is_correct (bool)
 var _current_question_id: String = ""
 
+const QaAnswerRevealOverlayClass = preload("res://src/ui/qa/qa_answer_reveal_overlay.gd")
+
 # UI Presentation
 var _presentation_shell: Control = null
 var _bootstrap_ui: Control = null
-var _qa_overlay: QaAnswerRevealOverlay = null
+var _qa_overlay: Control = null
 
 func _ready() -> void:
 	_bootstrap_ui = get_node_or_null("BootstrapUI") as Control
@@ -70,12 +72,17 @@ func bootstrap_runtime(custom_content_root: String = "") -> bool:
 
 func _ensure_qa_overlay() -> void:
 	if _qa_overlay == null:
-		_qa_overlay = QaAnswerRevealOverlay.new()
-		_qa_overlay.set_catalog(_catalog)
-		_qa_overlay.set_app_root(self)
+		var overlay_script: GDScript = load("res://src/ui/qa/qa_answer_reveal_overlay.gd") as GDScript
+		if overlay_script != null and overlay_script.can_instantiate():
+			_qa_overlay = overlay_script.new() as Control
+			if _qa_overlay != null:
+				_qa_overlay.call("set_catalog", _catalog)
+				_qa_overlay.call("set_app_root", self)
+				add_child(_qa_overlay)
+	elif _qa_overlay != null and _qa_overlay.get_parent() == null:
 		add_child(_qa_overlay)
 
-func get_qa_overlay() -> QaAnswerRevealOverlay:
+func get_qa_overlay() -> Control:
 	_ensure_qa_overlay()
 	return _qa_overlay
 

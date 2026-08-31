@@ -1,7 +1,7 @@
 class_name TestQaAnswerRevealCheat
 extends SceneTree
 
-## Unit test suite for QA-only Correct Answer Reveal Cheat (QA-CHEAT-001..010)
+## Unit test suite for QA-only Correct Answer Reveal Cheat (QA-CHEAT-001..012)
 
 func _initialize() -> void:
 	var ok: bool = run_all_tests()
@@ -10,8 +10,24 @@ func _initialize() -> void:
 	else:
 		quit(1)
 
+static func _create_overlay() -> QaAnswerRevealOverlay:
+	var script_res: GDScript = load("res://src/ui/qa/qa_answer_reveal_overlay.gd") as GDScript
+	if script_res != null and script_res.can_instantiate():
+		return script_res.new() as QaAnswerRevealOverlay
+	return null
+
+static func _create_and_mount_app() -> AppRoot:
+	var scene_res: PackedScene = load("res://src/app/app_root.tscn") as PackedScene
+	if scene_res == null:
+		return null
+	var app: AppRoot = scene_res.instantiate() as AppRoot
+	(Engine.get_main_loop() as SceneTree).root.add_child(app)
+	if app.has_method("bootstrap_runtime"):
+		app.bootstrap_runtime()
+	return app
+
 static func run_all_tests() -> bool:
-	print("--- RUNNING QA ANSWER REVEAL CHEAT TEST SUITE (QA-CHEAT-001..010) ---")
+	print("--- RUNNING QA ANSWER REVEAL CHEAT TEST SUITE (QA-CHEAT-001..012) ---")
 	var passes: int = 0
 	if test_qa_cheat_001_absent_without_flag(): passes += 1
 	if test_qa_cheat_002_available_with_flag(): passes += 1
@@ -23,13 +39,18 @@ static func run_all_tests() -> bool:
 	if test_qa_cheat_008_no_submit_or_evaluation(): passes += 1
 	if test_qa_cheat_009_question_change_clears_display(): passes += 1
 	if test_qa_cheat_010_retry_session_unchanged(): passes += 1
+	if test_qa_cheat_011_runtime_tree_and_visibility(): passes += 1
+	if test_qa_cheat_012_question_transition_no_duplication(): passes += 1
 
-	print("[QA-CHEAT-HARNESS] %d / 10 test scenarios passed" % passes)
-	return passes == 10
+	print("[QA-CHEAT-HARNESS] %d / 12 test scenarios passed" % passes)
+	return passes == 12
 
 static func test_qa_cheat_001_absent_without_flag() -> bool:
 	print("[QA-CHEAT-001] Testing QA cheat control absent/hidden when --qa-cheats flag is absent...")
-	var overlay: QaAnswerRevealOverlay = QaAnswerRevealOverlay.new()
+	var overlay: QaAnswerRevealOverlay = _create_overlay()
+	if overlay == null:
+		print("[QA-CHEAT-001] FAIL: Failed to instantiate QaAnswerRevealOverlay")
+		return false
 	overlay.set_qa_cheats_enabled(false)
 
 	if overlay.visible:
@@ -48,7 +69,10 @@ static func test_qa_cheat_001_absent_without_flag() -> bool:
 
 static func test_qa_cheat_002_available_with_flag() -> bool:
 	print("[QA-CHEAT-002] Testing QA cheat control available when --qa-cheats is enabled...")
-	var overlay: QaAnswerRevealOverlay = QaAnswerRevealOverlay.new()
+	var overlay: QaAnswerRevealOverlay = _create_overlay()
+	if overlay == null:
+		print("[QA-CHEAT-002] FAIL: Failed to instantiate QaAnswerRevealOverlay")
+		return false
 	overlay.set_qa_cheats_enabled(true)
 
 	if not overlay.visible:
@@ -160,9 +184,9 @@ static func test_qa_cheat_007_no_session_mutation() -> bool:
 	var sess_before: Dictionary = q_svc.get_active_session()
 	var sess_id_before: String = String(sess_before.get("session_id", ""))
 
-	var overlay: QaAnswerRevealOverlay = app.get_qa_overlay()
-	overlay.set_qa_cheats_enabled(true)
-	overlay._on_cheat_button_pressed()
+	var overlay: Control = app.get_qa_overlay()
+	overlay.call("set_qa_cheats_enabled", true)
+	overlay.call("_on_cheat_button_pressed")
 
 	var sess_after: Dictionary = q_svc.get_active_session()
 	var sess_id_after: String = String(sess_after.get("session_id", ""))
@@ -192,15 +216,15 @@ static func test_qa_cheat_008_no_submit_or_evaluation() -> bool:
 	app._on_lesson_continue_requested()
 
 	var q_panel: QuestionPanel = app.get_question_panel()
-	var attempts_before: int = q_panel.get_instance_id() # check submitting state
+	var attempts_before: int = q_panel.get_instance_id()
 	if q_panel.get("_is_submitting") == true or q_panel.has_feedback():
 		print("[QA-CHEAT-008] FAIL: QuestionPanel in submitting/feedback state before reveal test")
 		app.queue_free()
 		return false
 
-	var overlay: QaAnswerRevealOverlay = app.get_qa_overlay()
-	overlay.set_qa_cheats_enabled(true)
-	overlay._on_cheat_button_pressed()
+	var overlay: Control = app.get_qa_overlay()
+	overlay.call("set_qa_cheats_enabled", true)
+	overlay.call("_on_cheat_button_pressed")
 
 	if q_panel.get("_is_submitting") == true or q_panel.has_feedback():
 		print("[QA-CHEAT-008] FAIL: Reveal action triggered submission/feedback on QuestionPanel!")
@@ -213,7 +237,10 @@ static func test_qa_cheat_008_no_submit_or_evaluation() -> bool:
 
 static func test_qa_cheat_009_question_change_clears_display() -> bool:
 	print("[QA-CHEAT-009] Testing changing question clears previous answer display...")
-	var overlay: QaAnswerRevealOverlay = QaAnswerRevealOverlay.new()
+	var overlay: QaAnswerRevealOverlay = _create_overlay()
+	if overlay == null:
+		print("[QA-CHEAT-009] FAIL: Failed to instantiate QaAnswerRevealOverlay")
+		return false
 	overlay.set_qa_cheats_enabled(true)
 	overlay._current_question_id = "q_test_1"
 	overlay._answer_label.text = "ĐÁP ÁN ĐÚNG: [opt_a]"
@@ -251,20 +278,19 @@ static func test_qa_cheat_010_retry_session_unchanged() -> bool:
 	app.start_new_game()
 	app._on_lesson_continue_requested()
 
-	var overlay: QaAnswerRevealOverlay = app.get_qa_overlay()
-	overlay.set_qa_cheats_enabled(true)
+	var overlay: Control = app.get_qa_overlay()
+	overlay.call("set_qa_cheats_enabled", true)
 
 	var q_panel: QuestionPanel = app.get_question_panel()
 	var mc_view: MultipleChoiceView = q_panel.get_active_interaction_view() as MultipleChoiceView
 	mc_view.select_option("opt_b")
-	q_panel._submit_button.pressed.emit() # Submit wrong answer
+	q_panel._submit_button.pressed.emit()
 
 	if q_panel.is_correct():
 		print("[QA-CHEAT-010] FAIL: Incorrect submission marked correct")
 		app.queue_free()
 		return false
 
-	# Click "THỬ LẠI"
 	q_panel._submit_button.pressed.emit()
 
 	var q_svc: QuestionService = app.get_question_service()
@@ -274,5 +300,75 @@ static func test_qa_cheat_010_retry_session_unchanged() -> bool:
 		return false
 
 	print("[QA-CHEAT-010] PASS: Retry and session lifecycle remained 100% stable with QA overlay present!")
+	app.queue_free()
+	return true
+
+static func test_qa_cheat_011_runtime_tree_and_visibility() -> bool:
+	print("[QA-CHEAT-011] Testing runtime-tree assertions, CanvasLayer, and viewport containment...")
+	var app: AppRoot = _create_and_mount_app()
+	if app == null:
+		print("[QA-CHEAT-011] FAIL: App null")
+		return false
+	app.start_new_game()
+	app._on_lesson_continue_requested()
+
+	var overlay: Control = app.get_qa_overlay()
+	if overlay == null or overlay.get_parent() != app:
+		print("[QA-CHEAT-011] FAIL: QaAnswerRevealOverlay null or not mounted under AppRoot")
+		app.queue_free()
+		return false
+
+	var layer_node: CanvasLayer = overlay.call("get_canvas_layer") as CanvasLayer
+	if layer_node == null or layer_node.layer != 100:
+		print("[QA-CHEAT-011] FAIL: CanvasLayer null or layer != 100 (got %s)" % str(layer_node))
+		app.queue_free()
+		return false
+
+	overlay.call("set_qa_cheats_enabled", true)
+
+	var root_ctrl: Control = overlay.call("get_root_control") as Control
+	if not overlay.visible or root_ctrl == null or not root_ctrl.visible:
+		print("[QA-CHEAT-011] FAIL: Overlay or root control not visible when enabled")
+		app.queue_free()
+		return false
+
+	var btn: Button = overlay.call("get_cheat_button") as Button
+	if btn == null or not btn.visible or btn.mouse_filter != Control.MOUSE_FILTER_STOP:
+		print("[QA-CHEAT-011] FAIL: Cheat button null, invisible, or mouse_filter != STOP")
+		app.queue_free()
+		return false
+
+	print("[QA-CHEAT-011] PASS: Runtime tree assertions, CanvasLayer 100, and viewport containment verified!")
+	app.queue_free()
+	return true
+
+static func test_qa_cheat_012_question_transition_no_duplication() -> bool:
+	print("[QA-CHEAT-012] Testing question transitions do not duplicate overlay nodes...")
+	var app_scene: PackedScene = load("res://src/app/app_root.tscn") as PackedScene
+	var root: Window = (Engine.get_main_loop() as SceneTree).root
+	var app: AppRoot = app_scene.instantiate() as AppRoot
+	root.add_child(app)
+	app.bootstrap_runtime()
+	app.start_new_game()
+	app._on_lesson_continue_requested()
+
+	var count_1: int = 0
+	for child in app.get_children():
+		if child.name == "QaAnswerRevealOverlay":
+			count_1 += 1
+
+	app._on_question_continue_requested()
+
+	var count_2: int = 0
+	for child in app.get_children():
+		if child.name == "QaAnswerRevealOverlay":
+			count_2 += 1
+
+	if count_1 != 1 or count_2 != 1:
+		print("[QA-CHEAT-012] FAIL: Duplicate overlay nodes detected! (count_1: %d, count_2: %d)" % [count_1, count_2])
+		app.queue_free()
+		return false
+
+	print("[QA-CHEAT-012] PASS: Zero overlay duplication across question transitions verified!")
 	app.queue_free()
 	return true

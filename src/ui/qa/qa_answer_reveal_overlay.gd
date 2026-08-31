@@ -3,15 +3,19 @@ extends Control
 
 ## QA-only overlay component providing the "🧪 ĐÁP ÁN" reveal cheat.
 ## Gated behind the command-line flag --qa-cheats or explicit set_qa_cheats_enabled(true).
-## Obtains authoritative answer_spec via separate QA catalog lookup without weakening presentation DTO safety.
+## Uses internal CanvasLayer (layer = 100) to guarantee top z-order rendering in live Windows GUI.
 
 signal qa_answer_revealed(formatted_text: String)
+
+const QaAnswerFormatterClass = preload("res://src/ui/qa/qa_answer_formatter.gd")
 
 var _qa_cheats_enabled: bool = false
 var _catalog: RefCounted = null
 var _app_root: Node = null
 var _current_question_id: String = ""
 
+var _canvas_layer: CanvasLayer = null
+var _root_control: Control = null
 var _cheat_button: Button = null
 var _answer_panel: PanelContainer = null
 var _answer_label: RichTextLabel = null
@@ -23,12 +27,29 @@ func _init() -> void:
 
 func _ready() -> void:
 	_ensure_ui_built()
-	set_qa_cheats_enabled(OS.get_cmdline_args().has("--qa-cheats"))
+	set_qa_cheats_enabled(detect_qa_cheats_flag())
+
+static func detect_qa_cheats_flag() -> bool:
+	var args: Array = OS.get_cmdline_args()
+	for a in args:
+		var sa: String = String(a).strip_edges()
+		if sa == "--qa-cheats" or sa == "-qa-cheats":
+			return true
+	var user_args: Array = OS.get_cmdline_user_args()
+	for ua in user_args:
+		var sua: String = String(ua).strip_edges()
+		if sua == "--qa-cheats" or sua == "-qa-cheats":
+			return true
+	return false
 
 func set_qa_cheats_enabled(enabled: bool) -> void:
 	_ensure_ui_built()
 	_qa_cheats_enabled = enabled
 	visible = enabled
+	if _canvas_layer != null:
+		_canvas_layer.visible = enabled
+	if _root_control != null:
+		_root_control.visible = enabled
 	if _cheat_button != null:
 		_cheat_button.visible = enabled
 		_cheat_button.mouse_filter = MOUSE_FILTER_STOP if enabled else MOUSE_FILTER_IGNORE
@@ -36,8 +57,22 @@ func set_qa_cheats_enabled(enabled: bool) -> void:
 		_answer_panel.hide()
 		_is_revealed = false
 
+	_log_diagnostic_evidence()
+
 func is_qa_cheats_enabled() -> bool:
 	return _qa_cheats_enabled
+
+func get_canvas_layer() -> CanvasLayer:
+	_ensure_ui_built()
+	return _canvas_layer
+
+func get_root_control() -> Control:
+	_ensure_ui_built()
+	return _root_control
+
+func get_cheat_button() -> Button:
+	_ensure_ui_built()
+	return _cheat_button
 
 func set_catalog(p_catalog: RefCounted) -> void:
 	_catalog = p_catalog
@@ -64,8 +99,29 @@ func get_formatted_answer() -> String:
 		return _answer_label.text
 	return ""
 
+func _log_diagnostic_evidence() -> void:
+	print("[QA-CHEAT-DIAG] QA_CHEATS_FLAG=%s" % str(_qa_cheats_enabled))
+	print("[QA-CHEAT-DIAG] OVERLAY_CREATED=true")
+	print("[QA-CHEAT-DIAG] OVERLAY_IN_TREE=%s" % str(is_inside_tree()))
+	print("[QA-CHEAT-DIAG] OVERLAY_VISIBLE=%s" % str(visible and (_root_control != null and _root_control.visible)))
+	if _cheat_button != null and _cheat_button.is_inside_tree():
+		print("[QA-CHEAT-DIAG] OVERLAY_GLOBAL_RECT=%s" % str(_cheat_button.get_global_rect()))
+
 func _ensure_ui_built() -> void:
 	set_anchors_preset(PRESET_FULL_RECT)
+
+	if _canvas_layer == null:
+		_canvas_layer = CanvasLayer.new()
+		_canvas_layer.name = "QaCanvasLayer"
+		_canvas_layer.layer = 100
+		add_child(_canvas_layer)
+
+	if _root_control == null:
+		_root_control = Control.new()
+		_root_control.name = "RootControl"
+		_root_control.set_anchors_preset(PRESET_FULL_RECT)
+		_root_control.mouse_filter = MOUSE_FILTER_IGNORE
+		_canvas_layer.add_child(_root_control)
 
 	if _cheat_button == null:
 		_cheat_button = Button.new()
@@ -76,13 +132,13 @@ func _ensure_ui_built() -> void:
 		_cheat_button.anchor_top = 0.0
 		_cheat_button.anchor_right = 1.0
 		_cheat_button.anchor_bottom = 0.0
-		_cheat_button.offset_left = -130.0
+		_cheat_button.offset_left = -260.0
 		_cheat_button.offset_top = 16.0
-		_cheat_button.offset_right = -16.0
+		_cheat_button.offset_right = -136.0
 		_cheat_button.offset_bottom = 52.0
 		_cheat_button.theme_type_variation = &"MathosSecondaryButton"
 		_cheat_button.pressed.connect(_on_cheat_button_pressed)
-		add_child(_cheat_button)
+		_root_control.add_child(_cheat_button)
 
 	if _answer_panel == null:
 		_answer_panel = PanelContainer.new()
@@ -92,7 +148,7 @@ func _ensure_ui_built() -> void:
 		_answer_panel.anchor_top = 0.0
 		_answer_panel.anchor_right = 1.0
 		_answer_panel.anchor_bottom = 0.0
-		_answer_panel.offset_left = -360.0
+		_answer_panel.offset_left = -380.0
 		_answer_panel.offset_top = 60.0
 		_answer_panel.offset_right = -16.0
 		_answer_panel.offset_bottom = 220.0
@@ -112,7 +168,7 @@ func _ensure_ui_built() -> void:
 		_answer_label.selection_enabled = true
 		margin.add_child(_answer_label)
 
-		add_child(_answer_panel)
+		_root_control.add_child(_answer_panel)
 
 func _on_cheat_button_pressed() -> void:
 	if not _qa_cheats_enabled:
@@ -173,4 +229,4 @@ func _fetch_and_format_current_answer() -> String:
 	if answer_spec.is_empty():
 		return "⚠️ Không tìm thấy đáp án hợp lệ cho câu hỏi hiện tại (id: '%s')" % qid
 
-	return QaAnswerFormatter.format_answer(interaction_type, answer_spec, q_dict)
+	return QaAnswerFormatterClass.format_answer(interaction_type, answer_spec, q_dict)
