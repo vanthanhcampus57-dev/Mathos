@@ -154,6 +154,11 @@ func get_active_session() -> Dictionary:
 		return {}
 	return _active_session.to_dictionary()
 
+func get_active_question() -> Dictionary:
+	if _active_question.is_empty():
+		return {}
+	return _presentation_view(_active_question)
+
 func has_active_session() -> bool:
 	return _active_session != null
 

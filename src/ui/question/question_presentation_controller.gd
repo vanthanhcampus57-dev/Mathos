@@ -78,21 +78,28 @@ func bind_existing_session(session: Dictionary, question: Dictionary) -> Diction
 
 	if _question_service == null:
 		var err_null: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION_SESSION, "QuestionService reference is null")
+		push_error("QuestionPresentationController.bind_existing_session: QuestionService reference is null")
 		question_failed.emit(err_null)
 		return err_null
 
+	if session.is_empty() and _question_service.has_active_session():
+		session = _question_service.get_active_session()
+
 	if not _question_service.has_active_session():
 		var err_no_session: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION_SESSION, "QuestionService has no active session to bind")
+		push_error("QuestionPresentationController.bind_existing_session: QuestionService has no active session to bind")
 		question_failed.emit(err_no_session)
 		return err_no_session
 
 	if not (session is Dictionary) or session.is_empty() or not session.has("session_id") or not (session["session_id"] is String):
 		var err_sess_shape: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION_SESSION, "Supplied session dictionary is missing session_id")
+		push_error("QuestionPresentationController.bind_existing_session: Supplied session dictionary is missing session_id")
 		question_failed.emit(err_sess_shape)
 		return err_sess_shape
 
 	if not session.has("question_id") or not (session["question_id"] is String) or String(session["question_id"]).is_empty():
 		var err_sess_qid: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION_SESSION, "Supplied session dictionary is missing question_id")
+		push_error("QuestionPresentationController.bind_existing_session: Supplied session dictionary is missing question_id")
 		question_failed.emit(err_sess_qid)
 		return err_sess_qid
 
@@ -102,11 +109,13 @@ func bind_existing_session(session: Dictionary, question: Dictionary) -> Diction
 
 	if supplied_session_id != active_session_id or active_session_id.is_empty():
 		var err_mismatch: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION_SESSION, "Supplied session_id '%s' does not match active QuestionService session '%s'" % [supplied_session_id, active_session_id])
+		push_error("QuestionPresentationController.bind_existing_session: " + String(err_mismatch["error_message"]))
 		question_failed.emit(err_mismatch)
 		return err_mismatch
 
 	if not (question is Dictionary) or question.is_empty() or not question.has("question_id") or not (question["question_id"] is String) or String(question["question_id"]).is_empty() or not question.has("interaction_type"):
 		var err_q_shape: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION, "Supplied question view dictionary is missing required fields")
+		push_error("QuestionPresentationController.bind_existing_session: Supplied question view dictionary is missing required fields")
 		question_failed.emit(err_q_shape)
 		return err_q_shape
 
@@ -114,11 +123,13 @@ func bind_existing_session(session: Dictionary, question: Dictionary) -> Diction
 	var question_qid: String = String(question["question_id"])
 	if question_qid != session_qid:
 		var err_qid_mismatch: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION, "Supplied question_id '%s' does not match active session question_id '%s'" % [question_qid, session_qid])
+		push_error("QuestionPresentationController.bind_existing_session: " + String(err_qid_mismatch["error_message"]))
 		question_failed.emit(err_qid_mismatch)
 		return err_qid_mismatch
 
 	if question.has("answer_spec"):
 		var err_leak: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION, "answer_spec leaked into presentation view")
+		push_error("QuestionPresentationController.bind_existing_session: answer_spec leaked into presentation view")
 		question_failed.emit(err_leak)
 		return err_leak
 
@@ -126,6 +137,7 @@ func bind_existing_session(session: Dictionary, question: Dictionary) -> Diction
 		var panel_ok: bool = _question_panel.setup_question(question)
 		if not panel_ok:
 			var err_panel: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION, "Failed to setup QuestionPanel with question view")
+			push_error("QuestionPresentationController.bind_existing_session: Failed to setup QuestionPanel with question view")
 			question_failed.emit(err_panel)
 			return err_panel
 
@@ -140,8 +152,20 @@ func bind_existing_session(session: Dictionary, question: Dictionary) -> Diction
 	}
 
 func submit_answer(interaction_payload: Dictionary) -> Dictionary:
+	if _active_session_id.is_empty() and _question_service != null and _question_service.has_active_session():
+		var active_sess: Dictionary = _question_service.get_active_session()
+		_active_session_id = String(active_sess.get("session_id", ""))
+		if _question_panel != null and _question_panel.get("_question_view") is Dictionary:
+			var q_view: Dictionary = _question_panel.get("_question_view") as Dictionary
+			_active_interaction_type = String(q_view.get("interaction_type", ""))
+
 	if _question_service == null or _active_session_id.is_empty() or _completed:
-		return _error(QuestionErrorCodes.INVALID_QUESTION_SESSION, "No active or uncompleted QuestionSession")
+		var err_no_sess: Dictionary = _error(QuestionErrorCodes.INVALID_QUESTION_SESSION, "No active or uncompleted QuestionSession")
+		push_error("QuestionPresentationController.submit_answer: No active or uncompleted QuestionSession")
+		if _question_panel != null and _question_panel.has_method("on_submission_failed"):
+			_question_panel.call("on_submission_failed", err_no_sess)
+		question_failed.emit(err_no_sess)
+		return err_no_sess
 
 	var answer_payload: Dictionary = {
 		"session_id": _active_session_id,
@@ -151,7 +175,10 @@ func submit_answer(interaction_payload: Dictionary) -> Dictionary:
 
 	var response: Dictionary = _question_service.submit_answer(answer_payload)
 	if not bool(response.get("success", false)):
-		# Malformed submission errors do not lock or complete the session.
+		push_error("QuestionPresentationController.submit_answer rejected by QuestionService: %s" % String(response.get("error_message", "Unknown submission failure")))
+		if _question_panel != null and _question_panel.has_method("on_submission_failed"):
+			_question_panel.call("on_submission_failed", response)
+		question_failed.emit(response)
 		return response
 
 	var result: Dictionary = (response.get("result", {}) as Dictionary).duplicate(true)

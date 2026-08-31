@@ -48,7 +48,7 @@ static func test_a_wrong_retry_does_not_prematurely_complete() -> bool:
 		print("[DEMO-FIX2-A] FAIL: MultipleChoiceView null")
 		return false
 
-	mc_view.select_option("B")
+	mc_view.select_option("opt_b")
 	panel.request_submit()
 
 	# Verify shell is STILL in QUESTION_HOST / FEEDBACK view mode, NOT STAGE_COMPLETE
@@ -60,13 +60,14 @@ static func test_a_wrong_retry_does_not_prematurely_complete() -> bool:
 	# Click THỬ LẠI (Retry)
 	panel._on_submit_button_pressed()
 
-	# Verify interaction view re-enabled for same question
-	if mc_view.is_disabled():
+	# Re-get active interaction view after retry setup
+	mc_view = panel.get_active_interaction_view() as MultipleChoiceView
+	if mc_view == null or mc_view.is_disabled():
 		print("[DEMO-FIX2-A] FAIL: Retry did not re-enable interaction view")
 		return false
 
-	# Submit correct answer (Option A)
-	mc_view.select_option("A")
+	# Submit correct answer (Option opt_a)
+	mc_view.select_option("opt_a")
 	panel.request_submit()
 
 	# Verify shell is STILL in QUESTION_HOST / FEEDBACK view mode until TIẾP TỤC is clicked

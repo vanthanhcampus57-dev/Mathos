@@ -359,3 +359,31 @@ func _on_hint_button_pressed() -> void:
 		var fb_tween: Tween = create_tween()
 		if fb_tween != null:
 			fb_tween.tween_property(_feedback_label, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+func on_submission_failed(error_info: Dictionary = {}) -> void:
+	_is_submitting = false
+	_ensure_ui_built()
+
+	if _submit_button != null:
+		_submit_button.disabled = false
+		if not _has_feedback:
+			_submit_button.text = "Xác nhận"
+
+	if _active_interaction_view != null and _active_interaction_view.has_method("set_disabled"):
+		_active_interaction_view.call("set_disabled", false)
+
+	var msg: String = String(error_info.get("error_message", "")).strip_edges()
+	if msg.is_empty():
+		msg = "Không thể gửi câu trả lời. Vui lòng thử lại."
+
+	_feedback_text = "⚠️ %s" % sanitize_presentation_text(msg)
+	_has_feedback = true
+
+	if _feedback_label != null:
+		_feedback_label.theme_type_variation = &"MathosMeta"
+		_feedback_label.text = _feedback_text
+		_feedback_label.modulate.a = 0.0
+		_feedback_label.visible = true
+		var fb_tween: Tween = create_tween()
+		if fb_tween != null:
+			fb_tween.tween_property(_feedback_label, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)

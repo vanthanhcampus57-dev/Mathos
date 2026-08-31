@@ -467,9 +467,40 @@ func _start_next_question_in_stage() -> Dictionary:
 		var session: Dictionary = _active_question_res.get("session", {}) as Dictionary
 		var question: Dictionary = _active_question_res.get("question", {}) as Dictionary
 		if not session.is_empty() and not question.is_empty():
+			var bind_res: Dictionary = {}
 			if _question_controller.has_method("bind_existing_session"):
-				return _question_controller.call("bind_existing_session", session, question) as Dictionary
-			return _active_question_res
+				bind_res = _question_controller.call("bind_existing_session", session, question) as Dictionary
+			else:
+				bind_res = _active_question_res
+			if bool(bind_res.get("success", false)):
+				_current_question_id = String(question.get("question_id", ""))
+				var orch: StageOrchestrator = _game_flow_service.get_orchestrator()
+				if orch != null:
+					orch.set("_current_phase", "QUESTION_ACTIVE")
+					orch.set("_active_question_session_id", String(session.get("session_id", "")))
+			return bind_res
+
+	if _question_service != null and _question_service.has_active_session():
+		var active_sess: Dictionary = _question_service.get_active_session()
+		var active_q: Dictionary = _question_service.get_active_question()
+		if not active_sess.is_empty() and not active_q.is_empty():
+			_active_question_res = {
+				"success": true,
+				"session": active_sess,
+				"question": active_q
+			}
+			var bind_res: Dictionary = {}
+			if _question_controller.has_method("bind_existing_session"):
+				bind_res = _question_controller.call("bind_existing_session", active_sess, active_q) as Dictionary
+			else:
+				bind_res = _active_question_res
+			if bool(bind_res.get("success", false)):
+				_current_question_id = String(active_q.get("question_id", ""))
+				var orch: StageOrchestrator = _game_flow_service.get_orchestrator()
+				if orch != null:
+					orch.set("_current_phase", "QUESTION_ACTIVE")
+					orch.set("_active_question_session_id", String(active_sess.get("session_id", "")))
+			return bind_res
 
 	var stage_data: Dictionary = _catalog.get_stage(current_stage_id)
 	var practice_id: String = String(stage_data.get("practice_id", ""))

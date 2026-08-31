@@ -4,7 +4,7 @@ extends RefCounted
 ## Centralized Mathos Design Tokens (Fantasy-Math Theme).
 ## Provides single-source-of-truth constants for colors, font sizes, spacing, and radiuses.
 
-const VERSION: String = "0.1.0-rc3"
+const VERSION: String = "0.1.0-rc4"
 
 # --- SURFACES & BACKGROUNDS ---
 const BG_APP: Color = Color(0.06, 0.08, 0.12, 1.0)              # #0f141e - Deep slate navy
