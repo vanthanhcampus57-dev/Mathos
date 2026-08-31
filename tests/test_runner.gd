@@ -49,7 +49,8 @@ func _initialize() -> void:
 		{"name": "D4 Procedural QGen", "func": Callable(preload("res://tests/unit/question/test_d4_procedural_qgen.gd"), "run_all_tests")},
 		{"name": "Finished Game Flow Batch 1", "func": Callable(preload("res://tests/unit/presentation/test_finished_game_flow_batch1.gd"), "run_all_tests")},
 		{"name": "Batch 2A Components", "func": Callable(preload("res://tests/unit/presentation/test_batch_2a_components.gd"), "run_all_tests")},
-		{"name": "Batch 2B Game Finish Flow Wiring", "func": Callable(preload("res://tests/unit/presentation/test_game_finish_flow_batch2b.gd"), "run_all_tests")}
+		{"name": "Batch 2B Game Finish Flow Wiring", "func": Callable(preload("res://tests/unit/presentation/test_game_finish_flow_batch2b.gd"), "run_all_tests")},
+		{"name": "Final Player Polish V2 UX & Safety", "func": Callable(preload("res://tests/unit/presentation/test_final_player_polish_v2.gd"), "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -151,4 +152,5 @@ func _count_suite_tests(name: String) -> int:
 		"Finished Game Flow Batch 1": return 5
 		"Batch 2A Components": return 5
 		"Batch 2B Game Finish Flow Wiring": return 7
+		"Final Player Polish V2 UX & Safety": return 6
 		_: return 1

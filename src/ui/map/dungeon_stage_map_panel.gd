@@ -20,22 +20,22 @@ var _back_button: Button = null
 const DEFAULT_DUNGEONS: Array = [
 	{
 		"dungeon_id": "dungeon_01",
-		"title": "Dungeon 1: Phép Thử & Biến Cố",
+		"title": "Dungeon 1: Khu Rừng Mù Sương",
 		"stages": ["stage_01_01", "stage_01_02", "stage_01_03", "stage_01_04", "stage_01_05"]
 	},
 	{
 		"dungeon_id": "dungeon_02",
-		"title": "Dungeon 2: Xác Suất Cổ Điển",
+		"title": "Dungeon 2: Đầm Lầy Tỷ Lệ",
 		"stages": ["stage_02_01", "stage_02_02", "stage_02_03", "stage_02_04", "stage_02_05"]
 	},
 	{
 		"dungeon_id": "dungeon_03",
-		"title": "Dungeon 3: Quy Tắc Cộng",
+		"title": "Dungeon 3: Cung Điện Hợp Nhất",
 		"stages": ["stage_03_01", "stage_03_02", "stage_03_03", "stage_03_04", "stage_03_05"]
 	},
 	{
 		"dungeon_id": "dungeon_04",
-		"title": "Dungeon 4: Quy Tắc Nhân & Độc Lập",
+		"title": "Dungeon 4: Đỉnh Tháp Độc Lập",
 		"stages": ["stage_04_01", "stage_04_02", "stage_04_03", "stage_04_04", "stage_04_05"]
 	}
 ]
@@ -77,15 +77,16 @@ func _build_base_layout() -> void:
 	main_vbox.add_child(header_hbox)
 
 	_title_label = Label.new()
-	_title_label.text = "BẢN ĐỒ TIẾN TRÌNH MATHOS"
-	_title_label.add_theme_font_size_override("font_size", 26)
-	_title_label.add_theme_color_override("font_color", Color(0.95, 0.96, 0.98))
+	_title_label.text = "BẢN ĐỒ HÀNH TRÌNH MATHOS"
+	_title_label.theme_type_variation = &"MathosTitle"
+	_title_label.add_theme_font_size_override("font_size", 24)
 	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header_hbox.add_child(_title_label)
 
 	_back_button = Button.new()
-	_back_button.text = "QUAY LẠI"
-	_back_button.custom_minimum_size = Vector2(120, 40)
+	_back_button.text = "Trở về trang chủ"
+	_back_button.theme_type_variation = &"MathosSecondaryButton"
+	_back_button.custom_minimum_size = Vector2(160, 44)
 	_back_button.pressed.connect(func() -> void: back_requested.emit())
 	header_hbox.add_child(_back_button)
 
@@ -118,12 +119,14 @@ func render_map() -> void:
 		return
 
 	for child in _dungeon_container.get_children():
-		child.queue_free()
+		_dungeon_container.remove_child(child)
+		child.free()
 
 	for dun_info in DEFAULT_DUNGEONS:
 		var dun_panel: PanelContainer = PanelContainer.new()
 		dun_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		dun_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		dun_panel.theme_type_variation = &"MathosCard"
 
 		var dun_margin: MarginContainer = MarginContainer.new()
 		dun_margin.add_theme_constant_override("margin_left", 12)
@@ -133,14 +136,15 @@ func render_map() -> void:
 		dun_panel.add_child(dun_margin)
 
 		var dun_vbox: VBoxContainer = VBoxContainer.new()
-		dun_vbox.add_theme_constant_override("separation", 12)
+		dun_vbox.add_theme_constant_override("separation", 10)
 		dun_margin.add_child(dun_vbox)
 
 		# Dungeon Header
 		var dun_title: Label = Label.new()
 		dun_title.text = String(dun_info.get("title", "Dungeon"))
-		dun_title.add_theme_font_size_override("font_size", 16)
-		dun_title.add_theme_color_override("font_color", Color(0.4, 0.75, 1.0))
+		dun_title.theme_type_variation = &"MathosSubtitle"
+		dun_title.add_theme_font_size_override("font_size", 15)
+		dun_title.add_theme_color_override("font_color", Color(0.4, 0.8, 1.0))
 		dun_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		dun_vbox.add_child(dun_title)
 
@@ -156,24 +160,28 @@ func render_map() -> void:
 			var is_current: bool = (s_id == _current_stage_id)
 
 			var stage_btn: Button = Button.new()
-			stage_btn.custom_minimum_size = Vector2(0, 48)
+			stage_btn.custom_minimum_size = Vector2(0, 46)
 			stage_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 			var parts: PackedStringArray = s_id.split("_")
-			var stage_num_str: String = "S" + parts[1] + "." + parts[2] if parts.size() == 3 else s_id
+			var stage_num_str: String = "Stage " + str(parts[1].to_int()) + "." + str(parts[2].to_int()) if parts.size() == 3 else s_id
 
 			if is_completed:
-				stage_btn.text = "✔ " + stage_num_str + " (Hoàn thành)"
+				stage_btn.text = "✔ " + stage_num_str + " (Đã xong)"
 				stage_btn.disabled = false
+				stage_btn.theme_type_variation = &"MathosSecondaryButton"
 				stage_btn.add_theme_color_override("font_color", Color(0.3, 0.9, 0.4))
 			elif is_current or is_unlocked:
 				stage_btn.text = "▶ " + stage_num_str + " (Đang mở)"
 				stage_btn.disabled = false
-				stage_btn.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+				stage_btn.theme_type_variation = &"MathosPrimaryButton"
+				stage_btn.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3))
 			else:
 				stage_btn.text = "🔒 " + stage_num_str + " (Khóa)"
 				stage_btn.disabled = true
-				stage_btn.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+				stage_btn.theme_type_variation = &"MathosSecondaryButton"
+				stage_btn.add_theme_color_override("font_color", Color(0.55, 0.6, 0.65))
+				stage_btn.modulate.a = 0.55
 
 			if is_unlocked or is_completed:
 				stage_btn.pressed.connect(func() -> void:

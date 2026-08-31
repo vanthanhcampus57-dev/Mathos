@@ -389,7 +389,10 @@ func _finish_stage_practice() -> void:
 				var stage_id: String = String(prep_res.get("stage_id", ""))
 				var reward_grant: RewardGrant = prep_res.get("reward_grant") as RewardGrant
 				if not stage_id.is_empty() and reward_grant != null and _bridge != null:
-					_bridge.commit_stage_and_checkpoint(stage_id, reward_grant)
+					var commit_res: Dictionary = _bridge.commit_stage_and_checkpoint(stage_id, reward_grant)
+					if not bool(commit_res.get("success", false)):
+						if _presentation_shell != null and _presentation_shell.has_method("show_notification_banner"):
+							_presentation_shell.call("show_notification_banner", "Không thể lưu tiến trình tự động. Tiến trình hiện tại vẫn được giữ tạm thời.", true)
 
 	var unique_count: int = _finalized_question_ids.size()
 	var first_attempt_correct: int = 0

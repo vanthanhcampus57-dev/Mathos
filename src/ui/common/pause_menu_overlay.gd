@@ -29,7 +29,7 @@ func _build_ui() -> void:
 
 	# Dark semi-transparent backdrop
 	var backdrop: ColorRect = ColorRect.new()
-	backdrop.color = Color(0.02, 0.04, 0.08, 0.8)
+	backdrop.color = Color(0.02, 0.04, 0.08, 0.85)
 	backdrop.anchor_right = 1.0
 	backdrop.anchor_bottom = 1.0
 	add_child(backdrop)
@@ -43,11 +43,12 @@ func _build_ui() -> void:
 	# Card Panel
 	_card_panel = PanelContainer.new()
 	_card_panel.custom_minimum_size = Vector2(380, 320)
+	_card_panel.theme_type_variation = &"MathosCard"
 	center.add_child(_card_panel)
 
 	var margin: MarginContainer = MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 24)
-	margin.add_theme_constant_override("margin_right", 24)
+	margin.add_theme_constant_override("margin_left", 28)
+	margin.add_theme_constant_override("margin_right", 28)
 	margin.add_theme_constant_override("margin_top", 24)
 	margin.add_theme_constant_override("margin_bottom", 24)
 	_card_panel.add_child(margin)
@@ -58,10 +59,9 @@ func _build_ui() -> void:
 
 	# Title
 	var title_lbl: Label = Label.new()
-	title_lbl.text = "TẠM DỪNG GAMEPLAY"
+	title_lbl.text = "TẠM DỪNG GAME"
+	title_lbl.theme_type_variation = &"MathosHeading"
 	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_lbl.add_theme_font_size_override("font_size", 22)
-	title_lbl.add_theme_color_override("font_color", Color(0.95, 0.96, 0.98))
 	vbox.add_child(title_lbl)
 
 	var hs: HSeparator = HSeparator.new()
@@ -69,8 +69,9 @@ func _build_ui() -> void:
 
 	# Resume Button
 	_resume_button = Button.new()
-	_resume_button.text = "TIẾP TỤC"
-	_resume_button.custom_minimum_size = Vector2(0, 44)
+	_resume_button.text = "Tiếp tục"
+	_resume_button.theme_type_variation = &"MathosPrimaryButton"
+	_resume_button.custom_minimum_size = Vector2(0, 48)
 	_resume_button.pressed.connect(func() -> void:
 		hide_pause()
 		resume_requested.emit()
@@ -79,8 +80,9 @@ func _build_ui() -> void:
 
 	# Stage Map Button
 	_map_button = Button.new()
-	_map_button.text = "BẢN ĐỒ TIẾN TRÌNH"
-	_map_button.custom_minimum_size = Vector2(0, 44)
+	_map_button.text = "Bản đồ hành trình"
+	_map_button.theme_type_variation = &"MathosSecondaryButton"
+	_map_button.custom_minimum_size = Vector2(0, 48)
 	_map_button.pressed.connect(func() -> void:
 		hide_pause()
 		stage_map_requested.emit()
@@ -89,8 +91,9 @@ func _build_ui() -> void:
 
 	# Main Menu Button
 	_menu_button = Button.new()
-	_menu_button.text = "VỀ TRANG CHỦ"
-	_menu_button.custom_minimum_size = Vector2(0, 44)
+	_menu_button.text = "Trở về trang chủ"
+	_menu_button.theme_type_variation = &"MathosDestructiveButton"
+	_menu_button.custom_minimum_size = Vector2(0, 48)
 	_menu_button.pressed.connect(func() -> void:
 		hide_pause()
 		main_menu_requested.emit()

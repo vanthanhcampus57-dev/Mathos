@@ -80,7 +80,7 @@ func _ensure_ui_built() -> void:
 	var sub_lbl: Label = Label.new()
 	sub_lbl.name = "SubtitleLabel"
 	sub_lbl.theme_type_variation = &"MathosHeading"
-	sub_lbl.text = "Chúc mừng bạn đã xuất sắc chinh phục toàn bộ 4 Dungeon Xác Suất!"
+	sub_lbl.text = "Chúc mừng bạn đã xuất sắc chinh phục toàn bộ 4 Dungeon xác suất!"
 	sub_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_main_vbox.add_child(sub_lbl)
 
@@ -160,7 +160,7 @@ func _ensure_ui_built() -> void:
 	var gold_vbox: VBoxContainer = VBoxContainer.new()
 	gold_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	var gold_title: Label = Label.new()
-	gold_title.text = "VÀNG TÍCH LŨY"
+	gold_title.text = "VÀNG"
 	gold_title.theme_type_variation = &"MathosMeta"
 	gold_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_gold_value_label = Label.new()
@@ -200,7 +200,7 @@ func _ensure_ui_built() -> void:
 	_return_button.name = "ReturnButton"
 	_return_button.custom_minimum_size = Vector2(280, 48)
 	_return_button.theme_type_variation = &"MathosPrimaryButton"
-	_return_button.text = "Trở về Trang chủ"
+	_return_button.text = "Trở về trang chủ"
 	action_hbox.add_child(_return_button)
 
 func _on_return_pressed() -> void:

@@ -42,6 +42,11 @@ var _journey_map_button: Button = null
 var _save_summary_label: Label = null
 var _pause_button: Button = null
 
+# Notification Banner
+var _notification_banner: PanelContainer = null
+var _notification_label: Label = null
+var _notification_tween: Tween = null
+
 func _ready() -> void:
 	_update_background_texture()
 	_ensure_sub_components()
@@ -232,6 +237,52 @@ func set_continue_available(available: bool, summary_data: Dictionary = {}) -> v
 		else:
 			summary_lbl.visible = false
 			summary_lbl.text = ""
+
+func show_notification_banner(message: String, is_error: bool = false, duration: float = 4.0) -> void:
+	_ensure_sub_components()
+	if _notification_banner == null:
+		_notification_banner = PanelContainer.new()
+		_notification_banner.name = "NotificationBanner"
+		_notification_banner.custom_minimum_size = Vector2(420, 44)
+		_notification_banner.size_flags_horizontal = SIZE_SHRINK_CENTER
+
+		var margin: MarginContainer = MarginContainer.new()
+		margin.name = "MarginContainer"
+		margin.add_theme_constant_override("margin_left", 20)
+		margin.add_theme_constant_override("margin_right", 20)
+		margin.add_theme_constant_override("margin_top", 10)
+		margin.add_theme_constant_override("margin_bottom", 10)
+		_notification_banner.add_child(margin)
+
+		_notification_label = Label.new()
+		_notification_label.name = "NotificationLabel"
+		_notification_label.theme_type_variation = &"MathosMeta"
+		_notification_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		margin.add_child(_notification_label)
+
+		add_child(_notification_banner)
+
+	if _notification_banner != null and _notification_label != null:
+		if is_error:
+			_notification_banner.theme_type_variation = &"MathosPanelElevated"
+			_notification_label.text = "⚠️ " + message
+			_notification_label.add_theme_color_override("font_color", Color(1.0, 0.45, 0.45))
+		else:
+			_notification_banner.theme_type_variation = &"MathosCard"
+			_notification_label.text = "ℹ️ " + message
+			_notification_label.add_theme_color_override("font_color", Color(0.4, 0.85, 1.0))
+
+		_notification_banner.visible = true
+		_notification_banner.modulate.a = 0.0
+
+		if _notification_tween != null and _notification_tween.is_valid():
+			_notification_tween.kill()
+
+		_notification_tween = create_tween()
+		_notification_tween.tween_property(_notification_banner, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		_notification_tween.tween_interval(duration)
+		_notification_tween.tween_property(_notification_banner, "modulate:a", 0.0, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		_notification_tween.tween_callback(func(): if _notification_banner != null: _notification_banner.visible = false)
 
 func show_game_victory(player_gold: int = 0, player_xp: int = 0) -> void:
 	_ensure_sub_components()
