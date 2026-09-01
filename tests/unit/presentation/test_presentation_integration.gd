@@ -1,6 +1,8 @@
 class_name TestPresentationIntegration
 extends RefCounted
 
+const StagePresentationShellClass = preload("res://src/ui/stage/stage_presentation_shell.gd")
+
 ## B.3 Presentation Integration Suite covering PRES-001..012.
 ## Validates end-to-end UI presentation flow, QuestionService request/submit pipeline,
 ## AttemptResult feedback mapping, and FLOW/Progress ownership boundaries.
@@ -298,20 +300,33 @@ static func test_pres_006_completion_event_exactly_once() -> String:
 	print("[PRES-006] PASS: Question completion presentation event emitted exactly once")
 	return "PASS"
 
+static func _instantiate_shell() -> PanelContainer:
+	var scene_res: PackedScene = load("res://src/ui/stage/stage_presentation_shell.tscn") as PackedScene
+	if scene_res != null:
+		return scene_res.instantiate() as PanelContainer
+	var node: PanelContainer = PanelContainer.new()
+	node.set_script(StagePresentationShellClass)
+	return node
+
 # PRES-007 — UI does not mutate ProgressState
 static func test_pres_007_ui_does_not_mutate_progress_state() -> String:
-	var shell: StagePresentationShell = StagePresentationShell.new()
+	var shell: PanelContainer = _instantiate_shell()
+	if shell == null:
+		print("[PRES-007] FAIL: _instantiate_shell returned null")
+		return "FAIL"
+	var empty_steps: Array[PresentationModels.LessonStepData] = []
 	var info: PresentationModels.StageContextInfo = PresentationModels.StageContextInfo.new(
-		"stage_01_01", "Title", "Dungeon", [], false
+		"stage_01_01", "Title", "Dungeon", empty_steps, false
 	)
 	shell.set_stage_context(info)
 	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_LESSON)
 
-	# Verify UI shell contains no reference to ProgressState
 	if shell.get("progress_state") != null or shell.get("_progress_state") != null:
+		shell.free()
 		print("[PRES-007] FAIL: StagePresentationShell holds direct ProgressState reference")
 		return "FAIL"
 
+	shell.free()
 	print("[PRES-007] PASS: Presentation UI does not hold or mutate ProgressState")
 	return "PASS"
 
@@ -320,6 +335,7 @@ static func test_pres_008_invalid_question_definition_fails_explicitly() -> Stri
 	var panel: QuestionPanel = QuestionPanel.new()
 	var invalid_q1: Dictionary = {"question_id": "q_bad"} # missing interaction_type and payload
 	if panel.setup_question(invalid_q1):
+		panel.free()
 		print("[PRES-008] FAIL: Invalid QuestionDefinition (missing fields) accepted")
 		return "FAIL"
 
@@ -330,35 +346,46 @@ static func test_pres_008_invalid_question_definition_fails_explicitly() -> Stri
 		"interaction_payload": {}
 	}
 	if panel.setup_question(invalid_q2):
+		panel.free()
 		print("[PRES-008] FAIL: Invalid interaction_type accepted")
 		return "FAIL"
 
+	panel.free()
 	print("[PRES-008] PASS: Invalid QuestionDefinition fails explicitly")
 	return "PASS"
 
 # PRES-009 — Stage presentation sequence: lesson -> question -> result
 static func test_pres_009_stage_presentation_sequence() -> String:
-	var shell: StagePresentationShell = StagePresentationShell.new()
+	var shell: PanelContainer = _instantiate_shell()
+	if shell == null:
+		print("[PRES-009] FAIL: _instantiate_shell returned null")
+		return "FAIL"
+
 	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_ENTRY)
 	if shell.get_view_mode() != StagePresentationShell.ViewMode.MODE_ENTRY:
+		shell.free()
 		print("[PRES-009] FAIL: ViewMode is not MODE_ENTRY")
 		return "FAIL"
 
 	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_LESSON)
 	if shell.get_view_mode() != StagePresentationShell.ViewMode.MODE_LESSON:
+		shell.free()
 		print("[PRES-009] FAIL: ViewMode is not MODE_LESSON")
 		return "FAIL"
 
 	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_QUESTION_HOST)
 	if shell.get_view_mode() != StagePresentationShell.ViewMode.MODE_QUESTION_HOST:
+		shell.free()
 		print("[PRES-009] FAIL: ViewMode is not MODE_QUESTION_HOST")
 		return "FAIL"
 
 	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_STAGE_COMPLETE)
 	if shell.get_view_mode() != StagePresentationShell.ViewMode.MODE_STAGE_COMPLETE:
+		shell.free()
 		print("[PRES-009] FAIL: ViewMode is not MODE_STAGE_COMPLETE")
 		return "FAIL"
 
+	shell.free()
 	print("[PRES-009] PASS: Stage presentation sequence (lesson -> question -> result) verified")
 	return "PASS"
 

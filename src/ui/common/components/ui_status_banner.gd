@@ -49,6 +49,9 @@ func show_status(p_type: StatusType, title: String, message: String, detail: Str
 	detail_text = detail
 	visible = true
 
+func set_banner_text(text: String) -> void:
+	message_text = text
+
 func _update_labels() -> void:
 	if title_label != null:
 		title_label.text = title_text

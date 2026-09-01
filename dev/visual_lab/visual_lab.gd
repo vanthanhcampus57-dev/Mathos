@@ -29,12 +29,12 @@ const DEFAULT_MODULATE_G: float = 1.25
 const DEFAULT_MODULATE_B: float = 1.35
 
 # Procedural Fog Default Parameters
-const DEFAULT_PROC_OPACITY: float = 0.35
+const DEFAULT_PROC_OPACITY: float = 0.48
 const DEFAULT_DRIFT_AMOUNT: float = 120.0
 const DEFAULT_DRIFT_SPEED: float = 0.15
 const DEFAULT_DISTORTION: float = 0.08
 const DEFAULT_BREATHING: float = 0.05
-const DEFAULT_LAYER_COUNT: int = 2
+const DEFAULT_LAYER_COUNT: int = 3
 
 # Scene Nodes
 var _bg_texture_rect: TextureRect = null
@@ -806,6 +806,7 @@ func _update_diagnostic_display() -> void:
 		var disp_h_str: String = "%.0f" % disp_h
 
 		_diag_label.text = "\n".join([
+			"PRODUCTION PRESET: D1_FOG_V1 (0.48 / 120 / 0.15 / 0.08 / 0.05 / 3)",
 			"FOG SOURCE: d1_misty_forest_fog_layer.png",
 			"SOURCE SIZE: %dx%d" % [w, h],
 			"VIEWPORT: %.0fx%.0f" % [vp_size.x, vp_size.y],

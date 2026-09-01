@@ -1,8 +1,12 @@
 class_name TestStagePresentationShell
-extends RefCounted
+extends SceneTree
 
-## Unit test suite for StagePresentationShell, LessonPanel, StageCompletePanel,
-## and presentation models (supporting PRES-009, PRES-010, PRES-011, PRES-STARTUP-LEAK, STATE-CONTRACT-R2).
+func _initialize() -> void:
+	var ok: bool = run_all_tests(self)
+	if ok:
+		quit(0)
+	else:
+		quit(1)
 
 static func run_all_tests(tree: SceneTree = null) -> bool:
 	print("--- RUNNING PRESENTATION UI SHELL SUITE ---")

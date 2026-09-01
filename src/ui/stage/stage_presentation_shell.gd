@@ -1,5 +1,5 @@
 class_name StagePresentationShell
-extends Control
+extends PanelContainer
 
 ## Main UI Presentation Shell for Mathos stages (e.g. Stage 1.1 -> 4.5).
 ## Hosts lesson dialogue, question host container, feedback host container,
@@ -53,9 +53,21 @@ const D1_BG_ALT_PATH: String = "res://assets/backgrounds/dungeon_1/d1_misty_fore
 const D1_FOG_PATH: String = "res://assets/backgrounds/d1_misty_forest_fog_8f.png"
 const D1_FOG_ALT_PATH: String = "res://assets/backgrounds/dungeon_1/d1_misty_forest_fog_8f.png"
 
+const D1_PROCEDURAL_FOG_PATH: String = "res://assets/backgrounds/d1_misty_forest_fog_layer.png"
+const D1_PROCEDURAL_FOG_ALT_PATH: String = "res://assets/backgrounds/dungeon_1/d1_misty_forest_fog_layer.png"
+
 const BRAND_LOGO_MAIN_PATH: String = "res://assets/branding/mathos_logo_main.png"
 const BRAND_LOGO_EMBLEM_PATH: String = "res://assets/branding/mathos_logo_emblem.png"
 
+# Locked D1 Production Fog Preset v1
+const PROC_FOG_OPACITY: float = 0.48
+const PROC_FOG_DRIFT_AMOUNT: float = 120.0
+const PROC_FOG_DRIFT_SPEED: float = 0.15
+const PROC_FOG_DISTORTION: float = 0.08
+const PROC_FOG_BREATHING: float = 0.05
+const PROC_FOG_LAYER_COUNT: int = 3
+
+# Historical Old Atlas Constants (preserved for Visual Lab / backward compatibility)
 const FOG_FPS: float = 2.0
 const FOG_COLS: int = 4
 const FOG_ROWS: int = 2
@@ -66,6 +78,14 @@ var _fog_source_texture: Texture2D = null
 var _fog_frames: Array[AtlasTexture] = []
 var _fog_frame_timer: float = 0.0
 var _fog_current_frame: int = 0
+
+# Production Procedural Fog Nodes & State
+var _procedural_fog_texture: Texture2D = null
+var _procedural_fog_container: Control = null
+var _proc_layer_1: TextureRect = null
+var _proc_layer_2: TextureRect = null
+var _proc_layer_3: TextureRect = null
+var _procedural_fog_time: float = 0.0
 
 func _ready() -> void:
 	set_process(true)
@@ -119,21 +139,25 @@ func _ensure_sub_components() -> void:
 		if _victory_panel == null:
 			_victory_panel = GameVictoryPanel.new()
 			_victory_panel.name = "GameVictoryPanel"
+			_victory_panel.visible = false
 			main_content.add_child(_victory_panel)
-		if not _victory_panel.return_to_main_menu_requested.is_connected(_on_victory_return):
-			_victory_panel.return_to_main_menu_requested.connect(_on_victory_return)
 
-	# Stage Map Panel
+		if not _victory_panel.return_to_main_menu_requested.is_connected(_on_victory_return_pressed):
+			_victory_panel.return_to_main_menu_requested.connect(_on_victory_return_pressed)
+
+	# Dungeon Stage Map Panel
 	if _stage_map_panel == null and main_content != null:
 		_stage_map_panel = main_content.get_node_or_null("DungeonStageMapPanel") as DungeonStageMapPanel
 		if _stage_map_panel == null:
 			_stage_map_panel = DungeonStageMapPanel.new()
 			_stage_map_panel.name = "DungeonStageMapPanel"
+			_stage_map_panel.visible = false
 			main_content.add_child(_stage_map_panel)
+
 		if not _stage_map_panel.stage_selected.is_connected(_on_map_stage_selected):
 			_stage_map_panel.stage_selected.connect(_on_map_stage_selected)
-		if not _stage_map_panel.back_requested.is_connected(_on_map_back):
-			_stage_map_panel.back_requested.connect(_on_map_back)
+		if not _stage_map_panel.back_requested.is_connected(_on_map_return_pressed):
+			_stage_map_panel.back_requested.connect(_on_map_return_pressed)
 
 	# Pause Menu Overlay
 	if _pause_overlay == null:
@@ -141,41 +165,36 @@ func _ensure_sub_components() -> void:
 		if _pause_overlay == null:
 			_pause_overlay = PauseMenuOverlay.new()
 			_pause_overlay.name = "PauseMenuOverlay"
+			_pause_overlay.visible = false
 			add_child(_pause_overlay)
+
 		if not _pause_overlay.resume_requested.is_connected(_on_pause_resume):
 			_pause_overlay.resume_requested.connect(_on_pause_resume)
-		if not _pause_overlay.stage_map_requested.is_connected(_on_pause_stage_map):
-			_pause_overlay.stage_map_requested.connect(_on_pause_stage_map)
+		if not _pause_overlay.stage_map_requested.is_connected(_on_pause_map):
+			_pause_overlay.stage_map_requested.connect(_on_pause_map)
 		if not _pause_overlay.main_menu_requested.is_connected(_on_pause_main_menu):
 			_pause_overlay.main_menu_requested.connect(_on_pause_main_menu)
 
-	# Main Menu Journey Map Button & Save Summary Label
-	var start_vbox: VBoxContainer = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer") as VBoxContainer
-	if start_vbox != null:
-		if _journey_map_button == null:
+	# Journey Map Button in Start Container
+	if _journey_map_button == null:
+		var start_vbox: VBoxContainer = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer") as VBoxContainer
+		if start_vbox != null:
 			_journey_map_button = start_vbox.get_node_or_null("JourneyMapButton") as Button
 			if _journey_map_button == null:
 				_journey_map_button = Button.new()
 				_journey_map_button.name = "JourneyMapButton"
-				_journey_map_button.custom_minimum_size = Vector2(280, 48)
-				_journey_map_button.size_flags_horizontal = SIZE_SHRINK_CENTER
-				_journey_map_button.theme_type_variation = &"MathosSecondaryButton"
 				_journey_map_button.text = "Bản đồ hành trình"
+				_journey_map_button.custom_minimum_size = Vector2(280, 48)
+				_journey_map_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+				_journey_map_button.theme_type_variation = &"MathosSecondaryButton"
 				start_vbox.add_child(_journey_map_button)
 
-		if _save_summary_label == null:
-			_save_summary_label = start_vbox.get_node_or_null("SaveSummaryLabel") as Label
-			if _save_summary_label == null:
-				_save_summary_label = Label.new()
-				_save_summary_label.name = "SaveSummaryLabel"
-				_save_summary_label.theme_type_variation = &"MathosMeta"
-				_save_summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-				_save_summary_label.visible = false
-				start_vbox.add_child(_save_summary_label)
+			if not _journey_map_button.pressed.is_connected(_on_journey_map_pressed):
+				_journey_map_button.pressed.connect(_on_journey_map_pressed)
 
-	# Pause Button in HeaderBar
-	var header_bar: HBoxContainer = _get_header_bar() as HBoxContainer
-	if header_bar != null and _pause_button == null:
+	# Pause Button in Header
+	var header_bar: HBoxContainer = get_node_or_null("VBoxContainer/HeaderBar") as HBoxContainer
+	if header_bar != null:
 		_pause_button = header_bar.get_node_or_null("PauseButton") as Button
 		if _pause_button == null:
 			_pause_button = Button.new()
@@ -202,7 +221,59 @@ func _ensure_visual_nodes() -> void:
 		fog_rect.mouse_filter = MOUSE_FILTER_IGNORE
 		fog_rect.texture_filter = TEXTURE_FILTER_NEAREST
 		fog_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		fog_rect.modulate = Color(1.15, 1.25, 1.35, 2.2)
+		fog_rect.visible = false # Old atlas is disabled in production
+
+	_ensure_procedural_fog_nodes()
+
+func _ensure_procedural_fog_nodes() -> void:
+	if _procedural_fog_container != null and is_instance_valid(_procedural_fog_container):
+		return
+
+	_procedural_fog_container = get_node_or_null("ProceduralFogContainer") as Control
+	if _procedural_fog_container == null:
+		_procedural_fog_container = Control.new()
+		_procedural_fog_container.name = "ProceduralFogContainer"
+		_procedural_fog_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_procedural_fog_container.clip_contents = true
+		_procedural_fog_container.mouse_filter = MOUSE_FILTER_IGNORE
+		add_child(_procedural_fog_container)
+
+		var bg_rect: TextureRect = get_node_or_null("BackgroundTextureRect") as TextureRect
+		if bg_rect != null:
+			move_child(_procedural_fog_container, bg_rect.get_index() + 1)
+
+	if _procedural_fog_texture == null:
+		_procedural_fog_texture = _load_texture_from_paths([D1_PROCEDURAL_FOG_PATH, D1_PROCEDURAL_FOG_ALT_PATH])
+
+	if _proc_layer_3 == null or not is_instance_valid(_proc_layer_3):
+		_proc_layer_3 = TextureRect.new()
+		_proc_layer_3.name = "ProcFogLayer3"
+		_proc_layer_3.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_proc_layer_3.stretch_mode = TextureRect.STRETCH_SCALE
+		_proc_layer_3.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_proc_layer_3.mouse_filter = MOUSE_FILTER_IGNORE
+		_proc_layer_3.texture = _procedural_fog_texture
+		_procedural_fog_container.add_child(_proc_layer_3)
+
+	if _proc_layer_2 == null or not is_instance_valid(_proc_layer_2):
+		_proc_layer_2 = TextureRect.new()
+		_proc_layer_2.name = "ProcFogLayer2"
+		_proc_layer_2.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_proc_layer_2.stretch_mode = TextureRect.STRETCH_SCALE
+		_proc_layer_2.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_proc_layer_2.mouse_filter = MOUSE_FILTER_IGNORE
+		_proc_layer_2.texture = _procedural_fog_texture
+		_procedural_fog_container.add_child(_proc_layer_2)
+
+	if _proc_layer_1 == null or not is_instance_valid(_proc_layer_1):
+		_proc_layer_1 = TextureRect.new()
+		_proc_layer_1.name = "ProcFogLayer1"
+		_proc_layer_1.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_proc_layer_1.stretch_mode = TextureRect.STRETCH_SCALE
+		_proc_layer_1.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_proc_layer_1.mouse_filter = MOUSE_FILTER_IGNORE
+		_proc_layer_1.texture = _procedural_fog_texture
+		_procedural_fog_container.add_child(_proc_layer_1)
 
 func _is_dungeon_1_context() -> bool:
 	if _context_info == null:
@@ -226,6 +297,8 @@ func _update_background_texture() -> void:
 	if not _is_dungeon_1_context():
 		if fog_rect != null:
 			fog_rect.visible = false
+		if _procedural_fog_container != null:
+			_procedural_fog_container.visible = false
 		return
 
 	var bg_tex: Texture2D = _load_texture_from_paths([D1_BG_PATH, D1_BG_ALT_PATH, "res://assets/backgrounds/misty_forest_v1.jpg"])
@@ -234,13 +307,47 @@ func _update_background_texture() -> void:
 		bg_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		bg_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 
-	_init_fog_frames()
-	if fog_rect != null and not _fog_frames.is_empty():
-		fog_rect.visible = true
-		fog_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		fog_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		fog_rect.modulate = Color(1.15, 1.25, 1.35, 2.2)
-		fog_rect.texture = _fog_frames[_fog_current_frame]
+	if fog_rect != null:
+		fog_rect.visible = false # Old atlas is disabled in production
+
+	if _procedural_fog_container != null:
+		_procedural_fog_container.visible = true
+
+func calculate_overscan_info(vp_size: Vector2) -> Dictionary:
+	var src_w: float = 2115.0
+	var src_h: float = 744.0
+	if _procedural_fog_texture != null:
+		src_w = float(_procedural_fog_texture.get_width())
+		src_h = float(_procedural_fog_texture.get_height())
+
+	var aspect: float = src_w / src_h
+	var base_disp_height: float = vp_size.y
+	var base_disp_width: float = base_disp_height * aspect
+
+	var max_drift_mult: float = 1.2
+	var max_drift_px: float = PROC_FOG_DRIFT_AMOUNT * max_drift_mult
+	var max_distortion_px: float = PROC_FOG_DISTORTION * 25.0
+	var max_offset_px: float = max_drift_px + max_distortion_px
+	var safety_margin: float = 64.0
+
+	var required_overscan_per_side: float = max_offset_px + safety_margin
+	var required_total_width: float = vp_size.x + 2.0 * required_overscan_per_side
+
+	var scale_factor: float = 1.0
+	if base_disp_width < required_total_width:
+		scale_factor = required_total_width / base_disp_width
+
+	var final_disp_width: float = base_disp_width * scale_factor
+	var final_disp_height: float = base_disp_height * scale_factor
+
+	return {
+		"aspect": aspect,
+		"disp_width": final_disp_width,
+		"disp_height": final_disp_height,
+		"base_center_x": (vp_size.x - final_disp_width) / 2.0,
+		"base_center_y": (vp_size.y - final_disp_height) / 2.0,
+		"required_overscan": required_overscan_per_side
+	}
 
 func get_fog_frames() -> Array[AtlasTexture]:
 	_init_fog_frames()
@@ -263,16 +370,100 @@ func _init_fog_frames() -> void:
 			_fog_frames.append(atlas_tex)
 
 func _update_fog_animation(delta: float) -> void:
-	var fog_rect: TextureRect = get_node_or_null("FogOverlayTextureRect") as TextureRect
-	if fog_rect == null or not fog_rect.visible or _fog_frames.is_empty():
+	if _procedural_fog_container == null or not _procedural_fog_container.visible or not is_inside_tree():
 		return
 
-	_fog_frame_timer += delta
-	var frame_dur: float = 1.0 / FOG_FPS
-	if _fog_frame_timer >= frame_dur:
-		_fog_frame_timer = fmod(_fog_frame_timer, frame_dur)
-		_fog_current_frame = (_fog_current_frame + 1) % _fog_frames.size()
-		fog_rect.texture = _fog_frames[_fog_current_frame]
+	if _procedural_fog_texture == null:
+		_procedural_fog_texture = _load_texture_from_paths([D1_PROCEDURAL_FOG_PATH, D1_PROCEDURAL_FOG_ALT_PATH])
+		if _procedural_fog_texture != null:
+			if _proc_layer_1 != null: _proc_layer_1.texture = _procedural_fog_texture
+			if _proc_layer_2 != null: _proc_layer_2.texture = _procedural_fog_texture
+			if _proc_layer_3 != null: _proc_layer_3.texture = _procedural_fog_texture
+
+	if _procedural_fog_texture == null:
+		return
+
+	var vp_size: Vector2 = get_viewport_rect().size
+	if vp_size.x <= 0.0 or vp_size.y <= 0.0:
+		return
+
+	_procedural_fog_time += delta
+	var time: float = _procedural_fog_time * PROC_FOG_DRIFT_SPEED
+
+	var overscan_info: Dictionary = calculate_overscan_info(vp_size)
+	var disp_w: float = overscan_info["disp_width"]
+	var disp_h: float = overscan_info["disp_height"]
+	var center_x: float = overscan_info["base_center_x"]
+	var center_y: float = overscan_info["base_center_y"]
+
+	var layers: Array[TextureRect] = [_proc_layer_1, _proc_layer_2, _proc_layer_3]
+	var layer_configs: Array[Dictionary] = [
+		{
+			"freq_x": 0.7, "drift_mult": 1.0,
+			"freq_y": 0.4, "dist_mult": 20.0,
+			"freq_s": 0.3, "scale_amp": 0.05, "base_scale": 1.0,
+			"freq_a": 0.8, "alpha_mult": 1.0
+		},
+		{
+			"freq_x": 0.5, "phase_x": 1.5, "drift_mult": 0.8,
+			"freq_y": 0.3, "phase_y": 2.0, "dist_mult": 15.0,
+			"freq_s": 0.2, "scale_amp": 0.04, "base_scale": 1.05,
+			"freq_a": 0.6, "alpha_mult": 0.65
+		},
+		{
+			"freq_x": 0.3, "phase_x": 3.0, "drift_mult": 1.2,
+			"freq_y": 0.5, "phase_y": 1.0, "dist_mult": 25.0,
+			"freq_s": 0.1, "scale_amp": 0.03, "base_scale": 1.10,
+			"freq_a": 0.4, "alpha_mult": 0.45
+		}
+	]
+
+	for idx in range(3):
+		var layer_node: TextureRect = layers[idx]
+		var cfg: Dictionary = layer_configs[idx]
+
+		if layer_node == null:
+			continue
+
+		var px_x: float = cfg.get("phase_x", 0.0)
+		var px_y: float = cfg.get("phase_y", 0.0)
+
+		var off_x: float = sin(time * cfg["freq_x"] + px_x) * (PROC_FOG_DRIFT_AMOUNT * cfg["drift_mult"])
+		var off_y: float = cos(time * cfg["freq_y"] + px_y) * (PROC_FOG_DISTORTION * cfg["dist_mult"])
+
+		var scale_delta: float = sin(time * cfg["freq_s"]) * (PROC_FOG_DISTORTION * cfg["scale_amp"])
+		var layer_scale: float = maxf(0.8, cfg["base_scale"] + scale_delta)
+
+		var alpha: float = clampf((PROC_FOG_OPACITY * cfg["alpha_mult"]) * (1.0 + sin(time * cfg["freq_a"]) * PROC_FOG_BREATHING), 0.0, 1.0)
+
+		layer_node.size = Vector2(disp_w, disp_h)
+		layer_node.pivot_offset = Vector2(disp_w / 2.0, disp_h / 2.0)
+		layer_node.position = Vector2(center_x + off_x, center_y + off_y)
+		layer_node.scale = Vector2(layer_scale, layer_scale)
+		layer_node.modulate = Color(1.0, 1.0, 1.0, alpha)
+
+func get_procedural_fog_container() -> Control:
+	_ensure_procedural_fog_nodes()
+	return _procedural_fog_container
+
+func get_procedural_fog_texture() -> Texture2D:
+	if _procedural_fog_texture == null:
+		_procedural_fog_texture = _load_texture_from_paths([D1_PROCEDURAL_FOG_PATH, D1_PROCEDURAL_FOG_ALT_PATH])
+	return _procedural_fog_texture
+
+func get_procedural_fog_preset() -> Dictionary:
+	return {
+		"opacity": PROC_FOG_OPACITY,
+		"drift_amount": PROC_FOG_DRIFT_AMOUNT,
+		"drift_speed": PROC_FOG_DRIFT_SPEED,
+		"distortion": PROC_FOG_DISTORTION,
+		"breathing": PROC_FOG_BREATHING,
+		"layer_count": PROC_FOG_LAYER_COUNT
+	}
+
+func is_old_fog_atlas_disabled_in_production() -> bool:
+	var fog_rect: TextureRect = get_node_or_null("FogOverlayTextureRect") as TextureRect
+	return fog_rect == null or not fog_rect.visible
 
 func _update_branding_logos() -> void:
 	var logo_main_tex: Texture2D = _load_texture_from_paths([BRAND_LOGO_MAIN_PATH])
@@ -348,276 +539,84 @@ func set_stage_context(data: Variant) -> void:
 	if stage_complete_panel != null and _context_info != null:
 		stage_complete_panel.set_summary_data(_context_info.stage_title)
 
-func set_continue_available(available: bool, summary_data: Dictionary = {}) -> void:
-	_ensure_sub_components()
-	var continue_btn: Button = _get_continue_game_button()
-	if continue_btn != null:
-		continue_btn.visible = available
-		continue_btn.disabled = not available
-		if available:
-			continue_btn.text = "Tiếp tục"
-			continue_btn.theme_type_variation = &"MathosPrimaryButton"
+func is_restored_context_displayed() -> bool:
+	return _context_info != null and _context_info.is_restored_context
 
-	var new_game_btn: Button = _get_new_game_button()
-	if new_game_btn != null:
-		new_game_btn.text = "Bắt đầu mới"
-		if available:
-			new_game_btn.theme_type_variation = &"MathosSecondaryButton"
-		else:
-			new_game_btn.theme_type_variation = &"MathosPrimaryButton"
-
-	var summary_lbl: Label = _get_save_summary_label()
-	if summary_lbl != null:
-		if available and not summary_data.is_empty():
-			var title_str: String = String(summary_data.get("stage_title", summary_data.get("stage_id", "")))
-			summary_lbl.text = "Tiến độ đã lưu: %s" % title_str
-			summary_lbl.visible = true
-		else:
-			summary_lbl.visible = false
-			summary_lbl.text = ""
-
-func show_notification_banner(message: String, is_error: bool = false, duration: float = 4.0) -> void:
-	_ensure_sub_components()
-	if _notification_banner == null:
-		_notification_banner = PanelContainer.new()
-		_notification_banner.name = "NotificationBanner"
-		_notification_banner.custom_minimum_size = Vector2(420, 44)
-		_notification_banner.size_flags_horizontal = SIZE_SHRINK_CENTER
-
-		var margin: MarginContainer = MarginContainer.new()
-		margin.name = "MarginContainer"
-		margin.add_theme_constant_override("margin_left", 20)
-		margin.add_theme_constant_override("margin_right", 20)
-		margin.add_theme_constant_override("margin_top", 10)
-		margin.add_theme_constant_override("margin_bottom", 10)
-		_notification_banner.add_child(margin)
-
-		_notification_label = Label.new()
-		_notification_label.name = "NotificationLabel"
-		_notification_label.theme_type_variation = &"MathosMeta"
-		_notification_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		margin.add_child(_notification_label)
-
-		add_child(_notification_banner)
-
-	if _notification_banner != null and _notification_label != null:
-		if is_error:
-			_notification_banner.theme_type_variation = &"MathosPanelElevated"
-			_notification_label.text = "⚠️ " + message
-			_notification_label.add_theme_color_override("font_color", Color(1.0, 0.45, 0.45))
-		else:
-			_notification_banner.theme_type_variation = &"MathosCard"
-			_notification_label.text = "ℹ️ " + message
-			_notification_label.add_theme_color_override("font_color", Color(0.4, 0.85, 1.0))
-
-		_notification_banner.visible = true
-		_notification_banner.modulate.a = 0.0
-
-		if _notification_tween != null and _notification_tween.is_valid():
-			_notification_tween.kill()
-
-		_notification_tween = create_tween()
-		_notification_tween.tween_property(_notification_banner, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		_notification_tween.tween_interval(duration)
-		_notification_tween.tween_property(_notification_banner, "modulate:a", 0.0, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		_notification_tween.tween_callback(func(): if _notification_banner != null: _notification_banner.visible = false)
-
-func show_game_victory(player_gold: int = 0, player_xp: int = 0) -> void:
-	_ensure_sub_components()
-	if _victory_panel != null:
-		_victory_panel.set_victory_data(player_gold, player_xp)
-	set_view_mode(ViewMode.MODE_VICTORY)
-
-func show_stage_map(map_data: Dictionary = {}) -> void:
-	_ensure_sub_components()
-	if _stage_map_panel != null:
-		_stage_map_panel.set_map_data(map_data)
-	set_view_mode(ViewMode.MODE_MAP)
-
-func toggle_pause() -> void:
-	_ensure_sub_components()
-	if _pause_overlay == null:
+func _update_header() -> void:
+	var header_bar: HBoxContainer = get_node_or_null("VBoxContainer/HeaderBar") as HBoxContainer
+	if header_bar == null:
 		return
 
-	# Only allow pausing during active stage gameplay
-	var is_gameplay: bool = (_current_mode == ViewMode.MODE_LESSON or _current_mode == ViewMode.MODE_QUESTION_HOST or _current_mode == ViewMode.MODE_FEEDBACK_HOST or _current_mode == ViewMode.MODE_STAGE_COMPLETE)
-	if not is_gameplay and not _pause_overlay.is_paused():
+	var d_label: Label = header_bar.get_node_or_null("DungeonTitleLabel") as Label
+	var s_label: Label = header_bar.get_node_or_null("StageTitleLabel") as Label
+
+	if d_label != null and _context_info != null:
+		d_label.text = _context_info.dungeon_title
+	if s_label != null and _context_info != null:
+		s_label.text = _context_info.stage_title
+
+	var badge_label: Label = header_bar.get_node_or_null("RestoredBadgeLabel") as Label
+	if badge_label != null:
+		badge_label.visible = (_context_info != null and _context_info.is_restored_context)
+
+	if _current_mode == ViewMode.MODE_ENTRY or _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_VICTORY:
+		header_bar.visible = false
 		return
 
-	_pause_overlay.toggle_pause()
+	header_bar.visible = true
 
-func show_pause() -> void:
-	_ensure_sub_components()
-	if _pause_overlay != null:
-		_pause_overlay.show_pause()
-
-func hide_pause() -> void:
-	_ensure_sub_components()
-	if _pause_overlay != null:
-		_pause_overlay.hide_pause()
-
-func is_paused() -> bool:
-	return _pause_overlay != null and _pause_overlay.is_paused()
+func _get_dungeon_title_label() -> Label:
+	var header_bar: HBoxContainer = _get_header_bar()
+	if header_bar != null:
+		return header_bar.get_node_or_null("DungeonTitleLabel") as Label
+	return null
 
 func set_view_mode(mode: ViewMode) -> void:
 	_ensure_sub_components()
+	_previous_mode = _current_mode
+	_current_mode = mode
+	_update_header()
 	_update_background_texture()
 
-	if _current_mode != ViewMode.MODE_MAP and _current_mode != ViewMode.MODE_VICTORY and _current_mode != ViewMode.MODE_ENTRY:
-		_previous_mode = _current_mode
+	var main_content: Control = _get_main_content_vbox()
+	if main_content == null:
+		return
 
-	_current_mode = mode
-
-	var is_gameplay: bool = (_current_mode == ViewMode.MODE_LESSON or _current_mode == ViewMode.MODE_QUESTION_HOST or _current_mode == ViewMode.MODE_FEEDBACK_HOST or _current_mode == ViewMode.MODE_STAGE_COMPLETE)
-
-	var header_bar: Control = _get_header_bar()
-	if header_bar != null:
-		header_bar.visible = is_gameplay
-
-	var left_sidebar: Control = _get_left_sidebar()
-	if left_sidebar != null:
-		left_sidebar.visible = is_gameplay
-
-	var start_game_container: Control = _get_start_game_container()
-	if start_game_container != null:
-		start_game_container.visible = (_current_mode == ViewMode.MODE_ENTRY)
-
-	var active_target: Control = null
-
+	var start_container: Control = main_content.get_node_or_null("StartGameContainer") as Control
 	var lesson_panel: LessonPanel = get_lesson_panel()
-	if lesson_panel != null:
-		lesson_panel.visible = (_current_mode == ViewMode.MODE_LESSON)
-		if _current_mode == ViewMode.MODE_LESSON:
-			active_target = lesson_panel
+	var q_host: MarginContainer = get_question_host_container()
+	var f_host: MarginContainer = get_feedback_host_container()
+	var complete_panel: StageCompletePanel = get_stage_complete_panel()
 
-	var question_host: MarginContainer = get_question_host_container()
-	if question_host != null:
-		question_host.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
-		if _current_mode == ViewMode.MODE_QUESTION_HOST:
-			active_target = question_host
-			question_host_ready.emit(question_host)
+	if start_container != null: start_container.visible = (_current_mode == ViewMode.MODE_ENTRY)
+	if lesson_panel != null: lesson_panel.visible = (_current_mode == ViewMode.MODE_LESSON)
+	if q_host != null: q_host.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
+	if f_host != null: f_host.visible = (_current_mode == ViewMode.MODE_FEEDBACK_HOST)
+	if complete_panel != null: complete_panel.visible = (_current_mode == ViewMode.MODE_STAGE_COMPLETE)
+	if _victory_panel != null: _victory_panel.visible = (_current_mode == ViewMode.MODE_VICTORY)
+	if _stage_map_panel != null: _stage_map_panel.visible = (_current_mode == ViewMode.MODE_MAP)
 
-	var feedback_host_container: MarginContainer = get_feedback_host_container()
-	if feedback_host_container != null:
-		feedback_host_container.visible = (_current_mode == ViewMode.MODE_FEEDBACK_HOST)
-		if _current_mode == ViewMode.MODE_FEEDBACK_HOST:
-			active_target = feedback_host_container
-			feedback_host_ready.emit(feedback_host_container)
+	if _current_mode == ViewMode.MODE_QUESTION_HOST and q_host != null:
+		if get_question_panel() == null:
+			question_host_ready.emit(q_host)
+	elif _current_mode == ViewMode.MODE_FEEDBACK_HOST and f_host != null:
+		feedback_host_ready.emit(f_host)
 
-	var stage_complete_panel: StageCompletePanel = get_stage_complete_panel()
-	if stage_complete_panel != null:
-		stage_complete_panel.visible = (_current_mode == ViewMode.MODE_STAGE_COMPLETE)
-		if _current_mode == ViewMode.MODE_STAGE_COMPLETE:
-			active_target = stage_complete_panel
-
-	if _victory_panel != null:
-		_victory_panel.visible = (_current_mode == ViewMode.MODE_VICTORY)
-		if _current_mode == ViewMode.MODE_VICTORY:
-			active_target = _victory_panel
-
-	if _stage_map_panel != null:
-		_stage_map_panel.visible = (_current_mode == ViewMode.MODE_MAP)
-		if _current_mode == ViewMode.MODE_MAP:
-			active_target = _stage_map_panel
-
-	# Game Polish: smooth mode transition tween
-	if active_target != null and is_inside_tree():
-		active_target.modulate.a = 0.0
-		var t: Tween = create_tween()
-		if t != null:
-			t.tween_property(active_target, "modulate:a", 1.0, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	var sidebar: Control = get_node_or_null("VBoxContainer/MainBody/ContentHBox/LeftSidebar") as Control
+	if sidebar != null:
+		sidebar.visible = (_current_mode != ViewMode.MODE_ENTRY and _current_mode != ViewMode.MODE_MAP and _current_mode != ViewMode.MODE_VICTORY)
 
 func get_view_mode() -> ViewMode:
 	return _current_mode
 
-func get_victory_panel() -> GameVictoryPanel:
-	_ensure_sub_components()
-	return _victory_panel
-
-func get_stage_map_panel() -> DungeonStageMapPanel:
-	_ensure_sub_components()
-	return _stage_map_panel
-
-func get_pause_menu_overlay() -> PauseMenuOverlay:
-	_ensure_sub_components()
-	return _pause_overlay
-
-func get_question_host_container() -> MarginContainer:
-	var node = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer")
-	if node != null:
-		return node as MarginContainer
-	return null
-
-func get_question_panel() -> QuestionPanel:
-	var host: Control = get_question_host_container()
-	if host != null:
-		var panel: Control = host.get_node_or_null("GameplayHBox/QuestionPanelHost/QuestionPanel") as Control
-		if panel != null:
-			return panel as QuestionPanel
-		panel = host.get_node_or_null("QuestionPanel") as Control
-		if panel != null:
-			return panel as QuestionPanel
-	return null
-
-func get_feedback_host_container() -> MarginContainer:
-	var node = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/FeedbackHostContainer")
-	if node != null:
-		return node as MarginContainer
-	return null
-
-func get_lesson_panel() -> LessonPanel:
-	var node = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/LessonPanel")
-	if node != null:
-		return node as LessonPanel
-	return null
-
-func get_stage_complete_panel() -> StageCompletePanel:
-	var node = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StageCompletePanel")
-	if node != null:
-		return node as StageCompletePanel
-	return null
-
-func _get_start_game_container() -> Control:
-	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer") as Control
-
-func _get_new_game_button() -> Button:
-	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer/NewGameButton") as Button
-
-func _get_continue_game_button() -> Button:
-	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer/ContinueButton") as Button
-
-func _get_journey_map_button() -> Button:
-	_ensure_sub_components()
-	return _journey_map_button
-
-func _get_save_summary_label() -> Label:
-	_ensure_sub_components()
-	return _save_summary_label
-
-func _get_header_bar() -> Control:
-	return get_node_or_null("VBoxContainer/HeaderBar") as Control
-
-func _get_left_sidebar() -> Control:
-	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/LeftSidebar") as Control
-
-func _get_main_content_vbox() -> Control:
-	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox") as Control
-
-func _update_header() -> void:
-	if _context_info == null:
-		return
-
-	var d_label: Label = get_node_or_null("VBoxContainer/HeaderBar/DungeonTitleLabel") as Label
-	if d_label != null:
-		d_label.text = _context_info.dungeon_title
-
-	var s_label: Label = get_node_or_null("VBoxContainer/HeaderBar/StageTitleLabel") as Label
-	if s_label != null:
-		s_label.text = _context_info.stage_title
-
-	var r_label: Label = get_node_or_null("VBoxContainer/HeaderBar/RestoredBadgeLabel") as Label
-	if r_label != null:
-		r_label.visible = _context_info.is_restored_context
+func toggle_pause() -> void:
+	if _pause_overlay != null:
+		if _pause_overlay.visible:
+			_pause_overlay.hide_pause()
+			resume_requested.emit()
+		else:
+			_pause_overlay.show_pause()
+			pause_requested.emit()
 
 func _on_new_game_pressed() -> void:
 	new_game_requested.emit()
@@ -628,60 +627,211 @@ func _on_continue_game_pressed() -> void:
 func _on_journey_map_pressed() -> void:
 	show_map_requested.emit()
 
-func show_feedback(data: Variant = null) -> void:
-	set_view_mode(ViewMode.MODE_FEEDBACK_HOST)
-
-func is_restored_context_displayed() -> bool:
-	return _context_info != null and _context_info.is_restored_context
-
-func _get_restored_badge_label() -> Label:
-	return get_node_or_null("VBoxContainer/HeaderBar/RestoredBadgeLabel") as Label
-
-func _get_stage_title_label() -> Label:
-	return get_node_or_null("VBoxContainer/HeaderBar/StageTitleLabel") as Label
-
-func _get_dungeon_title_label() -> Label:
-	return get_node_or_null("VBoxContainer/HeaderBar/DungeonTitleLabel") as Label
-
 func _on_lesson_continue() -> void:
 	lesson_continue_requested.emit()
 
 func _on_lesson_completed() -> void:
-	lesson_continue_requested.emit()
 	set_view_mode(ViewMode.MODE_QUESTION_HOST)
+
+func _get_header_bar() -> HBoxContainer:
+	return get_node_or_null("VBoxContainer/HeaderBar") as HBoxContainer
+
+func _get_start_game_container() -> Control:
+	var main_content: Control = _get_main_content_vbox()
+	if main_content != null:
+		return main_content.get_node_or_null("StartGameContainer") as Control
+	return null
+
+func _get_stage_title_label() -> Label:
+	var header_bar: HBoxContainer = _get_header_bar()
+	if header_bar != null:
+		return header_bar.get_node_or_null("StageTitleLabel") as Label
+	return null
+
+func _get_restored_badge_label() -> Label:
+	var header_bar: HBoxContainer = _get_header_bar()
+	if header_bar != null:
+		return header_bar.get_node_or_null("RestoredBadgeLabel") as Label
+	return null
+
+func show_feedback(data: Variant = null) -> void:
+	set_view_mode(ViewMode.MODE_FEEDBACK_HOST)
+
+func _on_question_host_child_entered(node: Node) -> void:
+	if node is Control:
+		question_host_ready.emit(node as Control)
 
 func _on_stage_continue() -> void:
 	stage_continue_requested.emit()
 
-func _on_question_host_child_entered(node: Node) -> void:
-	pass
+func _on_victory_return_pressed() -> void:
+	return_to_main_menu_requested.emit()
 
 func _on_map_stage_selected(stage_id: String) -> void:
 	stage_selected.emit(stage_id)
 
-func _on_map_back() -> void:
-	return_to_main_menu_requested.emit()
-
-func _on_victory_return() -> void:
-	return_to_main_menu_requested.emit()
+func _on_map_return_pressed() -> void:
+	if _previous_mode == ViewMode.MODE_ENTRY:
+		set_view_mode(ViewMode.MODE_ENTRY)
+	else:
+		set_view_mode(_previous_mode)
 
 func _on_pause_resume() -> void:
-	hide_pause()
 	resume_requested.emit()
 
-func _on_pause_stage_map() -> void:
+func _on_pause_map() -> void:
 	hide_pause()
+	set_view_mode(ViewMode.MODE_MAP)
 	show_map_requested.emit()
 
 func _on_pause_main_menu() -> void:
 	hide_pause()
+	set_view_mode(ViewMode.MODE_ENTRY)
 	return_to_main_menu_requested.emit()
 
-func _unhandled_input(event: InputEvent) -> void:
-	if not is_inside_tree():
-		return
-	if event.is_action_pressed("ui_cancel") or (event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE):
-		var is_gameplay: bool = (_current_mode == ViewMode.MODE_LESSON or _current_mode == ViewMode.MODE_QUESTION_HOST or _current_mode == ViewMode.MODE_FEEDBACK_HOST or _current_mode == ViewMode.MODE_STAGE_COMPLETE)
-		if is_gameplay or (_pause_overlay != null and _pause_overlay.is_paused()):
-			toggle_pause()
-			get_viewport().set_input_as_handled()
+func _get_main_content_vbox() -> VBoxContainer:
+	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox") as VBoxContainer
+
+func get_lesson_panel() -> LessonPanel:
+	var main_content: Control = _get_main_content_vbox()
+	if main_content != null:
+		return main_content.get_node_or_null("LessonPanel") as LessonPanel
+	return null
+
+func get_question_host_container() -> MarginContainer:
+	var main_content: Control = _get_main_content_vbox()
+	if main_content != null:
+		return main_content.get_node_or_null("QuestionHostContainer") as MarginContainer
+	return null
+
+func get_question_panel() -> QuestionPanel:
+	var q_host: MarginContainer = get_question_host_container()
+	if q_host != null:
+		var panel: QuestionPanel = q_host.get_node_or_null("GameplayHBox/QuestionPanelHost/QuestionPanel") as QuestionPanel
+		if panel == null:
+			panel = q_host.get_node_or_null("QuestionPanel") as QuestionPanel
+		return panel
+	return null
+
+func get_feedback_host_container() -> MarginContainer:
+	var main_content: Control = _get_main_content_vbox()
+	if main_content != null:
+		return main_content.get_node_or_null("FeedbackHostContainer") as MarginContainer
+	return null
+
+func get_stage_complete_panel() -> StageCompletePanel:
+	var main_content: Control = _get_main_content_vbox()
+	if main_content != null:
+		return main_content.get_node_or_null("StageCompletePanel") as StageCompletePanel
+	return null
+
+func _get_new_game_button() -> Button:
+	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer/NewGameButton") as Button
+
+func _get_journey_map_button() -> Button:
+	if _journey_map_button != null:
+		return _journey_map_button
+	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer/JourneyMapButton") as Button
+
+func show_notification_banner(text: String, is_error: bool = false, duration: float = 3.0) -> void:
+	var banner: UiStatusBanner = get_node_or_null("NotificationBanner") as UiStatusBanner
+	if banner == null:
+		banner = UiStatusBanner.new()
+		banner.name = "NotificationBanner"
+		add_child(banner)
+	banner.show_status(UiStatusBanner.StatusType.ERROR if is_error else UiStatusBanner.StatusType.INFO, "Thông báo", text)
+	var margin: MarginContainer = banner.get_node_or_null("MarginContainer") as MarginContainer
+	if margin == null:
+		margin = MarginContainer.new()
+		margin.name = "MarginContainer"
+		banner.add_child(margin)
+	var notif_lbl: Label = margin.get_node_or_null("NotificationLabel") as Label
+	if notif_lbl == null:
+		notif_lbl = Label.new()
+		notif_lbl.name = "NotificationLabel"
+		margin.add_child(notif_lbl)
+	notif_lbl.text = text
+	banner.visible = true
+
+func _get_save_summary_label() -> Label:
+	if _save_summary_label != null:
+		return _save_summary_label
+	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer/SaveSummaryLabel") as Label
+
+func show_game_victory(gold: int = 0, xp: int = 0) -> void:
+	_ensure_sub_components()
+	if _victory_panel != null:
+		_victory_panel.set_rewards(gold, xp)
+	set_view_mode(ViewMode.MODE_VICTORY)
+
+func show_stage_map(data: Dictionary = {}) -> void:
+	_ensure_sub_components()
+	if _stage_map_panel != null and not data.is_empty():
+		_stage_map_panel.set_map_data(data)
+	set_view_mode(ViewMode.MODE_MAP)
+
+func get_victory_panel() -> GameVictoryPanel:
+	_ensure_sub_components()
+	return _victory_panel
+
+func get_stage_map_panel() -> DungeonStageMapPanel:
+	_ensure_sub_components()
+	return _stage_map_panel
+
+func get_pause_overlay() -> PauseMenuOverlay:
+	_ensure_sub_components()
+	return _pause_overlay
+
+func get_pause_menu_overlay() -> PauseMenuOverlay:
+	_ensure_sub_components()
+	return _pause_overlay
+
+func is_paused() -> bool:
+	_ensure_sub_components()
+	return _pause_overlay != null and _pause_overlay.visible
+
+func show_pause() -> void:
+	_ensure_sub_components()
+	if _pause_overlay != null:
+		if _pause_overlay.has_method("show_pause"):
+			_pause_overlay.show_pause()
+		elif _pause_overlay.has_method("show_overlay"):
+			_pause_overlay.call("show_overlay")
+
+func hide_pause() -> void:
+	_ensure_sub_components()
+	if _pause_overlay != null:
+		if _pause_overlay.has_method("hide_pause"):
+			_pause_overlay.hide_pause()
+		elif _pause_overlay.has_method("hide_overlay"):
+			_pause_overlay.call("hide_overlay")
+
+func _get_continue_game_button() -> Button:
+	var btn: Button = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer/ContinueButton") as Button
+	if btn == null:
+		btn = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer/ContinueGameButton") as Button
+	return btn
+
+func set_continue_available(available: bool, summary_data: Dictionary = {}) -> void:
+	var continue_btn: Button = _get_continue_game_button()
+	if continue_btn != null:
+		continue_btn.visible = available
+
+	var start_vbox: VBoxContainer = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer") as VBoxContainer
+	if start_vbox != null:
+		if _save_summary_label == null:
+			_save_summary_label = start_vbox.get_node_or_null("SaveSummaryLabel") as Label
+			if _save_summary_label == null:
+				_save_summary_label = Label.new()
+				_save_summary_label.name = "SaveSummaryLabel"
+				_save_summary_label.theme_type_variation = &"MathosSubtitle"
+				_save_summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				start_vbox.add_child(_save_summary_label)
+
+		if available and not summary_data.is_empty():
+			var title: String = String(summary_data.get("stage_title", ""))
+			var s_id: String = String(summary_data.get("stage_id", ""))
+			_save_summary_label.text = "Tiếp tục: %s (%s)" % [title, s_id]
+			_save_summary_label.visible = true
+		else:
+			_save_summary_label.visible = false

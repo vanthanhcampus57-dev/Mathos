@@ -113,6 +113,15 @@ func toggle_pause() -> void:
 	else:
 		show_pause()
 
+func show_overlay() -> void:
+	show_pause()
+
+func hide_overlay() -> void:
+	hide_pause()
+
+func toggle_overlay() -> void:
+	toggle_pause()
+
 func is_paused() -> bool:
 	return visible
 

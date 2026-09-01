@@ -159,14 +159,21 @@ custom_minimum_size = Vector2(280, 48)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_type_variation = &"MathosPrimaryButton"
-text = "Continue"
+text = "Tiếp tục"
 
 [node name="NewGameButton" type="Button" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer"]
 custom_minimum_size = Vector2(280, 48)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_type_variation = &"MathosSecondaryButton"
-text = "Start New Game"
+text = "Bắt đầu mới"
+
+[node name="JourneyMapButton" type="Button" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer"]
+custom_minimum_size = Vector2(280, 48)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"MathosSecondaryButton"
+text = "Bản đồ hành trình"
 
 [node name="VersionLabel" type="Label" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer"]
 layout_mode = 2

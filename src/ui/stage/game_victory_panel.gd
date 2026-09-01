@@ -28,6 +28,9 @@ func set_victory_data(player_gold: int = 0, player_xp: int = 0) -> void:
 	if _xp_value_label != null:
 		_xp_value_label.text = "%d" % player_xp
 
+func set_rewards(gold: int = 0, xp: int = 0) -> void:
+	set_victory_data(gold, xp)
+
 func _ensure_ui_built() -> void:
 	if _main_vbox != null:
 		return
