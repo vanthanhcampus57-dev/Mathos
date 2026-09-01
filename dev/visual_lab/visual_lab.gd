@@ -133,6 +133,12 @@ var _distortion: float = DEFAULT_DISTORTION
 var _breathing: float = DEFAULT_BREATHING
 var _layer_count: int = DEFAULT_LAYER_COUNT
 
+# Diagnostics State Cash
+var _last_diag_left_overscan: float = 0.0
+var _last_diag_right_overscan: float = 0.0
+var _last_diag_curr_offset: float = 0.0
+var _last_diag_edge_safe: bool = true
+
 # Common Toggles
 var _bg_visible: bool = true
 var _fog_visible: bool = true
@@ -186,6 +192,45 @@ func get_fog_frames() -> Array[AtlasTexture]:
 	_load_all_textures()
 	return _fog_frames
 
+func calculate_overscan_info(vp_size: Vector2) -> Dictionary:
+	var src_w: float = 2115.0
+	var src_h: float = 744.0
+	if _procedural_texture != null:
+		src_w = float(_procedural_texture.get_width())
+		src_h = float(_procedural_texture.get_height())
+
+	var aspect: float = src_w / src_h
+	var base_disp_height: float = vp_size.y
+	var base_disp_width: float = base_disp_height * aspect
+
+	# Max drift multiplier among active layers (Layer 3 has 1.2x)
+	var max_drift_mult: float = 1.2 if _layer_count >= 3 else (0.8 if _layer_count == 2 else 1.0)
+	var max_drift_px: float = _drift_amount * max_drift_mult
+	var max_distortion_px: float = _distortion * 25.0
+	var max_offset_px: float = max_drift_px + max_distortion_px
+	var safety_margin: float = 64.0
+
+	var required_overscan_per_side: float = max_offset_px + safety_margin
+	var required_total_width: float = vp_size.x + 2.0 * required_overscan_per_side
+
+	var scale_factor: float = 1.0
+	if base_disp_width < required_total_width:
+		scale_factor = required_total_width / base_disp_width
+
+	var final_disp_width: float = base_disp_width * scale_factor
+	var final_disp_height: float = base_disp_height * scale_factor
+
+	return {
+		"aspect": aspect,
+		"disp_width": final_disp_width,
+		"disp_height": final_disp_height,
+		"base_center_x": (vp_size.x - final_disp_width) / 2.0,
+		"base_center_y": (vp_size.y - final_disp_height) / 2.0,
+		"required_overscan": required_overscan_per_side,
+		"required_width": required_total_width,
+		"max_offset": max_offset_px
+	}
+
 func _process(delta: float) -> void:
 	if _current_lab_mode != LabMode.FOG_TEST:
 		return
@@ -210,54 +255,121 @@ func _update_procedural_motion() -> void:
 	if _procedural_texture == null or not is_inside_tree():
 		return
 
-	var time: float = _procedural_time * _drift_speed
 	var vp_size: Vector2 = get_viewport_rect().size
+	if vp_size.x <= 0.0 or vp_size.y <= 0.0:
+		return
 
-	# Layer 1 (Front)
-	if _proc_layer_1 != null:
-		var off_x1: float = sin(time * 0.7) * _drift_amount
-		var off_y1: float = cos(time * 0.4) * (_distortion * 20.0)
-		var scale1: float = 1.0 + sin(time * 0.3) * (_distortion * 0.05)
-		var alpha1: float = clampf(_proc_opacity * (1.0 + sin(time * 0.8) * _breathing), 0.0, 1.0)
-		_proc_layer_1.modulate = Color(_proc_mod_r, _proc_mod_g, _proc_mod_b, alpha1)
-		_proc_layer_1.position = Vector2(off_x1, off_y1)
-		_proc_layer_1.scale = Vector2(scale1, scale1)
+	var overscan_info: Dictionary = calculate_overscan_info(vp_size)
+	var disp_w: float = overscan_info["disp_width"]
+	var disp_h: float = overscan_info["disp_height"]
+	var center_x: float = overscan_info["base_center_x"]
+	var center_y: float = overscan_info["base_center_y"]
 
-	# Layer 2 (Mid)
-	if _proc_layer_2 != null:
-		var off_x2: float = cos(time * 0.5 + 1.5) * (_drift_amount * 0.8)
-		var off_y2: float = sin(time * 0.3 + 2.0) * (_distortion * 15.0)
-		var scale2: float = 1.05 + cos(time * 0.2) * (_distortion * 0.04)
-		var alpha2: float = clampf((_proc_opacity * 0.65) * (1.0 + cos(time * 0.6) * _breathing), 0.0, 1.0)
-		_proc_layer_2.modulate = Color(_proc_mod_r, _proc_mod_g, _proc_mod_b, alpha2)
-		_proc_layer_2.position = Vector2(off_x2, off_y2)
-		_proc_layer_2.scale = Vector2(scale2, scale2)
-		_proc_layer_2.visible = (_layer_count >= 2)
+	var time: float = _procedural_time * _drift_speed
 
-	# Layer 3 (Back)
-	if _proc_layer_3 != null:
-		var off_x3: float = sin(time * 0.3 + 3.0) * (_drift_amount * 1.2)
-		var off_y3: float = sin(time * 0.5 + 1.0) * (_distortion * 25.0)
-		var scale3: float = 1.1 + sin(time * 0.1) * (_distortion * 0.03)
-		var alpha3: float = clampf((_proc_opacity * 0.45) * (1.0 + sin(time * 0.4) * _breathing), 0.0, 1.0)
-		_proc_layer_3.modulate = Color(_proc_mod_r, _proc_mod_g, _proc_mod_b, alpha3)
-		_proc_layer_3.position = Vector2(off_x3, off_y3)
-		_proc_layer_3.scale = Vector2(scale3, scale3)
-		_proc_layer_3.visible = (_layer_count >= 3)
+	var layers: Array[TextureRect] = [_proc_layer_1, _proc_layer_2, _proc_layer_3]
+	var layer_configs: Array[Dictionary] = [
+		{
+			"freq_x": 0.7, "drift_mult": 1.0,
+			"freq_y": 0.4, "dist_mult": 20.0,
+			"freq_s": 0.3, "scale_amp": 0.05, "base_scale": 1.0,
+			"freq_a": 0.8, "alpha_mult": 1.0, "active": true
+		},
+		{
+			"freq_x": 0.5, "phase_x": 1.5, "drift_mult": 0.8,
+			"freq_y": 0.3, "phase_y": 2.0, "dist_mult": 15.0,
+			"freq_s": 0.2, "scale_amp": 0.04, "base_scale": 1.05,
+			"freq_a": 0.6, "alpha_mult": 0.65, "active": (_layer_count >= 2)
+		},
+		{
+			"freq_x": 0.3, "phase_x": 3.0, "drift_mult": 1.2,
+			"freq_y": 0.5, "phase_y": 1.0, "dist_mult": 25.0,
+			"freq_s": 0.1, "scale_amp": 0.03, "base_scale": 1.10,
+			"freq_a": 0.4, "alpha_mult": 0.45, "active": (_layer_count >= 3)
+		}
+	]
+
+	var min_left_overscan: float = 99999.0
+	var min_right_overscan: float = 99999.0
+	var is_edge_safe: bool = true
+	var curr_max_offset: float = 0.0
+
+	for idx in range(3):
+		var layer_node: TextureRect = layers[idx]
+		var cfg: Dictionary = layer_configs[idx]
+
+		if layer_node == null:
+			continue
+
+		var is_active: bool = cfg["active"]
+		layer_node.visible = is_active
+		if not is_active:
+			continue
+
+		var px_x: float = cfg.get("phase_x", 0.0)
+		var px_y: float = cfg.get("phase_y", 0.0)
+
+		var off_x: float = sin(time * cfg["freq_x"] + px_x) * (_drift_amount * cfg["drift_mult"])
+		var off_y: float = cos(time * cfg["freq_y"] + px_y) * (_distortion * cfg["dist_mult"])
+
+		var scale_delta: float = sin(time * cfg["freq_s"]) * (_distortion * cfg["scale_amp"])
+		var layer_scale: float = maxf(0.8, cfg["base_scale"] + scale_delta)
+
+		var alpha: float = clampf((_proc_opacity * cfg["alpha_mult"]) * (1.0 + sin(time * cfg["freq_a"]) * _breathing), 0.0, 1.0)
+
+		layer_node.size = Vector2(disp_w, disp_h)
+		layer_node.pivot_offset = Vector2(disp_w / 2.0, disp_h / 2.0)
+		layer_node.position = Vector2(center_x + off_x, center_y + off_y)
+		layer_node.scale = Vector2(layer_scale, layer_scale)
+		layer_node.modulate = Color(_proc_mod_r, _proc_mod_g, _proc_mod_b, alpha)
+
+		# Edge safety calculation considering scale centered at pivot
+		var phys_left: float = layer_node.position.x - (disp_w * (layer_scale - 1.0) / 2.0)
+		var phys_right: float = layer_node.position.x + disp_w + (disp_w * (layer_scale - 1.0) / 2.0)
+
+		var overscan_l: float = -phys_left
+		var overscan_r: float = phys_right - vp_size.x
+
+		if overscan_l < min_left_overscan:
+			min_left_overscan = overscan_l
+		if overscan_r < min_right_overscan:
+			min_right_overscan = overscan_r
+
+		if phys_left > 0.0 or phys_right < vp_size.x:
+			is_edge_safe = false
+
+		var layer_off_mag: float = absf(off_x)
+		if layer_off_mag > curr_max_offset:
+			curr_max_offset = layer_off_mag
+
+	_last_diag_left_overscan = min_left_overscan
+	_last_diag_right_overscan = min_right_overscan
+	_last_diag_curr_offset = curr_max_offset
+	_last_diag_edge_safe = is_edge_safe
 
 	# Compare Old vs New right panel
 	if _compare_old_vs_new_mode and _compare_new_proc_container != null:
-		if _compare_new_proc_l1 != null:
-			_compare_new_proc_l1.modulate = _proc_layer_1.modulate
-			_compare_new_proc_l1.position = _proc_layer_1.position * 0.5
-		if _compare_new_proc_l2 != null:
-			_compare_new_proc_l2.modulate = _proc_layer_2.modulate
-			_compare_new_proc_l2.position = _proc_layer_2.position * 0.5
-			_compare_new_proc_l2.visible = (_layer_count >= 2)
-		if _compare_new_proc_l3 != null:
-			_compare_new_proc_l3.modulate = _proc_layer_3.modulate
-			_compare_new_proc_l3.position = _proc_layer_3.position * 0.5
-			_compare_new_proc_l3.visible = (_layer_count >= 3)
+		var half_vp: Vector2 = Vector2(vp_size.x * 0.5, vp_size.y)
+		var half_info: Dictionary = calculate_overscan_info(half_vp)
+		var h_w: float = half_info["disp_width"]
+		var h_h: float = half_info["disp_height"]
+		var h_cx: float = half_info["base_center_x"]
+		var h_cy: float = half_info["base_center_y"]
+
+		var compare_layers: Array[TextureRect] = [_compare_new_proc_l1, _compare_new_proc_l2, _compare_new_proc_l3]
+		for idx in range(3):
+			var comp_node: TextureRect = compare_layers[idx]
+			var orig_node: TextureRect = layers[idx]
+			var cfg: Dictionary = layer_configs[idx]
+			if comp_node != null and orig_node != null:
+				var is_active: bool = cfg["active"]
+				comp_node.visible = is_active
+				if is_active:
+					comp_node.size = Vector2(h_w, h_h)
+					comp_node.pivot_offset = Vector2(h_w / 2.0, h_h / 2.0)
+					comp_node.position = Vector2(h_cx + (orig_node.position.x - center_x) * 0.5, h_cy + orig_node.position.y - center_y)
+					comp_node.scale = orig_node.scale
+					comp_node.modulate = orig_node.modulate
 
 func _build_ui_hierarchy() -> void:
 	# 1. Background Texture Rect
@@ -283,32 +395,30 @@ func _build_ui_hierarchy() -> void:
 		_fog_texture_rect.texture = _fog_frames[0]
 	add_child(_fog_texture_rect)
 
-	# 3. New Procedural Fog Layer Container
+	# 3. New Procedural Fog Layer Container (Clipped Parent)
 	_proc_container = Control.new()
 	_proc_container.name = "ProceduralFogContainer"
 	_proc_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_proc_container.clip_contents = true
 	_proc_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	_proc_layer_3 = TextureRect.new()
-	_proc_layer_3.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_proc_layer_3.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_proc_layer_3.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_proc_layer_3.stretch_mode = TextureRect.STRETCH_SCALE
 	_proc_layer_3.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_proc_layer_3.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_proc_layer_3.texture = _procedural_texture
 
 	_proc_layer_2 = TextureRect.new()
-	_proc_layer_2.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_proc_layer_2.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_proc_layer_2.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_proc_layer_2.stretch_mode = TextureRect.STRETCH_SCALE
 	_proc_layer_2.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_proc_layer_2.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_proc_layer_2.texture = _procedural_texture
 
 	_proc_layer_1 = TextureRect.new()
-	_proc_layer_1.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_proc_layer_1.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_proc_layer_1.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_proc_layer_1.stretch_mode = TextureRect.STRETCH_SCALE
 	_proc_layer_1.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_proc_layer_1.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_proc_layer_1.texture = _procedural_texture
@@ -383,9 +493,10 @@ func _build_ui_hierarchy() -> void:
 
 	_compare_new_proc_container = Control.new()
 	_compare_new_proc_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_compare_new_proc_l3 = TextureRect.new(); _compare_new_proc_l3.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); _compare_new_proc_l3.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; _compare_new_proc_l3.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED; _compare_new_proc_l3.texture = _procedural_texture
-	_compare_new_proc_l2 = TextureRect.new(); _compare_new_proc_l2.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); _compare_new_proc_l2.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; _compare_new_proc_l2.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED; _compare_new_proc_l2.texture = _procedural_texture
-	_compare_new_proc_l1 = TextureRect.new(); _compare_new_proc_l1.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); _compare_new_proc_l1.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; _compare_new_proc_l1.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED; _compare_new_proc_l1.texture = _procedural_texture
+	_compare_new_proc_container.clip_contents = true
+	_compare_new_proc_l3 = TextureRect.new(); _compare_new_proc_l3.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; _compare_new_proc_l3.stretch_mode = TextureRect.STRETCH_SCALE; _compare_new_proc_l3.texture = _procedural_texture
+	_compare_new_proc_l2 = TextureRect.new(); _compare_new_proc_l2.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; _compare_new_proc_l2.stretch_mode = TextureRect.STRETCH_SCALE; _compare_new_proc_l2.texture = _procedural_texture
+	_compare_new_proc_l1 = TextureRect.new(); _compare_new_proc_l1.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; _compare_new_proc_l1.stretch_mode = TextureRect.STRETCH_SCALE; _compare_new_proc_l1.texture = _procedural_texture
 	_compare_new_proc_container.add_child(_compare_new_proc_l3)
 	_compare_new_proc_container.add_child(_compare_new_proc_l2)
 	_compare_new_proc_container.add_child(_compare_new_proc_l1)
@@ -582,7 +693,7 @@ func _build_ui_hierarchy() -> void:
 	var diag_panel: PanelContainer = PanelContainer.new()
 	diag_panel.name = "DiagPanel"
 	diag_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	diag_panel.offset_left = -360.0
+	diag_panel.offset_left = -380.0
 	diag_panel.offset_top = 48.0
 	diag_panel.offset_right = -16.0
 
@@ -685,14 +796,25 @@ func _update_diagnostic_display() -> void:
 			"VISIBLE: %s" % str(_fog_visible)
 		])
 	else:
-		var disp_rect: Rect2 = _proc_layer_1.get_global_rect() if _proc_layer_1 != null else Rect2()
-		var w: int = _procedural_texture.get_width() if _procedural_texture != null else 2048
-		var h: int = _procedural_texture.get_height() if _procedural_texture != null else 720
+		var overscan_info: Dictionary = calculate_overscan_info(vp_size)
+		var disp_w: float = overscan_info["disp_width"]
+		var disp_h: float = overscan_info["disp_height"]
+		var w: int = _procedural_texture.get_width() if _procedural_texture != null else 2115
+		var h: int = _procedural_texture.get_height() if _procedural_texture != null else 744
+
+		var disp_w_str: String = "%.0f" % disp_w
+		var disp_h_str: String = "%.0f" % disp_h
+
 		_diag_label.text = "\n".join([
 			"FOG SOURCE: d1_misty_forest_fog_layer.png",
 			"SOURCE SIZE: %dx%d" % [w, h],
-			"DISPLAY RECT: %.0fx%.0f" % [disp_rect.size.x, disp_rect.size.y],
 			"VIEWPORT: %.0fx%.0f" % [vp_size.x, vp_size.y],
+			"DISPLAY SIZE: %sx%s" % [disp_w_str, disp_h_str],
+			"HORIZONTAL OVERSCAN LEFT: %.1f px" % _last_diag_left_overscan,
+			"HORIZONTAL OVERSCAN RIGHT: %.1f px" % _last_diag_right_overscan,
+			"CURRENT OFFSET: %.1f" % _last_diag_curr_offset,
+			"REQUIRED OVERSCAN: %.1f" % overscan_info["required_overscan"],
+			"EDGE SAFE: %s" % str(_last_diag_edge_safe).to_lower(),
 			"OPACITY: %.2f" % _proc_opacity,
 			"DRIFT AMOUNT: %.0f px" % _drift_amount,
 			"DRIFT SPEED: %.2f" % _drift_speed,
@@ -820,6 +942,10 @@ func set_compare_old_vs_new_mode(enabled: bool) -> void:
 func set_lab_mode(mode: LabMode) -> void:
 	_current_lab_mode = mode
 
+func set_procedural_time(t: float) -> void:
+	_procedural_time = t
+	_update_procedural_motion()
+
 func reset_defaults() -> void:
 	_is_playing = true
 	_fog_current_frame = 0
@@ -920,3 +1046,12 @@ func is_compare_old_vs_new_mode() -> bool:
 
 func get_motion_mode() -> MotionMode:
 	return _current_motion_mode
+
+func is_edge_safe() -> bool:
+	return _last_diag_edge_safe
+
+func get_left_overscan() -> float:
+	return _last_diag_left_overscan
+
+func get_right_overscan() -> float:
+	return _last_diag_right_overscan

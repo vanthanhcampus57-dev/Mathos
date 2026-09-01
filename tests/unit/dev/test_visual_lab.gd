@@ -1,6 +1,6 @@
 extends SceneTree
 
-## Targeted Verification Test Suite for MATHOS-VISUAL-LAB-PROCEDURAL-FOG-COMPARE-002
+## Targeted Verification Test Suite for MATHOS-VISUAL-LAB-FOG-EDGE-SEAM-FIX-003
 ## Verifies:
 ## 1. CLI flag routing for --visual-lab.
 ## 2. Normal boot un-affected when flag absent.
@@ -13,12 +13,16 @@ extends SceneTree
 ## 9. Procedural fog controls: Opacity, Drift, Speed, Distortion, Breathing, Layer Count (1/2/3).
 ## 10. Compare Old vs New side-by-side mode.
 ## 11. Zero save data / progression mutation.
+## 12. Preserved source aspect ratio (2115/744 ≈ 2.8427).
+## 13. Dynamic overscan contract at 1280x720 and 1024x600.
+## 14. Edge-stress test (Drift 300, Distortion 0.50, Layers 3) EDGE_SAFE=true across animation samples.
+## 15. Normal human preset EDGE_SAFE=true across animation samples.
 
 const AppRootClass = preload("res://src/app/app_root.gd")
 const VisualLabClass = preload("res://dev/visual_lab/visual_lab.gd")
 
 func _initialize() -> void:
-	print("--- RUNNING MATHOS VISUAL LAB QA HARNESS (VIS-LAB-001..017) ---")
+	print("--- RUNNING MATHOS VISUAL LAB QA HARNESS (VIS-LAB-001..022) ---")
 	var ok: bool = run_all_tests()
 	if ok:
 		print("MATHOS VISUAL LAB QA HARNESS: PASS!")
@@ -46,9 +50,14 @@ static func run_all_tests() -> bool:
 	if test_vislab_015_procedural_fog_controls(): passes += 1
 	if test_vislab_016_procedural_fog_layer_count_1_2_3(): passes += 1
 	if test_vislab_017_compare_old_vs_new_mode(): passes += 1
+	if test_vislab_018_source_aspect_ratio_preserved(): passes += 1
+	if test_vislab_019_dynamic_overscan_at_1280x720_and_1024x600(): passes += 1
+	if test_vislab_020_edge_stress_test_drift_300_distortion_050_all_layers(): passes += 1
+	if test_vislab_021_normal_preset_edge_safety(): passes += 1
+	if test_vislab_022_minimum_scale_never_exposes_boundary(): passes += 1
 
-	print("[VIS-LAB-HARNESS] %d / 17 test scenarios passed" % passes)
-	return passes == 17
+	print("[VIS-LAB-HARNESS] %d / 22 test scenarios passed" % passes)
+	return passes == 22
 
 static func _create_lab() -> VisualLab:
 	var scene: PackedScene = load("res://dev/visual_lab/visual_lab.tscn") as PackedScene
@@ -419,5 +428,117 @@ static func test_vislab_017_compare_old_vs_new_mode() -> bool:
 		return false
 
 	print("[VIS-LAB-017] PASS: Compare Old vs New side-by-side mode verified!")
+	lab.queue_free()
+	return true
+
+static func test_vislab_018_source_aspect_ratio_preserved() -> bool:
+	print("[VIS-LAB-018] Verifying preserved source aspect ratio (2115 / 744 ≈ 2.8427)...")
+	var lab: VisualLab = _create_lab()
+	Engine.get_main_loop().root.add_child(lab)
+
+	var info720: Dictionary = lab.calculate_overscan_info(Vector2(1280, 720))
+	var expected_aspect: float = 2115.0 / 744.0
+	var calculated_aspect: float = info720["disp_width"] / info720["disp_height"]
+
+	if abs(calculated_aspect - expected_aspect) > 0.001:
+		print("[VIS-LAB-018] FAIL: Aspect ratio mismatch (expected %.4f, got %.4f)" % [expected_aspect, calculated_aspect])
+		lab.queue_free()
+		return false
+
+	print("[VIS-LAB-018] PASS: Source aspect ratio preserved cleanly!")
+	lab.queue_free()
+	return true
+
+static func test_vislab_019_dynamic_overscan_at_1280x720_and_1024x600() -> bool:
+	print("[VIS-LAB-019] Verifying dynamic overscan calculation at 1280x720 & 1024x600...")
+	var lab: VisualLab = _create_lab()
+	Engine.get_main_loop().root.add_child(lab)
+
+	var info720: Dictionary = lab.calculate_overscan_info(Vector2(1280, 720))
+	if info720["disp_width"] < 1280.0 or info720["disp_width"] < info720["required_width"]:
+		print("[VIS-LAB-019] FAIL: Insufficient overscan width at 1280x720 (disp=%.1f, req=%.1f)" % [info720["disp_width"], info720["required_width"]])
+		lab.queue_free()
+		return false
+
+	var info600: Dictionary = lab.calculate_overscan_info(Vector2(1024, 600))
+	if info600["disp_width"] < 1024.0 or info600["disp_width"] < info600["required_width"]:
+		print("[VIS-LAB-019] FAIL: Insufficient overscan width at 1024x600 (disp=%.1f, req=%.1f)" % [info600["disp_width"], info600["required_width"]])
+		lab.queue_free()
+		return false
+
+	print("[VIS-LAB-019] PASS: Dynamic overscan contract verified for both resolutions!")
+	lab.queue_free()
+	return true
+
+static func test_vislab_020_edge_stress_test_drift_300_distortion_050_all_layers() -> bool:
+	print("[VIS-LAB-020] Verifying Edge-Stress Test (Drift=300, Distortion=0.50, Layers=3)...")
+	var lab: VisualLab = _create_lab()
+	Engine.get_main_loop().root.add_child(lab)
+
+	lab.set_drift_amount(300.0)
+	lab.set_distortion(0.50)
+	lab.set_breathing(0.30)
+	lab.set_layer_count(3)
+	lab.set_drift_speed(0.15)
+
+	# Sample animation phase/time steps 0.0 -> 20.0s
+	var step_size: float = 0.5
+	var sample_time: float = 0.0
+	while sample_time <= 20.0:
+		lab.set_procedural_time(sample_time)
+		if not lab.is_edge_safe():
+			print("[VIS-LAB-020] FAIL: EDGE_SAFE is false at sample time %.1f s (left_overscan=%.1f, right_overscan=%.1f)" % [sample_time, lab.get_left_overscan(), lab.get_right_overscan()])
+			lab.queue_free()
+			return false
+		sample_time += step_size
+
+	print("[VIS-LAB-020] PASS: EDGE_SAFE remains TRUE across all animation stress samples!")
+	lab.queue_free()
+	return true
+
+static func test_vislab_021_normal_preset_edge_safety() -> bool:
+	print("[VIS-LAB-021] Verifying Normal Human Preset edge safety (Drift=120, Distortion=0.08, Layers=2)...")
+	var lab: VisualLab = _create_lab()
+	Engine.get_main_loop().root.add_child(lab)
+
+	lab.set_procedural_opacity(0.58)
+	lab.set_drift_amount(120.0)
+	lab.set_drift_speed(0.15)
+	lab.set_distortion(0.08)
+	lab.set_breathing(0.05)
+	lab.set_layer_count(2)
+
+	var step_size: float = 0.5
+	var sample_time: float = 0.0
+	while sample_time <= 20.0:
+		lab.set_procedural_time(sample_time)
+		if not lab.is_edge_safe():
+			print("[VIS-LAB-021] FAIL: EDGE_SAFE is false at sample time %.1f s" % sample_time)
+			lab.queue_free()
+			return false
+		sample_time += step_size
+
+	print("[VIS-LAB-021] PASS: Normal preset EDGE_SAFE remains TRUE cleanly!")
+	lab.queue_free()
+	return true
+
+static func test_vislab_022_minimum_scale_never_exposes_boundary() -> bool:
+	print("[VIS-LAB-022] Verifying minimum scale pulsation never exposes texture boundary...")
+	var lab: VisualLab = _create_lab()
+	Engine.get_main_loop().root.add_child(lab)
+
+	lab.set_drift_amount(300.0)
+	lab.set_distortion(0.50)
+	lab.set_layer_count(3)
+
+	# Force scale pulsation to its minimum phase
+	for t_val in [1.57, 4.71, 7.85, 10.99]:
+		lab.set_procedural_time(t_val)
+		if lab.get_left_overscan() < 0.0 or lab.get_right_overscan() < 0.0:
+			print("[VIS-LAB-022] FAIL: Physical boundary exposed at min scale phase t=%.2f (left=%.1f, right=%.1f)" % [t_val, lab.get_left_overscan(), lab.get_right_overscan()])
+			lab.queue_free()
+			return false
+
+	print("[VIS-LAB-022] PASS: Minimum scale pulsation boundary safety verified!")
 	lab.queue_free()
 	return true
