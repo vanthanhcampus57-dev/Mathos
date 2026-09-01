@@ -16,6 +16,11 @@ var _active_session_id: String = ""
 var _active_interaction_type: String = ""
 var _completed: bool = false
 
+static func strip_answer_spec(question: Dictionary) -> Dictionary:
+	var view: Dictionary = question.duplicate(true)
+	view.erase("answer_spec")
+	return view
+
 func _init(p_service: QuestionService, p_panel: QuestionPanel = null) -> void:
 	_question_service = p_service
 	if p_panel != null:
@@ -175,7 +180,6 @@ func submit_answer(interaction_payload: Dictionary) -> Dictionary:
 
 	var response: Dictionary = _question_service.submit_answer(answer_payload)
 	if not bool(response.get("success", false)):
-		push_error("QuestionPresentationController.submit_answer rejected by QuestionService: %s" % String(response.get("error_message", "Unknown submission failure")))
 		if _question_panel != null and _question_panel.has_method("on_submission_failed"):
 			_question_panel.call("on_submission_failed", response)
 		question_failed.emit(response)

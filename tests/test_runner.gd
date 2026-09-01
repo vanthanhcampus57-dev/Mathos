@@ -34,7 +34,7 @@ func _initialize() -> void:
 		{"name": "Save Integration", "func": Callable(preload("res://tests/integration/save/test_save_integration.gd"), "run_all_tests")},
 		{"name": "GameFlow Vertical Slice", "func": Callable(load("res://tests/integration/flow/test_flow_vertical_slice.gd") as GDScript, "run_all_tests")},
 		{"name": "AppRoot Integration", "func": Callable(load("res://tests/integration/app/test_app_root_integration.gd") as GDScript, "run_all_tests")},
-		{"name": "Question Presentation (B.1)", "func": Callable(preload("res://tests/unit/presentation/question/test_question_presentation.gd"), "run_all_tests")},
+		{"name": "Question Presentation (B.1)", "func": Callable(TestQuestionPresentation, "run_all_tests")},
 		{"name": "Presentation Shell (B.2)", "func": Callable(preload("res://tests/unit/presentation/lesson/test_stage_presentation_shell.gd"), "run_all_tests").bind(self)},
 		{"name": "Mathos Theme (A.1)", "func": Callable(TestMathosTheme, "run_all_tests")},
 		{"name": "Shared Components (A.2)", "func": Callable(preload("res://tests/unit/presentation/test_shared_components.gd"), "run_all_tests")},

@@ -387,7 +387,47 @@ func _on_submit_button_pressed() -> void:
 		if _is_submitting:
 			return
 		_is_submitting = true
+		var payload: Dictionary = get_current_interaction_payload()
+		if not is_payload_complete(payload):
+			_is_submitting = false
+			var itype: String = String(_question_view.get("interaction_type", ""))
+			var uncompleted_msg: String = "Hãy hoàn tất tất cả các mục trước khi xác nhận."
+			if itype == "multiple_choice":
+				uncompleted_msg = "Vui lòng chọn một đáp án trước khi xác nhận."
+			elif itype == "input":
+				uncompleted_msg = "Vui lòng nhập câu trả lời trước khi xác nhận."
+			elif itype == "matching":
+				uncompleted_msg = "Vui lòng chọn ghép đôi cho tất cả các mục trước khi xác nhận."
+			elif itype == "drag_drop":
+				uncompleted_msg = "Hãy phân loại tất cả các mục trước khi xác nhận."
+
+			_feedback_text = "⚠️ %s" % uncompleted_msg
+			_has_feedback = true
+			if _feedback_label != null:
+				_feedback_label.theme_type_variation = &"MathosMeta"
+				_feedback_label.text = _feedback_text
+				_feedback_label.modulate.a = 0.0
+				_feedback_label.visible = true
+				var fb_tween: Tween = create_tween()
+				if fb_tween != null:
+					fb_tween.tween_property(_feedback_label, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			return
+
 		request_submit()
+
+func is_payload_complete(payload: Dictionary) -> bool:
+	var itype: String = String(_question_view.get("interaction_type", ""))
+	match itype:
+		"multiple_choice":
+			return payload.has("selected_option_id") and not String(payload["selected_option_id"]).strip_edges().is_empty()
+		"input":
+			return payload.has("value") and not String(payload["value"]).strip_edges().is_empty()
+		"matching":
+			return payload.has("pairs") and (payload["pairs"] is Array) and not (payload["pairs"] as Array).is_empty()
+		"drag_drop":
+			return payload.has("placements") and (payload["placements"] is Array) and not (payload["placements"] as Array).is_empty()
+		_:
+			return not payload.is_empty()
 
 func _on_hint_button_pressed() -> void:
 	var hint: String = String(_question_view.get("hint", "")).strip_edges()
@@ -424,7 +464,6 @@ func on_submission_failed(error_info: Dictionary = {}) -> void:
 		_active_interaction_view.call("set_disabled", false)
 
 	var msg: String = String(error_info.get("error_message", "")).strip_edges()
-	var code: int = int(error_info.get("error_code", 0))
 
 	# Player-facing localized Vietnamese translation for internal validation keys
 	var player_facing_msg: String = ""
@@ -434,13 +473,12 @@ func on_submission_failed(error_info: Dictionary = {}) -> void:
 		player_facing_msg = "Vui lòng chọn ghép đôi cho tất cả các mục trước khi xác nhận."
 	elif msg.contains("input payload") or msg.contains("value"):
 		player_facing_msg = "Vui lòng nhập câu trả lời trước khi xác nhận."
+	elif msg.contains("multiple_choice") or msg.contains("selected_option_id"):
+		player_facing_msg = "Vui lòng chọn một đáp án trước khi xác nhận."
 	elif not msg.is_empty() and not msg.contains("requires") and not msg.contains("definition"):
 		player_facing_msg = sanitize_presentation_text(msg)
 	else:
 		player_facing_msg = "Hãy hoàn tất tất cả các mục trước khi xác nhận."
-
-	if not msg.is_empty():
-		push_warning("[QuestionPanel] Diagnostic submission failure (code %d): %s" % [code, msg])
 
 	_feedback_text = "⚠️ %s" % player_facing_msg
 	_has_feedback = true
