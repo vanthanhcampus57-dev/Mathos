@@ -1,0 +1,55 @@
+name: mathos-local-backend
+
+services:
+  mathos-api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: mathos-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      mathos-db:
+        condition: service_healthy
+      mathos-mailpit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/v1/health')\" || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  mathos-db:
+    image: postgres:16-alpine
+    container_name: mathos-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mathos_dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mathos_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-mathos_local_db}
+    volumes:
+      - mathos_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mathos_dev} -d ${POSTGRES_DB:-mathos_local_db}"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 3s
+
+  mathos-mailpit:
+    image: axllent/mailpit:latest
+    container_name: mathos-mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_DATABASE: ""
+
+volumes:
+  mathos_postgres_data:
+    name: mathos_postgres_data
