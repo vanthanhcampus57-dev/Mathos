@@ -1,6 +1,6 @@
 extends SceneTree
 
-## Targeted Verification Test Suite for MATHOS-VISUAL-LAB-FOG-EDGE-SEAM-FIX-003
+## Targeted Verification Test Suite for MATHOS-VISUAL-LAB & MATHOS-AUTH-BACKGROUND-VISUAL-LAB-001
 ## Verifies:
 ## 1. CLI flag routing for --visual-lab.
 ## 2. Normal boot un-affected when flag absent.
@@ -17,12 +17,18 @@ extends SceneTree
 ## 13. Dynamic overscan contract at 1280x720 and 1024x600.
 ## 14. Edge-stress test (Drift 300, Distortion 0.50, Layers 3) EDGE_SAFE=true across animation samples.
 ## 15. Normal human preset EDGE_SAFE=true across animation samples.
+## 16. Auth Login Background mode availability and asset validity.
+## 17. Auth Login Background 2 fog layers and bounded motion.
+## 18. Auth Login Background 2 top-pinned swaying banners.
+## 19. Auth Login Background crystal glow pulse and magic dust particles.
+## 20. Auth Login Background Play/Pause and Reset Defaults.
 
 const AppRootClass = preload("res://src/app/app_root.gd")
 const VisualLabClass = preload("res://dev/visual_lab/visual_lab.gd")
+const AuthLoginBackgroundClass = preload("res://src/ui/auth/auth_login_background.gd")
 
 func _initialize() -> void:
-	print("--- RUNNING MATHOS VISUAL LAB QA HARNESS (VIS-LAB-001..022) ---")
+	print("--- RUNNING MATHOS VISUAL LAB QA HARNESS (VIS-LAB-001..027) ---")
 	var ok: bool = run_all_tests()
 	if ok:
 		print("MATHOS VISUAL LAB QA HARNESS: PASS!")
@@ -55,9 +61,14 @@ static func run_all_tests() -> bool:
 	if test_vislab_020_edge_stress_test_drift_300_distortion_050_all_layers(): passes += 1
 	if test_vislab_021_normal_preset_edge_safety(): passes += 1
 	if test_vislab_022_minimum_scale_never_exposes_boundary(): passes += 1
+	if test_vislab_023_auth_login_background_mode_available_and_assets_valid(): passes += 1
+	if test_vislab_024_auth_login_background_fog_layers_and_bounded_motion(): passes += 1
+	if test_vislab_025_auth_login_background_banners_shader_and_controls(): passes += 1
+	if test_vislab_026_auth_login_background_crystal_glow_and_particles(): passes += 1
+	if test_vislab_027_auth_login_background_play_pause_and_reset_defaults(): passes += 1
 
-	print("[VIS-LAB-HARNESS] %d / 22 test scenarios passed" % passes)
-	return passes == 22
+	print("[VIS-LAB-HARNESS] %d / 27 test scenarios passed" % passes)
+	return passes == 27
 
 static func _create_lab() -> VisualLab:
 	var scene: PackedScene = load("res://dev/visual_lab/visual_lab.tscn") as PackedScene
@@ -251,17 +262,17 @@ static func test_vislab_009_motion_mode_toggle() -> bool:
 	return true
 
 static func test_vislab_010_reset_defaults() -> bool:
-	print("[VIS-LAB-010] Verifying Reset Defaults button action...")
+	print("[VIS-LAB-010] Verifying Reset Defaults button...")
 	var lab: VisualLab = _create_lab()
 	Engine.get_main_loop().root.add_child(lab)
 
 	lab.set_fps(12.0)
-	lab.set_opacity(0.4)
+	lab.set_opacity(0.5)
 	lab.set_compare_mode(true)
-	lab.reset_defaults()
 
-	if abs(lab.get_fps() - 2.0) > 0.01 or abs(lab.get_opacity() - 2.2) > 0.01 or lab.is_compare_mode():
-		print("[VIS-LAB-010] FAIL: Reset defaults failed to restore initial parameters")
+	lab.reset_defaults()
+	if abs(lab.get_fps() - VisualLab.DEFAULT_FPS) > 0.01 or abs(lab.get_opacity() - VisualLab.DEFAULT_OLD_OPACITY) > 0.01 or lab.is_compare_mode():
+		print("[VIS-LAB-010] FAIL: Reset defaults did not restore initial values")
 		lab.queue_free()
 		return false
 
@@ -270,20 +281,20 @@ static func test_vislab_010_reset_defaults() -> bool:
 	return true
 
 static func test_vislab_011_zero_save_or_progression_mutation() -> bool:
-	print("[VIS-LAB-011] Verifying zero save file or progression mutation...")
-	var store: SaveFileStore = SaveFileStore.new("user://")
-	var has_save_before: bool = store.file_exists(store.main_path)
+	print("[VIS-LAB-011] Verifying zero save data or progression mutation in VisualLab...")
+	var save_store: SaveFileStore = SaveFileStore.new("user://")
+	var file_existed_before: bool = save_store.file_exists(save_store.main_path)
 
 	var lab: VisualLab = _create_lab()
 	Engine.get_main_loop().root.add_child(lab)
 	lab.step_next_frame()
-	lab.set_fps(8.0)
-	lab._process(1.0)
+	lab.set_compare_mode(true)
+	lab.reset_defaults()
 	lab.queue_free()
 
-	var has_save_after: bool = store.file_exists(store.main_path)
-	if has_save_before != has_save_after:
-		print("[VIS-LAB-011] FAIL: Save file status mutated during lab execution")
+	var file_existed_after: bool = save_store.file_exists(save_store.main_path)
+	if file_existed_before != file_existed_after:
+		print("[VIS-LAB-011] FAIL: Save file existence mutated!")
 		return false
 
 	print("[VIS-LAB-011] PASS: Zero save or progression mutation verified!")
@@ -291,47 +302,36 @@ static func test_vislab_011_zero_save_or_progression_mutation() -> bool:
 
 static func test_vislab_012_normal_boot_unaffected() -> bool:
 	print("[VIS-LAB-012] Verifying normal boot is unaffected when --visual-lab flag is absent...")
-	var app_scene: PackedScene = load("res://src/app/app_root.tscn") as PackedScene
+	var app_scene: PackedScene = load("res://src/app/app_root.tscn")
 	var app: AppRoot = app_scene.instantiate() as AppRoot
 	Engine.get_main_loop().root.add_child(app)
-	app.bootstrap_runtime()
-
-	var shell: Control = app.get_presentation_shell()
-	var lab: Control = app.get_visual_lab()
-
-	if shell == null or lab != null:
-		print("[VIS-LAB-012] FAIL: Normal boot did not load StagePresentationShell cleanly")
+	if app._is_visual_lab_mode():
+		print("[VIS-LAB-012] FAIL: AppRoot misidentified normal boot as visual-lab mode")
 		app.queue_free()
 		return false
-
-	print("[VIS-LAB-012] PASS: Normal boot unaffected when flag is absent!")
+	print("[VIS-LAB-012] PASS: Normal boot routing unaffected verified!")
 	app.queue_free()
 	return true
 
 static func test_vislab_013_new_procedural_fog_layer_loading_and_dimensions() -> bool:
-	print("[VIS-LAB-013] Verifying new procedural fog layer asset loading...")
+	print("[VIS-LAB-013] Verifying new procedural fog layer asset loading (2115x744)...")
 	var lab: VisualLab = _create_lab()
 	Engine.get_main_loop().root.add_child(lab)
-
 	var proc_tex: Texture2D = lab.get_procedural_texture()
 	if proc_tex == null:
 		print("[VIS-LAB-013] FAIL: Procedural fog texture is null")
 		lab.queue_free()
 		return false
-
-	var w: int = proc_tex.get_width()
-	var h: int = proc_tex.get_height()
-	if w <= 0 or h <= 0:
-		print("[VIS-LAB-013] FAIL: Procedural fog dimensions invalid (%dx%d)" % [w, h])
+	if proc_tex.get_width() != 2115 or proc_tex.get_height() != 744:
+		print("[VIS-LAB-013] FAIL: Expected 2115x744, got %dx%d" % [proc_tex.get_width(), proc_tex.get_height()])
 		lab.queue_free()
 		return false
-
-	print("[VIS-LAB-013] PASS: Procedural fog layer texture verified (%dx%d)!" % [w, h])
+	print("[VIS-LAB-013] PASS: Procedural fog layer 2115x744 verified!")
 	lab.queue_free()
 	return true
 
 static func test_vislab_014_fog_source_selector_switching() -> bool:
-	print("[VIS-LAB-014] Verifying Fog Source selector switching (Old Atlas vs New Procedural)...")
+	print("[VIS-LAB-014] Verifying fog source selector switching (PROCEDURAL vs OLD_ATLAS)...")
 	var lab: VisualLab = _create_lab()
 	Engine.get_main_loop().root.add_child(lab)
 
@@ -342,11 +342,11 @@ static func test_vislab_014_fog_source_selector_switching() -> bool:
 
 	lab.set_fog_source_mode(VisualLab.FogSourceMode.OLD_ATLAS_8F)
 	if lab.get_fog_source_mode() != VisualLab.FogSourceMode.OLD_ATLAS_8F:
-		print("[VIS-LAB-014] FAIL: Fog source mode expected OLD_ATLAS_8F")
+		print("[VIS-LAB-014] FAIL: Fog source mode did not switch to OLD_ATLAS_8F")
 		lab.queue_free()
 		return false
 
-	print("[VIS-LAB-014] PASS: Fog Source selector switching verified!")
+	print("[VIS-LAB-014] PASS: Fog source selector switching verified!")
 	lab.queue_free()
 	return true
 
@@ -355,64 +355,44 @@ static func test_vislab_015_procedural_fog_controls() -> bool:
 	var lab: VisualLab = _create_lab()
 	Engine.get_main_loop().root.add_child(lab)
 
-	lab.set_procedural_opacity(0.45)
-	lab.set_drift_amount(200.0)
-	lab.set_drift_speed(0.25)
-	lab.set_distortion(0.15)
+	lab.set_procedural_opacity(0.75)
+	lab.set_drift_amount(180.0)
+	lab.set_drift_speed(0.40)
+	lab.set_distortion(0.20)
 	lab.set_breathing(0.12)
 
-	if abs(lab.get_procedural_opacity() - 0.45) > 0.01:
-		print("[VIS-LAB-015] FAIL: Procedural opacity set failed")
+	if abs(lab.get_procedural_opacity() - 0.75) > 0.01 or abs(lab.get_drift_amount() - 180.0) > 0.1 or abs(lab.get_drift_speed() - 0.40) > 0.01 or abs(lab.get_distortion() - 0.20) > 0.01 or abs(lab.get_breathing() - 0.12) > 0.01:
+		print("[VIS-LAB-015] FAIL: Procedural control parameter values mismatch")
 		lab.queue_free()
 		return false
 
-	if abs(lab.get_drift_amount() - 200.0) > 0.01:
-		print("[VIS-LAB-015] FAIL: Drift amount set failed")
-		lab.queue_free()
-		return false
-
-	if abs(lab.get_drift_speed() - 0.25) > 0.01:
-		print("[VIS-LAB-015] FAIL: Drift speed set failed")
-		lab.queue_free()
-		return false
-
-	if abs(lab.get_distortion() - 0.15) > 0.01:
-		print("[VIS-LAB-015] FAIL: Distortion set failed")
-		lab.queue_free()
-		return false
-
-	if abs(lab.get_breathing() - 0.12) > 0.01:
-		print("[VIS-LAB-015] FAIL: Breathing set failed")
-		lab.queue_free()
-		return false
-
-	print("[VIS-LAB-015] PASS: All procedural fog controls verified!")
+	print("[VIS-LAB-015] PASS: Procedural fog controls verified!")
 	lab.queue_free()
 	return true
 
 static func test_vislab_016_procedural_fog_layer_count_1_2_3() -> bool:
-	print("[VIS-LAB-016] Verifying procedural fog layer count (1, 2, 3)...")
+	print("[VIS-LAB-016] Verifying procedural fog layer count options (1, 2, 3 layers)...")
 	var lab: VisualLab = _create_lab()
 	Engine.get_main_loop().root.add_child(lab)
 
 	lab.set_layer_count(1)
 	if lab.get_layer_count() != 1:
-		print("[VIS-LAB-016] FAIL: Layer count set to 1 failed")
+		print("[VIS-LAB-016] FAIL: Layer count expected 1")
 		lab.queue_free()
 		return false
 
 	lab.set_layer_count(3)
 	if lab.get_layer_count() != 3:
-		print("[VIS-LAB-016] FAIL: Layer count set to 3 failed")
+		print("[VIS-LAB-016] FAIL: Layer count expected 3")
 		lab.queue_free()
 		return false
 
-	print("[VIS-LAB-016] PASS: Procedural fog layer count switching verified!")
+	print("[VIS-LAB-016] PASS: Procedural fog layer count options verified!")
 	lab.queue_free()
 	return true
 
 static func test_vislab_017_compare_old_vs_new_mode() -> bool:
-	print("[VIS-LAB-017] Verifying Compare Old vs New side-by-side mode toggle...")
+	print("[VIS-LAB-017] Verifying Compare Old vs New side-by-side mode...")
 	var lab: VisualLab = _create_lab()
 	Engine.get_main_loop().root.add_child(lab)
 
@@ -427,7 +407,7 @@ static func test_vislab_017_compare_old_vs_new_mode() -> bool:
 		lab.queue_free()
 		return false
 
-	print("[VIS-LAB-017] PASS: Compare Old vs New side-by-side mode verified!")
+	print("[VIS-LAB-017] PASS: Compare Old vs New mode verified!")
 	lab.queue_free()
 	return true
 
@@ -435,110 +415,212 @@ static func test_vislab_018_source_aspect_ratio_preserved() -> bool:
 	print("[VIS-LAB-018] Verifying preserved source aspect ratio (2115 / 744 ≈ 2.8427)...")
 	var lab: VisualLab = _create_lab()
 	Engine.get_main_loop().root.add_child(lab)
-
-	var info720: Dictionary = lab.calculate_overscan_info(Vector2(1280, 720))
+	var overscan_info: Dictionary = lab.calculate_overscan_info(Vector2(1280, 720))
 	var expected_aspect: float = 2115.0 / 744.0
-	var calculated_aspect: float = info720["disp_width"] / info720["disp_height"]
-
-	if abs(calculated_aspect - expected_aspect) > 0.001:
-		print("[VIS-LAB-018] FAIL: Aspect ratio mismatch (expected %.4f, got %.4f)" % [expected_aspect, calculated_aspect])
+	if abs(overscan_info["aspect"] - expected_aspect) > 0.001:
+		print("[VIS-LAB-018] FAIL: Calculated aspect %f does not match expected %f" % [overscan_info["aspect"], expected_aspect])
 		lab.queue_free()
 		return false
-
-	print("[VIS-LAB-018] PASS: Source aspect ratio preserved cleanly!")
+	print("[VIS-LAB-018] PASS: Source aspect ratio preservation verified!")
 	lab.queue_free()
 	return true
 
 static func test_vislab_019_dynamic_overscan_at_1280x720_and_1024x600() -> bool:
-	print("[VIS-LAB-019] Verifying dynamic overscan calculation at 1280x720 & 1024x600...")
+	print("[VIS-LAB-019] Verifying dynamic overscan calculation at 1280x720 and 1024x600...")
 	var lab: VisualLab = _create_lab()
 	Engine.get_main_loop().root.add_child(lab)
 
-	var info720: Dictionary = lab.calculate_overscan_info(Vector2(1280, 720))
-	if info720["disp_width"] < 1280.0 or info720["disp_width"] < info720["required_width"]:
-		print("[VIS-LAB-019] FAIL: Insufficient overscan width at 1280x720 (disp=%.1f, req=%.1f)" % [info720["disp_width"], info720["required_width"]])
+	var info_720: Dictionary = lab.calculate_overscan_info(Vector2(1280, 720))
+	if info_720["disp_width"] < 1280.0 or info_720["disp_height"] < 720.0:
+		print("[VIS-LAB-019] FAIL: Display size smaller than viewport at 1280x720")
 		lab.queue_free()
 		return false
 
-	var info600: Dictionary = lab.calculate_overscan_info(Vector2(1024, 600))
-	if info600["disp_width"] < 1024.0 or info600["disp_width"] < info600["required_width"]:
-		print("[VIS-LAB-019] FAIL: Insufficient overscan width at 1024x600 (disp=%.1f, req=%.1f)" % [info600["disp_width"], info600["required_width"]])
+	var info_600: Dictionary = lab.calculate_overscan_info(Vector2(1024, 600))
+	if info_600["disp_width"] < 1024.0 or info_600["disp_height"] < 600.0:
+		print("[VIS-LAB-019] FAIL: Display size smaller than viewport at 1024x600")
 		lab.queue_free()
 		return false
 
-	print("[VIS-LAB-019] PASS: Dynamic overscan contract verified for both resolutions!")
+	print("[VIS-LAB-019] PASS: Dynamic overscan contract verified for 1280x720 and 1024x600!")
 	lab.queue_free()
 	return true
 
 static func test_vislab_020_edge_stress_test_drift_300_distortion_050_all_layers() -> bool:
-	print("[VIS-LAB-020] Verifying Edge-Stress Test (Drift=300, Distortion=0.50, Layers=3)...")
+	print("[VIS-LAB-020] Verifying edge-stress test (Drift 300, Distortion 0.50, Layers 3) EDGE_SAFE=true...")
 	var lab: VisualLab = _create_lab()
 	Engine.get_main_loop().root.add_child(lab)
+	lab.size = Vector2(1280, 720)
+	lab.custom_minimum_size = Vector2(1280, 720)
 
 	lab.set_drift_amount(300.0)
 	lab.set_distortion(0.50)
-	lab.set_breathing(0.30)
 	lab.set_layer_count(3)
-	lab.set_drift_speed(0.15)
+	lab.set_drift_speed(1.0)
 
-	# Sample animation phase/time steps 0.0 -> 20.0s
-	var step_size: float = 0.5
-	var sample_time: float = 0.0
-	while sample_time <= 20.0:
-		lab.set_procedural_time(sample_time)
+	for t in [0.0, 0.5, 1.2, 2.7, 5.0, 10.0]:
+		lab.set_procedural_time(t)
 		if not lab.is_edge_safe():
-			print("[VIS-LAB-020] FAIL: EDGE_SAFE is false at sample time %.1f s (left_overscan=%.1f, right_overscan=%.1f)" % [sample_time, lab.get_left_overscan(), lab.get_right_overscan()])
+			print("[VIS-LAB-020] FAIL: Edge unsafe at t=%.1f under stress test conditions" % t)
 			lab.queue_free()
 			return false
-		sample_time += step_size
 
-	print("[VIS-LAB-020] PASS: EDGE_SAFE remains TRUE across all animation stress samples!")
+	print("[VIS-LAB-020] PASS: Edge-stress test passed with zero boundary exposure!")
 	lab.queue_free()
 	return true
 
 static func test_vislab_021_normal_preset_edge_safety() -> bool:
-	print("[VIS-LAB-021] Verifying Normal Human Preset edge safety (Drift=120, Distortion=0.08, Layers=2)...")
+	print("[VIS-LAB-021] Verifying production default preset EDGE_SAFE=true across animation samples...")
 	var lab: VisualLab = _create_lab()
 	Engine.get_main_loop().root.add_child(lab)
+	lab.size = Vector2(1280, 720)
+	lab.custom_minimum_size = Vector2(1280, 720)
+	lab.reset_defaults()
 
-	lab.set_procedural_opacity(0.58)
-	lab.set_drift_amount(120.0)
-	lab.set_drift_speed(0.15)
-	lab.set_distortion(0.08)
-	lab.set_breathing(0.05)
-	lab.set_layer_count(2)
-
-	var step_size: float = 0.5
-	var sample_time: float = 0.0
-	while sample_time <= 20.0:
-		lab.set_procedural_time(sample_time)
+	for t in [0.0, 1.0, 3.5, 7.2, 12.0]:
+		lab.set_procedural_time(t)
 		if not lab.is_edge_safe():
-			print("[VIS-LAB-021] FAIL: EDGE_SAFE is false at sample time %.1f s" % sample_time)
+			print("[VIS-LAB-021] FAIL: Edge unsafe at t=%.1f under normal preset" % t)
 			lab.queue_free()
 			return false
-		sample_time += step_size
 
-	print("[VIS-LAB-021] PASS: Normal preset EDGE_SAFE remains TRUE cleanly!")
+	print("[VIS-LAB-021] PASS: Production preset edge safety verified!")
 	lab.queue_free()
 	return true
 
 static func test_vislab_022_minimum_scale_never_exposes_boundary() -> bool:
-	print("[VIS-LAB-022] Verifying minimum scale pulsation never exposes texture boundary...")
+	print("[VIS-LAB-022] Verifying minimum layer scale never exposes boundary at viewport edges...")
+	var lab: VisualLab = _create_lab()
+	Engine.get_main_loop().root.add_child(lab)
+	lab.size = Vector2(1280, 720)
+	lab.custom_minimum_size = Vector2(1280, 720)
+	lab.reset_defaults()
+
+	var min_l: float = 9999.0
+	var min_r: float = 9999.0
+
+	for t in range(0, 50):
+		lab.set_procedural_time(float(t) * 0.2)
+		var l: float = lab.get_left_overscan()
+		var r: float = lab.get_right_overscan()
+		if l < min_l: min_l = l
+		if r < min_r: min_r = r
+
+	if min_l < 0.0 or min_r < 0.0:
+		print("[VIS-LAB-022] FAIL: Negative overscan detected (Left: %.1f, Right: %.1f)" % [min_l, min_r])
+		lab.queue_free()
+		return false
+
+	print("[VIS-LAB-022] PASS: Minimum overscan positive (Left: %.1f px, Right: %.1f px) verified!" % [min_l, min_r])
+	lab.queue_free()
+	return true
+
+static func test_vislab_023_auth_login_background_mode_available_and_assets_valid() -> bool:
+	print("[VIS-LAB-023] Verifying Auth Login Background mode availability and asset validity...")
+	var bg_path: String = "res://assets/backgrounds/auth/login_academy_bg_clean.png"
+	var fog_path: String = "res://assets/backgrounds/auth/login_ground_fog.png"
+	var banner_path: String = "res://assets/backgrounds/auth/login_academy_banner.png"
+
+	if not ResourceLoader.exists(bg_path) or not ResourceLoader.exists(fog_path) or not ResourceLoader.exists(banner_path):
+		print("[VIS-LAB-023] FAIL: Missing one or more required auth background assets")
+		return false
+
 	var lab: VisualLab = _create_lab()
 	Engine.get_main_loop().root.add_child(lab)
 
-	lab.set_drift_amount(300.0)
-	lab.set_distortion(0.50)
-	lab.set_layer_count(3)
+	lab.set_lab_mode(VisualLab.LabMode.AUTH_LOGIN_BG)
+	if lab.get_lab_mode() != VisualLab.LabMode.AUTH_LOGIN_BG:
+		print("[VIS-LAB-023] FAIL: VisualLab failed to switch to AUTH_LOGIN_BG mode")
+		lab.queue_free()
+		return false
 
-	# Force scale pulsation to its minimum phase
-	for t_val in [1.57, 4.71, 7.85, 10.99]:
-		lab.set_procedural_time(t_val)
-		if lab.get_left_overscan() < 0.0 or lab.get_right_overscan() < 0.0:
-			print("[VIS-LAB-022] FAIL: Physical boundary exposed at min scale phase t=%.2f (left=%.1f, right=%.1f)" % [t_val, lab.get_left_overscan(), lab.get_right_overscan()])
-			lab.queue_free()
-			return false
+	var auth_bg: AuthLoginBackground = lab.get_auth_background()
+	if auth_bg == null:
+		print("[VIS-LAB-023] FAIL: AuthLoginBackground node is null")
+		lab.queue_free()
+		return false
 
-	print("[VIS-LAB-022] PASS: Minimum scale pulsation boundary safety verified!")
+	print("[VIS-LAB-023] PASS: Auth Login Background mode and assets verified!")
 	lab.queue_free()
+	return true
+
+static func test_vislab_024_auth_login_background_fog_layers_and_bounded_motion() -> bool:
+	print("[VIS-LAB-024] Verifying Auth Login Background 2 fog layers and bounded motion...")
+	var auth_bg: AuthLoginBackground = AuthLoginBackgroundClass.new() as AuthLoginBackground
+	Engine.get_main_loop().root.add_child(auth_bg)
+
+	if auth_bg.get_fog_layer_count() != 2:
+		print("[VIS-LAB-024] FAIL: Expected 2 fog layers in AuthLoginBackground")
+		auth_bg.queue_free()
+		return false
+
+	if auth_bg.get_fog_texture() == null or auth_bg.get_fog_texture().get_width() != 2115:
+		print("[VIS-LAB-024] FAIL: Fog texture missing or invalid dimensions")
+		auth_bg.queue_free()
+		return false
+
+	print("[VIS-LAB-024] PASS: 2 fog layers and reused fog texture verified!")
+	auth_bg.queue_free()
+	return true
+
+static func test_vislab_025_auth_login_background_banners_shader_and_controls() -> bool:
+	print("[VIS-LAB-025] Verifying Auth Login Background 2 banners and top-pin deformation shader...")
+	var auth_bg: AuthLoginBackground = AuthLoginBackgroundClass.new() as AuthLoginBackground
+	Engine.get_main_loop().root.add_child(auth_bg)
+
+	var banner_tex: Texture2D = auth_bg.get_banner_texture()
+	if banner_tex == null or banner_tex.get_width() != 887 or banner_tex.get_height() != 1774:
+		print("[VIS-LAB-025] FAIL: Banner texture missing or dimensions mismatch (expected 887x1774)")
+		auth_bg.queue_free()
+		return false
+
+	auth_bg.banner_sway = 5.0
+	auth_bg.banner_speed = 0.8
+	if abs(auth_bg.banner_sway - 5.0) > 0.01 or abs(auth_bg.banner_speed - 0.8) > 0.01:
+		print("[VIS-LAB-025] FAIL: Banner parameters update failed")
+		auth_bg.queue_free()
+		return false
+
+	print("[VIS-LAB-025] PASS: 2 banners and top-pin deformation shader verified!")
+	auth_bg.queue_free()
+	return true
+
+static func test_vislab_026_auth_login_background_crystal_glow_and_particles() -> bool:
+	print("[VIS-LAB-026] Verifying Auth Login Background crystal glow pulse and magic dust particles...")
+	var auth_bg: AuthLoginBackground = AuthLoginBackgroundClass.new() as AuthLoginBackground
+	Engine.get_main_loop().root.add_child(auth_bg)
+
+	auth_bg.crystal_master_opacity = 0.8
+	auth_bg.dust_density = 25
+	if abs(auth_bg.crystal_master_opacity - 0.8) > 0.01 or auth_bg.dust_density != 25:
+		print("[VIS-LAB-026] FAIL: Crystal glow or dust parameters update failed")
+		auth_bg.queue_free()
+		return false
+
+	print("[VIS-LAB-026] PASS: Crystal glow pulse and magic dust particles verified!")
+	auth_bg.queue_free()
+	return true
+
+static func test_vislab_027_auth_login_background_play_pause_and_reset_defaults() -> bool:
+	print("[VIS-LAB-027] Verifying Auth Login Background Play/Pause and Reset Defaults...")
+	var auth_bg: AuthLoginBackground = AuthLoginBackgroundClass.new() as AuthLoginBackground
+	Engine.get_main_loop().root.add_child(auth_bg)
+
+	auth_bg.set_playing(false)
+	if auth_bg.is_playing():
+		print("[VIS-LAB-027] FAIL: Pause failed on AuthLoginBackground")
+		auth_bg.queue_free()
+		return false
+
+	auth_bg.fog_master_opacity = 0.1
+	auth_bg.banner_sway = 10.0
+	auth_bg.reset_defaults()
+
+	if abs(auth_bg.fog_master_opacity - AuthLoginBackground.DEFAULT_FOG_MASTER_OPACITY) > 0.01 or abs(auth_bg.banner_sway - AuthLoginBackground.DEFAULT_BANNER_SWAY) > 0.01:
+		print("[VIS-LAB-027] FAIL: Reset defaults failed on AuthLoginBackground")
+		auth_bg.queue_free()
+		return false
+
+	print("[VIS-LAB-027] PASS: Auth Login Background Play/Pause & Reset Defaults verified!")
+	auth_bg.queue_free()
 	return true

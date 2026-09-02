@@ -3,9 +3,10 @@ extends Control
 
 ## Developer & QA Visual Asset Lab for Mathos Engine.
 ## Provides isolated diagnosis of visual presentation, fog overlays, frame inspection,
-## procedural fog animation, side-by-side old vs new comparison, without mutating save/gameplay data.
+## procedural fog animation, side-by-side old vs new comparison,
+## and Auth/Login Academy background tuning, without mutating save/gameplay data.
 
-enum LabMode { FOG_TEST, FUTURE_TAB_2, FUTURE_TAB_3 }
+enum LabMode { FOG_TEST, AUTH_LOGIN_BG, FUTURE_TAB_3 }
 enum MotionMode { CURRENT_ATLAS_ANIMATION, STATIC_FRAME }
 enum FogSourceMode { NEW_PROCEDURAL_LAYER, OLD_ATLAS_8F }
 
@@ -36,11 +37,11 @@ const DEFAULT_DISTORTION: float = 0.08
 const DEFAULT_BREATHING: float = 0.05
 const DEFAULT_LAYER_COUNT: int = 3
 
-# Scene Nodes
+# D1 Scene Nodes
 var _bg_texture_rect: TextureRect = null
 var _fog_texture_rect: TextureRect = null # Old atlas
 
-# Procedural Fog Layer Nodes (3 layers max)
+# D1 Procedural Fog Layer Nodes (3 layers max)
 var _proc_container: Control = null
 var _proc_layer_1: TextureRect = null
 var _proc_layer_2: TextureRect = null
@@ -63,10 +64,14 @@ var _compare_new_proc_l1: TextureRect = null
 var _compare_new_proc_l2: TextureRect = null
 var _compare_new_proc_l3: TextureRect = null
 
+# Auth Login Background Node
+var _auth_bg_node: AuthLoginBackground = null
+
 var _diag_label: Label = null
 
 # Controls
 var _fog_source_option: OptionButton = null
+var _fog_source_box: VBoxContainer = null
 var _play_pause_btn: Button = null
 var _prev_frame_btn: Button = null
 var _next_frame_btn: Button = null
@@ -85,9 +90,10 @@ var _compare_old_new_toggle: CheckBox = null
 var _reset_btn: Button = null
 var _motion_option: OptionButton = null
 
-# Procedural Controls
+# D1 Procedural Controls Box
 var _proc_ctrl_box: VBoxContainer = null
 var _old_ctrl_box: VBoxContainer = null
+var _global_toggles_box: VBoxContainer = null
 var _proc_opacity_slider: Slider = null
 var _proc_opacity_spinbox: SpinBox = null
 var _drift_amount_slider: Slider = null
@@ -99,6 +105,10 @@ var _distortion_spinbox: SpinBox = null
 var _breathing_slider: Slider = null
 var _breathing_spinbox: SpinBox = null
 var _layer_count_option: OptionButton = null
+
+# Auth Login Background Controls Box
+var _auth_ctrl_box: VBoxContainer = null
+var _auth_play_btn: Button = null
 
 # State
 var _current_lab_mode: LabMode = LabMode.FOG_TEST
@@ -150,6 +160,7 @@ func _ready() -> void:
 	_load_all_textures()
 	_build_ui_hierarchy()
 	_apply_parameters()
+	set_lab_mode(LabMode.FOG_TEST)
 	_update_diagnostic_display()
 
 func _load_all_textures() -> void:
@@ -192,6 +203,14 @@ func get_fog_frames() -> Array[AtlasTexture]:
 	_load_all_textures()
 	return _fog_frames
 
+func get_auth_background() -> AuthLoginBackground:
+	if _auth_bg_node == null:
+		_auth_bg_node = AuthLoginBackground.new()
+		_auth_bg_node.name = "AuthLoginBackground"
+		_auth_bg_node.visible = false
+		add_child(_auth_bg_node)
+	return _auth_bg_node
+
 func calculate_overscan_info(vp_size: Vector2) -> Dictionary:
 	var src_w: float = 2115.0
 	var src_h: float = 744.0
@@ -203,7 +222,6 @@ func calculate_overscan_info(vp_size: Vector2) -> Dictionary:
 	var base_disp_height: float = vp_size.y
 	var base_disp_width: float = base_disp_height * aspect
 
-	# Max drift multiplier among active layers (Layer 3 has 1.2x)
 	var max_drift_mult: float = 1.2 if _layer_count >= 3 else (0.8 if _layer_count == 2 else 1.0)
 	var max_drift_px: float = _drift_amount * max_drift_mult
 	var max_distortion_px: float = _distortion * 25.0
@@ -232,32 +250,29 @@ func calculate_overscan_info(vp_size: Vector2) -> Dictionary:
 	}
 
 func _process(delta: float) -> void:
-	if _current_lab_mode != LabMode.FOG_TEST:
-		return
+	if _current_lab_mode == LabMode.FOG_TEST:
+		if _is_playing:
+			if not _fog_frames.is_empty() and _fps > 0.0 and _current_motion_mode == MotionMode.CURRENT_ATLAS_ANIMATION:
+				_fog_frame_timer += delta
+				var frame_dur: float = 1.0 / _fps
+				if _fog_frame_timer >= frame_dur:
+					_fog_frame_timer = fmod(_fog_frame_timer, frame_dur)
+					_fog_current_frame = (_fog_current_frame + 1) % _fog_frames.size()
+					_update_frame_display()
 
-	if _is_playing:
-		# Old atlas tick
-		if not _fog_frames.is_empty() and _fps > 0.0 and _current_motion_mode == MotionMode.CURRENT_ATLAS_ANIMATION:
-			_fog_frame_timer += delta
-			var frame_dur: float = 1.0 / _fps
-			if _fog_frame_timer >= frame_dur:
-				_fog_frame_timer = fmod(_fog_frame_timer, frame_dur)
-				_fog_current_frame = (_fog_current_frame + 1) % _fog_frames.size()
-				_update_frame_display()
-
-		# Procedural motion tick
-		_procedural_time += delta
-		_update_procedural_motion()
+			_procedural_time += delta
+			_update_procedural_motion()
 
 	_update_diagnostic_display()
 
 func _update_procedural_motion() -> void:
+	_load_all_textures()
 	if _procedural_texture == null or not is_inside_tree():
 		return
 
 	var vp_size: Vector2 = get_viewport_rect().size
 	if vp_size.x <= 0.0 or vp_size.y <= 0.0:
-		return
+		vp_size = Vector2(1280, 720)
 
 	var overscan_info: Dictionary = calculate_overscan_info(vp_size)
 	var disp_w: float = overscan_info["disp_width"]
@@ -323,7 +338,6 @@ func _update_procedural_motion() -> void:
 		layer_node.scale = Vector2(layer_scale, layer_scale)
 		layer_node.modulate = Color(_proc_mod_r, _proc_mod_g, _proc_mod_b, alpha)
 
-		# Edge safety calculation considering scale centered at pivot
 		var phys_left: float = layer_node.position.x - (disp_w * (layer_scale - 1.0) / 2.0)
 		var phys_right: float = layer_node.position.x + disp_w + (disp_w * (layer_scale - 1.0) / 2.0)
 
@@ -347,32 +361,8 @@ func _update_procedural_motion() -> void:
 	_last_diag_curr_offset = curr_max_offset
 	_last_diag_edge_safe = is_edge_safe
 
-	# Compare Old vs New right panel
-	if _compare_old_vs_new_mode and _compare_new_proc_container != null:
-		var half_vp: Vector2 = Vector2(vp_size.x * 0.5, vp_size.y)
-		var half_info: Dictionary = calculate_overscan_info(half_vp)
-		var h_w: float = half_info["disp_width"]
-		var h_h: float = half_info["disp_height"]
-		var h_cx: float = half_info["base_center_x"]
-		var h_cy: float = half_info["base_center_y"]
-
-		var compare_layers: Array[TextureRect] = [_compare_new_proc_l1, _compare_new_proc_l2, _compare_new_proc_l3]
-		for idx in range(3):
-			var comp_node: TextureRect = compare_layers[idx]
-			var orig_node: TextureRect = layers[idx]
-			var cfg: Dictionary = layer_configs[idx]
-			if comp_node != null and orig_node != null:
-				var is_active: bool = cfg["active"]
-				comp_node.visible = is_active
-				if is_active:
-					comp_node.size = Vector2(h_w, h_h)
-					comp_node.pivot_offset = Vector2(h_w / 2.0, h_h / 2.0)
-					comp_node.position = Vector2(h_cx + (orig_node.position.x - center_x) * 0.5, h_cy + orig_node.position.y - center_y)
-					comp_node.scale = orig_node.scale
-					comp_node.modulate = orig_node.modulate
-
 func _build_ui_hierarchy() -> void:
-	# 1. Background Texture Rect
+	# 1. D1 Background Texture Rect
 	_bg_texture_rect = TextureRect.new()
 	_bg_texture_rect.name = "BackgroundTextureRect"
 	_bg_texture_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -383,7 +373,7 @@ func _build_ui_hierarchy() -> void:
 	_bg_texture_rect.texture = _bg_texture
 	add_child(_bg_texture_rect)
 
-	# 2. Old Atlas Fog Overlay Texture Rect
+	# 2. D1 Old Atlas Fog Overlay
 	_fog_texture_rect = TextureRect.new()
 	_fog_texture_rect.name = "FogOverlayTextureRect"
 	_fog_texture_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -395,125 +385,29 @@ func _build_ui_hierarchy() -> void:
 		_fog_texture_rect.texture = _fog_frames[0]
 	add_child(_fog_texture_rect)
 
-	# 3. New Procedural Fog Layer Container (Clipped Parent)
+	# 3. D1 New Procedural Fog Layer Container
 	_proc_container = Control.new()
 	_proc_container.name = "ProceduralFogContainer"
 	_proc_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_proc_container.clip_contents = true
 	_proc_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	_proc_layer_3 = TextureRect.new()
-	_proc_layer_3.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_proc_layer_3.stretch_mode = TextureRect.STRETCH_SCALE
-	_proc_layer_3.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_proc_layer_3.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_proc_layer_3.texture = _procedural_texture
-
-	_proc_layer_2 = TextureRect.new()
-	_proc_layer_2.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_proc_layer_2.stretch_mode = TextureRect.STRETCH_SCALE
-	_proc_layer_2.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_proc_layer_2.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_proc_layer_2.texture = _procedural_texture
-
-	_proc_layer_1 = TextureRect.new()
-	_proc_layer_1.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_proc_layer_1.stretch_mode = TextureRect.STRETCH_SCALE
-	_proc_layer_1.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_proc_layer_1.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_proc_layer_1.texture = _procedural_texture
+	_proc_layer_3 = TextureRect.new(); _proc_layer_3.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; _proc_layer_3.stretch_mode = TextureRect.STRETCH_SCALE; _proc_layer_3.texture = _procedural_texture; _proc_layer_3.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_proc_layer_2 = TextureRect.new(); _proc_layer_2.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; _proc_layer_2.stretch_mode = TextureRect.STRETCH_SCALE; _proc_layer_2.texture = _procedural_texture; _proc_layer_2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_proc_layer_1 = TextureRect.new(); _proc_layer_1.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; _proc_layer_1.stretch_mode = TextureRect.STRETCH_SCALE; _proc_layer_1.texture = _procedural_texture; _proc_layer_1.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	_proc_container.add_child(_proc_layer_3)
 	_proc_container.add_child(_proc_layer_2)
 	_proc_container.add_child(_proc_layer_1)
 	add_child(_proc_container)
 
-	# 4. Compare Container (Atlas Frame N vs N+1)
-	_compare_container = HBoxContainer.new()
-	_compare_container.name = "CompareContainer"
-	_compare_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_compare_container.visible = false
+	# 4. Auth Login Background Node
+	_auth_bg_node = AuthLoginBackground.new()
+	_auth_bg_node.name = "AuthLoginBackground"
+	_auth_bg_node.visible = false
+	add_child(_auth_bg_node)
 
-	var box_a: VBoxContainer = VBoxContainer.new()
-	box_a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_compare_label_a = Label.new(); _compare_label_a.text = "FRAME N"; _compare_label_a.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_compare_rect_a = TextureRect.new(); _compare_rect_a.size_flags_vertical = Control.SIZE_EXPAND_FILL; _compare_rect_a.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; _compare_rect_a.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	box_a.add_child(_compare_label_a); box_a.add_child(_compare_rect_a)
-
-	var box_b: VBoxContainer = VBoxContainer.new()
-	box_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_compare_label_b = Label.new(); _compare_label_b.text = "FRAME N+1"; _compare_label_b.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_compare_rect_b = TextureRect.new(); _compare_rect_b.size_flags_vertical = Control.SIZE_EXPAND_FILL; _compare_rect_b.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; _compare_rect_b.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	box_b.add_child(_compare_label_b); box_b.add_child(_compare_rect_b)
-
-	_compare_container.add_child(box_a); _compare_container.add_child(box_b)
-	add_child(_compare_container)
-
-	# 5. Compare Old vs New Container (Side-by-side decision view)
-	_compare_old_new_container = HBoxContainer.new()
-	_compare_old_new_container.name = "CompareOldVsNewContainer"
-	_compare_old_new_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_compare_old_new_container.visible = false
-
-	# Left panel (Old Atlas)
-	var left_side: SubViewportContainer = SubViewportContainer.new()
-	left_side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left_side.stretch = true
-	var vp_old: SubViewport = SubViewport.new()
-	vp_old.size = Vector2i(640, 720)
-	_compare_old_bg = TextureRect.new()
-	_compare_old_bg.texture = _bg_texture
-	_compare_old_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_compare_old_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_compare_old_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	_compare_old_fog = TextureRect.new()
-	_compare_old_fog.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_compare_old_fog.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_compare_old_fog.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	if not _fog_frames.is_empty(): _compare_old_fog.texture = _fog_frames[0]
-	var lbl_left: Label = Label.new()
-	lbl_left.text = " OLD 8-FRAME ATLAS FOG "
-	lbl_left.position = Vector2(16, 16)
-	vp_old.add_child(_compare_old_bg)
-	vp_old.add_child(_compare_old_fog)
-	vp_old.add_child(lbl_left)
-	left_side.add_child(vp_old)
-
-	# Right panel (New Procedural)
-	var right_side: SubViewportContainer = SubViewportContainer.new()
-	right_side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right_side.stretch = true
-	var vp_new: SubViewport = SubViewport.new()
-	vp_new.size = Vector2i(640, 720)
-	_compare_new_bg = TextureRect.new()
-	_compare_new_bg.texture = _bg_texture
-	_compare_new_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_compare_new_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_compare_new_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-
-	_compare_new_proc_container = Control.new()
-	_compare_new_proc_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_compare_new_proc_container.clip_contents = true
-	_compare_new_proc_l3 = TextureRect.new(); _compare_new_proc_l3.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; _compare_new_proc_l3.stretch_mode = TextureRect.STRETCH_SCALE; _compare_new_proc_l3.texture = _procedural_texture
-	_compare_new_proc_l2 = TextureRect.new(); _compare_new_proc_l2.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; _compare_new_proc_l2.stretch_mode = TextureRect.STRETCH_SCALE; _compare_new_proc_l2.texture = _procedural_texture
-	_compare_new_proc_l1 = TextureRect.new(); _compare_new_proc_l1.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; _compare_new_proc_l1.stretch_mode = TextureRect.STRETCH_SCALE; _compare_new_proc_l1.texture = _procedural_texture
-	_compare_new_proc_container.add_child(_compare_new_proc_l3)
-	_compare_new_proc_container.add_child(_compare_new_proc_l2)
-	_compare_new_proc_container.add_child(_compare_new_proc_l1)
-
-	var lbl_right: Label = Label.new()
-	lbl_right.text = " NEW PROCEDURAL LAYER FOG "
-	lbl_right.position = Vector2(16, 16)
-	vp_new.add_child(_compare_new_bg)
-	vp_new.add_child(_compare_new_proc_container)
-	vp_new.add_child(lbl_right)
-	right_side.add_child(vp_new)
-
-	_compare_old_new_container.add_child(left_side)
-	_compare_old_new_container.add_child(right_side)
-	add_child(_compare_old_new_container)
-
-	# 6. Top Header & Mode Tabs
+	# 5. Top Header & Mode Tabs
 	var top_bar: PanelContainer = PanelContainer.new()
 	top_bar.name = "TopBar"
 	top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -523,13 +417,16 @@ func _build_ui_hierarchy() -> void:
 	var title_lbl: Label = Label.new(); title_lbl.text = " 🔬 MATHOS VISUAL LAB "
 	top_box.add_child(title_lbl)
 
-	var tab_fog: Button = Button.new(); tab_fog.text = "FOG TEST"; tab_fog.pressed.connect(func(): set_lab_mode(LabMode.FOG_TEST))
-	top_box.add_child(tab_fog)
+	var tab_d1: Button = Button.new(); tab_d1.text = " D1 FOG LAB "; tab_d1.pressed.connect(func(): set_lab_mode(LabMode.FOG_TEST))
+	top_box.add_child(tab_d1)
+
+	var tab_auth: Button = Button.new(); tab_auth.text = " AUTH LOGIN BACKGROUND "; tab_auth.pressed.connect(func(): set_lab_mode(LabMode.AUTH_LOGIN_BG))
+	top_box.add_child(tab_auth)
 
 	top_bar.add_child(top_box)
 	add_child(top_bar)
 
-	# 7. Developer Control Dock (Left Floating Panel)
+	# 6. Developer Control Dock (Left Floating Panel)
 	var ctrl_panel: PanelContainer = PanelContainer.new()
 	ctrl_panel.name = "ControlDock"
 	ctrl_panel.set_anchors_preset(Control.PRESET_LEFT_WIDE)
@@ -542,17 +439,19 @@ func _build_ui_hierarchy() -> void:
 	var vbox: VBoxContainer = VBoxContainer.new()
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
-	# Fog Source Selector
+	# Fog Source Selector (D1 Mode Only)
+	_fog_source_box = VBoxContainer.new()
 	var src_lbl: Label = Label.new(); src_lbl.text = "FOG SOURCE:"
 	_fog_source_option = OptionButton.new()
 	_fog_source_option.add_item("New Procedural Layer", FogSourceMode.NEW_PROCEDURAL_LAYER)
 	_fog_source_option.add_item("Old Atlas 8F", FogSourceMode.OLD_ATLAS_8F)
 	_fog_source_option.select(0)
 	_fog_source_option.item_selected.connect(_on_fog_source_selected)
-	vbox.add_child(src_lbl)
-	vbox.add_child(_fog_source_option)
+	_fog_source_box.add_child(src_lbl)
+	_fog_source_box.add_child(_fog_source_option)
+	vbox.add_child(_fog_source_box)
 
-	# Global Play/Pause
+	# Global Play/Pause for D1
 	var play_box: HBoxContainer = HBoxContainer.new()
 	_play_pause_btn = Button.new(); _play_pause_btn.text = "Pause"; _play_pause_btn.pressed.connect(_on_play_pause_pressed)
 	play_box.add_child(_play_pause_btn)
@@ -600,19 +499,15 @@ func _build_ui_hierarchy() -> void:
 	op_old_box.add_child(_opacity_slider); op_old_box.add_child(_opacity_spinbox)
 	_old_ctrl_box.add_child(op_old_lbl); _old_ctrl_box.add_child(op_old_box)
 
-	_compare_toggle = CheckBox.new(); _compare_toggle.text = "Compare Frames (N vs N+1)"; _compare_toggle.button_pressed = false; _compare_toggle.toggled.connect(func(t): set_compare_mode(t))
-	_old_ctrl_box.add_child(_compare_toggle)
-
 	vbox.add_child(_old_ctrl_box)
 
-	# --- NEW PROCEDURAL CONTROLS BOX ---
+	# --- D1 PROCEDURAL CONTROLS BOX ---
 	_proc_ctrl_box = VBoxContainer.new()
 	_proc_ctrl_box.name = "ProceduralControls"
 
-	var hdr_proc: Label = Label.new(); hdr_proc.text = "=== PROCEDURAL CONTROLS ==="
+	var hdr_proc: Label = Label.new(); hdr_proc.text = "=== D1 FOG CONTROLS ==="
 	_proc_ctrl_box.add_child(hdr_proc)
 
-	# Procedural Opacity (0.00 -> 1.00)
 	var op_proc_lbl: Label = Label.new(); op_proc_lbl.text = "Opacity (0.00 -> 1.00):"
 	var op_proc_box: HBoxContainer = HBoxContainer.new()
 	_proc_opacity_slider = HSlider.new(); _proc_opacity_slider.min_value = 0.0; _proc_opacity_slider.max_value = 1.0; _proc_opacity_slider.step = 0.01; _proc_opacity_slider.value = DEFAULT_PROC_OPACITY; _proc_opacity_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -621,7 +516,6 @@ func _build_ui_hierarchy() -> void:
 	op_proc_box.add_child(_proc_opacity_slider); op_proc_box.add_child(_proc_opacity_spinbox)
 	_proc_ctrl_box.add_child(op_proc_lbl); _proc_ctrl_box.add_child(op_proc_box)
 
-	# Drift Amount (0 -> 300 px)
 	var drift_lbl: Label = Label.new(); drift_lbl.text = "Drift Amount (0 -> 300 px):"
 	var drift_box: HBoxContainer = HBoxContainer.new()
 	_drift_amount_slider = HSlider.new(); _drift_amount_slider.min_value = 0.0; _drift_amount_slider.max_value = 300.0; _drift_amount_slider.step = 5.0; _drift_amount_slider.value = DEFAULT_DRIFT_AMOUNT; _drift_amount_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -630,7 +524,6 @@ func _build_ui_hierarchy() -> void:
 	drift_box.add_child(_drift_amount_slider); drift_box.add_child(_drift_amount_spinbox)
 	_proc_ctrl_box.add_child(drift_lbl); _proc_ctrl_box.add_child(drift_box)
 
-	# Drift Speed (0.00 -> 1.00)
 	var speed_lbl: Label = Label.new(); speed_lbl.text = "Drift Speed (0.00 -> 1.00):"
 	var speed_box: HBoxContainer = HBoxContainer.new()
 	_drift_speed_slider = HSlider.new(); _drift_speed_slider.min_value = 0.0; _drift_speed_slider.max_value = 1.0; _drift_speed_slider.step = 0.01; _drift_speed_slider.value = DEFAULT_DRIFT_SPEED; _drift_speed_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -639,7 +532,6 @@ func _build_ui_hierarchy() -> void:
 	speed_box.add_child(_drift_speed_slider); speed_box.add_child(_drift_speed_spinbox)
 	_proc_ctrl_box.add_child(speed_lbl); _proc_ctrl_box.add_child(speed_box)
 
-	# Distortion (0.00 -> 0.50)
 	var dist_lbl: Label = Label.new(); dist_lbl.text = "Distortion (0.00 -> 0.50):"
 	var dist_box: HBoxContainer = HBoxContainer.new()
 	_distortion_slider = HSlider.new(); _distortion_slider.min_value = 0.0; _distortion_slider.max_value = 0.50; _distortion_slider.step = 0.01; _distortion_slider.value = DEFAULT_DISTORTION; _distortion_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -648,7 +540,6 @@ func _build_ui_hierarchy() -> void:
 	dist_box.add_child(_distortion_slider); dist_box.add_child(_distortion_spinbox)
 	_proc_ctrl_box.add_child(dist_lbl); _proc_ctrl_box.add_child(dist_box)
 
-	# Breathing (0.00 -> 0.30)
 	var breath_lbl: Label = Label.new(); breath_lbl.text = "Breathing (0.00 -> 0.30):"
 	var breath_box: HBoxContainer = HBoxContainer.new()
 	_breathing_slider = HSlider.new(); _breathing_slider.min_value = 0.0; _breathing_slider.max_value = 0.30; _breathing_slider.step = 0.01; _breathing_slider.value = DEFAULT_BREATHING; _breathing_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -657,7 +548,6 @@ func _build_ui_hierarchy() -> void:
 	breath_box.add_child(_breathing_slider); breath_box.add_child(_breathing_spinbox)
 	_proc_ctrl_box.add_child(breath_lbl); _proc_ctrl_box.add_child(breath_box)
 
-	# Layer Count (1 / 2 / 3)
 	var layer_lbl: Label = Label.new(); layer_lbl.text = "Layer Count:"
 	_layer_count_option = OptionButton.new()
 	_layer_count_option.add_item("1 Layer", 1)
@@ -669,27 +559,118 @@ func _build_ui_hierarchy() -> void:
 
 	vbox.add_child(_proc_ctrl_box)
 
-	# Global Toggles
+	# Global Toggles for D1
+	_global_toggles_box = VBoxContainer.new()
 	var hdr_glob: Label = Label.new(); hdr_glob.text = "=== GLOBAL TOGGLES ==="
-	vbox.add_child(hdr_glob)
+	_global_toggles_box.add_child(hdr_glob)
 
 	_bg_toggle = CheckBox.new(); _bg_toggle.text = "Background"; _bg_toggle.button_pressed = true; _bg_toggle.toggled.connect(func(t): set_background_visible(t))
-	vbox.add_child(_bg_toggle)
+	_global_toggles_box.add_child(_bg_toggle)
 
 	_fog_toggle = CheckBox.new(); _fog_toggle.text = "Fog Layer"; _fog_toggle.button_pressed = true; _fog_toggle.toggled.connect(func(t): set_fog_visible(t))
-	vbox.add_child(_fog_toggle)
+	_global_toggles_box.add_child(_fog_toggle)
 
 	_compare_old_new_toggle = CheckBox.new(); _compare_old_new_toggle.text = "Compare Old vs New"; _compare_old_new_toggle.button_pressed = false; _compare_old_new_toggle.toggled.connect(func(t): set_compare_old_vs_new_mode(t))
-	vbox.add_child(_compare_old_new_toggle)
+	_global_toggles_box.add_child(_compare_old_new_toggle)
 
 	_reset_btn = Button.new(); _reset_btn.text = "[ Reset Defaults ]"; _reset_btn.pressed.connect(reset_defaults)
-	vbox.add_child(_reset_btn)
+	_global_toggles_box.add_child(_reset_btn)
+
+	vbox.add_child(_global_toggles_box)
+
+	# --- AUTH LOGIN BACKGROUND CONTROLS BOX ---
+	_auth_ctrl_box = VBoxContainer.new()
+	_auth_ctrl_box.name = "AuthLoginControls"
+	_auth_ctrl_box.visible = false
+
+	var hdr_auth: Label = Label.new(); hdr_auth.text = "=== AUTH BG FOG CONTROLS ==="
+	_auth_ctrl_box.add_child(hdr_auth)
+
+	# Fog Master Opacity
+	var afog_op_lbl: Label = Label.new(); afog_op_lbl.text = "Fog Master Opacity (0..1):"
+	var afog_op_slider: HSlider = HSlider.new(); afog_op_slider.min_value = 0.0; afog_op_slider.max_value = 1.0; afog_op_slider.step = 0.02; afog_op_slider.value = AuthLoginBackground.DEFAULT_FOG_MASTER_OPACITY
+	afog_op_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_master_opacity = v)
+	_auth_ctrl_box.add_child(afog_op_lbl); _auth_ctrl_box.add_child(afog_op_slider)
+
+	# Fog Drift Mult
+	var afog_drift_lbl: Label = Label.new(); afog_drift_lbl.text = "Fog Drift Mult (0..2.5):"
+	var afog_drift_slider: HSlider = HSlider.new(); afog_drift_slider.min_value = 0.0; afog_drift_slider.max_value = 2.5; afog_drift_slider.step = 0.05; afog_drift_slider.value = AuthLoginBackground.DEFAULT_FOG_DRIFT_MULT
+	afog_drift_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_drift_mult = v)
+	_auth_ctrl_box.add_child(afog_drift_lbl); _auth_ctrl_box.add_child(afog_drift_slider)
+
+	# Fog Speed Mult
+	var afog_speed_lbl: Label = Label.new(); afog_speed_lbl.text = "Fog Speed Mult (0..2.5):"
+	var afog_speed_slider: HSlider = HSlider.new(); afog_speed_slider.min_value = 0.0; afog_speed_slider.max_value = 2.5; afog_speed_slider.step = 0.05; afog_speed_slider.value = AuthLoginBackground.DEFAULT_FOG_SPEED_MULT
+	afog_speed_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_speed_mult = v)
+	_auth_ctrl_box.add_child(afog_speed_lbl); _auth_ctrl_box.add_child(afog_speed_slider)
+
+	# Fog Layer 1 / 2 Toggles
+	var afog_l1_chk: CheckBox = CheckBox.new(); afog_l1_chk.text = "Fog Layer 1"; afog_l1_chk.button_pressed = true
+	afog_l1_chk.toggled.connect(func(t): if _auth_bg_node: _auth_bg_node.fog_l1_enabled = t)
+	var afog_l2_chk: CheckBox = CheckBox.new(); afog_l2_chk.text = "Fog Layer 2"; afog_l2_chk.button_pressed = true
+	afog_l2_chk.toggled.connect(func(t): if _auth_bg_node: _auth_bg_node.fog_l2_enabled = t)
+	_auth_ctrl_box.add_child(afog_l1_chk); _auth_ctrl_box.add_child(afog_l2_chk)
+
+	# Banner Controls Header
+	var hdr_banner: Label = Label.new(); hdr_banner.text = "=== BANNER CONTROLS ==="
+	_auth_ctrl_box.add_child(hdr_banner)
+
+	var ban_a_chk: CheckBox = CheckBox.new(); ban_a_chk.text = "Banner A Visible"; ban_a_chk.button_pressed = true
+	ban_a_chk.toggled.connect(func(t): if _auth_bg_node: _auth_bg_node.banner_a_visible = t)
+	var ban_b_chk: CheckBox = CheckBox.new(); ban_b_chk.text = "Banner B Visible"; ban_b_chk.button_pressed = true
+	ban_b_chk.toggled.connect(func(t): if _auth_bg_node: _auth_bg_node.banner_b_visible = t)
+	_auth_ctrl_box.add_child(ban_a_chk); _auth_ctrl_box.add_child(ban_b_chk)
+
+	var ban_sway_lbl: Label = Label.new(); ban_sway_lbl.text = "Global Banner Sway (0..12px):"
+	var ban_sway_slider: HSlider = HSlider.new(); ban_sway_slider.min_value = 0.0; ban_sway_slider.max_value = 12.0; ban_sway_slider.step = 0.2; ban_sway_slider.value = AuthLoginBackground.DEFAULT_BANNER_SWAY
+	ban_sway_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_sway = v)
+	_auth_ctrl_box.add_child(ban_sway_lbl); _auth_ctrl_box.add_child(ban_sway_slider)
+
+	var ban_spd_lbl: Label = Label.new(); ban_spd_lbl.text = "Banner Speed (0.1..2.0):"
+	var ban_spd_slider: HSlider = HSlider.new(); ban_spd_slider.min_value = 0.1; ban_spd_slider.max_value = 2.0; ban_spd_slider.step = 0.05; ban_spd_slider.value = AuthLoginBackground.DEFAULT_BANNER_SPEED
+	ban_spd_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_speed = v)
+	_auth_ctrl_box.add_child(ban_spd_lbl); _auth_ctrl_box.add_child(ban_spd_slider)
+
+	# Crystal Glow Header
+	var hdr_crys: Label = Label.new(); hdr_crys.text = "=== CRYSTAL GLOW ==="
+	_auth_ctrl_box.add_child(hdr_crys)
+
+	var crys_op_lbl: Label = Label.new(); crys_op_lbl.text = "Crystal Glow Master (0..1):"
+	var crys_op_slider: HSlider = HSlider.new(); crys_op_slider.min_value = 0.0; crys_op_slider.max_value = 1.0; crys_op_slider.step = 0.05; crys_op_slider.value = AuthLoginBackground.DEFAULT_CRYSTAL_MASTER
+	crys_op_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.crystal_master_opacity = v)
+	_auth_ctrl_box.add_child(crys_op_lbl); _auth_ctrl_box.add_child(crys_op_slider)
+
+	var crys_spd_lbl: Label = Label.new(); crys_spd_lbl.text = "Pulse Speed (0.1..3.0 Hz):"
+	var crys_spd_slider: HSlider = HSlider.new(); crys_spd_slider.min_value = 0.1; crys_spd_slider.max_value = 3.0; crys_spd_slider.step = 0.1; crys_spd_slider.value = AuthLoginBackground.DEFAULT_CRYSTAL_PULSE_SPEED
+	crys_spd_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.crystal_pulse_speed = v)
+	_auth_ctrl_box.add_child(crys_spd_lbl); _auth_ctrl_box.add_child(crys_spd_slider)
+
+	# Magic Dust Header
+	var hdr_dust: Label = Label.new(); hdr_dust.text = "=== MAGIC DUST PARTICLES ==="
+	_auth_ctrl_box.add_child(hdr_dust)
+
+	var dust_chk: CheckBox = CheckBox.new(); dust_chk.text = "Magic Dust ON/OFF"; dust_chk.button_pressed = true
+	dust_chk.toggled.connect(func(t): if _auth_bg_node: _auth_bg_node.dust_enabled = t)
+	_auth_ctrl_box.add_child(dust_chk)
+
+	# Auth Play/Pause & Reset
+	var auth_act_hdr: Label = Label.new(); auth_act_hdr.text = "=== ACTIONS ==="
+	_auth_ctrl_box.add_child(auth_act_hdr)
+
+	_auth_play_btn = Button.new(); _auth_play_btn.text = "Pause"; _auth_play_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.set_playing(not _auth_bg_node.is_playing()); _auth_play_btn.text = "Pause" if _auth_bg_node.is_playing() else "Play")
+	_auth_ctrl_box.add_child(_auth_play_btn)
+
+	var reset_auth_btn: Button = Button.new(); reset_auth_btn.text = "[ Reset Auth BG Defaults ]"
+	reset_auth_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.reset_defaults(); _auth_play_btn.text = "Pause")
+	_auth_ctrl_box.add_child(reset_auth_btn)
+
+	vbox.add_child(_auth_ctrl_box)
 
 	scroll.add_child(vbox)
 	ctrl_panel.add_child(scroll)
 	add_child(ctrl_panel)
 
-	# 8. Diagnostic Label Overlay
+	# 7. Diagnostic Label Overlay
 	var diag_panel: PanelContainer = PanelContainer.new()
 	diag_panel.name = "DiagPanel"
 	diag_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -697,7 +678,7 @@ func _build_ui_hierarchy() -> void:
 	diag_panel.offset_top = 48.0
 	diag_panel.offset_right = -16.0
 
-	_diag_label = Label.new(); _diag_label.text = "FOG DIAGNOSTICS"
+	_diag_label = Label.new(); _diag_label.text = "VISUAL LAB DIAGNOSTICS"
 	diag_panel.add_child(_diag_label)
 	add_child(diag_panel)
 
@@ -710,13 +691,23 @@ func set_fog_source_mode(mode: FogSourceMode) -> void:
 		_fog_source_option.select(int(_fog_source_mode))
 
 	if _proc_ctrl_box != null:
-		_proc_ctrl_box.visible = (_fog_source_mode == FogSourceMode.NEW_PROCEDURAL_LAYER)
+		_proc_ctrl_box.visible = (_fog_source_mode == FogSourceMode.NEW_PROCEDURAL_LAYER) and (_current_lab_mode == LabMode.FOG_TEST)
 	if _old_ctrl_box != null:
-		_old_ctrl_box.visible = (_fog_source_mode == FogSourceMode.OLD_ATLAS_8F)
+		_old_ctrl_box.visible = (_fog_source_mode == FogSourceMode.OLD_ATLAS_8F) and (_current_lab_mode == LabMode.FOG_TEST)
 
 	_apply_parameters()
 
 func _apply_parameters() -> void:
+	if _current_lab_mode == LabMode.AUTH_LOGIN_BG:
+		if _bg_texture_rect != null: _bg_texture_rect.visible = false
+		if _fog_texture_rect != null: _fog_texture_rect.visible = false
+		if _proc_container != null: _proc_container.visible = false
+		if _auth_bg_node != null: _auth_bg_node.visible = true
+		return
+
+	if _auth_bg_node != null:
+		_auth_bg_node.visible = false
+
 	if _bg_texture_rect != null:
 		_bg_texture_rect.visible = _bg_visible and not _compare_old_vs_new_mode
 
@@ -733,6 +724,27 @@ func _apply_parameters() -> void:
 		if _proc_container != null:
 			_proc_container.visible = _fog_visible and not _compare_old_vs_new_mode
 		_update_procedural_motion()
+
+func set_lab_mode(mode: LabMode) -> void:
+	_current_lab_mode = mode
+	if _auth_ctrl_box != null:
+		_auth_ctrl_box.visible = (_current_lab_mode == LabMode.AUTH_LOGIN_BG)
+	if _fog_source_box != null:
+		_fog_source_box.visible = (_current_lab_mode == LabMode.FOG_TEST)
+	if _play_pause_btn != null:
+		_play_pause_btn.visible = (_current_lab_mode == LabMode.FOG_TEST)
+	if _global_toggles_box != null:
+		_global_toggles_box.visible = (_current_lab_mode == LabMode.FOG_TEST)
+
+	if _proc_ctrl_box != null:
+		_proc_ctrl_box.visible = (_current_lab_mode == LabMode.FOG_TEST and _fog_source_mode == FogSourceMode.NEW_PROCEDURAL_LAYER)
+	if _old_ctrl_box != null:
+		_old_ctrl_box.visible = (_current_lab_mode == LabMode.FOG_TEST and _fog_source_mode == FogSourceMode.OLD_ATLAS_8F)
+
+	_apply_parameters()
+
+func get_lab_mode() -> LabMode:
+	return _current_lab_mode
 
 func _update_frame_display() -> void:
 	if _fog_frames.is_empty():
@@ -767,6 +779,46 @@ func _update_diagnostic_display() -> void:
 		return
 
 	var vp_size: Vector2 = get_viewport_rect().size
+
+	if _current_lab_mode == LabMode.AUTH_LOGIN_BG:
+		var bg_w: int = 1672
+		var bg_h: int = 941
+		if _auth_bg_node != null and _auth_bg_node.get_bg_texture() != null:
+			bg_w = _auth_bg_node.get_bg_texture().get_width()
+			bg_h = _auth_bg_node.get_bg_texture().get_height()
+
+		_diag_label.text = "\n".join([
+			"MODE: AUTH LOGIN BACKGROUND LAB",
+			"VIEWPORT: %.0fx%.0f" % [vp_size.x, vp_size.y],
+			"BACKGROUND: %dx%d (Aspect: %.3f)" % [bg_w, bg_h, float(bg_w) / float(bg_h)],
+			"FOG LAYERS: 2 (Reused Source: 2115x744)",
+			"  L1: %s (Opacity: %.2f)",
+			"  L2: %s (Opacity: %.2f)",
+			"BANNERS: Top-Pinned Shader (887x1774)",
+			"  Banner A: %s | Banner B: %s",
+			"  Sway: %.1fpx | Speed: %.2f | Ripple: %.1f",
+			"CRYSTAL GLOW: Master=%.2f, Speed=%.2fHz",
+			"MAGIC DUST: %s (Density=%d, Opacity=%.2f)",
+			"FPS: %d | PLAYING: %s"
+		]) % [
+			"ON" if (_auth_bg_node and _auth_bg_node.fog_l1_enabled) else "OFF",
+			(_auth_bg_node.fog_master_opacity * 0.22) if _auth_bg_node else 0.22,
+			"ON" if (_auth_bg_node and _auth_bg_node.fog_l2_enabled) else "OFF",
+			(_auth_bg_node.fog_master_opacity * 0.12) if _auth_bg_node else 0.12,
+			"ON" if (_auth_bg_node and _auth_bg_node.banner_a_visible) else "OFF",
+			"ON" if (_auth_bg_node and _auth_bg_node.banner_b_visible) else "OFF",
+			_auth_bg_node.banner_sway if _auth_bg_node else 3.5,
+			_auth_bg_node.banner_speed if _auth_bg_node else 0.45,
+			_auth_bg_node.banner_ripple if _auth_bg_node else 0.8,
+			_auth_bg_node.crystal_master_opacity if _auth_bg_node else 0.65,
+			_auth_bg_node.crystal_pulse_speed if _auth_bg_node else 0.6,
+			"ON" if (_auth_bg_node and _auth_bg_node.dust_enabled) else "OFF",
+			_auth_bg_node.dust_density if _auth_bg_node else 16,
+			_auth_bg_node.dust_opacity if _auth_bg_node else 0.35,
+			Engine.get_frames_per_second(),
+			str(_auth_bg_node.is_playing() if _auth_bg_node else true).to_lower()
+		]
+		return
 
 	if _compare_old_vs_new_mode:
 		_diag_label.text = "\n".join([
@@ -940,9 +992,6 @@ func set_compare_old_vs_new_mode(enabled: bool) -> void:
 	if _compare_old_new_container != null: _compare_old_new_container.visible = _compare_old_vs_new_mode
 	_apply_parameters()
 
-func set_lab_mode(mode: LabMode) -> void:
-	_current_lab_mode = mode
-
 func set_procedural_time(t: float) -> void:
 	_procedural_time = t
 	_update_procedural_motion()
@@ -1002,6 +1051,9 @@ func reset_defaults() -> void:
 	if _compare_old_new_toggle != null: _compare_old_new_toggle.button_pressed = false
 	if _fog_source_option != null: _fog_source_option.select(0)
 	if _motion_option != null: _motion_option.select(0)
+
+	if _auth_bg_node != null:
+		_auth_bg_node.reset_defaults()
 
 	_apply_parameters()
 
