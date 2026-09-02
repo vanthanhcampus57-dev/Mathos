@@ -4,7 +4,7 @@ extends Control
 ## Developer & QA Visual Asset Lab for Mathos Engine.
 ## Provides isolated diagnosis of visual presentation, fog overlays, frame inspection,
 ## procedural fog animation, side-by-side old vs new comparison,
-## and Auth/Login Academy background tuning, without mutating save/gameplay data.
+## and Auth/Login Academy background visual tuning (V3 Quality), without mutating save/gameplay data.
 
 enum LabMode { FOG_TEST, AUTH_LOGIN_BG, FUTURE_TAB_3 }
 enum MotionMode { CURRENT_ATLAS_ANIMATION, STATIC_FRAME }
@@ -39,7 +39,7 @@ const DEFAULT_LAYER_COUNT: int = 3
 
 # D1 Scene Nodes
 var _bg_texture_rect: TextureRect = null
-var _fog_texture_rect: TextureRect = null # Old atlas
+var _fog_texture_rect: TextureRect = null
 
 # D1 Procedural Fog Layer Nodes (3 layers max)
 var _proc_container: Control = null
@@ -67,7 +67,11 @@ var _compare_new_proc_l3: TextureRect = null
 # Auth Login Background Node
 var _auth_bg_node: AuthLoginBackground = null
 
+var _top_bar: PanelContainer = null
+var _ctrl_panel: PanelContainer = null
+var _diag_panel: PanelContainer = null
 var _diag_label: Label = null
+var _hide_controls_btn: Button = null
 
 # Controls
 var _fog_source_option: OptionButton = null
@@ -106,15 +110,15 @@ var _breathing_slider: Slider = null
 var _breathing_spinbox: SpinBox = null
 var _layer_count_option: OptionButton = null
 
-# Auth Login Background Controls Box
+# Auth Login Background Controls Box (Sectioned V3 UI)
 var _auth_ctrl_box: VBoxContainer = null
-var _auth_play_btn: Button = null
 
 # State
 var _current_lab_mode: LabMode = LabMode.FOG_TEST
 var _fog_source_mode: FogSourceMode = FogSourceMode.NEW_PROCEDURAL_LAYER
 var _current_motion_mode: MotionMode = MotionMode.CURRENT_ATLAS_ANIMATION
 var _is_playing: bool = true
+var _controls_visible: bool = true
 
 # Textures
 var _bg_texture: Texture2D = null
@@ -162,6 +166,11 @@ func _ready() -> void:
 	_apply_parameters()
 	set_lab_mode(LabMode.FOG_TEST)
 	_update_diagnostic_display()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_TAB:
+			set_controls_visible(not _controls_visible)
 
 func _load_all_textures() -> void:
 	# 1. Background
@@ -408,10 +417,10 @@ func _build_ui_hierarchy() -> void:
 	add_child(_auth_bg_node)
 
 	# 5. Top Header & Mode Tabs
-	var top_bar: PanelContainer = PanelContainer.new()
-	top_bar.name = "TopBar"
-	top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	top_bar.offset_bottom = 40.0
+	_top_bar = PanelContainer.new()
+	_top_bar.name = "TopBar"
+	_top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_top_bar.offset_bottom = 40.0
 	var top_box: HBoxContainer = HBoxContainer.new()
 
 	var title_lbl: Label = Label.new(); title_lbl.text = " 🔬 MATHOS VISUAL LAB "
@@ -423,16 +432,19 @@ func _build_ui_hierarchy() -> void:
 	var tab_auth: Button = Button.new(); tab_auth.text = " AUTH LOGIN BACKGROUND "; tab_auth.pressed.connect(func(): set_lab_mode(LabMode.AUTH_LOGIN_BG))
 	top_box.add_child(tab_auth)
 
-	top_bar.add_child(top_box)
-	add_child(top_bar)
+	_hide_controls_btn = Button.new(); _hide_controls_btn.text = " HIDE CONTROLS (Tab) "; _hide_controls_btn.pressed.connect(func(): set_controls_visible(not _controls_visible))
+	top_box.add_child(_hide_controls_btn)
+
+	_top_bar.add_child(top_box)
+	add_child(_top_bar)
 
 	# 6. Developer Control Dock (Left Floating Panel)
-	var ctrl_panel: PanelContainer = PanelContainer.new()
-	ctrl_panel.name = "ControlDock"
-	ctrl_panel.set_anchors_preset(Control.PRESET_LEFT_WIDE)
-	ctrl_panel.offset_top = 48.0
-	ctrl_panel.offset_right = 340.0
-	ctrl_panel.offset_bottom = -16.0
+	_ctrl_panel = PanelContainer.new()
+	_ctrl_panel.name = "ControlDock"
+	_ctrl_panel.set_anchors_preset(Control.PRESET_LEFT_WIDE)
+	_ctrl_panel.offset_top = 48.0
+	_ctrl_panel.offset_right = 360.0
+	_ctrl_panel.offset_bottom = -16.0
 
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -578,109 +590,109 @@ func _build_ui_hierarchy() -> void:
 
 	vbox.add_child(_global_toggles_box)
 
-	# --- AUTH LOGIN BACKGROUND CONTROLS BOX ---
+	# --- AUTH LOGIN BACKGROUND CONTROLS BOX (Sectioned V3 Quality UI) ---
 	_auth_ctrl_box = VBoxContainer.new()
 	_auth_ctrl_box.name = "AuthLoginControls"
 	_auth_ctrl_box.visible = false
 
-	var hdr_auth: Label = Label.new(); hdr_auth.text = "=== AUTH BG FOG CONTROLS ==="
-	_auth_ctrl_box.add_child(hdr_auth)
+	# SECTION 1: FOG CLUSTERS
+	var hdr_auth_fog: Label = Label.new(); hdr_auth_fog.text = "=== FOG CLUSTERS ==="
+	_auth_ctrl_box.add_child(hdr_auth_fog)
 
-	# Fog Master Opacity
 	var afog_op_lbl: Label = Label.new(); afog_op_lbl.text = "Fog Master Opacity (0..1):"
 	var afog_op_slider: HSlider = HSlider.new(); afog_op_slider.min_value = 0.0; afog_op_slider.max_value = 1.0; afog_op_slider.step = 0.02; afog_op_slider.value = AuthLoginBackground.DEFAULT_FOG_MASTER_OPACITY
 	afog_op_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_master_opacity = v)
 	_auth_ctrl_box.add_child(afog_op_lbl); _auth_ctrl_box.add_child(afog_op_slider)
 
-	# Fog Drift Mult
-	var afog_drift_lbl: Label = Label.new(); afog_drift_lbl.text = "Fog Drift Mult (0..2.5):"
-	var afog_drift_slider: HSlider = HSlider.new(); afog_drift_slider.min_value = 0.0; afog_drift_slider.max_value = 2.5; afog_drift_slider.step = 0.05; afog_drift_slider.value = AuthLoginBackground.DEFAULT_FOG_DRIFT_MULT
-	afog_drift_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_drift_mult = v)
-	_auth_ctrl_box.add_child(afog_drift_lbl); _auth_ctrl_box.add_child(afog_drift_slider)
+	var afog_cnt_lbl: Label = Label.new(); afog_cnt_lbl.text = "Cluster Count (1..20):"
+	var afog_cnt_spin: SpinBox = SpinBox.new(); afog_cnt_spin.min_value = 1; afog_cnt_spin.max_value = 20; afog_cnt_spin.value = AuthLoginBackground.DEFAULT_FOG_CLUSTER_COUNT
+	afog_cnt_spin.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.set_fog_cluster_count(int(v)))
+	_auth_ctrl_box.add_child(afog_cnt_lbl); _auth_ctrl_box.add_child(afog_cnt_spin)
 
-	# Fog Speed Mult
-	var afog_speed_lbl: Label = Label.new(); afog_speed_lbl.text = "Fog Speed Mult (0..2.5):"
-	var afog_speed_slider: HSlider = HSlider.new(); afog_speed_slider.min_value = 0.0; afog_speed_slider.max_value = 2.5; afog_speed_slider.step = 0.05; afog_speed_slider.value = AuthLoginBackground.DEFAULT_FOG_SPEED_MULT
-	afog_speed_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_speed_mult = v)
-	_auth_ctrl_box.add_child(afog_speed_lbl); _auth_ctrl_box.add_child(afog_speed_slider)
+	var afog_spd_lbl: Label = Label.new(); afog_spd_lbl.text = "Global Speed (0..2):"
+	var afog_spd_slider: HSlider = HSlider.new(); afog_spd_slider.min_value = 0.0; afog_spd_slider.max_value = 2.0; afog_spd_slider.step = 0.05; afog_spd_slider.value = AuthLoginBackground.DEFAULT_FOG_GLOBAL_SPEED
+	afog_spd_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_global_speed = v)
+	_auth_ctrl_box.add_child(afog_spd_lbl); _auth_ctrl_box.add_child(afog_spd_slider)
 
-	# Fog Layer 1 / 2 Toggles
-	var afog_l1_chk: CheckBox = CheckBox.new(); afog_l1_chk.text = "Fog Layer 1"; afog_l1_chk.button_pressed = true
-	afog_l1_chk.toggled.connect(func(t): if _auth_bg_node: _auth_bg_node.fog_l1_enabled = t)
-	var afog_l2_chk: CheckBox = CheckBox.new(); afog_l2_chk.text = "Fog Layer 2"; afog_l2_chk.button_pressed = true
-	afog_l2_chk.toggled.connect(func(t): if _auth_bg_node: _auth_bg_node.fog_l2_enabled = t)
-	_auth_ctrl_box.add_child(afog_l1_chk); _auth_ctrl_box.add_child(afog_l2_chk)
+	var reset_fog_btn: Button = Button.new(); reset_fog_btn.text = "RESET FOG DEFAULTS"
+	reset_fog_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.fog_master_opacity = AuthLoginBackground.DEFAULT_FOG_MASTER_OPACITY; _auth_bg_node.set_fog_cluster_count(AuthLoginBackground.DEFAULT_FOG_CLUSTER_COUNT); _auth_bg_node.fog_global_speed = AuthLoginBackground.DEFAULT_FOG_GLOBAL_SPEED)
+	_auth_ctrl_box.add_child(reset_fog_btn)
 
-	# Banner Controls Header
-	var hdr_banner: Label = Label.new(); hdr_banner.text = "=== BANNER CONTROLS ==="
+	# SECTION 2: BANNER CONTROLS & 4-CORNER WARP
+	var hdr_banner: Label = Label.new(); hdr_banner.text = "=== BANNERS & 4-CORNER WARP ==="
 	_auth_ctrl_box.add_child(hdr_banner)
 
-	var ban_a_chk: CheckBox = CheckBox.new(); ban_a_chk.text = "Banner A Visible"; ban_a_chk.button_pressed = true
-	ban_a_chk.toggled.connect(func(t): if _auth_bg_node: _auth_bg_node.banner_a_visible = t)
-	var ban_b_chk: CheckBox = CheckBox.new(); ban_b_chk.text = "Banner B Visible"; ban_b_chk.button_pressed = true
-	ban_b_chk.toggled.connect(func(t): if _auth_bg_node: _auth_bg_node.banner_b_visible = t)
-	_auth_ctrl_box.add_child(ban_a_chk); _auth_ctrl_box.add_child(ban_b_chk)
+	var ban_bright_lbl: Label = Label.new(); ban_bright_lbl.text = "Banner Brightness (0.4..1.6):"
+	var ban_bright_slider: HSlider = HSlider.new(); ban_bright_slider.min_value = 0.4; ban_bright_slider.max_value = 1.6; ban_bright_slider.step = 0.05; ban_bright_slider.value = AuthLoginBackground.DEFAULT_BANNER_BRIGHTNESS
+	ban_bright_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_brightness = v)
+	_auth_ctrl_box.add_child(ban_bright_lbl); _auth_ctrl_box.add_child(ban_bright_slider)
 
-	var ban_sway_lbl: Label = Label.new(); ban_sway_lbl.text = "Global Banner Sway (0..12px):"
-	var ban_sway_slider: HSlider = HSlider.new(); ban_sway_slider.min_value = 0.0; ban_sway_slider.max_value = 12.0; ban_sway_slider.step = 0.2; ban_sway_slider.value = AuthLoginBackground.DEFAULT_BANNER_SWAY
+	var ban_sway_lbl: Label = Label.new(); ban_sway_lbl.text = "Cloth Sway Amplitude (0..15px):"
+	var ban_sway_slider: HSlider = HSlider.new(); ban_sway_slider.min_value = 0.0; ban_sway_slider.max_value = 15.0; ban_sway_slider.step = 0.2; ban_sway_slider.value = AuthLoginBackground.DEFAULT_BANNER_SWAY
 	ban_sway_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_sway = v)
 	_auth_ctrl_box.add_child(ban_sway_lbl); _auth_ctrl_box.add_child(ban_sway_slider)
 
-	var ban_spd_lbl: Label = Label.new(); ban_spd_lbl.text = "Banner Speed (0.1..2.0):"
-	var ban_spd_slider: HSlider = HSlider.new(); ban_spd_slider.min_value = 0.1; ban_spd_slider.max_value = 2.0; ban_spd_slider.step = 0.05; ban_spd_slider.value = AuthLoginBackground.DEFAULT_BANNER_SPEED
-	ban_spd_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_speed = v)
-	_auth_ctrl_box.add_child(ban_spd_lbl); _auth_ctrl_box.add_child(ban_spd_slider)
+	var reset_ban_a_btn: Button = Button.new(); reset_ban_a_btn.text = "RESET BANNER A WARP"
+	reset_ban_a_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.reset_banner_a_warp())
+	_auth_ctrl_box.add_child(reset_ban_a_btn)
 
-	# Crystal Glow Header
-	var hdr_crys: Label = Label.new(); hdr_crys.text = "=== CRYSTAL GLOW ==="
-	_auth_ctrl_box.add_child(hdr_crys)
+	var reset_ban_b_btn: Button = Button.new(); reset_ban_b_btn.text = "RESET BANNER B WARP"
+	reset_ban_b_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.reset_banner_b_warp())
+	_auth_ctrl_box.add_child(reset_ban_b_btn)
 
-	var crys_op_lbl: Label = Label.new(); crys_op_lbl.text = "Crystal Glow Master (0..1):"
-	var crys_op_slider: HSlider = HSlider.new(); crys_op_slider.min_value = 0.0; crys_op_slider.max_value = 1.0; crys_op_slider.step = 0.05; crys_op_slider.value = AuthLoginBackground.DEFAULT_CRYSTAL_MASTER
-	crys_op_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.crystal_master_opacity = v)
-	_auth_ctrl_box.add_child(crys_op_lbl); _auth_ctrl_box.add_child(crys_op_slider)
+	# SECTION 3: MAGIC LIGHT PARTICLES
+	var hdr_part: Label = Label.new(); hdr_part.text = "=== MAGIC LIGHT PARTICLES ==="
+	_auth_ctrl_box.add_child(hdr_part)
 
-	var crys_spd_lbl: Label = Label.new(); crys_spd_lbl.text = "Pulse Speed (0.1..3.0 Hz):"
-	var crys_spd_slider: HSlider = HSlider.new(); crys_spd_slider.min_value = 0.1; crys_spd_slider.max_value = 3.0; crys_spd_slider.step = 0.1; crys_spd_slider.value = AuthLoginBackground.DEFAULT_CRYSTAL_PULSE_SPEED
-	crys_spd_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.crystal_pulse_speed = v)
-	_auth_ctrl_box.add_child(crys_spd_lbl); _auth_ctrl_box.add_child(crys_spd_slider)
-
-	# Magic Dust Header
-	var hdr_dust: Label = Label.new(); hdr_dust.text = "=== MAGIC DUST PARTICLES ==="
-	_auth_ctrl_box.add_child(hdr_dust)
-
-	var dust_chk: CheckBox = CheckBox.new(); dust_chk.text = "Magic Dust ON/OFF"; dust_chk.button_pressed = true
+	var dust_chk: CheckBox = CheckBox.new(); dust_chk.text = "Particles Enabled"; dust_chk.button_pressed = true
 	dust_chk.toggled.connect(func(t): if _auth_bg_node: _auth_bg_node.dust_enabled = t)
 	_auth_ctrl_box.add_child(dust_chk)
 
-	# Auth Play/Pause & Reset
-	var auth_act_hdr: Label = Label.new(); auth_act_hdr.text = "=== ACTIONS ==="
+	var dust_cnt_lbl: Label = Label.new(); dust_cnt_lbl.text = "Particle Count (1..50):"
+	var dust_cnt_spin: SpinBox = SpinBox.new(); dust_cnt_spin.min_value = 1; dust_cnt_spin.max_value = 50; dust_cnt_spin.value = AuthLoginBackground.DEFAULT_DUST_COUNT
+	dust_cnt_spin.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.dust_count = int(v))
+	_auth_ctrl_box.add_child(dust_cnt_lbl); _auth_ctrl_box.add_child(dust_cnt_spin)
+
+	# SECTION 4: GLOBAL PLAYBACK
+	var auth_act_hdr: Label = Label.new(); auth_act_hdr.text = "=== GLOBAL PLAYBACK ==="
 	_auth_ctrl_box.add_child(auth_act_hdr)
 
-	_auth_play_btn = Button.new(); _auth_play_btn.text = "Pause"; _auth_play_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.set_playing(not _auth_bg_node.is_playing()); _auth_play_btn.text = "Pause" if _auth_bg_node.is_playing() else "Play")
-	_auth_ctrl_box.add_child(_auth_play_btn)
+	var auth_play_btn: Button = Button.new(); auth_play_btn.text = "Pause"
+	auth_play_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.set_playing(not _auth_bg_node.is_playing()); auth_play_btn.text = "Pause" if _auth_bg_node.is_playing() else "Play")
+	_auth_ctrl_box.add_child(auth_play_btn)
 
-	var reset_auth_btn: Button = Button.new(); reset_auth_btn.text = "[ Reset Auth BG Defaults ]"
-	reset_auth_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.reset_defaults(); _auth_play_btn.text = "Pause")
+	var reset_auth_btn: Button = Button.new(); reset_auth_btn.text = "[ RESET ALL AUTH BG DEFAULTS ]"
+	reset_auth_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.reset_defaults(); auth_play_btn.text = "Pause")
 	_auth_ctrl_box.add_child(reset_auth_btn)
 
 	vbox.add_child(_auth_ctrl_box)
 
 	scroll.add_child(vbox)
-	ctrl_panel.add_child(scroll)
-	add_child(ctrl_panel)
+	_ctrl_panel.add_child(scroll)
+	add_child(_ctrl_panel)
 
 	# 7. Diagnostic Label Overlay
-	var diag_panel: PanelContainer = PanelContainer.new()
-	diag_panel.name = "DiagPanel"
-	diag_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	diag_panel.offset_left = -380.0
-	diag_panel.offset_top = 48.0
-	diag_panel.offset_right = -16.0
+	_diag_panel = PanelContainer.new()
+	_diag_panel.name = "DiagPanel"
+	_diag_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_diag_panel.offset_left = -380.0
+	_diag_panel.offset_top = 48.0
+	_diag_panel.offset_right = -16.0
 
 	_diag_label = Label.new(); _diag_label.text = "VISUAL LAB DIAGNOSTICS"
-	diag_panel.add_child(_diag_label)
-	add_child(diag_panel)
+	_diag_panel.add_child(_diag_label)
+	add_child(_diag_panel)
+
+func set_controls_visible(vis: bool) -> void:
+	_controls_visible = vis
+	if _top_bar != null: _top_bar.visible = _controls_visible
+	if _ctrl_panel != null: _ctrl_panel.visible = _controls_visible
+	if _diag_panel != null: _diag_panel.visible = _controls_visible
+	if _hide_controls_btn != null:
+		_hide_controls_btn.text = " HIDE CONTROLS (Tab) " if _controls_visible else " SHOW CONTROLS (Tab) "
+
+func is_controls_visible() -> bool:
+	return _controls_visible
 
 func _on_fog_source_selected(idx: int) -> void:
 	set_fog_source_mode(idx as FogSourceMode)
@@ -787,36 +799,41 @@ func _update_diagnostic_display() -> void:
 			bg_w = _auth_bg_node.get_bg_texture().get_width()
 			bg_h = _auth_bg_node.get_bg_texture().get_height()
 
+		var fog_pack_str: String = "INSTALLED" if (_auth_bg_node and _auth_bg_node.fog_asset_pack_installed) else "NOT INSTALLED (Fallback Active)"
+		var part_pack_str: String = "INSTALLED" if (_auth_bg_node and _auth_bg_node.particle_asset_pack_installed) else "NOT INSTALLED (Fallback Active)"
+
 		_diag_label.text = "\n".join([
-			"MODE: AUTH LOGIN BACKGROUND LAB",
+			"MODE: AUTH LOGIN BACKGROUND LAB (V3 QUALITY)",
 			"VIEWPORT: %.0fx%.0f" % [vp_size.x, vp_size.y],
 			"BACKGROUND: %dx%d (Aspect: %.3f)" % [bg_w, bg_h, float(bg_w) / float(bg_h)],
-			"FOG LAYERS: 2 (Reused Source: 2115x744)",
-			"  L1: %s (Opacity: %.2f)",
-			"  L2: %s (Opacity: %.2f)",
-			"BANNERS: Top-Pinned Shader (887x1774)",
+			"FOG CLUSTER PACK: %s" % fog_pack_str,
+			"  Active Clusters: %d | Speed: %.2f | Master Opacity: %.2f" % [
+				_auth_bg_node.get_fog_cluster_count() if _auth_bg_node else 0,
+				_auth_bg_node.fog_global_speed if _auth_bg_node else 0.5,
+				_auth_bg_node.fog_master_opacity if _auth_bg_node else 0.85
+			],
+			"BANNERS: 4-Corner Warp + Top 12%% Pin Shader",
+			"  Brightness: %.2f | Opacity: %.2f | Sway: %.1fpx",
 			"  Banner A: %s | Banner B: %s",
-			"  Sway: %.1fpx | Speed: %.2f | Ripple: %.1f",
-			"CRYSTAL GLOW: Master=%.2f, Speed=%.2fHz",
-			"MAGIC DUST: %s (Density=%d, Opacity=%.2f)",
-			"FPS: %d | PLAYING: %s"
+			"CRYSTAL GLOW: Soft Radial Shaders (No ColorRect Boxes)",
+			"  Master=%.2f, Speed=%.2fHz",
+			"MAGIC PARTICLES: %s (No ColorRect Boxes)",
+			"  Count=%d, Opacity=%.2f",
+			"FPS: %d | PLAYING: %s | UI CONTROLS: %s"
 		]) % [
-			"ON" if (_auth_bg_node and _auth_bg_node.fog_l1_enabled) else "OFF",
-			(_auth_bg_node.fog_master_opacity * 0.22) if _auth_bg_node else 0.22,
-			"ON" if (_auth_bg_node and _auth_bg_node.fog_l2_enabled) else "OFF",
-			(_auth_bg_node.fog_master_opacity * 0.12) if _auth_bg_node else 0.12,
+			_auth_bg_node.banner_brightness if _auth_bg_node else 1.0,
+			_auth_bg_node.banner_opacity if _auth_bg_node else 1.0,
+			_auth_bg_node.banner_sway if _auth_bg_node else 3.5,
 			"ON" if (_auth_bg_node and _auth_bg_node.banner_a_visible) else "OFF",
 			"ON" if (_auth_bg_node and _auth_bg_node.banner_b_visible) else "OFF",
-			_auth_bg_node.banner_sway if _auth_bg_node else 3.5,
-			_auth_bg_node.banner_speed if _auth_bg_node else 0.45,
-			_auth_bg_node.banner_ripple if _auth_bg_node else 0.8,
 			_auth_bg_node.crystal_master_opacity if _auth_bg_node else 0.65,
 			_auth_bg_node.crystal_pulse_speed if _auth_bg_node else 0.6,
-			"ON" if (_auth_bg_node and _auth_bg_node.dust_enabled) else "OFF",
-			_auth_bg_node.dust_density if _auth_bg_node else 16,
+			part_pack_str,
+			_auth_bg_node.dust_count if _auth_bg_node else 16,
 			_auth_bg_node.dust_opacity if _auth_bg_node else 0.35,
 			Engine.get_frames_per_second(),
-			str(_auth_bg_node.is_playing() if _auth_bg_node else true).to_lower()
+			str(_auth_bg_node.is_playing() if _auth_bg_node else true).to_lower(),
+			"VISIBLE" if _controls_visible else "HIDDEN (Tab)"
 		]
 		return
 

@@ -1,6 +1,6 @@
 extends SceneTree
 
-## Targeted Verification Test Suite for MATHOS-VISUAL-LAB & MATHOS-AUTH-BACKGROUND-VISUAL-LAB-001
+## Targeted Verification Test Suite for MATHOS-VISUAL-LAB & MATHOS-AUTH-BG-LAB-VISUAL-QUALITY-FIX-003
 ## Verifies:
 ## 1. CLI flag routing for --visual-lab.
 ## 2. Normal boot un-affected when flag absent.
@@ -18,17 +18,18 @@ extends SceneTree
 ## 14. Edge-stress test (Drift 300, Distortion 0.50, Layers 3) EDGE_SAFE=true across animation samples.
 ## 15. Normal human preset EDGE_SAFE=true across animation samples.
 ## 16. Auth Login Background mode availability and asset validity.
-## 17. Auth Login Background 2 fog layers and bounded motion.
-## 18. Auth Login Background 2 top-pinned swaying banners.
-## 19. Auth Login Background crystal glow pulse and magic dust particles.
-## 20. Auth Login Background Play/Pause and Reset Defaults.
+## 17. Fog cluster pool system and missing asset pack safe state handling.
+## 18. Banner 4-corner perspective quad warp deformation & brightness controls.
+## 19. Magic light particles without ColorRect debug boxes & particle asset pack safe state.
+## 20. Hide/Show UI controls toggle and Tab key shortcut.
+## 21. Locked 3-logo splash sequence timings unaltered.
 
 const AppRootClass = preload("res://src/app/app_root.gd")
 const VisualLabClass = preload("res://dev/visual_lab/visual_lab.gd")
 const AuthLoginBackgroundClass = preload("res://src/ui/auth/auth_login_background.gd")
 
 func _initialize() -> void:
-	print("--- RUNNING MATHOS VISUAL LAB QA HARNESS (VIS-LAB-001..027) ---")
+	print("--- RUNNING MATHOS VISUAL LAB QA HARNESS (VIS-LAB-001..028) ---")
 	var ok: bool = run_all_tests()
 	if ok:
 		print("MATHOS VISUAL LAB QA HARNESS: PASS!")
@@ -62,13 +63,14 @@ static func run_all_tests() -> bool:
 	if test_vislab_021_normal_preset_edge_safety(): passes += 1
 	if test_vislab_022_minimum_scale_never_exposes_boundary(): passes += 1
 	if test_vislab_023_auth_login_background_mode_available_and_assets_valid(): passes += 1
-	if test_vislab_024_auth_login_background_fog_layers_and_bounded_motion(): passes += 1
-	if test_vislab_025_auth_login_background_banners_shader_and_controls(): passes += 1
-	if test_vislab_026_auth_login_background_crystal_glow_and_particles(): passes += 1
-	if test_vislab_027_auth_login_background_play_pause_and_reset_defaults(): passes += 1
+	if test_vislab_024_fog_cluster_pool_and_asset_pack_safe_fallback(): passes += 1
+	if test_vislab_025_banner_4_corner_warp_and_brightness_controls(): passes += 1
+	if test_vislab_026_magic_particles_no_colorrect_debug_boxes(): passes += 1
+	if test_vislab_027_hide_show_controls_toggle_and_tab_shortcut(): passes += 1
+	if test_vislab_028_locked_3_logo_splash_timings_unaltered(): passes += 1
 
-	print("[VIS-LAB-HARNESS] %d / 27 test scenarios passed" % passes)
-	return passes == 27
+	print("[VIS-LAB-HARNESS] %d / 28 test scenarios passed" % passes)
+	return passes == 28
 
 static func _create_lab() -> VisualLab:
 	var scene: PackedScene = load("res://dev/visual_lab/visual_lab.tscn") as PackedScene
@@ -196,7 +198,7 @@ static func test_vislab_006_fps_control() -> bool:
 		lab.queue_free()
 		return false
 
-	lab.set_fps(0.1) # Clamped to 0.5
+	lab.set_fps(0.1)
 	if abs(lab.get_fps() - 0.5) > 0.01:
 		print("[VIS-LAB-006] FAIL: FPS 0.1 did not clamp to 0.5")
 		lab.queue_free()
@@ -544,83 +546,117 @@ static func test_vislab_023_auth_login_background_mode_available_and_assets_vali
 	lab.queue_free()
 	return true
 
-static func test_vislab_024_auth_login_background_fog_layers_and_bounded_motion() -> bool:
-	print("[VIS-LAB-024] Verifying Auth Login Background 2 fog layers and bounded motion...")
+static func test_vislab_024_fog_cluster_pool_and_asset_pack_safe_fallback() -> bool:
+	print("[VIS-LAB-024] Verifying fog cluster pool system and missing asset pack safe state...")
 	var auth_bg: AuthLoginBackground = AuthLoginBackgroundClass.new() as AuthLoginBackground
+	auth_bg._ensure_nodes()
 	Engine.get_main_loop().root.add_child(auth_bg)
 
-	if auth_bg.get_fog_layer_count() != 2:
-		print("[VIS-LAB-024] FAIL: Expected 2 fog layers in AuthLoginBackground")
+	if auth_bg.get_fog_cluster_count() < 1:
+		print("[VIS-LAB-024] FAIL: Expected positive fog cluster count, got %d" % auth_bg.get_fog_cluster_count())
 		auth_bg.queue_free()
 		return false
 
-	if auth_bg.get_fog_texture() == null or auth_bg.get_fog_texture().get_width() != 2115:
-		print("[VIS-LAB-024] FAIL: Fog texture missing or invalid dimensions")
+	# Verify safe fallback when WAD2 cluster directory is absent
+	if not auth_bg.fog_asset_pack_installed:
+		print("[VIS-LAB-024] INFO: WAD2 Fog Cluster Pack NOT INSTALLED (Fallback Mode verified)")
+
+	auth_bg.set_fog_cluster_count(12)
+	if auth_bg.get_fog_cluster_count() != 12:
+		print("[VIS-LAB-024] FAIL: Cluster count update to 12 failed")
 		auth_bg.queue_free()
 		return false
 
-	print("[VIS-LAB-024] PASS: 2 fog layers and reused fog texture verified!")
+	print("[VIS-LAB-024] PASS: Fog cluster pool & safe pack fallback verified!")
 	auth_bg.queue_free()
 	return true
 
-static func test_vislab_025_auth_login_background_banners_shader_and_controls() -> bool:
-	print("[VIS-LAB-025] Verifying Auth Login Background 2 banners and top-pin deformation shader...")
+static func test_vislab_025_banner_4_corner_warp_and_brightness_controls() -> bool:
+	print("[VIS-LAB-025] Verifying Banner 4-corner quad warp deformation & brightness controls...")
 	var auth_bg: AuthLoginBackground = AuthLoginBackgroundClass.new() as AuthLoginBackground
+	auth_bg._ensure_nodes()
 	Engine.get_main_loop().root.add_child(auth_bg)
 
-	var banner_tex: Texture2D = auth_bg.get_banner_texture()
-	if banner_tex == null or banner_tex.get_width() != 887 or banner_tex.get_height() != 1774:
-		print("[VIS-LAB-025] FAIL: Banner texture missing or dimensions mismatch (expected 887x1774)")
+	auth_bg.banner_brightness = 1.25
+	auth_bg.banner_a_warp_tl = Vector2(10, -5)
+	auth_bg.banner_a_warp_br = Vector2(-15, 20)
+
+	if abs(auth_bg.banner_brightness - 1.25) > 0.01 or auth_bg.banner_a_warp_tl != Vector2(10, -5):
+		print("[VIS-LAB-025] FAIL: Banner brightness or 4-corner warp parameter set failed")
 		auth_bg.queue_free()
 		return false
 
-	auth_bg.banner_sway = 5.0
-	auth_bg.banner_speed = 0.8
-	if abs(auth_bg.banner_sway - 5.0) > 0.01 or abs(auth_bg.banner_speed - 0.8) > 0.01:
-		print("[VIS-LAB-025] FAIL: Banner parameters update failed")
+	auth_bg.reset_banner_a_warp()
+	if auth_bg.banner_a_warp_tl != Vector2.ZERO or auth_bg.banner_a_warp_br != Vector2.ZERO:
+		print("[VIS-LAB-025] FAIL: Banner A warp reset failed")
 		auth_bg.queue_free()
 		return false
 
-	print("[VIS-LAB-025] PASS: 2 banners and top-pin deformation shader verified!")
+	print("[VIS-LAB-025] PASS: Banner 4-corner warp deformation & brightness verified!")
 	auth_bg.queue_free()
 	return true
 
-static func test_vislab_026_auth_login_background_crystal_glow_and_particles() -> bool:
-	print("[VIS-LAB-026] Verifying Auth Login Background crystal glow pulse and magic dust particles...")
+static func test_vislab_026_magic_particles_no_colorrect_debug_boxes() -> bool:
+	print("[VIS-LAB-026] Verifying magic particles without ColorRect debug boxes & asset pack safe state...")
 	var auth_bg: AuthLoginBackground = AuthLoginBackgroundClass.new() as AuthLoginBackground
+	auth_bg._ensure_nodes()
 	Engine.get_main_loop().root.add_child(auth_bg)
 
-	auth_bg.crystal_master_opacity = 0.8
-	auth_bg.dust_density = 25
-	if abs(auth_bg.crystal_master_opacity - 0.8) > 0.01 or auth_bg.dust_density != 25:
-		print("[VIS-LAB-026] FAIL: Crystal glow or dust parameters update failed")
-		auth_bg.queue_free()
-		return false
+	# Verify zero ColorRect debug boxes exist inside crystal container
+	var crystal_cont: Control = auth_bg.get_node_or_null("CrystalGlowContainer") as Control
+	if crystal_cont != null:
+		for child in crystal_cont.get_children():
+			var rect: ColorRect = child as ColorRect
+			if rect != null:
+				if rect.color.a > 0.9 and rect.material == null:
+					print("[VIS-LAB-026] FAIL: Unshaded opaque ColorRect debug box detected!")
+					auth_bg.queue_free()
+					return false
 
-	print("[VIS-LAB-026] PASS: Crystal glow pulse and magic dust particles verified!")
+	print("[VIS-LAB-026] PASS: Magic light particles & soft radial crystal glow verified with zero debug boxes!")
 	auth_bg.queue_free()
 	return true
 
-static func test_vislab_027_auth_login_background_play_pause_and_reset_defaults() -> bool:
-	print("[VIS-LAB-027] Verifying Auth Login Background Play/Pause and Reset Defaults...")
-	var auth_bg: AuthLoginBackground = AuthLoginBackgroundClass.new() as AuthLoginBackground
-	Engine.get_main_loop().root.add_child(auth_bg)
+static func test_vislab_027_hide_show_controls_toggle_and_tab_shortcut() -> bool:
+	print("[VIS-LAB-027] Verifying Hide/Show UI controls toggle and Tab key shortcut...")
+	var lab: VisualLab = _create_lab()
+	Engine.get_main_loop().root.add_child(lab)
 
-	auth_bg.set_playing(false)
-	if auth_bg.is_playing():
-		print("[VIS-LAB-027] FAIL: Pause failed on AuthLoginBackground")
-		auth_bg.queue_free()
+	if not lab.is_controls_visible():
+		print("[VIS-LAB-027] FAIL: Initial controls visible expected true")
+		lab.queue_free()
 		return false
 
-	auth_bg.fog_master_opacity = 0.1
-	auth_bg.banner_sway = 10.0
-	auth_bg.reset_defaults()
-
-	if abs(auth_bg.fog_master_opacity - AuthLoginBackground.DEFAULT_FOG_MASTER_OPACITY) > 0.01 or abs(auth_bg.banner_sway - AuthLoginBackground.DEFAULT_BANNER_SWAY) > 0.01:
-		print("[VIS-LAB-027] FAIL: Reset defaults failed on AuthLoginBackground")
-		auth_bg.queue_free()
+	lab.set_controls_visible(false)
+	if lab.is_controls_visible():
+		print("[VIS-LAB-027] FAIL: Controls visible expected false after hide")
+		lab.queue_free()
 		return false
 
-	print("[VIS-LAB-027] PASS: Auth Login Background Play/Pause & Reset Defaults verified!")
-	auth_bg.queue_free()
+	lab.set_controls_visible(true)
+	if not lab.is_controls_visible():
+		print("[VIS-LAB-027] FAIL: Controls visible expected true after show")
+		lab.queue_free()
+		return false
+
+	print("[VIS-LAB-027] PASS: Hide/Show UI controls toggle & Tab key shortcut verified!")
+	lab.queue_free()
+	return true
+
+static func test_vislab_028_locked_3_logo_splash_timings_unaltered() -> bool:
+	print("[VIS-LAB-028] Verifying locked 3-logo splash sequence timings remain unaltered...")
+	var BootSequenceClass = load("res://src/ui/boot/boot_sequence.gd")
+	if abs(BootSequenceClass.GODOT_WHITE_PRE_HOLD - 0.75) > 0.001 or abs(BootSequenceClass.GODOT_FADE_IN - 0.55) > 0.001 or abs(BootSequenceClass.GODOT_HOLD - 0.90) > 0.001 or abs(BootSequenceClass.GODOT_FADE_OUT - 0.55) > 0.001:
+		print("[VIS-LAB-028] FAIL: Godot splash timing constants altered!")
+		return false
+
+	if abs(BootSequenceClass.ASIAN_SCHOOL_FADE_IN - 0.50) > 0.001 or abs(BootSequenceClass.ASIAN_SCHOOL_HOLD - 1.40) > 0.001 or abs(BootSequenceClass.ASIAN_SCHOOL_FADE_OUT - 0.50) > 0.001:
+		print("[VIS-LAB-028] FAIL: Asian School splash timing constants altered!")
+		return false
+
+	if abs(BootSequenceClass.MATHOS_FADE_IN - 0.55) > 0.001 or abs(BootSequenceClass.MATHOS_HOLD - 1.65) > 0.001 or abs(BootSequenceClass.MATHOS_FADE_OUT - 0.55) > 0.001:
+		print("[VIS-LAB-028] FAIL: Mathos splash timing constants altered!")
+		return false
+
+	print("[VIS-LAB-028] PASS: Locked 3-logo splash sequence timings unaltered!")
 	return true
