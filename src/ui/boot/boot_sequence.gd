@@ -25,18 +25,18 @@ const GODOT_BG_COLOR: Color = Color(1.0, 1.0, 1.0, 1.0)
 const ASIAN_SCHOOL_BG_COLOR: Color = Color(0.96, 0.97, 0.98, 1.0)
 const MATHOS_BG_COLOR: Color = Color(0.06, 0.08, 0.12, 1.0)
 
-const GODOT_WHITE_PRE_HOLD: float = 0.35
-const GODOT_FADE_IN: float = 0.35
-const GODOT_HOLD: float = 0.80
-const GODOT_FADE_OUT: float = 0.30
+const GODOT_WHITE_PRE_HOLD: float = 0.75
+const GODOT_FADE_IN: float = 0.55
+const GODOT_HOLD: float = 0.90
+const GODOT_FADE_OUT: float = 0.55
 
-const ASIAN_SCHOOL_FADE_IN: float = 0.30
+const ASIAN_SCHOOL_FADE_IN: float = 0.50
 const ASIAN_SCHOOL_HOLD: float = 1.40
-const ASIAN_SCHOOL_FADE_OUT: float = 0.30
+const ASIAN_SCHOOL_FADE_OUT: float = 0.50
 
-const MATHOS_FADE_IN: float = 0.35
+const MATHOS_FADE_IN: float = 0.55
 const MATHOS_HOLD: float = 1.65
-const MATHOS_FADE_OUT: float = 0.35
+const MATHOS_FADE_OUT: float = 0.55
 
 var _current_stage: Stage = Stage.IDLE
 var _bg_rect: ColorRect = null

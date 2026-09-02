@@ -165,31 +165,31 @@ static func test_godot_stage_presentation_and_white_background() -> bool:
 	return true
 
 static func test_godot_stage_polished_timings_and_logo_size() -> bool:
-	print("[BOOT-005] Verifying Godot stage polished timings (pre-hold 0.35s, fade-in 0.35s, hold 0.80s, fade-out 0.30s) and enlarged display size (~640px)...")
+	print("[BOOT-005] Verifying splash timings (Godot 0.75/0.55/0.90/0.55, Asian 0.50/1.40/0.50, Mathos 0.55/1.65/0.55)...")
 	var scene_res: Resource = load("res://src/ui/boot/boot_sequence.tscn")
 	var boot: BootSequence = (scene_res as PackedScene).instantiate() as BootSequence
 	boot._ensure_nodes()
 
-	if abs(BootSequence.GODOT_WHITE_PRE_HOLD - 0.35) > 0.001:
+	if abs(BootSequence.GODOT_WHITE_PRE_HOLD - 0.75) > 0.001:
 		boot.queue_free()
-		return _fail("BOOT-005", "GODOT_WHITE_PRE_HOLD expected 0.35, got %f" % BootSequence.GODOT_WHITE_PRE_HOLD)
-	if abs(BootSequence.GODOT_FADE_IN - 0.35) > 0.001:
+		return _fail("BOOT-005", "GODOT_WHITE_PRE_HOLD expected 0.75, got %f" % BootSequence.GODOT_WHITE_PRE_HOLD)
+	if abs(BootSequence.GODOT_FADE_IN - 0.55) > 0.001:
 		boot.queue_free()
-		return _fail("BOOT-005", "GODOT_FADE_IN expected 0.35, got %f" % BootSequence.GODOT_FADE_IN)
-	if abs(BootSequence.GODOT_HOLD - 0.80) > 0.001:
+		return _fail("BOOT-005", "GODOT_FADE_IN expected 0.55, got %f" % BootSequence.GODOT_FADE_IN)
+	if abs(BootSequence.GODOT_HOLD - 0.90) > 0.001:
 		boot.queue_free()
-		return _fail("BOOT-005", "GODOT_HOLD expected 0.80, got %f" % BootSequence.GODOT_HOLD)
-	if abs(BootSequence.GODOT_FADE_OUT - 0.30) > 0.001:
+		return _fail("BOOT-005", "GODOT_HOLD expected 0.90, got %f" % BootSequence.GODOT_HOLD)
+	if abs(BootSequence.GODOT_FADE_OUT - 0.55) > 0.001:
 		boot.queue_free()
-		return _fail("BOOT-005", "GODOT_FADE_OUT expected 0.30, got %f" % BootSequence.GODOT_FADE_OUT)
+		return _fail("BOOT-005", "GODOT_FADE_OUT expected 0.55, got %f" % BootSequence.GODOT_FADE_OUT)
 
-	# Verify Asian School & Mathos timings remain completely unchanged
-	if abs(BootSequence.ASIAN_SCHOOL_FADE_IN - 0.30) > 0.001 or abs(BootSequence.ASIAN_SCHOOL_HOLD - 1.40) > 0.001 or abs(BootSequence.ASIAN_SCHOOL_FADE_OUT - 0.30) > 0.001:
+	# Verify Asian School & Mathos timings
+	if abs(BootSequence.ASIAN_SCHOOL_FADE_IN - 0.50) > 0.001 or abs(BootSequence.ASIAN_SCHOOL_HOLD - 1.40) > 0.001 or abs(BootSequence.ASIAN_SCHOOL_FADE_OUT - 0.50) > 0.001:
 		boot.queue_free()
-		return _fail("BOOT-005", "Asian School timings altered")
-	if abs(BootSequence.MATHOS_FADE_IN - 0.35) > 0.001 or abs(BootSequence.MATHOS_HOLD - 1.65) > 0.001 or abs(BootSequence.MATHOS_FADE_OUT - 0.35) > 0.001:
+		return _fail("BOOT-005", "Asian School timings mismatch")
+	if abs(BootSequence.MATHOS_FADE_IN - 0.55) > 0.001 or abs(BootSequence.MATHOS_HOLD - 1.65) > 0.001 or abs(BootSequence.MATHOS_FADE_OUT - 0.55) > 0.001:
 		boot.queue_free()
-		return _fail("BOOT-005", "Mathos timings altered")
+		return _fail("BOOT-005", "Mathos timings mismatch")
 
 	# Verify logo display minimum size
 	boot._show_godot_stage()
