@@ -25,9 +25,10 @@ const GODOT_BG_COLOR: Color = Color(1.0, 1.0, 1.0, 1.0)
 const ASIAN_SCHOOL_BG_COLOR: Color = Color(0.96, 0.97, 0.98, 1.0)
 const MATHOS_BG_COLOR: Color = Color(0.06, 0.08, 0.12, 1.0)
 
-const GODOT_FADE_IN: float = 0.25
-const GODOT_HOLD: float = 0.75
-const GODOT_FADE_OUT: float = 0.25
+const GODOT_WHITE_PRE_HOLD: float = 0.35
+const GODOT_FADE_IN: float = 0.35
+const GODOT_HOLD: float = 0.80
+const GODOT_FADE_OUT: float = 0.30
 
 const ASIAN_SCHOOL_FADE_IN: float = 0.30
 const ASIAN_SCHOOL_HOLD: float = 1.40
@@ -97,7 +98,7 @@ func _ensure_nodes() -> void:
 			_logo_rect.name = "LogoTextureRect"
 			_logo_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			_logo_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			_logo_rect.custom_minimum_size = Vector2(350, 400)
+			_logo_rect.custom_minimum_size = Vector2(640, 258)
 			_logo_rect.mouse_filter = MOUSE_FILTER_IGNORE
 			margin.add_child(_logo_rect)
 
@@ -150,13 +151,23 @@ func _show_godot_stage() -> void:
 	_bg_rect.color = GODOT_BG_COLOR
 	if _logo_rect != null and _godot_logo_tex != null:
 		_logo_rect.texture = _godot_logo_tex
-		_logo_rect.custom_minimum_size = Vector2(350, 400)
+		_logo_rect.custom_minimum_size = Vector2(640, 258)
+
+	# First-frame contract: fade overlay is fully opaque white (alpha = 1.0)
 	_fade_overlay.color = Color(1.0, 1.0, 1.0, 1.0)
 
+	var g_pre_hold: float = GODOT_WHITE_PRE_HOLD / _time_scale
 	var g_in: float = GODOT_FADE_IN / _time_scale
 	var g_hold: float = GODOT_HOLD / _time_scale
 	var g_out: float = GODOT_FADE_OUT / _time_scale
 
+	# 1. Pure White Pre-Hold (alpha = 1.0, logo completely hidden behind overlay)
+	if g_pre_hold > 0.0 and is_inside_tree() and get_tree() != null:
+		await get_tree().create_timer(g_pre_hold).timeout
+	if _current_stage != Stage.GODOT:
+		return
+
+	# 2. Fade In (alpha 1.0 -> 0.0)
 	_active_tween = create_tween()
 	_active_tween.tween_property(_fade_overlay, "color:a", 0.0, g_in)
 	await _active_tween.finished
@@ -164,10 +175,13 @@ func _show_godot_stage() -> void:
 	if _current_stage != Stage.GODOT:
 		return
 
-	await get_tree().create_timer(g_hold).timeout
+	# 3. Hold Fully Visible
+	if g_hold > 0.0 and is_inside_tree() and get_tree() != null:
+		await get_tree().create_timer(g_hold).timeout
 	if _current_stage != Stage.GODOT:
 		return
 
+	# 4. Fade Out (interpolating to Asian School background color)
 	_active_tween = create_tween()
 	_active_tween.tween_property(_fade_overlay, "color", ASIAN_SCHOOL_BG_COLOR, g_out)
 	await _active_tween.finished
@@ -195,7 +209,8 @@ func _show_asian_school_stage() -> void:
 	if _current_stage != Stage.ASIAN_SCHOOL:
 		return
 
-	await get_tree().create_timer(as_hold).timeout
+	if as_hold > 0.0 and is_inside_tree() and get_tree() != null:
+		await get_tree().create_timer(as_hold).timeout
 	if _current_stage != Stage.ASIAN_SCHOOL:
 		return
 
@@ -225,7 +240,8 @@ func _show_mathos_stage() -> void:
 	if _current_stage != Stage.MATHOS:
 		return
 
-	await get_tree().create_timer(m_hold).timeout
+	if m_hold > 0.0 and is_inside_tree() and get_tree() != null:
+		await get_tree().create_timer(m_hold).timeout
 	if _current_stage != Stage.MATHOS:
 		return
 

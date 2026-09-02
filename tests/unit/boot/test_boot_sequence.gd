@@ -2,7 +2,7 @@ class_name TestBootSequence
 extends SceneTree
 
 ## Automated QA Unit & Integration Test Suite for Mathos Production Boot Sequence.
-## Tests MATHOS-BOOT-GODOT-ANIMATED-STAGE-FIX-002-CONTINUE requirements.
+## Tests MATHOS-BOOT-GODOT-INTRO-POLISH-003 requirements.
 
 func _initialize() -> void:
 	var ok: bool = run_all_tests(self)
@@ -12,13 +12,14 @@ func _initialize() -> void:
 		quit(1)
 
 static func run_all_tests(tree: SceneTree = null) -> bool:
-	print("--- RUNNING MATHOS PRODUCTION BOOT SEQUENCE QA HARNESS (BOOT-001..012) ---")
+	print("--- RUNNING MATHOS PRODUCTION BOOT SEQUENCE QA HARNESS (BOOT-001..013) ---")
 	var all_ok: bool = true
 
 	all_ok = test_boot_assets_exist_and_valid() and all_ok
 	all_ok = test_boot_sequence_instantiation_and_nodes() and all_ok
 	all_ok = test_boot_sequence_stage_order(tree) and all_ok
 	all_ok = test_godot_stage_presentation_and_white_background() and all_ok
+	all_ok = test_godot_stage_polished_timings_and_logo_size() and all_ok
 	all_ok = test_aspect_preserving_presentation() and all_ok
 	all_ok = test_input_isolation_no_buttons() and all_ok
 	all_ok = test_skip_splash_flag_bypasses_splashes(tree) and all_ok
@@ -29,7 +30,7 @@ static func run_all_tests(tree: SceneTree = null) -> bool:
 	all_ok = test_multi_resolution_layout_safety(tree) and all_ok
 
 	if all_ok:
-		print("[BOOT-HARNESS] 12 / 12 test scenarios passed")
+		print("[BOOT-HARNESS] 13 / 13 test scenarios passed")
 		print("MATHOS PRODUCTION BOOT SEQUENCE QA HARNESS: PASS!")
 	else:
 		print("[BOOT-HARNESS] FAIL: One or more boot sequence tests failed")
@@ -137,14 +138,10 @@ static func test_boot_sequence_stage_order(tree: SceneTree = null) -> bool:
 	return true
 
 static func test_godot_stage_presentation_and_white_background() -> bool:
-	print("[BOOT-004] Verifying Godot Stage presentation, non-zero timing, and opaque white background...")
+	print("[BOOT-004] Verifying Godot Stage presentation and opaque white background...")
 	var scene_res: Resource = load("res://src/ui/boot/boot_sequence.tscn")
 	var boot: BootSequence = (scene_res as PackedScene).instantiate() as BootSequence
 	boot._ensure_nodes()
-
-	if BootSequence.GODOT_FADE_IN <= 0.0 or BootSequence.GODOT_HOLD <= 0.0 or BootSequence.GODOT_FADE_OUT <= 0.0:
-		boot.queue_free()
-		return _fail("BOOT-004", "Godot stage fade/hold durations must be greater than zero")
 
 	boot._show_godot_stage()
 
@@ -153,17 +150,60 @@ static func test_godot_stage_presentation_and_white_background() -> bool:
 		boot.queue_free()
 		return _fail("BOOT-004", "Godot stage background is not pure white GODOT_BG_COLOR")
 
+	var fade: ColorRect = boot.get_node_or_null("FadeOverlay") as ColorRect
+	if fade == null or fade.color.a != 1.0:
+		boot.queue_free()
+		return _fail("BOOT-004", "First-frame contract violated: fade overlay alpha is not 1.0 on stage init")
+
 	var logo_rect: TextureRect = boot.get_node_or_null("CenterContainer/MarginContainer/LogoTextureRect") as TextureRect
 	if logo_rect == null or logo_rect.texture != boot.get_godot_texture():
 		boot.queue_free()
 		return _fail("BOOT-004", "Godot logo texture is not assigned to LogoTextureRect")
 
 	boot.queue_free()
-	print("[BOOT-004] PASS: Godot Stage presentation, white background, and non-zero timing verified!")
+	print("[BOOT-004] PASS: Godot Stage presentation, first-frame contract, and white background verified!")
+	return true
+
+static func test_godot_stage_polished_timings_and_logo_size() -> bool:
+	print("[BOOT-005] Verifying Godot stage polished timings (pre-hold 0.35s, fade-in 0.35s, hold 0.80s, fade-out 0.30s) and enlarged display size (~640px)...")
+	var scene_res: Resource = load("res://src/ui/boot/boot_sequence.tscn")
+	var boot: BootSequence = (scene_res as PackedScene).instantiate() as BootSequence
+	boot._ensure_nodes()
+
+	if abs(BootSequence.GODOT_WHITE_PRE_HOLD - 0.35) > 0.001:
+		boot.queue_free()
+		return _fail("BOOT-005", "GODOT_WHITE_PRE_HOLD expected 0.35, got %f" % BootSequence.GODOT_WHITE_PRE_HOLD)
+	if abs(BootSequence.GODOT_FADE_IN - 0.35) > 0.001:
+		boot.queue_free()
+		return _fail("BOOT-005", "GODOT_FADE_IN expected 0.35, got %f" % BootSequence.GODOT_FADE_IN)
+	if abs(BootSequence.GODOT_HOLD - 0.80) > 0.001:
+		boot.queue_free()
+		return _fail("BOOT-005", "GODOT_HOLD expected 0.80, got %f" % BootSequence.GODOT_HOLD)
+	if abs(BootSequence.GODOT_FADE_OUT - 0.30) > 0.001:
+		boot.queue_free()
+		return _fail("BOOT-005", "GODOT_FADE_OUT expected 0.30, got %f" % BootSequence.GODOT_FADE_OUT)
+
+	# Verify Asian School & Mathos timings remain completely unchanged
+	if abs(BootSequence.ASIAN_SCHOOL_FADE_IN - 0.30) > 0.001 or abs(BootSequence.ASIAN_SCHOOL_HOLD - 1.40) > 0.001 or abs(BootSequence.ASIAN_SCHOOL_FADE_OUT - 0.30) > 0.001:
+		boot.queue_free()
+		return _fail("BOOT-005", "Asian School timings altered")
+	if abs(BootSequence.MATHOS_FADE_IN - 0.35) > 0.001 or abs(BootSequence.MATHOS_HOLD - 1.65) > 0.001 or abs(BootSequence.MATHOS_FADE_OUT - 0.35) > 0.001:
+		boot.queue_free()
+		return _fail("BOOT-005", "Mathos timings altered")
+
+	# Verify logo display minimum size
+	boot._show_godot_stage()
+	var logo_rect: TextureRect = boot.get_node_or_null("CenterContainer/MarginContainer/LogoTextureRect") as TextureRect
+	if logo_rect == null or abs(logo_rect.custom_minimum_size.x - 640.0) > 1.0:
+		boot.queue_free()
+		return _fail("BOOT-005", "Godot logo display width is not ~640px, got %f" % [logo_rect.custom_minimum_size.x if logo_rect != null else 0.0])
+
+	boot.queue_free()
+	print("[BOOT-005] PASS: Polished Godot stage timings and enlarged logo display size (~640px) verified!")
 	return true
 
 static func test_aspect_preserving_presentation() -> bool:
-	print("[BOOT-005] Verifying aspect-ratio preserving properties (STRETCH_KEEP_ASPECT_CENTERED)...")
+	print("[BOOT-006] Verifying aspect-ratio preserving properties (STRETCH_KEEP_ASPECT_CENTERED)...")
 	var scene_res: Resource = load("res://src/ui/boot/boot_sequence.tscn")
 	var boot: BootSequence = (scene_res as PackedScene).instantiate() as BootSequence
 	boot._ensure_nodes()
@@ -171,21 +211,21 @@ static func test_aspect_preserving_presentation() -> bool:
 	var logo_rect: TextureRect = boot.get_node_or_null("CenterContainer/MarginContainer/LogoTextureRect") as TextureRect
 	if logo_rect == null:
 		boot.queue_free()
-		return _fail("BOOT-005", "LogoTextureRect not found")
+		return _fail("BOOT-006", "LogoTextureRect not found")
 
 	if logo_rect.stretch_mode != TextureRect.STRETCH_KEEP_ASPECT_CENTERED:
 		boot.queue_free()
-		return _fail("BOOT-005", "stretch_mode is not STRETCH_KEEP_ASPECT_CENTERED")
+		return _fail("BOOT-006", "stretch_mode is not STRETCH_KEEP_ASPECT_CENTERED")
 	if logo_rect.expand_mode != TextureRect.EXPAND_IGNORE_SIZE:
 		boot.queue_free()
-		return _fail("BOOT-005", "expand_mode is not EXPAND_IGNORE_SIZE")
+		return _fail("BOOT-006", "expand_mode is not EXPAND_IGNORE_SIZE")
 
 	boot.queue_free()
-	print("[BOOT-005] PASS: Aspect ratio preservation properties verified!")
+	print("[BOOT-006] PASS: Aspect ratio preservation properties verified!")
 	return true
 
 static func test_input_isolation_no_buttons() -> bool:
-	print("[BOOT-006] Verifying input isolation (zero focusable controls or interactive buttons)...")
+	print("[BOOT-007] Verifying input isolation (zero focusable controls or interactive buttons)...")
 	var scene_res: Resource = load("res://src/ui/boot/boot_sequence.tscn")
 	var boot: BootSequence = (scene_res as PackedScene).instantiate() as BootSequence
 	boot._ensure_nodes()
@@ -193,18 +233,18 @@ static func test_input_isolation_no_buttons() -> bool:
 	var buttons: Array[Node] = boot.find_children("*", "Button", true, false)
 	if not buttons.is_empty():
 		boot.queue_free()
-		return _fail("BOOT-006", "BootSequence contains interactive Button nodes")
+		return _fail("BOOT-007", "BootSequence contains interactive Button nodes")
 
 	if boot.mouse_filter != Control.MOUSE_FILTER_IGNORE:
 		boot.queue_free()
-		return _fail("BOOT-006", "Root BootSequence mouse_filter is not MOUSE_FILTER_IGNORE")
+		return _fail("BOOT-007", "Root BootSequence mouse_filter is not MOUSE_FILTER_IGNORE")
 
 	boot.queue_free()
-	print("[BOOT-006] PASS: Input isolation verified with zero buttons and MOUSE_FILTER_IGNORE!")
+	print("[BOOT-007] PASS: Input isolation verified with zero buttons and MOUSE_FILTER_IGNORE!")
 	return true
 
 static func test_skip_splash_flag_bypasses_splashes(tree: SceneTree = null) -> bool:
-	print("[BOOT-007] Verifying --skip-splash CLI flag bypass logic for all 3 splash stages...")
+	print("[BOOT-008] Verifying --skip-splash CLI flag bypass logic for all 3 splash stages...")
 	var app_scene: PackedScene = load("res://src/app/app_root.tscn")
 	var app: AppRoot = app_scene.instantiate() as AppRoot
 	_add_node_to_tree(app, tree)
@@ -215,11 +255,11 @@ static func test_skip_splash_flag_bypasses_splashes(tree: SceneTree = null) -> b
 
 	_remove_node_from_tree(app)
 
-	print("[BOOT-007] PASS: --skip-splash bypass logic for all 3 stages verified!")
+	print("[BOOT-008] PASS: --skip-splash bypass logic for all 3 stages verified!")
 	return true
 
 static func test_visual_lab_flag_bypasses_splashes(tree: SceneTree = null) -> bool:
-	print("[BOOT-008] Verifying --visual-lab CLI flag bypass logic...")
+	print("[BOOT-009] Verifying --visual-lab CLI flag bypass logic...")
 	var app_scene: PackedScene = load("res://src/app/app_root.tscn")
 	var app: AppRoot = app_scene.instantiate() as AppRoot
 	_add_node_to_tree(app, tree)
@@ -228,14 +268,14 @@ static func test_visual_lab_flag_bypasses_splashes(tree: SceneTree = null) -> bo
 		var boot: Control = app.get_boot_sequence()
 		if boot != null:
 			_remove_node_from_tree(app)
-			return _fail("BOOT-008", "--visual-lab mode created full boot sequence")
+			return _fail("BOOT-009", "--visual-lab mode created full boot sequence")
 
 	_remove_node_from_tree(app)
-	print("[BOOT-008] PASS: --visual-lab splash bypass verified!")
+	print("[BOOT-009] PASS: --visual-lab splash bypass verified!")
 	return true
 
 static func test_qa_cheats_compatibility(tree: SceneTree = null) -> bool:
-	print("[BOOT-009] Verifying --qa-cheats overlay compatibility with BootSequence...")
+	print("[BOOT-010] Verifying --qa-cheats overlay compatibility with BootSequence...")
 	var app_scene: PackedScene = load("res://src/app/app_root.tscn")
 	var app: AppRoot = app_scene.instantiate() as AppRoot
 	_add_node_to_tree(app, tree)
@@ -243,14 +283,14 @@ static func test_qa_cheats_compatibility(tree: SceneTree = null) -> bool:
 	var qa_overlay: Control = app.get_qa_overlay()
 	if qa_overlay == null:
 		_remove_node_from_tree(app)
-		return _fail("BOOT-009", "QA Overlay failed to instantiate alongside boot sequence")
+		return _fail("BOOT-010", "QA Overlay failed to instantiate alongside boot sequence")
 
 	_remove_node_from_tree(app)
-	print("[BOOT-009] PASS: --qa-cheats overlay compatibility verified!")
+	print("[BOOT-010] PASS: --qa-cheats overlay compatibility verified!")
 	return true
 
 static func test_zero_save_progress_mutation(tree: SceneTree = null) -> bool:
-	print("[BOOT-010] Verifying zero save or progress mutation during boot sequence...")
+	print("[BOOT-011] Verifying zero save or progress mutation during boot sequence...")
 	var save_store: SaveFileStore = SaveFileStore.new("user://")
 	var had_save_before: bool = save_store.file_exists(save_store.main_path)
 
@@ -265,13 +305,13 @@ static func test_zero_save_progress_mutation(tree: SceneTree = null) -> bool:
 
 	var has_save_after: bool = save_store.file_exists(save_store.main_path)
 	if had_save_before != has_save_after:
-		return _fail("BOOT-010", "Boot sequence mutated save file state")
+		return _fail("BOOT-011", "Boot sequence mutated save file state")
 
-	print("[BOOT-010] PASS: Zero save/progress mutation verified!")
+	print("[BOOT-011] PASS: Zero save/progress mutation verified!")
 	return true
 
 static func test_no_duplicate_boot_sequence_instances(tree: SceneTree = null) -> bool:
-	print("[BOOT-011] Verifying zero duplicate boot sequence instances...")
+	print("[BOOT-012] Verifying zero duplicate boot sequence instances...")
 	var app_scene: PackedScene = load("res://src/app/app_root.tscn")
 	var app: AppRoot = app_scene.instantiate() as AppRoot
 	_add_node_to_tree(app, tree)
@@ -282,14 +322,14 @@ static func test_no_duplicate_boot_sequence_instances(tree: SceneTree = null) ->
 	var boot_nodes: Array[Node] = app.find_children("*", "BootSequence", true, false)
 	if boot_nodes.size() > 1:
 		_remove_node_from_tree(app)
-		return _fail("BOOT-011", "Multiple BootSequence instances created (%d)" % boot_nodes.size())
+		return _fail("BOOT-012", "Multiple BootSequence instances created (%d)" % boot_nodes.size())
 
 	_remove_node_from_tree(app)
-	print("[BOOT-011] PASS: Zero duplicate boot sequence instances verified!")
+	print("[BOOT-012] PASS: Zero duplicate boot sequence instances verified!")
 	return true
 
 static func test_multi_resolution_layout_safety(tree: SceneTree = null) -> bool:
-	print("[BOOT-012] Verifying multi-resolution layout safety (1024x600, 1280x720, 1920x1080)...")
+	print("[BOOT-013] Verifying multi-resolution layout safety (1024x600, 1280x720, 1920x1080)...")
 	var resolutions: Array[Vector2] = [
 		Vector2(1024, 600),
 		Vector2(1280, 720),
@@ -309,9 +349,9 @@ static func test_multi_resolution_layout_safety(tree: SceneTree = null) -> bool:
 
 		if bg == null or fade == null:
 			_remove_node_from_tree(boot)
-			return _fail("BOOT-012", "Background or fade null at %dx%d" % [res.x, res.y])
+			return _fail("BOOT-013", "Background or fade null at %dx%d" % [res.x, res.y])
 
 		_remove_node_from_tree(boot)
 
-	print("[BOOT-012] PASS: Multi-resolution layout safety verified for 1024x600, 1280x720, 1920x1080!")
+	print("[BOOT-013] PASS: Multi-resolution layout safety verified for 1024x600, 1280x720, 1920x1080!")
 	return true
