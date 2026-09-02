@@ -15,9 +15,9 @@ if /i "%CONFIRM%" neq "y" (
     exit /b 0
 )
 
-set SCRIPT_DIR=%~dp0
-set REPO_ROOT=%SCRIPT_DIR%..
-set SERVER_DIR=%REPO_ROOT%\server
+set "SCRIPT_DIR=%~dp0"
+set "REPO_ROOT=%SCRIPT_DIR%.."
+set "SERVER_DIR=%REPO_ROOT%\server"
 
 cd /d "%SERVER_DIR%"
 echo Purging containers and named Docker database volumes...
