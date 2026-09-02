@@ -30,6 +30,7 @@ var _presentation_shell: Control = null
 var _bootstrap_ui: Control = null
 var _qa_overlay: Control = null
 var _visual_lab_instance: Control = null
+var _boot_sequence_instance: Control = null
 
 func _ready() -> void:
 	_bootstrap_ui = get_node_or_null("BootstrapUI") as Control
@@ -287,6 +288,37 @@ func _setup_visual_lab() -> void:
 func get_visual_lab() -> Control:
 	return _visual_lab_instance
 
+func _is_skip_splash_mode() -> bool:
+	var args: PackedStringArray = OS.get_cmdline_args()
+	for a in args:
+		if a == "--skip-splash":
+			return true
+	var uargs: PackedStringArray = OS.get_cmdline_user_args()
+	for ua in uargs:
+		if ua == "--skip-splash":
+			return true
+	return false
+
+func _setup_boot_sequence() -> void:
+	if _boot_sequence_instance != null or _is_skip_splash_mode():
+		return
+
+	var boot_scene: Resource = load("res://src/ui/boot/boot_sequence.tscn")
+	if boot_scene is PackedScene:
+		_boot_sequence_instance = (boot_scene as PackedScene).instantiate() as Control
+		add_child(_boot_sequence_instance)
+	else:
+		var boot_script: Resource = load("res://src/ui/boot/boot_sequence.gd")
+		if boot_script is GDScript:
+			_boot_sequence_instance = (boot_script as GDScript).new() as Control
+			add_child(_boot_sequence_instance)
+
+	if _boot_sequence_instance != null and _boot_sequence_instance.has_method("start_boot_sequence"):
+		_boot_sequence_instance.call("start_boot_sequence")
+
+func get_boot_sequence() -> Control:
+	return _boot_sequence_instance
+
 func _setup_presentation_shell() -> void:
 	if _is_visual_lab_mode():
 		_setup_visual_lab()
@@ -328,6 +360,8 @@ func _setup_presentation_shell() -> void:
 			_presentation_shell.connect("stage_continue_requested", _on_stage_continue_requested)
 		if _bootstrap_ui != null:
 			_bootstrap_ui.visible = false
+
+	_setup_boot_sequence()
 
 func refresh_continue_availability() -> void:
 	var has_save: bool = false
