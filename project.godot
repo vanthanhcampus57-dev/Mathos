@@ -10,6 +10,7 @@ config_version=5
 config/name="Mathos"
 run/main_scene="res://src/app/app_root.tscn"
 config/features=PackedStringArray("4.7", "Compatibility")
+boot_splash/show_image=false
 config/icon="res://assets/branding/mathos_logo_emblem.png"
 
 [display]
