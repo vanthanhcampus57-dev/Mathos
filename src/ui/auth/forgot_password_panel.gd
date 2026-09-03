@@ -3,12 +3,16 @@ extends Control
 
 ## Production Forgot Password Panel Component for Mathos Auth UI.
 ## Provides Email input, password reset request submission,
-## anti-enumeration friendly message presentation, and Navigation back to Login.
+## anti-enumeration friendly message presentation, and Navigation back to Login
+## styled in dark fantasy academic RPG visual direction.
 
 signal forgot_password_submitted(email: String)
 signal login_nav_requested()
 
+const AuthUiThemeClass = preload("res://src/ui/auth/auth_ui_theme.gd")
+
 var _email_input: LineEdit = null
+var _status_container: Control = null
 var _status_label: Label = null
 var _submit_button: Button = null
 var _back_button: Button = null
@@ -44,9 +48,11 @@ func _build_ui_programmatically() -> void:
 	var margin: MarginContainer = MarginContainer.new()
 	margin.name = "MarginContainer"
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 24)
+	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	margin.add_theme_constant_override("margin_left", 28)
 	margin.add_theme_constant_override("margin_top", 24)
-	margin.add_theme_constant_override("margin_right", 24)
+	margin.add_theme_constant_override("margin_right", 28)
 	margin.add_theme_constant_override("margin_bottom", 24)
 	scroll.add_child(margin)
 
@@ -56,56 +62,87 @@ func _build_ui_programmatically() -> void:
 	vbox.add_theme_constant_override("separation", 12)
 	margin.add_child(vbox)
 
-	# Title
-	var title: Label = Label.new()
-	title.text = "QUÊN MẬT KHẨU"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 22)
-	title.add_theme_color_override("font_color", Color(1.0, 0.88, 0.4, 1.0))
-	vbox.add_child(title)
+	# 1. Official Logo
+	var logo_rect: TextureRect = TextureRect.new()
+	logo_rect.name = "LogoRect"
+	logo_rect.custom_minimum_size = Vector2(0, 52)
+	logo_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	logo_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	var logo_tex: Texture2D = load("res://assets/branding/mathos_logo_main.png") as Texture2D
+	if logo_tex != null:
+		logo_rect.texture = logo_tex
+	vbox.add_child(logo_rect)
 
+	# 2. Academy Subtitle
 	var subtitle: Label = Label.new()
-	subtitle.text = "Nhập email của bạn để nhận hướng dẫn khôi phục mật khẩu"
+	subtitle.name = "SubtitleLabel"
+	subtitle.text = "CỔNG XÁC THỰC HỌC VIỆN"
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	subtitle.add_theme_font_size_override("font_size", 13)
-	subtitle.add_theme_color_override("font_color", Color(0.8, 0.85, 0.9, 0.8))
+	subtitle.add_theme_font_size_override("font_size", 16)
+	subtitle.add_theme_color_override("font_color", AuthUiThemeClass.COLOR_GOLD_PRIMARY)
 	vbox.add_child(subtitle)
 
-	# Email Input
+	var secondary_lbl: Label = Label.new()
+	secondary_lbl.name = "SecondaryLabel"
+	secondary_lbl.text = "KHÔI PHỤC MẬT KHẨU TÀI KHOẢN"
+	secondary_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	secondary_lbl.add_theme_font_size_override("font_size", 11)
+	secondary_lbl.add_theme_color_override("font_color", AuthUiThemeClass.COLOR_CYAN_MUTED)
+	vbox.add_child(secondary_lbl)
+
+	# Description
+	var desc_lbl: Label = Label.new()
+	desc_lbl.text = "Nhập email đăng ký của bạn để nhận liên kết khôi phục quyền truy cập vào Học viện."
+	desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc_lbl.add_theme_font_size_override("font_size", 12)
+	desc_lbl.add_theme_color_override("font_color", AuthUiThemeClass.COLOR_TEXT_BODY)
+	vbox.add_child(desc_lbl)
+
+	# 3. Email Input
 	var email_lbl: Label = Label.new()
-	email_lbl.text = "Email đăng ký"
-	email_lbl.add_theme_font_size_override("font_size", 13)
+	email_lbl.text = "EMAIL"
+	email_lbl.add_theme_font_size_override("font_size", 11)
+	email_lbl.add_theme_color_override("font_color", AuthUiThemeClass.COLOR_TEXT_MUTED)
 	vbox.add_child(email_lbl)
 
 	_email_input = LineEdit.new()
 	_email_input.name = "EmailInput"
 	_email_input.placeholder_text = "nhap@email.com"
-	_email_input.custom_minimum_size = Vector2(0, 40)
+	_email_input.custom_minimum_size = Vector2(0, 42)
+	AuthUiThemeClass.style_line_edit(_email_input)
 	vbox.add_child(_email_input)
 
-	# Status / Success Message Label
+	# 4. Reserved Status / Message Container (Prevents vertical jumping)
+	_status_container = Control.new()
+	_status_container.name = "StatusContainer"
+	_status_container.custom_minimum_size = Vector2(0, 48)
+	vbox.add_child(_status_container)
+
 	_status_label = Label.new()
 	_status_label.name = "StatusLabel"
-	_status_label.visible = false
+	_status_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_status_label.add_theme_font_size_override("font_size", 13)
-	vbox.add_child(_status_label)
+	_status_label.add_theme_font_size_override("font_size", 12)
+	_status_label.visible = false
+	_status_container.add_child(_status_label)
 
-	# Submit Button
+	# 5. Submit Button
 	_submit_button = Button.new()
 	_submit_button.name = "SubmitButton"
-	_submit_button.text = "Gửi Yêu Cầu Khôi Phục"
+	_submit_button.text = "GỬI LIÊN KẾT KHÔI PHỤC"
 	_submit_button.custom_minimum_size = Vector2(0, 44)
+	AuthUiThemeClass.style_primary_button(_submit_button)
 	vbox.add_child(_submit_button)
 
-	# Back Button
+	# 6. Back Button
 	_back_button = Button.new()
 	_back_button.name = "BackButton"
-	_back_button.text = "Quay lại Đăng nhập"
-	_back_button.flat = true
-	_back_button.add_theme_color_override("font_color", Color(0.8, 0.9, 1.0, 0.9))
-	_back_button.add_theme_font_size_override("font_size", 13)
+	_back_button.text = "QUAY LẠI ĐĂNG NHẬP"
+	_back_button.custom_minimum_size = Vector2(0, 36)
+	AuthUiThemeClass.style_text_button(_back_button, true)
 	vbox.add_child(_back_button)
 
 func set_pending(pending: bool) -> void:
@@ -118,19 +155,19 @@ func set_pending(pending: bool) -> void:
 	if pending:
 		_submit_button.text = "Đang gửi yêu cầu..."
 	else:
-		_submit_button.text = "Gửi Yêu Cầu Khôi Phục"
+		_submit_button.text = "GỬI LIÊN KẾT KHÔI PHỤC"
 
 func show_error(msg: String) -> void:
 	_ensure_nodes()
 	_status_label.text = msg
-	_status_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35, 1.0))
+	_status_label.add_theme_color_override("font_color", AuthUiThemeClass.COLOR_ERROR_TEXT)
 	_status_label.visible = not msg.is_empty()
 
 func show_success_anti_enumeration(msg: String = "") -> void:
 	_ensure_nodes()
 	var final_msg: String = msg if not msg.is_empty() else "Nếu email này tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi đến hòm thư của bạn."
 	_status_label.text = final_msg
-	_status_label.add_theme_color_override("font_color", Color(0.4, 0.9, 0.5, 1.0))
+	_status_label.add_theme_color_override("font_color", AuthUiThemeClass.COLOR_SUCCESS_TEXT)
 	_status_label.visible = true
 
 func clear_form() -> void:
@@ -138,22 +175,14 @@ func clear_form() -> void:
 	if _email_input != null: _email_input.text = ""
 	_status_label.visible = false
 
-func get_email() -> String:
-	_ensure_nodes()
-	return _email_input.text.strip_edges() if _email_input != null else ""
-
-func set_email(email: String) -> void:
-	_ensure_nodes()
-	if _email_input != null:
-		_email_input.text = email
-
 func _on_text_submitted(_new_text: String) -> void:
 	if not _is_pending:
 		_on_submit_pressed()
 
 func _on_submit_pressed() -> void:
-	_status_label.visible = false
-	var email: String = get_email()
+	_ensure_nodes()
+	show_error("")
+	var email: String = _email_input.text.strip_edges()
 	if email.is_empty():
 		show_error("Vui lòng nhập địa chỉ Email.")
 		return
@@ -161,5 +190,6 @@ func _on_submit_pressed() -> void:
 	forgot_password_submitted.emit(email)
 
 func _on_back_pressed() -> void:
-	_status_label.visible = false
+	_ensure_nodes()
+	show_error("")
 	login_nav_requested.emit()

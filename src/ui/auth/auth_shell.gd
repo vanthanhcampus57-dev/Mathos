@@ -21,12 +21,16 @@ const LoginPanelClass = preload("res://src/ui/auth/login_panel.gd")
 const SignUpPanelClass = preload("res://src/ui/auth/sign_up_panel.gd")
 const ForgotPasswordPanelClass = preload("res://src/ui/auth/forgot_password_panel.gd")
 
+const AuthUiThemeClass = preload("res://src/ui/auth/auth_ui_theme.gd")
+
 # Nodes
 var _bg: Control = null
 var _form_container: PanelContainer = null
 var _login_panel: Control = null
 var _signup_panel: Control = null
 var _forgot_panel: Control = null
+var _dev_inspector: PanelContainer = null
+var _dev_inspector_enabled: bool = false
 
 # Auth API Client Instance
 var _auth_client: RefCounted = null
@@ -44,13 +48,21 @@ func set_auth_client(client: RefCounted) -> void:
 func get_auth_client() -> RefCounted:
 	return _auth_client
 
+func set_dev_inspector_visible(enable: bool) -> void:
+	_dev_inspector_enabled = enable
+	if _dev_inspector != null:
+		_dev_inspector.visible = enable
+
+func is_dev_inspector_visible() -> bool:
+	return _dev_inspector != null and _dev_inspector.visible
+
 func _ensure_nodes() -> void:
 	if _bg != null:
 		return
 
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
-	# 1. Background Component
+	# 1. Background Component (Production asset with parallax/particles)
 	_bg = AuthLoginBgClass.new()
 	_bg.name = "AuthLoginBackground"
 	add_child(_bg)
@@ -64,35 +76,22 @@ func _ensure_nodes() -> void:
 
 	_form_container = PanelContainer.new()
 	_form_container.name = "FormSafeContainer"
-	_form_container.custom_minimum_size = Vector2(420, 520)
+	_form_container.custom_minimum_size = Vector2(400, 520)
 	_form_container.size_flags_horizontal = Control.SIZE_SHRINK_END
 	_form_container.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
-	# Position in right 45% safe zone
-	_form_container.anchor_left = 0.52
-	_form_container.anchor_top = 0.08
-	_form_container.anchor_right = 0.94
-	_form_container.anchor_bottom = 0.92
+	# Position in right safe zone (x in [0.56, 0.96]), leaving academy focal art visible on left/center
+	_form_container.anchor_left = 0.56
+	_form_container.anchor_top = 0.05
+	_form_container.anchor_right = 0.96
+	_form_container.anchor_bottom = 0.95
 	_form_container.offset_left = 0
 	_form_container.offset_top = 0
 	_form_container.offset_right = 0
 	_form_container.offset_bottom = 0
 
-	# Dark Translucent Panel Styling
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Color(0.06, 0.09, 0.14, 0.90)
-	style.border_width_left = 1
-	style.border_width_top = 1
-	style.border_width_right = 1
-	style.border_width_bottom = 1
-	style.border_color = Color(0.2, 0.5, 0.8, 0.4)
-	style.corner_radius_top_left = 16
-	style.corner_radius_top_right = 16
-	style.corner_radius_bottom_right = 16
-	style.corner_radius_bottom_left = 16
-	style.shadow_color = Color(0.0, 0.0, 0.0, 0.5)
-	style.shadow_size = 12
-	_form_container.add_theme_stylebox_override("panel", style)
+	# Dark Navy Translucent Panel with Arcane Border & Subtle Glow
+	_form_container.add_theme_stylebox_override("panel", AuthUiThemeClass.create_auth_panel_stylebox())
 	overlay.add_child(_form_container)
 
 	# 3. Instantiate Panels
@@ -111,8 +110,112 @@ func _ensure_nodes() -> void:
 	_forgot_panel._ensure_nodes()
 	_form_container.add_child(_forgot_panel)
 
+	# 4. Dev State Inspector (Strictly hidden by default in production)
+	_build_dev_inspector(overlay)
+
 	_connect_panel_signals()
 	show_panel(PanelType.LOGIN)
+
+func _build_dev_inspector(parent: Control) -> void:
+	if _dev_inspector != null:
+		return
+
+	_dev_inspector = PanelContainer.new()
+	_dev_inspector.name = "DevStateInspector"
+	_dev_inspector.custom_minimum_size = Vector2(260, 220)
+	_dev_inspector.anchor_left = 0.02
+	_dev_inspector.anchor_top = 0.04
+	_dev_inspector.anchor_right = 0.26
+	_dev_inspector.anchor_bottom = 0.42
+	_dev_inspector.offset_left = 0
+	_dev_inspector.offset_top = 0
+	_dev_inspector.offset_right = 0
+	_dev_inspector.offset_bottom = 0
+
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.06, 0.09, 0.88)
+	style.border_width_left = 1
+	style.border_width_top = 1
+	style.border_width_right = 1
+	style.border_width_bottom = 1
+	style.border_color = Color(0.3, 0.5, 0.7, 0.5)
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_right = 8
+	style.corner_radius_bottom_left = 8
+	_dev_inspector.add_theme_stylebox_override("panel", style)
+
+	var margin: MarginContainer = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	_dev_inspector.add_child(margin)
+
+	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	margin.add_child(vbox)
+
+	var title: Label = Label.new()
+	title.name = "InspectorTitle"
+	title.text = "GODOT STATE INSPECTOR: PRODUCTION AUTH CONTROLLER"
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.add_theme_font_size_override("font_size", 10)
+	title.add_theme_color_override("font_color", Color(0.3, 0.8, 1.0, 1.0))
+	vbox.add_child(title)
+
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 4)
+	vbox.add_child(grid)
+
+	var btn_names: Array[String] = [
+		"Default", "Email Focus",
+		"Pass Focus", "Bad Creds",
+		"Validation", "Network Err",
+		"Loading UI"
+	]
+
+	for b_name in btn_names:
+		var btn: Button = Button.new()
+		btn.name = "Btn_" + b_name.replace(" ", "")
+		btn.text = b_name
+		btn.add_theme_font_size_override("font_size", 10)
+		btn.pressed.connect(_on_dev_inspector_button_pressed.bind(b_name))
+		grid.add_child(btn)
+
+	parent.add_child(_dev_inspector)
+
+	# Production requirement: Gated behind dev flag or test harness toggle.
+	var cmdline: PackedStringArray = OS.get_cmdline_args()
+	var flag_enabled: bool = cmdline.has("--auth-dev-inspector") or cmdline.has("--dev")
+	_dev_inspector.visible = flag_enabled or _dev_inspector_enabled
+
+func _on_dev_inspector_button_pressed(action: String) -> void:
+	match action:
+		"Default":
+			if _login_panel != null:
+				_login_panel.clear_form()
+				_login_panel.set_pending(false)
+		"Email Focus":
+			if _login_panel != null and _login_panel._email_input != null:
+				_login_panel._email_input.grab_focus()
+		"Pass Focus":
+			if _login_panel != null and _login_panel._password_input != null:
+				_login_panel._password_input.grab_focus()
+		"Bad Creds":
+			if _login_panel != null:
+				_login_panel.show_error("Email hoặc mật khẩu không chính xác.")
+		"Validation":
+			if _login_panel != null:
+				_login_panel.show_error("Vui lòng nhập địa chỉ Email.")
+		"Network Err":
+			if _login_panel != null:
+				_login_panel.show_error("Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.")
+		"Loading UI":
+			if _login_panel != null:
+				_login_panel.set_pending(not _login_panel._is_pending)
 
 func _connect_panel_signals() -> void:
 	# Login Signals

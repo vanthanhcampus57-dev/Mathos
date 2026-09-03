@@ -1,6 +1,6 @@
 extends SceneTree
 
-## Unit & Integration Test Suite for Production Mathos Auth UI (AUTH-UI-001..016)
+## Unit & Integration Test Suite for Production Mathos Auth UI (AUTH-UI-001..021)
 
 const AuthShellClass = preload("res://src/ui/auth/auth_shell.gd")
 const LoginPanelClass = preload("res://src/ui/auth/login_panel.gd")
@@ -10,7 +10,7 @@ const AuthApiClientClass = preload("res://src/core/auth/auth_api_client.gd")
 const AuthResultClass = preload("res://src/core/auth/auth_result.gd")
 
 func _initialize() -> void:
-	print("--- RUNNING MATHOS PRODUCTION AUTH UI QA HARNESS (AUTH-UI-001..016) ---")
+	print("--- RUNNING MATHOS PRODUCTION AUTH UI QA HARNESS (AUTH-UI-001..021) ---")
 	var ok: bool = run_all_tests()
 	if ok:
 		print("MATHOS PRODUCTION AUTH UI QA HARNESS: PASS!")
@@ -276,6 +276,78 @@ static func run_all_tests() -> bool:
 		"AuthShell is fully prepared to become post-splash route target!",
 		"Boot routing preparation check failed!")
 	shell.free()
+
+	# TEST 017: Show/Hide Password Toggle
+	login = LoginPanelClass.new()
+	login._ready()
+	var initial_secret: bool = login._password_input.secret
+	var initial_icon: String = login._password_toggle_button.text
+	login._password_toggle_button.emit_signal("pressed")
+	var toggled_secret: bool = login._password_input.secret
+	var toggled_icon: String = login._password_toggle_button.text
+	login._password_toggle_button.emit_signal("pressed")
+	var restored_secret: bool = login._password_input.secret
+	var ok017: bool = initial_secret and (not toggled_secret) and restored_secret and (initial_icon != toggled_icon)
+	_assert.call(ok017,
+		"AUTH-UI-017",
+		"Password visibility toggle accurately toggles secret mode and eye/lock icon!",
+		"Password visibility toggle failed!")
+	login.free()
+
+	# TEST 018: Reserved Error Container Height & Stability
+	login = LoginPanelClass.new()
+	login._ready()
+	var has_err_container: bool = (login._error_container != null)
+	var min_h_ok: bool = has_err_container and login._error_container.custom_minimum_size.y >= 30
+	var label_hidden_initially: bool = not login._error_label.visible
+	login.show_error("Test Error Notification")
+	var label_shown: bool = login._error_label.visible
+	login.show_error("")
+	var label_hidden_again: bool = not login._error_label.visible
+	_assert.call(min_h_ok and label_hidden_initially and label_shown and label_hidden_again,
+		"AUTH-UI-018",
+		"Reserved error container maintains vertical stability preventing panel jumping!",
+		"Reserved error container validation failed!")
+	login.free()
+
+	# TEST 019: Dev State Inspector Production Gating
+	shell = AuthShellClass.new()
+	shell._ready()
+	var inspector_exists: bool = (shell._dev_inspector != null)
+	var inspector_hidden_by_default: bool = (not shell.is_dev_inspector_visible())
+	shell.set_dev_inspector_visible(true)
+	var inspector_visible_when_enabled: bool = shell.is_dev_inspector_visible()
+	shell.set_dev_inspector_visible(false)
+	var inspector_hidden_again: bool = (not shell.is_dev_inspector_visible())
+	_assert.call(inspector_exists and inspector_hidden_by_default and inspector_visible_when_enabled and inspector_hidden_again,
+		"AUTH-UI-019",
+		"Dev State Inspector is strictly gated and hidden by default in production builds!",
+		"Dev State Inspector production gating check failed!")
+	shell.free()
+
+	# TEST 020: Safe Area Right Container Positioning & Theme
+	shell = AuthShellClass.new()
+	shell._ready()
+	var form_ok: bool = (shell._form_container != null)
+	var anchor_safe: bool = form_ok and shell._form_container.anchor_left >= 0.55 and shell._form_container.anchor_right <= 0.98
+	var style_theme_ok: bool = form_ok and shell._form_container.has_theme_stylebox_override("panel")
+	_assert.call(anchor_safe and style_theme_ok,
+		"AUTH-UI-020",
+		"FormSafeContainer is anchored in right safe area leaving left academy art visible!",
+		"FormSafeContainer safe area anchoring check failed!")
+	shell.free()
+
+	# TEST 021: Official Mathos Academy Branding / Logo
+	login = LoginPanelClass.new()
+	login._ready()
+	var logo_rect: TextureRect = login.find_child("LogoRect", true, false) as TextureRect
+	var has_logo: bool = (logo_rect != null and logo_rect.texture != null)
+	var texture_path_ok: bool = has_logo and logo_rect.texture.resource_path.contains("mathos_logo_main")
+	_assert.call(texture_path_ok,
+		"AUTH-UI-021",
+		"Official Mathos academy logo loaded and presented at top of auth panel!",
+		"Official Mathos academy logo check failed!")
+	login.free()
 
 	print("==========================================")
 	print("MATHOS PRODUCTION AUTH UI QA HARNESS SUMMARY:")
