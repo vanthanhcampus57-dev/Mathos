@@ -159,6 +159,7 @@ func get_current_panel() -> PanelType:
 
 # --- API HANDLERS ---
 func _on_login_submitted(email: String, pass_str: String) -> void:
+	_ensure_nodes()
 	_login_panel.set_pending(true)
 	var result = await _auth_client.login(email, pass_str)
 	_login_panel.set_pending(false)
@@ -171,6 +172,7 @@ func _on_login_submitted(email: String, pass_str: String) -> void:
 		_login_panel.show_error(err_msg)
 
 func _on_signup_submitted(dname: String, email: String, pass_str: String) -> void:
+	_ensure_nodes()
 	_signup_panel.set_pending(true)
 	var result = await _auth_client.register_account(dname, email, pass_str)
 	_signup_panel.set_pending(false)
@@ -186,6 +188,7 @@ func _on_signup_submitted(dname: String, email: String, pass_str: String) -> voi
 		_signup_panel.show_error(err_msg)
 
 func _on_forgot_password_submitted(email: String) -> void:
+	_ensure_nodes()
 	_forgot_panel.set_pending(true)
 	var result = await _auth_client.forgot_password(email)
 	_forgot_panel.set_pending(false)

@@ -24,6 +24,8 @@ var _first_attempt_results: Dictionary = {} # question_id (String) -> is_correct
 var _current_question_id: String = ""
 
 const QaAnswerRevealOverlayClass = preload("res://src/ui/qa/qa_answer_reveal_overlay.gd")
+const AuthShellClass = preload("res://src/ui/auth/auth_shell.gd")
+const AuthApiClientClass = preload("res://src/core/auth/auth_api_client.gd")
 
 # UI Presentation
 var _presentation_shell: Control = null
@@ -31,6 +33,8 @@ var _bootstrap_ui: Control = null
 var _qa_overlay: Control = null
 var _visual_lab_instance: Control = null
 var _boot_sequence_instance: Control = null
+var _auth_shell_instance: Control = null
+var _auth_client: RefCounted = null
 
 func _ready() -> void:
 	_bootstrap_ui = get_node_or_null("BootstrapUI") as Control
@@ -107,6 +111,10 @@ func start_new_game() -> Dictionary:
 			_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
 		if _bootstrap_ui != null:
 			_bootstrap_ui.visible = false
+		_presentation_shell.visible = true
+
+	if _auth_shell_instance != null:
+		_auth_shell_instance.visible = false
 
 	return {
 		"success": true,
@@ -154,6 +162,10 @@ func continue_game() -> Dictionary:
 			_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
 		if _bootstrap_ui != null:
 			_bootstrap_ui.visible = false
+		_presentation_shell.visible = true
+
+	if _auth_shell_instance != null:
+		_auth_shell_instance.visible = false
 
 	return {
 		"success": true,
@@ -191,6 +203,10 @@ func select_stage(stage_id: String) -> Dictionary:
 			_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
 		if _bootstrap_ui != null:
 			_bootstrap_ui.visible = false
+		_presentation_shell.visible = true
+
+	if _auth_shell_instance != null:
+		_auth_shell_instance.visible = false
 
 	return {
 		"success": true,
@@ -228,8 +244,12 @@ func show_stage_map() -> void:
 ## Safely returns to Main Menu
 func return_to_main_menu() -> void:
 	refresh_continue_availability()
-	if _presentation_shell != null and _presentation_shell.has_method("set_view_mode"):
-		_presentation_shell.call("set_view_mode", 0) # MODE_ENTRY
+	if _presentation_shell != null:
+		_presentation_shell.visible = true
+		if _presentation_shell.has_method("set_view_mode"):
+			_presentation_shell.call("set_view_mode", 0) # MODE_ENTRY
+	if _auth_shell_instance != null:
+		_auth_shell_instance.visible = false
 
 # Service Accessors
 func get_catalog() -> ValidatedCatalog:
@@ -300,7 +320,14 @@ func _is_skip_splash_mode() -> bool:
 	return false
 
 func _setup_boot_sequence() -> void:
+	if _is_visual_lab_mode():
+		return
+
 	if _boot_sequence_instance != null or _is_skip_splash_mode():
+		if _auth_shell_instance != null:
+			_auth_shell_instance.visible = true
+			if _auth_shell_instance.has_method("show_login"):
+				_auth_shell_instance.call("show_login")
 		return
 
 	var boot_scene: Resource = load("res://src/ui/boot/boot_sequence.tscn")
@@ -313,11 +340,107 @@ func _setup_boot_sequence() -> void:
 			_boot_sequence_instance = (boot_script as GDScript).new() as Control
 			add_child(_boot_sequence_instance)
 
-	if _boot_sequence_instance != null and _boot_sequence_instance.has_method("start_boot_sequence"):
-		_boot_sequence_instance.call("start_boot_sequence")
+	if _boot_sequence_instance != null:
+		if _boot_sequence_instance.has_signal("boot_completed") and not _boot_sequence_instance.is_connected("boot_completed", _on_boot_sequence_completed):
+			_boot_sequence_instance.connect("boot_completed", _on_boot_sequence_completed)
+		if _boot_sequence_instance.has_method("start_boot_sequence"):
+			_boot_sequence_instance.call("start_boot_sequence")
 
 func get_boot_sequence() -> Control:
 	return _boot_sequence_instance
+
+func _setup_auth_shell() -> void:
+	if _is_visual_lab_mode():
+		return
+
+	if _auth_shell_instance == null:
+		_auth_shell_instance = get_node_or_null("AuthShell") as Control
+
+	if _auth_shell_instance == null:
+		var auth_shell_scene: Resource = load("res://src/ui/auth/auth_shell.tscn")
+		if auth_shell_scene is PackedScene:
+			_auth_shell_instance = (auth_shell_scene as PackedScene).instantiate() as Control
+			add_child(_auth_shell_instance)
+		else:
+			var auth_script: Resource = load("res://src/ui/auth/auth_shell.gd")
+			if auth_script is GDScript:
+				_auth_shell_instance = (auth_script as GDScript).new() as Control
+				add_child(_auth_shell_instance)
+
+	if _auth_shell_instance != null:
+		if _auth_client == null:
+			_auth_client = AuthApiClientClass.new()
+		if _auth_shell_instance.has_method("set_auth_client"):
+			_auth_shell_instance.call("set_auth_client", _auth_client)
+
+		if _auth_shell_instance.has_signal("auth_completed") and not _auth_shell_instance.is_connected("auth_completed", _on_auth_completed):
+			_auth_shell_instance.connect("auth_completed", _on_auth_completed)
+		if _auth_shell_instance.has_signal("guest_entered") and not _auth_shell_instance.is_connected("guest_entered", _on_guest_entered):
+			_auth_shell_instance.connect("guest_entered", _on_guest_entered)
+
+		if _boot_sequence_instance != null and _boot_sequence_instance.is_running():
+			_auth_shell_instance.visible = false
+		else:
+			_auth_shell_instance.visible = true
+			if _auth_shell_instance.has_method("show_login"):
+				_auth_shell_instance.call("show_login")
+
+func _on_boot_sequence_completed() -> void:
+	if _auth_shell_instance != null:
+		_auth_shell_instance.visible = true
+		if _auth_shell_instance.has_method("show_login"):
+			_auth_shell_instance.call("show_login")
+
+func _on_auth_completed(_result: RefCounted) -> void:
+	if _auth_shell_instance != null:
+		_auth_shell_instance.visible = false
+	if _presentation_shell != null:
+		_presentation_shell.visible = true
+		if _presentation_shell.has_method("set_view_mode"):
+			_presentation_shell.call("set_view_mode", 0) # MODE_ENTRY
+	refresh_continue_availability()
+
+func _on_guest_entered() -> void:
+	if _auth_shell_instance != null:
+		_auth_shell_instance.visible = false
+	if _presentation_shell != null:
+		_presentation_shell.visible = true
+		if _presentation_shell.has_method("set_view_mode"):
+			_presentation_shell.call("set_view_mode", 0) # MODE_ENTRY
+	refresh_continue_availability()
+
+func logout() -> void:
+	if _auth_client != null and _auth_client.has_method("logout"):
+		_auth_client.logout()
+	elif _auth_shell_instance != null and _auth_shell_instance.has_method("get_auth_client"):
+		var ac = _auth_shell_instance.get_auth_client()
+		if ac != null and ac.has_method("logout"):
+			ac.logout()
+
+	if _presentation_shell != null:
+		_presentation_shell.visible = false
+		if _presentation_shell.has_method("set_view_mode"):
+			_presentation_shell.call("set_view_mode", 0)
+
+	if _auth_shell_instance != null:
+		_auth_shell_instance.visible = true
+		if _auth_shell_instance.has_method("show_login"):
+			_auth_shell_instance.call("show_login")
+
+func get_auth_shell() -> Control:
+	return _auth_shell_instance
+
+func get_auth_client() -> RefCounted:
+	if _auth_client != null:
+		return _auth_client
+	if _auth_shell_instance != null and _auth_shell_instance.has_method("get_auth_client"):
+		return _auth_shell_instance.get_auth_client()
+	return null
+
+func set_auth_client(client: RefCounted) -> void:
+	_auth_client = client
+	if _auth_shell_instance != null and _auth_shell_instance.has_method("set_auth_client"):
+		_auth_shell_instance.set_auth_client(client)
 
 func _setup_presentation_shell() -> void:
 	if _is_visual_lab_mode():
@@ -360,8 +483,10 @@ func _setup_presentation_shell() -> void:
 			_presentation_shell.connect("stage_continue_requested", _on_stage_continue_requested)
 		if _bootstrap_ui != null:
 			_bootstrap_ui.visible = false
+		_presentation_shell.visible = false
 
 	_setup_boot_sequence()
+	_setup_auth_shell()
 
 func refresh_continue_availability() -> void:
 	var has_save: bool = false
