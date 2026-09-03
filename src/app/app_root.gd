@@ -35,6 +35,7 @@ var _visual_lab_instance: Control = null
 var _boot_sequence_instance: Control = null
 var _auth_shell_instance: Control = null
 var _auth_client: RefCounted = null
+var _is_guest: bool = false
 
 func _ready() -> void:
 	_bootstrap_ui = get_node_or_null("BootstrapUI") as Control
@@ -392,6 +393,9 @@ func _on_boot_sequence_completed() -> void:
 			_auth_shell_instance.call("show_login")
 
 func _on_auth_completed(_result: RefCounted) -> void:
+	_is_guest = false
+	if _presentation_shell != null and _presentation_shell.has_method("set_guest_mode"):
+		_presentation_shell.call("set_guest_mode", false)
 	if _auth_shell_instance != null:
 		_auth_shell_instance.visible = false
 	if _presentation_shell != null:
@@ -401,6 +405,9 @@ func _on_auth_completed(_result: RefCounted) -> void:
 	refresh_continue_availability()
 
 func _on_guest_entered() -> void:
+	_is_guest = true
+	if _presentation_shell != null and _presentation_shell.has_method("set_guest_mode"):
+		_presentation_shell.call("set_guest_mode", true)
 	if _auth_shell_instance != null:
 		_auth_shell_instance.visible = false
 	if _presentation_shell != null:
@@ -410,12 +417,14 @@ func _on_guest_entered() -> void:
 	refresh_continue_availability()
 
 func logout() -> void:
-	if _auth_client != null and _auth_client.has_method("logout"):
-		_auth_client.logout()
-	elif _auth_shell_instance != null and _auth_shell_instance.has_method("get_auth_client"):
-		var ac = _auth_shell_instance.get_auth_client()
-		if ac != null and ac.has_method("logout"):
-			ac.logout()
+	if not _is_guest:
+		if _auth_client != null and _auth_client.has_method("logout"):
+			_auth_client.logout()
+		elif _auth_shell_instance != null and _auth_shell_instance.has_method("get_auth_client"):
+			var ac = _auth_shell_instance.get_auth_client()
+			if ac != null and ac.has_method("logout"):
+				ac.logout()
+	_is_guest = false
 
 	if _presentation_shell != null:
 		_presentation_shell.visible = false
@@ -426,6 +435,14 @@ func logout() -> void:
 		_auth_shell_instance.visible = true
 		if _auth_shell_instance.has_method("show_login"):
 			_auth_shell_instance.call("show_login")
+
+func is_guest_mode() -> bool:
+	return _is_guest
+
+func set_guest_mode(guest: bool) -> void:
+	_is_guest = guest
+	if _presentation_shell != null and _presentation_shell.has_method("set_guest_mode"):
+		_presentation_shell.call("set_guest_mode", guest)
 
 func get_auth_shell() -> Control:
 	return _auth_shell_instance
@@ -481,6 +498,8 @@ func _setup_presentation_shell() -> void:
 			_presentation_shell.connect("feedback_host_ready", _on_feedback_host_ready)
 		if _presentation_shell.has_signal("stage_continue_requested") and not _presentation_shell.is_connected("stage_continue_requested", _on_stage_continue_requested):
 			_presentation_shell.connect("stage_continue_requested", _on_stage_continue_requested)
+		if _presentation_shell.has_signal("logout_requested") and not _presentation_shell.is_connected("logout_requested", logout):
+			_presentation_shell.connect("logout_requested", logout)
 		if _bootstrap_ui != null:
 			_bootstrap_ui.visible = false
 		_presentation_shell.visible = false

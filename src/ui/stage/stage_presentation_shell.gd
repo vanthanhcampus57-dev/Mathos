@@ -27,6 +27,7 @@ signal stage_continue_requested()
 signal stage_selected(stage_id: String)
 signal pause_requested()
 signal resume_requested()
+signal logout_requested()
 
 var _current_mode: ViewMode = ViewMode.MODE_ENTRY
 var _previous_mode: ViewMode = ViewMode.MODE_LESSON
@@ -174,6 +175,8 @@ func _ensure_sub_components() -> void:
 			_pause_overlay.stage_map_requested.connect(_on_pause_map)
 		if not _pause_overlay.main_menu_requested.is_connected(_on_pause_main_menu):
 			_pause_overlay.main_menu_requested.connect(_on_pause_main_menu)
+		if not _pause_overlay.logout_requested.is_connected(_on_pause_logout):
+			_pause_overlay.logout_requested.connect(_on_pause_logout)
 
 	# Journey Map Button in Start Container
 	if _journey_map_button == null:
@@ -688,6 +691,14 @@ func _on_pause_main_menu() -> void:
 	hide_pause()
 	set_view_mode(ViewMode.MODE_ENTRY)
 	return_to_main_menu_requested.emit()
+
+func _on_pause_logout() -> void:
+	hide_pause()
+	logout_requested.emit()
+
+func set_guest_mode(guest: bool) -> void:
+	if _pause_overlay != null and _pause_overlay.has_method("set_guest_mode"):
+		_pause_overlay.set_guest_mode(guest)
 
 func _get_main_content_vbox() -> VBoxContainer:
 	return get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox") as VBoxContainer

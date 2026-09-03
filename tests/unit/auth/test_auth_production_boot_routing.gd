@@ -15,15 +15,22 @@ extends SceneTree
 ## 10. --visual-lab bypass preserved.
 ## 11. Splash sequence timings locked and preserved.
 ## 12. Duplicate signal safety across lifecycle transitions.
+## 13. Player-facing Logout button exists in PauseMenuOverlay with correct style/text.
+## 14. Guest vs authenticated label switching in PauseMenuOverlay ("THOÁT VỀ ĐĂNG NHẬP" vs "ĐĂNG XUẤT").
+## 15. Clicking logout shows confirmation modal without immediate exit.
+## 16. Cancelling confirmation preserves pause state without logout.
+## 17. Confirming logout invokes AppRoot.logout(), clears session, and returns to Login.
+## 18. Guest exit without backend call and relogin cycle verified cleanly.
 
 const AppRootClass = preload("res://src/app/app_root.gd")
 const AuthShellClass = preload("res://src/ui/auth/auth_shell.gd")
 const BootSequenceClass = preload("res://src/ui/boot/boot_sequence.gd")
 const AuthApiClientClass = preload("res://src/core/auth/auth_api_client.gd")
 const AuthResultClass = preload("res://src/core/auth/auth_result.gd")
+const PauseMenuOverlayClass = preload("res://src/ui/common/pause_menu_overlay.gd")
 
 func _initialize() -> void:
-	print("--- RUNNING MATHOS PRODUCTION AUTH BOOT ROUTING QA HARNESS (AUTH-BOOT-001..012) ---")
+	print("--- RUNNING MATHOS PRODUCTION AUTH BOOT ROUTING QA HARNESS (AUTH-BOOT-001..018) ---")
 	var ok: bool = await run_all_tests(self)
 	if ok:
 		print("MATHOS PRODUCTION AUTH BOOT ROUTING QA HARNESS: PASS!")
@@ -47,9 +54,15 @@ static func run_all_tests(tree: SceneTree = null) -> bool:
 	if test_auth_boot_010_visual_lab_bypass_preserved(): passes += 1
 	if test_auth_boot_011_splash_timing_lock(): passes += 1
 	if await test_auth_boot_012_duplicate_signal_safety(tree): passes += 1
+	if test_auth_boot_013_pause_logout_button_exists(tree): passes += 1
+	if test_auth_boot_014_guest_mode_label_switching(tree): passes += 1
+	if test_auth_boot_015_logout_shows_confirmation_dialog(tree): passes += 1
+	if test_auth_boot_016_logout_cancel_confirmation(tree): passes += 1
+	if test_auth_boot_017_logout_confirm_invokes_approot_logout(tree): passes += 1
+	if test_auth_boot_018_guest_exit_and_relogin_cycle(tree): passes += 1
 
-	print("[AUTH-BOOT-HARNESS] %d / 12 test scenarios passed" % passes)
-	return passes == 12
+	print("[AUTH-BOOT-HARNESS] %d / 18 test scenarios passed" % passes)
+	return passes == 18
 
 static func _instantiate_test_app(tree: SceneTree = null) -> Node:
 	var scene: PackedScene = load("res://src/app/app_root.tscn") as PackedScene
@@ -439,4 +452,219 @@ static func test_auth_boot_012_duplicate_signal_safety(tree: SceneTree = null) -
 		return true
 	else:
 		print("[AUTH-BOOT-012] FAIL: Duplicate signal connections detected: %d" % auth_conns)
+		return false
+
+# 13. Logout button exists in pause UI
+static func test_auth_boot_013_pause_logout_button_exists(tree: SceneTree = null) -> bool:
+	print("[AUTH-BOOT-013] Testing player-facing Logout button exists in PauseMenuOverlay...")
+	var overlay = PauseMenuOverlayClass.new()
+	overlay._ready()
+
+	var logout_btn: Button = overlay.get_logout_button()
+	var exists: bool = (logout_btn != null)
+	var text_ok: bool = (logout_btn != null and logout_btn.text == "ĐĂNG XUẤT")
+	var variation_ok: bool = (logout_btn != null and logout_btn.theme_type_variation == &"MathosDestructiveButton")
+	var not_confirming: bool = (not overlay.is_confirmation_visible())
+
+	overlay.free()
+
+	if exists and text_ok and variation_ok and not_confirming:
+		print("[AUTH-BOOT-013] PASS: Player-facing Logout button exists in PauseMenuOverlay with correct style and text!")
+		return true
+	else:
+		print("[AUTH-BOOT-013] FAIL: Logout button check failed (exists=%s, text=%s, var=%s)" % [str(exists), str(text_ok), str(variation_ok)])
+		return false
+
+# 14. Guest mode label switching
+static func test_auth_boot_014_guest_mode_label_switching(tree: SceneTree = null) -> bool:
+	print("[AUTH-BOOT-014] Testing guest vs authenticated label switching in PauseMenuOverlay...")
+	var app: Node = _instantiate_test_app(tree)
+	if app == null:
+		return false
+
+	var pres_shell = app.call("get_presentation_shell")
+	var pause_overlay = pres_shell.call("get_pause_overlay") as PauseMenuOverlay
+	if pause_overlay == null:
+		_cleanup_node(app)
+		return false
+
+	# Authenticated mode by default
+	app.call("_on_auth_completed", AuthResultClass.ok({}))
+	var is_guest_false: bool = (not app.call("is_guest_mode"))
+	var auth_text: bool = (pause_overlay.get_logout_button() != null and pause_overlay.get_logout_button().text == "ĐĂNG XUẤT")
+
+	# Guest mode
+	app.call("_on_guest_entered")
+	var is_guest_true: bool = bool(app.call("is_guest_mode"))
+	var guest_text: bool = (pause_overlay.get_logout_button() != null and pause_overlay.get_logout_button().text == "THOÁT VỀ ĐĂNG NHẬP")
+
+	_cleanup_node(app)
+
+	if is_guest_false and auth_text and is_guest_true and guest_text:
+		print("[AUTH-BOOT-014] PASS: Guest vs authenticated label switching verified!")
+		return true
+	else:
+		print("[AUTH-BOOT-014] FAIL: Label switching failed (auth_text=%s, guest_text=%s)" % [str(auth_text), str(guest_text)])
+		return false
+
+# 15. Clicking logout displays confirmation dialog
+static func test_auth_boot_015_logout_shows_confirmation_dialog(tree: SceneTree = null) -> bool:
+	print("[AUTH-BOOT-015] Testing clicking Logout shows confirmation dialog without immediate exit...")
+	var overlay = PauseMenuOverlayClass.new()
+	overlay._ready()
+	overlay.show_pause()
+
+	var logout_emitted: Array[bool] = [false]
+	overlay.logout_requested.connect(func(): logout_emitted[0] = true)
+
+	var logout_btn: Button = overlay.get_logout_button()
+	logout_btn.emit_signal("pressed")
+
+	var is_confirming: bool = overlay.is_confirmation_visible()
+	var still_paused: bool = overlay.is_paused()
+	var not_emitted: bool = (not logout_emitted[0])
+
+	overlay.free()
+
+	if is_confirming and still_paused and not_emitted:
+		print("[AUTH-BOOT-015] PASS: Confirmation dialog displayed without premature logout exit!")
+		return true
+	else:
+		print("[AUTH-BOOT-015] FAIL: Confirmation display failed (confirming=%s, paused=%s, not_emitted=%s)" % [str(is_confirming), str(still_paused), str(not_emitted)])
+		return false
+
+# 16. Cancelling confirmation keeps gameplay/pause intact
+static func test_auth_boot_016_logout_cancel_confirmation(tree: SceneTree = null) -> bool:
+	print("[AUTH-BOOT-016] Testing cancelling confirmation keeps pause menu intact...")
+	var overlay = PauseMenuOverlayClass.new()
+	overlay._ready()
+	overlay.show_pause()
+
+	var logout_emitted: Array[bool] = [false]
+	overlay.logout_requested.connect(func(): logout_emitted[0] = true)
+
+	# Click logout to show confirmation
+	overlay.get_logout_button().emit_signal("pressed")
+	var confirm_shown: bool = overlay.is_confirmation_visible()
+
+	# Click cancel ("HỦY")
+	overlay.get_confirm_cancel_button().emit_signal("pressed")
+	var confirm_hidden: bool = (not overlay.is_confirmation_visible())
+	var still_paused: bool = overlay.is_paused()
+	var not_emitted: bool = (not logout_emitted[0])
+
+	overlay.free()
+
+	if confirm_shown and confirm_hidden and still_paused and not_emitted:
+		print("[AUTH-BOOT-016] PASS: Cancel confirmation preserved pause state without emitting logout!")
+		return true
+	else:
+		print("[AUTH-BOOT-016] FAIL: Cancel confirmation failed (shown=%s, hidden=%s, paused=%s)" % [str(confirm_shown), str(confirm_hidden), str(still_paused)])
+		return false
+
+# 17. Confirming logout invokes AppRoot.logout()
+static func test_auth_boot_017_logout_confirm_invokes_approot_logout(tree: SceneTree = null) -> bool:
+	print("[AUTH-BOOT-017] Testing confirming logout triggers AppRoot.logout() and clears session...")
+	var app: Node = _instantiate_test_app(tree)
+	if app == null:
+		return false
+
+	var pres_shell = app.call("get_presentation_shell")
+	var auth_shell = app.call("get_auth_shell")
+	var client: RefCounted = app.call("get_auth_client") as RefCounted
+	var session = client.get_session()
+
+	# Mock logout endpoint
+	var transport = client.get("_transport")
+	transport.mock_handler = func(_url, _method, _headers, _body, _timeout = 10.0):
+		return {"status_code": 200, "body": JSON.stringify({"message": "Logged out"}), "headers": []}
+
+	# Login and enter gameplay
+	session.update_from_dict({
+		"access_token": "token_to_clear_777",
+		"refresh_token": "refresh_to_clear_888",
+		"user_id": "usr_999",
+		"email": "hero@mathos.dev"
+	})
+	app.call("_on_auth_completed", AuthResultClass.ok({}))
+
+	# Open pause overlay and click logout then confirm
+	pres_shell.call("show_pause")
+	var pause_overlay = pres_shell.call("get_pause_overlay") as PauseMenuOverlay
+	pause_overlay.get_logout_button().emit_signal("pressed")
+	pause_overlay.get_confirm_accept_button().emit_signal("pressed")
+
+	var pres_hidden: bool = (not pres_shell.visible)
+	var auth_visible: bool = (auth_shell.visible)
+	var is_login: bool = (auth_shell.call("get_current_panel") == AuthShellClass.PanelType.LOGIN)
+	var session_cleared: bool = (not session.is_active())
+	var pause_hidden: bool = (not pause_overlay.is_paused())
+
+	_cleanup_node(app)
+
+	if pres_hidden and auth_visible and is_login and session_cleared and pause_hidden:
+		print("[AUTH-BOOT-017] PASS: Confirming logout cleanly invoked AppRoot.logout(), cleared session, and returned to Login!")
+		return true
+	else:
+		print("[AUTH-BOOT-017] FAIL: Confirm logout failed (pres_hidden=%s, auth_vis=%s, login=%s, cleared=%s, pause_hidden=%s)" % [str(pres_hidden), str(auth_visible), str(is_login), str(session_cleared), str(pause_hidden)])
+		return false
+
+# 18. Guest exit without backend call and relogin cycle
+static func test_auth_boot_018_guest_exit_and_relogin_cycle(tree: SceneTree = null) -> bool:
+	print("[AUTH-BOOT-018] Testing guest exit has zero backend call, and relogin cycle works cleanly...")
+	var app: Node = _instantiate_test_app(tree)
+	if app == null:
+		return false
+
+	var pres_shell = app.call("get_presentation_shell")
+	var auth_shell = app.call("get_auth_shell")
+	var client: RefCounted = app.call("get_auth_client") as RefCounted
+	var session = client.get_session()
+
+	var backend_call_count: Array[int] = [0]
+	var transport = client.get("_transport")
+	transport.mock_handler = func(_url, _method, _headers, _body, _timeout = 10.0):
+		backend_call_count[0] += 1
+		return {"status_code": 200, "body": JSON.stringify({"message": "OK"}), "headers": []}
+
+	# Step 1: Guest enters gameplay
+	app.call("_on_guest_entered")
+	var guest_active: bool = pres_shell.visible and (not auth_shell.visible)
+
+	# Step 2: Guest opens pause and exits
+	pres_shell.call("show_pause")
+	var pause_overlay = pres_shell.call("get_pause_overlay") as PauseMenuOverlay
+	pause_overlay.get_logout_button().emit_signal("pressed")
+	pause_overlay.get_confirm_accept_button().emit_signal("pressed")
+
+	var guest_exit_ok: bool = (not pres_shell.visible) and auth_shell.visible
+	var zero_backend_calls_on_guest: bool = (backend_call_count[0] == 0)
+	var session_still_clean: bool = (not session.is_active())
+
+	# Step 3: Now user logs in as authenticated user
+	session.update_from_dict({
+		"access_token": "relogin_token_111",
+		"refresh_token": "relogin_refresh_222",
+		"user_id": "usr_relogin",
+		"email": "relogin@mathos.dev"
+	})
+	app.call("_on_auth_completed", AuthResultClass.ok({}))
+	var relogin_pres_vis: bool = pres_shell.visible and (not auth_shell.visible)
+
+	# Step 4: Authenticated user pauses and logs out
+	pres_shell.call("show_pause")
+	pause_overlay.get_logout_button().emit_signal("pressed")
+	pause_overlay.get_confirm_accept_button().emit_signal("pressed")
+
+	var auth_logout_pres_hidden: bool = (not pres_shell.visible) and auth_shell.visible
+	var one_backend_call: bool = (backend_call_count[0] == 1) # Authenticated logout DID call backend
+	var session_revoked: bool = (not session.is_active())
+
+	_cleanup_node(app)
+
+	if guest_active and guest_exit_ok and zero_backend_calls_on_guest and session_still_clean and relogin_pres_vis and auth_logout_pres_hidden and one_backend_call and session_revoked:
+		print("[AUTH-BOOT-018] PASS: Guest exit without backend calls and full relogin cycle verified cleanly!")
+		return true
+	else:
+		print("[AUTH-BOOT-018] FAIL: Cycle failed (guest_ok=%s, zero_calls=%s, relogin=%s, auth_exit=%s, one_call=%s)" % [str(guest_exit_ok), str(zero_backend_calls_on_guest), str(relogin_pres_vis), str(auth_logout_pres_hidden), str(one_backend_call)])
 		return false
