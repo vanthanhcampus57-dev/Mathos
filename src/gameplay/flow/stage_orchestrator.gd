@@ -224,6 +224,10 @@ func create_stage_context(is_restored: bool = false) -> Dictionary:
 		"stage_title": stage_title,
 		"dungeon_title": dungeon_title,
 		"lesson_steps": steps,
+		"encounter_mode": str(_current_stage_data.get("encounter_mode", "puzzle_onboarding")),
+		"enemy_id": "" if _current_stage_data.get("enemy_id") == null else str(_current_stage_data.get("enemy_id")),
+		"card_pool_ids": (_current_stage_data.get("card_pool_ids", []) as Array).duplicate() if _current_stage_data.get("card_pool_ids") != null else [],
+		"intent_enabled": bool(_current_stage_data.get("intent_enabled", false)),
 		"is_restored_context": is_restored
 	}
 

@@ -63,7 +63,8 @@ func _initialize() -> void:
 		{"name": "Visual Lab QA Harness", "func": Callable(preload("res://tests/unit/dev/test_visual_lab.gd"), "run_all_tests")},
 		{"name": "Mathos Production Boot Sequence QA", "func": Callable(preload("res://tests/unit/boot/test_boot_sequence.gd"), "run_all_tests")},
 		{"name": "Godot Auth API Client Foundation", "func": Callable(preload("res://tests/unit/network/test_auth_api_client.gd"), "run_all_tests")},
-		{"name": "Mathos Production Auth UI QA", "func": Callable(preload("res://tests/unit/auth/test_auth_ui.gd"), "run_all_tests")}
+		{"name": "Mathos Production Auth UI QA", "func": Callable(preload("res://tests/unit/auth/test_auth_ui.gd"), "run_all_tests")},
+		{"name": "D1 Stage 1.5 Boss Combat QA", "func": Callable(preload("res://tests/unit/combat/test_stage_1_5_boss_combat.gd"), "run_all_tests").bind(self)}
 	]
 
 	for s in bool_suites:
@@ -169,4 +170,5 @@ func _count_suite_tests(name: String) -> int:
 		"Mathos Production Boot Sequence QA": return 13
 		"Godot Auth API Client Foundation": return 24
 		"Mathos Production Auth UI QA": return 16
+		"D1 Stage 1.5 Boss Combat QA": return 14
 		_: return 1

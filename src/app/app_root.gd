@@ -23,6 +23,12 @@ var _finalized_question_ids: Array[String] = []
 var _first_attempt_results: Dictionary = {} # question_id (String) -> is_correct (bool)
 var _current_question_id: String = ""
 
+# Stage 1.5 Boss Combat State
+var _active_combat_controller: CardCombatController = null
+var _player_stats: PlayerStats = null
+var _player_runtime: PlayerRuntime = null
+var _active_enemy_entity: EnemyEntity = null
+
 const QaAnswerRevealOverlayClass = preload("res://src/ui/qa/qa_answer_reveal_overlay.gd")
 
 # UI Presentation
@@ -99,6 +105,7 @@ func start_new_game() -> Dictionary:
 
 	var stage_id: String = _game_flow_service.get_current_stage_id()
 	_reset_practice_metrics(stage_id)
+	_setup_combat_if_needed(stage_id)
 
 	var context: Dictionary = _game_flow_service.get_stage_context(false)
 	if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
@@ -146,6 +153,7 @@ func continue_game() -> Dictionary:
 
 	var entry_stage_id: String = String(restore_res.get("entry_stage_id", ""))
 	_reset_practice_metrics(entry_stage_id)
+	_setup_combat_if_needed(entry_stage_id)
 
 	var context: Dictionary = _game_flow_service.get_stage_context(true)
 	if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
@@ -181,6 +189,7 @@ func select_stage(stage_id: String) -> Dictionary:
 		return flow_res
 
 	_reset_practice_metrics(stage_id)
+	_setup_combat_if_needed(stage_id)
 
 	var is_cleared: bool = _progress_service.create_snapshot_view().cleared_stage_ids.has(stage_id)
 	var context: Dictionary = _game_flow_service.get_stage_context(is_cleared)
@@ -255,6 +264,55 @@ func get_question_controller() -> RefCounted:
 
 func get_presentation_shell() -> Control:
 	return _presentation_shell
+
+func get_active_combat_controller() -> CardCombatController:
+	return _active_combat_controller
+
+func get_active_enemy_entity() -> EnemyEntity:
+	return _active_enemy_entity
+
+func get_player_runtime() -> PlayerRuntime:
+	return _player_runtime
+
+func _setup_combat_if_needed(stage_id: String) -> void:
+	if _catalog == null:
+		return
+	var stage_data: Dictionary = _catalog.get_stage(stage_id)
+	var enc_mode: String = str(stage_data.get("encounter_mode", ""))
+	var enemy_id: String = "" if stage_data.get("enemy_id") == null else str(stage_data.get("enemy_id"))
+
+	if enc_mode == "card_combat" and not enemy_id.is_empty():
+		if _player_stats == null:
+			var game_cfg: Dictionary = _catalog.get_config()
+			_player_stats = PlayerStats.new(game_cfg)
+		_player_runtime = PlayerRuntime.new(stage_id, _player_stats)
+		_active_enemy_entity = EnemyEntity.from_catalog(_catalog, enemy_id)
+
+		var card_ids: Array = stage_data.get("card_pool_ids", []) as Array
+		var cards: Array[CardModel] = CardModel.load_cards(_catalog, card_ids)
+
+		_active_combat_controller = CardCombatController.new()
+		_active_combat_controller.start_combat(_player_runtime, _active_enemy_entity, cards)
+
+		if _presentation_shell != null and _presentation_shell.has_method("get_boss_combat_panel"):
+			var boss_panel: BossCombatPanel = _presentation_shell.call("get_boss_combat_panel") as BossCombatPanel
+			if boss_panel != null:
+				boss_panel.set_controller(_active_combat_controller)
+				if not boss_panel.retry_pressed.is_connected(_on_combat_retry_pressed):
+					boss_panel.retry_pressed.connect(_on_combat_retry_pressed)
+	else:
+		_active_combat_controller = null
+		_active_enemy_entity = null
+
+func _on_combat_retry_pressed() -> void:
+	if _active_combat_controller == null or _player_stats == null:
+		return
+	_active_combat_controller.reset_encounter(_player_stats)
+	_finalized_question_ids.clear()
+	_first_attempt_results.clear()
+	_retry_question_id = _current_question_id
+	_active_question_res = {}
+	_start_current_question()
 
 # Internal Helper Methods
 func _is_visual_lab_mode() -> bool:
@@ -447,6 +505,13 @@ func _on_question_host_ready(host_container: Control) -> void:
 		if _question_controller.has_signal("retry_requested") and not _question_controller.is_connected("retry_requested", _on_question_retry_requested):
 			_question_controller.connect("retry_requested", _on_question_retry_requested)
 
+	if _active_combat_controller != null and _presentation_shell != null and _presentation_shell.has_method("get_boss_combat_panel"):
+		var boss_panel: BossCombatPanel = _presentation_shell.call("get_boss_combat_panel") as BossCombatPanel
+		if boss_panel != null:
+			boss_panel.set_controller(_active_combat_controller)
+			if not boss_panel.retry_pressed.is_connected(_on_combat_retry_pressed):
+				boss_panel.retry_pressed.connect(_on_combat_retry_pressed)
+
 	_start_current_question()
 
 func get_question_panel() -> QuestionPanel:
@@ -468,16 +533,32 @@ func _on_question_completed(result: Dictionary) -> void:
 	if not q_id.is_empty() and not _first_attempt_results.has(q_id):
 		_first_attempt_results[q_id] = is_correct
 
+	if _active_combat_controller != null and _active_combat_controller.is_in_combat:
+		_active_combat_controller.resolve_answer_outcome(is_correct)
+
 func _on_question_continue_requested() -> void:
 	if not _current_question_id.is_empty() and not _finalized_question_ids.has(_current_question_id):
 		_finalized_question_ids.append(_current_question_id)
+
+	if _active_combat_controller != null and _active_combat_controller.boss_entity != null and _active_combat_controller.boss_entity.is_defeated:
+		_finish_stage_practice()
+		return
+
+	if _active_combat_controller != null and _active_combat_controller.player_runtime != null and _active_combat_controller.player_runtime.is_defeated:
+		return
 
 	_active_question_res = {}
 	var next_res: Dictionary = _start_next_question_in_stage()
 	if not bool(next_res.get("success", false)):
 		var err_code: String = String(next_res.get("error_code", ""))
 		if err_code == QuestionErrorCodes.NO_VALID_QUESTION or err_code == "NO_VALID_QUESTION" or err_code == "NO_REACHABLE_QUESTIONS":
-			_finish_stage_practice()
+			if _active_combat_controller != null and _active_combat_controller.is_in_combat and not _active_combat_controller.boss_entity.is_defeated:
+				_finalized_question_ids.clear()
+				next_res = _start_next_question_in_stage()
+				if not bool(next_res.get("success", false)):
+					_finish_stage_practice()
+			else:
+				_finish_stage_practice()
 		else:
 			push_error("AppRoot: _on_question_continue_requested encountered unexpected question request failure code: '%s'. Aborting stage clear." % err_code)
 
@@ -532,6 +613,7 @@ func _on_stage_continue_requested() -> void:
 
 		var next_stage_id: String = _game_flow_service.get_current_stage_id()
 		_reset_practice_metrics(next_stage_id)
+		_setup_combat_if_needed(next_stage_id)
 
 		var context: Dictionary = _game_flow_service.get_stage_context(false)
 		if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):

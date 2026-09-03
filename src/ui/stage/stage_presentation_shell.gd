@@ -590,7 +590,25 @@ func set_view_mode(mode: ViewMode) -> void:
 
 	if start_container != null: start_container.visible = (_current_mode == ViewMode.MODE_ENTRY)
 	if lesson_panel != null: lesson_panel.visible = (_current_mode == ViewMode.MODE_LESSON)
-	if q_host != null: q_host.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
+	if q_host != null:
+		q_host.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
+		var gameplay_hbox: Control = q_host.get_node_or_null("GameplayHBox") as Control
+		if gameplay_hbox != null:
+			var advisor: Control = gameplay_hbox.get_node_or_null("AdvisorPanel") as Control
+			var is_combat: bool = (_context_info != null and _context_info.encounter_mode == "card_combat")
+			if is_combat:
+				var boss_panel: BossCombatPanel = get_boss_combat_panel()
+				if boss_panel != null:
+					boss_panel.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
+				if advisor != null:
+					advisor.visible = false
+			else:
+				var existing_boss: Control = gameplay_hbox.get_node_or_null("BossCombatPanel") as Control
+				if existing_boss != null:
+					existing_boss.visible = false
+				if advisor != null:
+					advisor.visible = true
+
 	if f_host != null: f_host.visible = (_current_mode == ViewMode.MODE_FEEDBACK_HOST)
 	if complete_panel != null: complete_panel.visible = (_current_mode == ViewMode.MODE_STAGE_COMPLETE)
 	if _victory_panel != null: _victory_panel.visible = (_current_mode == ViewMode.MODE_VICTORY)
@@ -712,6 +730,27 @@ func get_question_panel() -> QuestionPanel:
 			panel = q_host.get_node_or_null("QuestionPanel") as QuestionPanel
 		return panel
 	return null
+
+func get_boss_combat_panel() -> BossCombatPanel:
+	var q_host: MarginContainer = get_question_host_container()
+	if q_host == null:
+		return null
+	var gameplay_hbox: Control = q_host.get_node_or_null("GameplayHBox") as Control
+	if gameplay_hbox == null:
+		return null
+	var b_panel: BossCombatPanel = gameplay_hbox.get_node_or_null("BossCombatPanel") as BossCombatPanel
+	if b_panel == null:
+		var scene_res: Resource = load("res://src/ui/combat/boss_combat_panel.tscn")
+		if scene_res is PackedScene:
+			b_panel = (scene_res as PackedScene).instantiate() as BossCombatPanel
+		else:
+			var script_res: Resource = load("res://src/ui/combat/boss_combat_panel.gd")
+			if script_res is GDScript:
+				b_panel = (script_res as GDScript).new() as BossCombatPanel
+		if b_panel != null:
+			b_panel.name = "BossCombatPanel"
+			gameplay_hbox.add_child(b_panel)
+	return b_panel
 
 func get_feedback_host_container() -> MarginContainer:
 	var main_content: Control = _get_main_content_vbox()

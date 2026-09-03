@@ -32,6 +32,10 @@ class StageContextInfo extends RefCounted:
 	var stage_title: String = ""
 	var dungeon_title: String = ""
 	var lesson_steps: Array[LessonStepData] = []
+	var encounter_mode: String = ""
+	var enemy_id: String = ""
+	var card_pool_ids: Array = []
+	var intent_enabled: bool = false
 	var is_restored_context: bool = false
 
 	func _init(p_id: String = "", p_title: String = "", p_dungeon: String = "", p_steps: Array[LessonStepData] = [], p_restored: bool = false) -> void:
@@ -51,13 +55,18 @@ class StageContextInfo extends RefCounted:
 				elif item is LessonStepData:
 					steps.append(item as LessonStepData)
 
-		return StageContextInfo.new(
+		var info: StageContextInfo = StageContextInfo.new(
 			str(d.get("stage_id", "")),
 			str(d.get("stage_title", "")),
 			str(d.get("dungeon_title", "")),
 			steps,
 			bool(d.get("is_restored_context", false))
 		)
+		info.encounter_mode = str(d.get("encounter_mode", ""))
+		info.enemy_id = str(d.get("enemy_id", ""))
+		info.card_pool_ids = d.get("card_pool_ids", [])
+		info.intent_enabled = bool(d.get("intent_enabled", false))
+		return info
 
 class FeedbackInfo extends RefCounted:
 	var is_correct: bool = false
