@@ -212,8 +212,8 @@ static func test_rc1_001_npc_internal_id_hidden() -> bool:
 		print("[RC1-001] FAIL: Speaker label contains raw npc_id: '%s'" % display_name)
 		return false
 
-	if display_name != "CỐ VẤN":
-		print("[RC1-001] FAIL: Speaker label is not 'CỐ VẤN': '%s'" % display_name)
+	if display_name != "Arithmos" and display_name != "CỐ VẤN":
+		print("[RC1-001] FAIL: Speaker label is not 'Arithmos' or 'CỐ VẤN': '%s'" % display_name)
 		return false
 
 	print("[RC1-001] PASS: NPC internal ID hidden from player presentation")

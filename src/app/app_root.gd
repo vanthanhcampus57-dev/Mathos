@@ -109,9 +109,12 @@ func start_new_game() -> Dictionary:
 
 	var context: Dictionary = _game_flow_service.get_stage_context(false)
 	if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
-		_presentation_shell.call("set_stage_context", context)
-		if _presentation_shell.has_method("set_view_mode"):
+		var story_steps: Array = context.get("story_steps", []) as Array
+		if not story_steps.is_empty() and _presentation_shell.has_method("set_view_mode"):
+			_presentation_shell.call("set_view_mode", 7) # MODE_STORY
+		elif _presentation_shell.has_method("set_view_mode"):
 			_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
+		_presentation_shell.call("set_stage_context", context)
 		if _bootstrap_ui != null:
 			_bootstrap_ui.visible = false
 
@@ -147,11 +150,27 @@ func continue_game() -> Dictionary:
 		_player_persistent
 	)
 
+	var entry_stage_id: String = String(restore_res.get("entry_stage_id", ""))
+
+	# D1 Completion check: If D1 is fully completed and entry points to D2, freeze D2 auto-entry
+	if _is_dungeon_1_complete() and entry_stage_id.begins_with("stage_02_"):
+		if _presentation_shell != null and _presentation_shell.has_method("show_dungeon_1_complete"):
+			var gold_val: int = _player_persistent.coin_balance if _player_persistent != null else 0
+			var xp_val: int = _player_persistent.exp_total if _player_persistent != null else 0
+			_presentation_shell.call("show_dungeon_1_complete", gold_val, xp_val, "Mảnh Vỡ Ma Thuật 01")
+		if _bootstrap_ui != null:
+			_bootstrap_ui.visible = false
+		return {
+			"success": true,
+			"dungeon_1_complete": true,
+			"entry_stage_id": entry_stage_id,
+			"restore_result": restore_res
+		}
+
 	var flow_res: Dictionary = _game_flow_service.restore_from_save(restore_res)
 	if not bool(flow_res.get("success", false)):
 		return flow_res
 
-	var entry_stage_id: String = String(restore_res.get("entry_stage_id", ""))
 	_reset_practice_metrics(entry_stage_id)
 	_setup_combat_if_needed(entry_stage_id)
 
@@ -171,11 +190,29 @@ func continue_game() -> Dictionary:
 		"flow_result": flow_res
 	}
 
+func _is_dungeon_1_complete() -> bool:
+	if _progress_service == null:
+		return false
+	var snapshot: ProgressState = _progress_service.create_snapshot_view()
+	if snapshot == null:
+		return false
+	for s_idx in range(1, 6):
+		var s_id: String = "stage_01_%02d" % s_idx
+		if not snapshot.cleared_stage_ids.has(s_id):
+			return false
+	return true
+
 ## Section D: MAP -> GAME Validation.
 ## Validates unlock / replay eligibility through existing progression services before entering stage.
 func select_stage(stage_id: String) -> Dictionary:
 	if stage_id.is_empty():
 		return {"success": false, "error_code": "INVALID_STAGE_ID"}
+
+	if stage_id.begins_with("stage_02_") or stage_id.begins_with("stage_03_") or stage_id.begins_with("stage_04_"):
+		push_warning("AppRoot: Dungeon 2-4 are currently frozen.")
+		if _presentation_shell != null and _presentation_shell.has_method("show_notification_banner"):
+			_presentation_shell.call("show_notification_banner", "Dungeon 2 hiện đang bị khóa.", true)
+		return {"success": false, "error_code": "STAGE_LOCKED", "message": "Dungeon is frozen"}
 
 	if _progress_service == null or not _progress_service.can_enter(stage_id):
 		push_warning("AppRoot: Stage '%s' is locked and cannot be entered." % stage_id)
@@ -195,9 +232,12 @@ func select_stage(stage_id: String) -> Dictionary:
 	var context: Dictionary = _game_flow_service.get_stage_context(is_cleared)
 
 	if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
-		_presentation_shell.call("set_stage_context", context)
-		if _presentation_shell.has_method("set_view_mode"):
+		var story_steps: Array = context.get("story_steps", []) as Array
+		if not story_steps.is_empty() and not is_cleared and _presentation_shell.has_method("set_view_mode"):
+			_presentation_shell.call("set_view_mode", 7) # MODE_STORY
+		elif _presentation_shell.has_method("set_view_mode"):
 			_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
+		_presentation_shell.call("set_stage_context", context)
 		if _bootstrap_ui != null:
 			_bootstrap_ui.visible = false
 
@@ -410,6 +450,10 @@ func _setup_presentation_shell() -> void:
 			_presentation_shell.connect("stage_selected", select_stage)
 		if _presentation_shell.has_signal("lesson_continue_requested") and not _presentation_shell.is_connected("lesson_continue_requested", _on_lesson_continue_requested):
 			_presentation_shell.connect("lesson_continue_requested", _on_lesson_continue_requested)
+		if _presentation_shell.has_signal("story_completed") and not _presentation_shell.is_connected("story_completed", _on_story_completed):
+			_presentation_shell.connect("story_completed", _on_story_completed)
+		if _presentation_shell.has_signal("story_continue_requested") and not _presentation_shell.is_connected("story_continue_requested", _on_story_completed):
+			_presentation_shell.connect("story_continue_requested", _on_story_completed)
 		if _presentation_shell.has_signal("question_host_ready") and not _presentation_shell.is_connected("question_host_ready", _on_question_host_ready):
 			_presentation_shell.connect("question_host_ready", _on_question_host_ready)
 		if _presentation_shell.has_signal("feedback_host_ready") and not _presentation_shell.is_connected("feedback_host_ready", _on_feedback_host_ready):
@@ -426,10 +470,15 @@ func refresh_continue_availability() -> void:
 	var summary_data: Dictionary = {}
 	if _save_service != null:
 		has_save = _save_service.has_save()
-		if has_save and _bridge != null:
-			var restore_res: Dictionary = _bridge.restore_from_save()
-			if bool(restore_res.get("success", false)):
-				var entry_stage_id: String = String(restore_res.get("entry_stage_id", ""))
+		if has_save:
+			var load_res: Dictionary = _save_service.load()
+			if bool(load_res.get("success", false)):
+				var snapshot: Dictionary = load_res.get("snapshot", {}) as Dictionary
+				var progress_dict: Dictionary = snapshot.get("progress", {}) as Dictionary
+				var unlocked: Array = progress_dict.get("unlocked_stage_ids", []) as Array
+				var entry_stage_id: String = ""
+				if not unlocked.is_empty():
+					entry_stage_id = String(unlocked[unlocked.size() - 1])
 				if _catalog != null and not entry_stage_id.is_empty():
 					var stage_info: Dictionary = _catalog.get_stage(entry_stage_id)
 					summary_data["stage_id"] = entry_stage_id
@@ -461,6 +510,13 @@ func _show_game_victory() -> void:
 
 	if _presentation_shell != null and _presentation_shell.has_method("show_game_victory"):
 		_presentation_shell.call("show_game_victory", gold, xp)
+
+func _on_story_completed() -> void:
+	if _presentation_shell != null:
+		if _presentation_shell.has_method("show_lesson_phase"):
+			_presentation_shell.call("show_lesson_phase")
+		elif _presentation_shell.has_method("set_view_mode"):
+			_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
 
 func _on_lesson_continue_requested() -> void:
 	if _game_flow_service != null:
@@ -547,6 +603,14 @@ func _on_question_continue_requested() -> void:
 	if _active_combat_controller != null and _active_combat_controller.player_runtime != null and _active_combat_controller.player_runtime.is_defeated:
 		return
 
+	# Respect target question_count from practice.json when not in card combat
+	var is_combat: bool = (_active_combat_controller != null and _active_combat_controller.is_in_combat)
+	if not is_combat:
+		var target_count: int = _get_target_practice_question_count()
+		if target_count > 0 and _finalized_question_ids.size() >= target_count:
+			_finish_stage_practice()
+			return
+
 	_active_question_res = {}
 	var next_res: Dictionary = _start_next_question_in_stage()
 	if not bool(next_res.get("success", false)):
@@ -562,6 +626,19 @@ func _on_question_continue_requested() -> void:
 		else:
 			push_error("AppRoot: _on_question_continue_requested encountered unexpected question request failure code: '%s'. Aborting stage clear." % err_code)
 
+func _get_target_practice_question_count() -> int:
+	if _catalog == null or _game_flow_service == null:
+		return 3
+	var stage_id: String = _game_flow_service.get_current_stage_id()
+	if stage_id.is_empty():
+		return 3
+	var stage: Dictionary = _catalog.get_stage(stage_id)
+	var practice_id: String = String(stage.get("practice_id", ""))
+	if practice_id.is_empty():
+		return 3
+	var practice: Dictionary = _catalog.get_practice(practice_id)
+	return int(practice.get("question_count", 3))
+
 var _retry_question_id: String = ""
 
 func _on_question_retry_requested() -> void:
@@ -570,6 +647,10 @@ func _on_question_retry_requested() -> void:
 	_start_current_question()
 
 func _finish_stage_practice() -> void:
+	var granted_coins: int = 0
+	var granted_exp: int = 0
+	var granted_frag: String = ""
+
 	if _game_flow_service != null:
 		var orch: StageOrchestrator = _game_flow_service.get_orchestrator()
 		if orch != null:
@@ -579,6 +660,13 @@ func _finish_stage_practice() -> void:
 				var stage_id: String = String(prep_res.get("stage_id", ""))
 				var reward_grant: RewardGrant = prep_res.get("reward_grant") as RewardGrant
 				if not stage_id.is_empty() and reward_grant != null and _bridge != null:
+					granted_coins = reward_grant.coin_delta
+					granted_exp = reward_grant.exp_delta
+					if not reward_grant.fragment_ids.is_empty():
+						granted_frag = String(reward_grant.fragment_ids[0])
+
+					if _bridge != null and _progress_service != null:
+						_bridge._progress_service = _progress_service
 					var commit_res: Dictionary = _bridge.commit_stage_and_checkpoint(stage_id, reward_grant)
 					if not bool(commit_res.get("success", false)):
 						if _presentation_shell != null and _presentation_shell.has_method("show_notification_banner"):
@@ -591,18 +679,50 @@ func _finish_stage_practice() -> void:
 			first_attempt_correct += 1
 
 	var acc_pct: float = (first_attempt_correct as float / max(1, unique_count)) * 100.0
+	var stage_summary: String = _build_dynamic_stage_summary()
 
 	if _presentation_shell != null:
 		if _presentation_shell.has_method("get_stage_complete_panel"):
 			var complete_panel: StageCompletePanel = _presentation_shell.call("get_stage_complete_panel") as StageCompletePanel
 			if complete_panel != null:
-				complete_panel.set_stage_complete_stats(unique_count, acc_pct, "• Phép thử ngẫu nhiên\n• Không gian mẫu Ω\n• Biến cố A ⊆ Ω")
+				complete_panel.set_stage_complete_stats(unique_count, acc_pct, stage_summary)
+				complete_panel.set_rewards_data(granted_coins, granted_exp, granted_frag)
 
 		if _presentation_shell.has_method("set_view_mode"):
 			_presentation_shell.call("set_view_mode", 4) # MODE_STAGE_COMPLETE
 
+func _build_dynamic_stage_summary() -> String:
+	if _catalog == null or _game_flow_service == null:
+		return "• Phép thử ngẫu nhiên\n• Không gian mẫu Ω\n• Biến cố A ⊆ Ω"
+	var stage_id: String = _game_flow_service.get_current_stage_id()
+	if stage_id.is_empty():
+		return "• Phép thử ngẫu nhiên\n• Không gian mẫu Ω\n• Biến cố A ⊆ Ω"
+	var stage: Dictionary = _catalog.get_stage(stage_id)
+	var lesson_id: String = String(stage.get("lesson_id", ""))
+	var lesson: Dictionary = _catalog.get_lesson(lesson_id)
+	var sections: Array = lesson.get("sections", []) as Array
+	if not sections.is_empty():
+		var bullets: Array[String] = []
+		for sec_var in sections:
+			var sec: Dictionary = sec_var as Dictionary
+			var header: String = String(sec.get("header", ""))
+			if not header.is_empty():
+				bullets.append("• " + header)
+		if not bullets.is_empty():
+			return "\n".join(bullets)
+	var obj: String = String(stage.get("learning_objective", ""))
+	if not obj.is_empty():
+		return "• " + obj
+	return "• Phép thử ngẫu nhiên\n• Không gian mẫu Ω\n• Biến cố A ⊆ Ω"
+
 func _on_stage_continue_requested() -> void:
 	if _game_flow_service == null:
+		return
+
+	var current_st: String = _game_flow_service.get_current_stage_id()
+	# D1 Completion check: If clearing stage_01_05, show D1 Complete screen and freeze D2
+	if current_st == "stage_01_05":
+		_show_dungeon_1_complete()
 		return
 
 	var adv_res: Dictionary = _game_flow_service.advance_to_next_stage()
@@ -612,14 +732,27 @@ func _on_stage_continue_requested() -> void:
 			return
 
 		var next_stage_id: String = _game_flow_service.get_current_stage_id()
+		if next_stage_id.begins_with("stage_02_"):
+			_show_dungeon_1_complete()
+			return
+
 		_reset_practice_metrics(next_stage_id)
 		_setup_combat_if_needed(next_stage_id)
 
 		var context: Dictionary = _game_flow_service.get_stage_context(false)
 		if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
-			_presentation_shell.call("set_stage_context", context)
-			if _presentation_shell.has_method("set_view_mode"):
+			var story_steps: Array = context.get("story_steps", []) as Array
+			if not story_steps.is_empty() and _presentation_shell.has_method("set_view_mode"):
+				_presentation_shell.call("set_view_mode", 7) # MODE_STORY
+			elif _presentation_shell.has_method("set_view_mode"):
 				_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
+			_presentation_shell.call("set_stage_context", context)
+
+func _show_dungeon_1_complete() -> void:
+	if _presentation_shell != null and _presentation_shell.has_method("show_dungeon_1_complete"):
+		var gold_val: int = _player_persistent.coin_balance if _player_persistent != null else 0
+		var xp_val: int = _player_persistent.exp_total if _player_persistent != null else 0
+		_presentation_shell.call("show_dungeon_1_complete", gold_val, xp_val, "Mảnh Vỡ Ma Thuật 01")
 
 func _start_current_question() -> Dictionary:
 	return _start_next_question_in_stage()

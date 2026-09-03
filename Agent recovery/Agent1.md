@@ -3,116 +3,127 @@
 > Canonical recovery note for Agent1. This file is maintained as a complete, authoritative state ledger for Agent1.
 
 ## 1. CURRENT TASK
-- TASK_ID: MATHOS-RC4-QA-CHEAT-INPUT-ANSWER-REVEAL-FIX-004
-- TITLE: Input/Integer QA Answer Reveal Fix & Player Technical Text Removal
+- TASK_ID: MATHOS-D1-CRITICAL-FLOW-FIX-024
+- TITLE: D1 Production Fix — Non-Boss Critical Flow
 - FROM: M1
-- PRIORITY: P0
-- STATUS: READY_FOR_INDEPENDENT_REQA
-- PROMPT_RECEIVED_AT: 2026-09-01T00:40:54+07:00
-- ACTIVE_GOAL: Trace real project data schema for input/integer/numeric/text questions; ensure QA answer reveal outputs canonical input answers cleanly (e.g. `ĐÁP ÁN ĐÚNG: 6`) without missing-answer warnings; remove player-facing technical string `"Input response type: integer"`.
+- PRIORITY: CRITICAL
+- STATUS: READY_FOR_D1_CRITICAL_FLOW_INDEPENDENT_REQA
+- PROMPT_RECEIVED_AT: 2026-09-03T17:04:35+07:00
+- ACTIVE_GOAL: Fix confirmed D1 production blockers and high/medium flow defects (Story Phase handoff, Story -> Lesson transition, Speaker Identity, D1 Completion Screen, D2 entry freeze, Real Reward presentation, Review Button handling, Stage-aware Advisor Text, Stage-aware Summary, Practice Count enforcement, Save/Recovery guarantees) while keeping Stage 1.5 Boss Combat, Auth, and D2/D3/D4 strictly untouched.
 
 ## 2. WORKSPACE / GIT
 - PROJECT: Mathos
 - WORKTREE: d:\Mathos
-- BRANCH: detached HEAD (at 52e4c594c4fa5cc175d22befbe687e4ccb74231f)
-- START_HEAD: b547266dd737f45bc3e213c1496c85c957b160db (Base HEAD)
-- CURRENT_HEAD: 52e4c594c4fa5cc175d22befbe687e4ccb74231f
-- CANONICAL_BASE: 48ede1db891e334a04e679bb906cfbebfe3d135c (Release Candidate 1 Base)
+- BRANCH: detached HEAD (at c1e93618e7dee89cb49f29a5681420945c455393)
+- START_HEAD: c1e93618e7dee89cb49f29a5681420945c455393
+- CURRENT_HEAD: a27d99ad5d31f4252ec323434e1a01dfedee4296
+- CANONICAL_BASE: 1be8283321eea2ef9ad2a576821df942beed9050
 - WORKTREE_CLEAN: TRUE
 
 ## 3. EXACT PROMPT / INTENT SUMMARY
-- GOAL: Fix Input/Integer QA answer reveal warning and remove technical text `"Input response type: integer"` from Question UI.
-- ACCEPTANCE_GATES:
-  1. Base commit is b547266dd737f45bc3e213c1496c85c957b160db.
-  2. Trace exact authoritative answer schema for input/integer questions across project catalog/QGen files.
-  3. QA reveal shows `ĐÁP ÁN ĐÚNG: 6` (or canonical answer) without missing-answer warning `⚠️ Không tìm thấy đáp án hợp lệ cho câu hỏi điền số`.
-  4. Trace and remove/localize player-facing technical string `Input response type: integer` from Question UI.
-  5. QA reveal remains display-only with zero input auto-fill, auto-submit, evaluator call, session mutation, or progress/save mutation.
-  6. Add real regression test for input integer question with canonical answer 6, asserting no missing-answer warning, no raw answer_spec, no internal field name, no stale answer, no automatic mutation.
-  7. Assert player-facing Question UI does NOT contain `Input response type:` or `integer`.
-  8. Run full verification suite (QA cheat, input presentation/evaluator, vertical/horizontal layout, live UX, session recovery, full runner, git diff --check).
-  9. Do NOT touch assets/backgrounds, do NOT merge main, do NOT build Windows yet.
-- DEPENDENCIES: Base commit b547266dd737f45bc3e213c1496c85c957b160db.
+- GOAL: Implement comprehensive non-boss critical flow fixes for Dungeon 1.
+- CRITICAL REQUIREMENTS:
+  1. Story Phase (Blocker): Implement real D1 story phase handoff before lesson (`STORY -> LESSON -> PRACTICE/GAMEPLAY -> COMPLETE`) using existing `content/story/story.json`. Do not invent new lore.
+  2. Story Transition: Sequential dialogue display, advance, complete, transition into lesson. No auto-skipping, no duplicate playback.
+  3. Speaker Identity: Fix `LessonPanel.get_player_facing_speaker_name()` to preserve canonical speaker identities (Arithmos, Draven, Karl, etc.) without masking everything as "CỐ VẤN".
+  4. D1 Completion (Blocker): Clearing 1.5 must show DUNGEON 1 COMPLETE screen with Fragment 01, EXP, Coins. Safe action returns to Hub/Map. Freeze D2 entry (no auto-routing into `stage_02_01`).
+  5. Reward Presentation: Display actual earned EXP, Coins, and Fragment on `StageCompletePanel` instead of static `+XP | +Vàng`.
+  6. Review Button: Wire or cleanly disable `ReviewButton` (no dead clickable button).
+  7. Advisor Text: Make `AdvisorDialogueLabel` stage-aware using existing D1 content.
+  8. Stage Summary: Derive learned summary dynamically from stage content instead of hardcoded 1.1 bullet points.
+  9. Practice Count: Respect configured `question_count` (e.g. 3) from `practice.json` instead of exhausting all questions via `NoValidQuestionError`.
+  10. Save / Recovery: Maintain all persistence and non-duplication invariants; D1 completion reload safe; no auto-route to D2.
+  11. Stage 1.5 Boss: Preserve `encounter_mode = card_combat` and `enemy_id = enemy_d1_stochas`; do NOT implement boss combat in this task.
+  12. Visual Lock & Prohibited Scope: Preserve D1 fog parameters, do not touch Auth, do not touch D2/D3/D4.
+  13. Verification: Add unit/integration tests; full canonical runner 0 FAIL, 0 WAITING.
 
 ## 4. SCOPE
-- IN_SCOPE: `src/ui/qa/qa_answer_formatter.gd`, `src/ui/question/interactions/input_view.gd`, `tests/unit/presentation/test_qa_answer_reveal_cheat.gd`, `tests/test_runner.gd`, `Agent recovery/Agent1.md`.
-- OUT_OF_SCOPE: Gameplay evaluators, content definitions, assets, backgrounds.
-- FILES_ALLOWED:
-  - src/ui/qa/qa_answer_formatter.gd
-  - src/ui/question/interactions/input_view.gd
-  - tests/unit/presentation/test_qa_answer_reveal_cheat.gd
-  - tests/test_runner.gd
-  - Agent recovery/Agent1.md
-- FILES_CHANGED:
-  - src/ui/qa/qa_answer_formatter.gd
-  - src/ui/question/interactions/input_view.gd
-  - tests/unit/presentation/test_qa_answer_reveal_cheat.gd
-  - tests/test_runner.gd
-  - Agent recovery/Agent1.md
+- IN_SCOPE:
+  - `src/ui/common/presentation/presentation_models.gd`
+  - `src/gameplay/flow/stage_orchestrator.gd`
+  - `src/ui/lesson/lesson_panel.gd`
+  - `src/ui/stage/stage_complete_panel.gd`
+  - `src/ui/stage/game_victory_panel.gd`
+  - `src/ui/stage/stage_presentation_shell.gd`
+  - `src/app/app_root.gd`
+  - `tests/unit/presentation/test_d1_critical_flow_fixes.gd`
+  - `tests/test_runner.gd`
+  - `Agent recovery/Agent1.md`
+- OUT_OF_SCOPE:
+  - Stage 1.5 boss combat implementation
+  - Auth subsystem (`src/core/auth/**`, `src/ui/auth/**`, `server/**`)
+  - D2 / D3 / D4 content or stages
+  - Art assets or shader modifications
 
 ## 5. PROGRESS
 - COMPLETED:
-  - Checked out base commit b547266dd737f45bc3e213c1496c85c957b160db
-  - Traced exact root cause of input question reveal missing-answer warning (`_format_input` checked `acceptable_values` instead of canonical `accepted_values` key)
-  - Traced technical player-facing text `"Input response type: integer"` to `InputView._label` (`InputMetaLabel`)
-  - Updated `QaAnswerFormatter._format_input` to support `accepted_values`, `acceptable_values`, `answers`, `expected`, `numeric_value`, `target_value`, `value`, `exact`, `correct_answer`, `numeric_tolerance`, and `tolerance`
-  - Updated `InputView`: set `_label.text = ""` and `_label.visible = false` while preserving node structure for unit tests, and localized `placeholder_text` using `interaction_payload.get("placeholder_text")` or fallback `"Nhập câu trả lời..."`
-  - Added test scenario `QA-CHEAT-014` testing canonical answer `6` reveal with zero warning and verifying zero technical copy in `InputView` player UI
-  - Updated test runner registration for `RC4 QA Answer Reveal Cheat` suite from 13 to 14 tests
-  - Re-ran targeted QA cheat test suite (`test_qa_answer_reveal_cheat.gd`): 14 / 14 PASS
-  - Re-ran full canonical test runner (`test_runner.gd`): 438 PASS / 0 FAIL / 0 WAITING
-  - Verified `git diff --check`: Exit code 0 (clean)
-  - Committed candidate HEAD `52e4c594c4fa5cc175d22befbe687e4ccb74231f`
-- IN_PROGRESS: None.
-- NOT_STARTED: None.
+  - Read `Agent RULE.md` and `Agent1.md`.
+  - Initialized Prompt 20 with audited base HEAD `c1e93618e7dee89cb49f29a5681420945c455393`.
+  - Created implementation plan artifact `implementation_plan.md`.
+  - Implemented data models in `src/ui/common/presentation/presentation_models.gd`.
+  - Implemented story extraction and stage advisor text in `src/gameplay/flow/stage_orchestrator.gd`.
+  - Implemented canonical speaker mapping and story mode in `src/ui/lesson/lesson_panel.gd`.
+  - Implemented real reward display and disabled review button in `src/ui/stage/stage_complete_panel.gd`.
+  - Implemented D1 complete victory panel in `src/ui/stage/game_victory_panel.gd`.
+  - Implemented `MODE_STORY` and `MODE_DUNGEON_COMPLETE` in `src/ui/stage/stage_presentation_shell.gd`.
+  - Implemented story transition, question count capping, dynamic summary, real rewards, and D1 complete screen in `src/app/app_root.gd`.
+  - Created test suite `tests/unit/presentation/test_d1_critical_flow_fixes.gd` (6/6 PASS).
+  - Registered test suite in `tests/test_runner.gd`.
+  - Resolved bridge/progress service synchronization and updated test assertions for story flow.
+  - Verified full canonical test suite passes 100% (543 PASS / 0 FAIL / 0 WAITING).
+- IN_PROGRESS: NONE
+- NOT_STARTED: NONE
 
 ## 6. FINDINGS / DECISIONS
-- ROOT_CAUSE:
-  1. `QaAnswerFormatter._format_input()` checked `answer_spec.has("acceptable_values")` (spelled with an 'a' and 'able') instead of the canonical `accepted_values` (spelled with 'ed') key used by `QuestionEvaluator` and question JSON content (`q_d1_01_4`). As a result, input questions with `accepted_values: [6]` fell through to `return "⚠️ Không tìm thấy đáp án hợp lệ cho câu hỏi điền số"`.
-  2. `InputView` instantiated `_label` (`InputMetaLabel`) with `_label.text = "Input response type: %s" % _input_type`, rendering `"Input response type: integer"` on the player's Question screen.
-- ARCHITECTURE_DECISIONS:
-  - `QaAnswerFormatter._format_input()` accepts both `accepted_values` (canonical) and legacy fallback keys (`acceptable_values`, `answers`, `expected`, `numeric_value`, `target_value`, `value`, `exact`), formatted with `numeric_tolerance` (e.g. `ĐÁP ÁN ĐÚNG: 6`).
-  - `InputView` keeps node `InputMetaLabel` present in the node tree to satisfy existing contract assertions, but sets `visible = false` and `text = ""` to eliminate all technical copy from player UI.
+- [DECISION] `LessonPanel` receives `set_story_mode(bool)`: when story mode is active, button displays "Vào bài học" and advances story dialogue steps, transitioning to lesson steps upon completion.
+- [DECISION] `PresentationModels.StageContextInfo` extended with `story_steps` and `stage_advisor_text` so presentation shell remains a pure view without domain logic.
+- [DECISION] `StageCompletePanel` disables/hides `ReviewButton` cleanly until dedicated review flow is scoped, preventing dead clickable controls.
+- [DECISION] `GameVictoryPanel` extended with `set_dungeon_complete_data()` to render Dungeon 1 completion, Fragment 01 award, and Hub return button.
+- [DECISION] `AppRoot` checks `_is_dungeon_1_complete()`: when cleared stage is `stage_01_05` or continued save has D1 complete with D2 entry, D2 auto-routing is suppressed and D1 Complete screen is presented.
+- [DECISION] `refresh_continue_availability()` uses `_save_service.load()` directly to prevent `ProgressSaveBridge` internal state desynchronization from active `ProgressService`.
 
 ## 7. TEST / VERIFICATION EVIDENCE
-- TARGETED_TESTS:
-  - `tests/unit/presentation/test_qa_answer_reveal_cheat.gd`: 14 / 14 PASS
-- FULL_REGRESSION:
-  - `tests/test_runner.gd`: 438 PASS / 0 FAIL / 0 WAITING
-- DIFF_CHECK: Clean (`git diff --check` returned 0).
+- TARGETED SUITE:
+  - `tests/unit/presentation/test_d1_critical_flow_fixes.gd`: 6 / 6 PASS
+    - `test_001_speaker_identity_resolution`: PASS
+    - `test_002_story_phase_mount_and_advance`: PASS
+    - `test_003_stage_aware_advisor_and_summary`: PASS
+    - `test_004_practice_question_count_respected`: PASS
+    - `test_005_real_reward_presentation_and_review_button`: PASS
+    - `test_006_d1_completion_and_d2_frozen`: PASS
+- FULL CANONICAL TEST RUNNER:
+  - `tests/test_runner.gd`: 543 PASS / 0 FAIL / 0 WAITING (Exit Code 0)
+- BOSS COMBAT REGRESSION:
+  - `tests/unit/combat/test_stage_1_5_boss_combat.gd`: 14 / 14 PASS
 
 ## 8. BLOCKERS / AUTHORITY
 - BLOCKED: FALSE
 - EXACT_BLOCKER: None
 - BLOCKER_OWNER: N/A
-- M1_DECISION_REQUIRED: Authorize independent Re-QA / build export.
+- M1_DECISION_REQUIRED: None
 
 ## 9. LATEST REPORT / DELIVERABLE
-- REPORT_STATUS: READY_FOR_INDEPENDENT_REQA
-- BASE_HEAD: b547266dd737f45bc3e213c1496c85c957b160db
-- FINAL_HEAD: 52e4c594c4fa5cc175d22befbe687e4ccb74231f
-- WORKTREE_CLEAN: YES
-- QA_CHEAT_TESTS: 14/14 PASS
-- FULL: 438 PASS / 0 FAIL / 0 WAITING
-- DIFF_CHECK: CLEAN
-- FILES_CHANGED:
-  - src/ui/qa/qa_answer_formatter.gd
-  - src/ui/question/interactions/input_view.gd
-  - tests/unit/presentation/test_qa_answer_reveal_cheat.gd
-  - tests/test_runner.gd
-- ROOT_CAUSE: `QaAnswerFormatter` checked `acceptable_values` instead of canonical `accepted_values`, producing a missing-answer warning for input questions; `InputView._label` exposed `"Input response type: integer"` debug text in player UI.
+- STATUS: READY_FOR_D1_CRITICAL_FLOW_INDEPENDENT_REQA
+- AUDITED_D1_HEAD: 1be8283321eea2ef9ad2a576821df942beed9050
 
 ## 10. RECOVERY HANDOFF
-- NEXT_ACTION: Independent Re-QA audit or Windows release build export.
-- DO_NOT_REPEAT: Do not expose technical debug copy to player UI. Check canonical `accepted_values` key for input question answer_spec.
+- NEXT_ACTION: Commit non-boss critical flow fixes and hand off to M1 for independent reQA.
+- DO_NOT_REPEAT: Do not touch Auth; do not touch D2/D3/D4; do not alter Boss Combat contract.
 - LAST_UPDATED_BY: Agent1
-- LAST_UPDATED_AT: 2026-09-01T00:50:23+07:00
+- LAST_UPDATED_AT: 2026-09-04T06:34:00+07:00
 
 ## 11. RECENT PROMPT LOG
 
-### Prompt 18
-- RECEIVED_AT: 2026-09-01T00:40:54+07:00
-- TASK_ID: MATHOS-RC4-QA-CHEAT-INPUT-ANSWER-REVEAL-FIX-004
-- ONE_LINE_INTENT: Fix Input/Integer QA answer reveal warning and remove technical string "Input response type: integer" from Question UI into candidate HEAD 52e4c594c4fa5cc175d22befbe687e4ccb74231f.
-- RESULT / CURRENT_STATE: READY_FOR_INDEPENDENT_REQA (14/14 QA Cheat PASS, 438/438 Full Suite PASS, git diff --check clean).
-- HEAD_AFTER_WORK: 52e4c594c4fa5cc175d22befbe687e4ccb74231f
+### Prompt 20
+- RECEIVED_AT: 2026-09-03T17:04:35+07:00
+- TASK_ID: MATHOS-D1-CRITICAL-FLOW-FIX-024
+- ONE_LINE_INTENT: Fix confirmed D1 non-boss production flow blockers and defects (Story phase handoff, Speaker names, D1 completion modal/hub return, Real rewards, Question count enforcement, Stage-aware advisor/summary).
+- RESULT / CURRENT_STATE: READY_FOR_D1_CRITICAL_FLOW_INDEPENDENT_REQA
+- HEAD_AFTER_WORK: a27d99ad5d31f4252ec323434e1a01dfedee4296
+
+### Prompt 19
+- RECEIVED_AT: 2026-09-03T16:43:03+07:00
+- TASK_ID: MATHOS-D1-FINAL-COMPLETENESS-AUDIT-023
+- ONE_LINE_INTENT: Comprehensive end-to-end completeness audit of Dungeon 1 determining all gaps blocking production completion.
+- RESULT / CURRENT_STATE: D1_FINAL_GAP_REPORT_READY (506/506 canonical tests PASS, full D1 end-to-end playthrough verified, gaps cataloged and prioritized).
+- HEAD_AFTER_WORK: c1e93618e7dee89cb49f29a5681420945c455393

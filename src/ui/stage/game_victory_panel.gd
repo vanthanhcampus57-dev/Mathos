@@ -28,6 +28,39 @@ func set_victory_data(player_gold: int = 0, player_xp: int = 0) -> void:
 	if _xp_value_label != null:
 		_xp_value_label.text = "%d" % player_xp
 
+func set_dungeon_complete_data(dungeon_title: String, fragment_id: String, player_gold: int = 0, player_xp: int = 0) -> void:
+	_ensure_ui_built()
+	if _main_vbox != null:
+		var title_lbl: Label = _main_vbox.get_node_or_null("TitleLabel") as Label
+		if title_lbl != null:
+			title_lbl.text = "HOÀN THÀNH " + dungeon_title.to_upper()
+		var sub_lbl: Label = _main_vbox.get_node_or_null("SubtitleLabel") as Label
+		if sub_lbl != null:
+			sub_lbl.text = "Chúc mừng bạn đã chinh phục %s và thu thập %s!" % [dungeon_title, fragment_id]
+	if _gold_value_label != null:
+		_gold_value_label.text = "%d" % player_gold
+	if _xp_value_label != null:
+		_xp_value_label.text = "%d" % player_xp
+
+	if _dungeon_grid != null:
+		var cards: Array = _dungeon_grid.get_children()
+		for idx in range(cards.size()):
+			var c = cards[idx]
+			var vbox = c.get_child(0) if c.get_child_count() > 0 else null
+			if vbox != null and vbox.get_child_count() >= 3:
+				var status_lbl: Label = vbox.get_child(2) as Label
+				if status_lbl != null:
+					if idx == 0:
+						status_lbl.text = "[Hoàn thành - %s]" % fragment_id
+						status_lbl.theme_type_variation = &"MathosSuccess"
+					else:
+						status_lbl.text = "[Tạm khóa]"
+						status_lbl.theme_type_variation = &"MathosMeta"
+
+	var btn: Button = _get_return_button()
+	if btn != null:
+		btn.text = "Trở Về Trang Chủ"
+
 func set_rewards(gold: int = 0, xp: int = 0) -> void:
 	set_victory_data(gold, xp)
 

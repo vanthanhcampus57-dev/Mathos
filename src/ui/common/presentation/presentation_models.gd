@@ -32,6 +32,8 @@ class StageContextInfo extends RefCounted:
 	var stage_title: String = ""
 	var dungeon_title: String = ""
 	var lesson_steps: Array[LessonStepData] = []
+	var story_steps: Array[LessonStepData] = []
+	var stage_advisor_text: String = ""
 	var encounter_mode: String = ""
 	var enemy_id: String = ""
 	var card_pool_ids: Array = []
@@ -55,6 +57,15 @@ class StageContextInfo extends RefCounted:
 				elif item is LessonStepData:
 					steps.append(item as LessonStepData)
 
+		var s_steps: Array[LessonStepData] = []
+		var raw_story: Variant = d.get("story_steps", [])
+		if raw_story is Array:
+			for item in raw_story:
+				if item is Dictionary:
+					s_steps.append(LessonStepData.from_dict(item as Dictionary))
+				elif item is LessonStepData:
+					s_steps.append(item as LessonStepData)
+
 		var info: StageContextInfo = StageContextInfo.new(
 			str(d.get("stage_id", "")),
 			str(d.get("stage_title", "")),
@@ -62,6 +73,8 @@ class StageContextInfo extends RefCounted:
 			steps,
 			bool(d.get("is_restored_context", false))
 		)
+		info.story_steps = s_steps
+		info.stage_advisor_text = str(d.get("stage_advisor_text", ""))
 		info.encounter_mode = str(d.get("encounter_mode", ""))
 		info.enemy_id = str(d.get("enemy_id", ""))
 		info.card_pool_ids = d.get("card_pool_ids", [])

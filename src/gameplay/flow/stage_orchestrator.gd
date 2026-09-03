@@ -219,11 +219,36 @@ func create_stage_context(is_restored: bool = false) -> Dictionary:
 			"total_steps": total
 		})
 
+	var story_id: String = String(_current_stage_data.get("story_id", ""))
+	var story_steps: Array[Dictionary] = []
+	if not story_id.is_empty():
+		var story: Dictionary = _catalog.get_story(story_id)
+		var dialogues: Array = story.get("dialogue_steps", []) as Array
+		var s_total: int = dialogues.size()
+		for s_idx in range(s_total):
+			var d_step: Dictionary = dialogues[s_idx] as Dictionary
+			var s_speaker: String = String(d_step.get("speaker", ""))
+			var s_text: String = String(d_step.get("text", ""))
+			story_steps.append({
+				"speaker_label": s_speaker,
+				"body_text": s_text,
+				"context_title": stage_title,
+				"step_index": s_idx + 1,
+				"total_steps": s_total
+			})
+
+	var stage_advisor_text: String = String(_current_stage_data.get("learning_objective", ""))
+	if stage_advisor_text.is_empty() and not raw_sections.is_empty():
+		var sec0: Dictionary = raw_sections[0] as Dictionary
+		stage_advisor_text = String(sec0.get("body", ""))
+
 	return {
 		"stage_id": _current_stage_id,
 		"stage_title": stage_title,
 		"dungeon_title": dungeon_title,
 		"lesson_steps": steps,
+		"story_steps": story_steps,
+		"stage_advisor_text": stage_advisor_text,
 		"encounter_mode": str(_current_stage_data.get("encounter_mode", "puzzle_onboarding")),
 		"enemy_id": "" if _current_stage_data.get("enemy_id") == null else str(_current_stage_data.get("enemy_id")),
 		"card_pool_ids": (_current_stage_data.get("card_pool_ids", []) as Array).duplicate() if _current_stage_data.get("card_pool_ids") != null else [],
