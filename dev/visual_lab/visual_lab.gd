@@ -147,7 +147,9 @@ var _distortion: float = DEFAULT_DISTORTION
 var _breathing: float = DEFAULT_BREATHING
 var _layer_count: int = DEFAULT_LAYER_COUNT
 
-# Diagnostics State Cash
+# Diagnostics State Cash & Throttling
+const DIAG_REFRESH_INTERVAL: float = 0.2 # 5 Hz refresh throttle
+var _diag_refresh_timer: float = 0.0
 var _last_diag_left_overscan: float = 0.0
 var _last_diag_right_overscan: float = 0.0
 var _last_diag_curr_offset: float = 0.0
@@ -270,7 +272,10 @@ func _process(delta: float) -> void:
 			_procedural_time += delta
 			_update_procedural_motion()
 
-	_update_diagnostic_display()
+	_diag_refresh_timer += delta
+	if _diag_refresh_timer >= DIAG_REFRESH_INTERVAL:
+		_diag_refresh_timer = 0.0
+		_update_diagnostic_display()
 
 func _update_procedural_motion() -> void:
 	_load_all_textures()

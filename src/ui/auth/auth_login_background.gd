@@ -167,7 +167,10 @@ var fog_asset_count: int = 0
 var banner_asset_count: int = 0
 var particle_asset_count: int = 0
 
-# State Variables
+# State & Profiling Tracking Variables
+var _resources_loaded: bool = false
+var resource_load_count: int = 0
+var shader_compilation_count: int = 0
 var _is_playing: bool = true
 var _accum_time: float = 0.0
 
@@ -243,6 +246,11 @@ func _process(delta: float) -> void:
 	_update_animations(_accum_time)
 
 func _load_resources() -> void:
+	if _resources_loaded:
+		return
+	_resources_loaded = true
+	resource_load_count += 1
+
 	if _bg_texture == null:
 		_bg_texture = _load_texture_safe(BG_ASSET_PATH)
 
@@ -303,18 +311,21 @@ func _load_resources() -> void:
 
 	particle_asset_count = _particle_all_textures.size()
 
-	# 4. Shaders
+	# 4. Shaders (Instantiated ONCE)
 	if _banner_shader == null:
 		_banner_shader = Shader.new()
 		_banner_shader.code = BANNER_SHADER_CODE
+		shader_compilation_count += 1
 
 	if _fog_shader == null:
 		_fog_shader = Shader.new()
 		_fog_shader.code = FOG_SHADER_CODE
+		shader_compilation_count += 1
 
 	if _crystal_shader == null:
 		_crystal_shader = Shader.new()
 		_crystal_shader.code = CRYSTAL_GLOW_SHADER_CODE
+		shader_compilation_count += 1
 
 func _load_texture_safe(p: String) -> Texture2D:
 	if ResourceLoader.exists(p) or FileAccess.file_exists(p):

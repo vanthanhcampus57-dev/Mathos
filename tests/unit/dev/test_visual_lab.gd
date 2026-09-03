@@ -30,7 +30,7 @@ const VisualLabClass = preload("res://dev/visual_lab/visual_lab.gd")
 const AuthLoginBackgroundClass = preload("res://src/ui/auth/auth_login_background.gd")
 
 func _initialize() -> void:
-	print("--- RUNNING MATHOS VISUAL LAB QA HARNESS (VIS-LAB-001..029) ---")
+	print("--- RUNNING MATHOS VISUAL LAB QA HARNESS (VIS-LAB-001..030) ---")
 	var ok: bool = run_all_tests()
 	if ok:
 		print("MATHOS VISUAL LAB QA HARNESS: PASS!")
@@ -70,9 +70,10 @@ static func run_all_tests() -> bool:
 	if test_vislab_027_hide_show_controls_toggle_and_tab_shortcut(): passes += 1
 	if test_vislab_028_locked_3_logo_splash_timings_unaltered(): passes += 1
 	if test_vislab_029_real_asset_inventory_verification(): passes += 1
+	if test_vislab_030_performance_one_time_resource_loading_and_throttled_diagnostics(): passes += 1
 
-	print("[VIS-LAB-HARNESS] %d / 29 test scenarios passed" % passes)
-	return passes == 29
+	print("[VIS-LAB-HARNESS] %d / 30 test scenarios passed" % passes)
+	return passes == 30
 
 static func _create_lab() -> VisualLab:
 	var scene: PackedScene = load("res://dev/visual_lab/visual_lab.tscn") as PackedScene
@@ -694,4 +695,65 @@ static func test_vislab_029_real_asset_inventory_verification() -> bool:
 
 	print("[VIS-LAB-029] PASS: All real asset inventory counts verified (15 fog, 2 banners, 8 particles)!")
 	auth_bg.queue_free()
+	return true
+
+static func test_vislab_030_performance_one_time_resource_loading_and_throttled_diagnostics() -> bool:
+	print("[VIS-LAB-030] Verifying performance contracts: one-time resource loading, cheap getters, and throttled diagnostics...")
+	var auth_bg: AuthLoginBackground = AuthLoginBackgroundClass.new() as AuthLoginBackground
+	auth_bg._ensure_nodes()
+	Engine.get_main_loop().root.add_child(auth_bg)
+
+	if auth_bg.resource_load_count != 1:
+		print("[VIS-LAB-030] FAIL: Initial resource_load_count expected 1, got %d" % auth_bg.resource_load_count)
+		auth_bg.queue_free()
+		return false
+
+	if auth_bg.shader_compilation_count != 3:
+		print("[VIS-LAB-030] FAIL: Initial shader_compilation_count expected 3, got %d" % auth_bg.shader_compilation_count)
+		auth_bg.queue_free()
+		return false
+
+	# Repeated texture getter calls must NOT trigger dynamic reloads
+	for i in range(25):
+		var bg_tex = auth_bg.get_bg_texture()
+		var ba_tex = auth_bg.get_banner_a_texture()
+		var bb_tex = auth_bg.get_banner_b_texture()
+		if bg_tex == null or ba_tex == null or bb_tex == null:
+			print("[VIS-LAB-030] FAIL: Texture getter returned null")
+			auth_bg.queue_free()
+			return false
+
+	if auth_bg.resource_load_count != 1:
+		print("[VIS-LAB-030] FAIL: Repeated getters re-triggered _load_resources()! Count=%d" % auth_bg.resource_load_count)
+		auth_bg.queue_free()
+		return false
+
+	if auth_bg.shader_compilation_count != 3:
+		print("[VIS-LAB-030] FAIL: Shaders re-compiled by getters! Count=%d" % auth_bg.shader_compilation_count)
+		auth_bg.queue_free()
+		return false
+
+	auth_bg.queue_free()
+
+	# Verify VisualLab diagnostic refresh throttling
+	var lab: VisualLab = _create_lab()
+	Engine.get_main_loop().root.add_child(lab)
+	lab.set_lab_mode(VisualLab.LabMode.AUTH_LOGIN_BG)
+
+	var lab_auth_bg = lab.get_auth_background()
+	var initial_loads: int = lab_auth_bg.resource_load_count
+
+	# Run 50 frames of animation
+	for f in range(50):
+		lab._process(0.016667)
+		if lab_auth_bg != null and lab_auth_bg.visible:
+			lab_auth_bg._process(0.016667)
+
+	if lab_auth_bg.resource_load_count != initial_loads:
+		print("[VIS-LAB-030] FAIL: _process loop triggered _load_resources! Initial=%d, Final=%d" % [initial_loads, lab_auth_bg.resource_load_count])
+		lab.queue_free()
+		return false
+
+	print("[VIS-LAB-030] PASS: Performance contracts (one-time load, cheap getters, throttled diagnostics) verified!")
+	lab.queue_free()
 	return true
