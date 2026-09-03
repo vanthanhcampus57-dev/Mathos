@@ -112,6 +112,8 @@ var _layer_count_option: OptionButton = null
 
 # Auth Login Background Controls Box (Sectioned V4 UI)
 var _auth_ctrl_box: VBoxContainer = null
+var _ban_a_warp_spins: Array[SpinBox] = []
+var _ban_b_warp_spins: Array[SpinBox] = []
 
 # State
 var _current_lab_mode: LabMode = LabMode.FOG_TEST
@@ -373,6 +375,37 @@ func _update_procedural_motion() -> void:
 	_last_diag_curr_offset = curr_max_offset
 	_last_diag_edge_safe = is_edge_safe
 
+func _create_warp_corner_row(corner_label: String, get_val: Callable, set_val_x: Callable, set_val_y: Callable) -> Dictionary:
+	var row: HBoxContainer = HBoxContainer.new()
+	var lbl: Label = Label.new()
+	lbl.text = "%-3s:" % corner_label
+	lbl.custom_minimum_size = Vector2(36, 0)
+	row.add_child(lbl)
+
+	var lx: Label = Label.new(); lx.text = "X"
+	row.add_child(lx)
+	var spin_x: SpinBox = SpinBox.new()
+	spin_x.min_value = -100.0
+	spin_x.max_value = 100.0
+	spin_x.step = 1.0
+	spin_x.value = get_val.call().x
+	spin_x.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spin_x.value_changed.connect(func(v): set_val_x.call(v))
+	row.add_child(spin_x)
+
+	var ly: Label = Label.new(); ly.text = "Y"
+	row.add_child(ly)
+	var spin_y: SpinBox = SpinBox.new()
+	spin_y.min_value = -100.0
+	spin_y.max_value = 100.0
+	spin_y.step = 1.0
+	spin_y.value = get_val.call().y
+	spin_y.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spin_y.value_changed.connect(func(v): set_val_y.call(v))
+	row.add_child(spin_y)
+
+	return {"row": row, "spin_x": spin_x, "spin_y": spin_y}
+
 func _build_ui_hierarchy() -> void:
 	_bg_texture_rect = TextureRect.new()
 	_bg_texture_rect.name = "BackgroundTextureRect"
@@ -618,7 +651,7 @@ func _build_ui_hierarchy() -> void:
 	reset_fog_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.fog_master_opacity = AuthLoginBackground.DEFAULT_FOG_MASTER_OPACITY; _auth_bg_node.fog_brightness = AuthLoginBackground.DEFAULT_FOG_BRIGHTNESS; _auth_bg_node.fog_saturation = AuthLoginBackground.DEFAULT_FOG_SATURATION; _auth_bg_node.set_fog_cluster_count(AuthLoginBackground.DEFAULT_FOG_CLUSTER_COUNT))
 	_auth_ctrl_box.add_child(reset_fog_btn)
 
-	# SECTION 2: BANNER A & BANNER B
+	# SECTION 2: BANNER A & BANNER B (Brightness + 16 4-Corner Warp Controls)
 	var hdr_banner: Label = Label.new(); hdr_banner.text = "=== REAL BANNERS & 4-CORNER WARP ==="
 	_auth_ctrl_box.add_child(hdr_banner)
 
@@ -627,17 +660,87 @@ func _build_ui_hierarchy() -> void:
 	ban_a_bright_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_a_brightness = v)
 	_auth_ctrl_box.add_child(ban_a_bright_lbl); _auth_ctrl_box.add_child(ban_a_bright_slider)
 
+	# BANNER A WARP CONTROLS (8 SpinBoxes)
+	var hdr_ban_a_warp: Label = Label.new(); hdr_ban_a_warp.text = "--- BANNER A WARP ---"
+	_auth_ctrl_box.add_child(hdr_ban_a_warp)
+	_ban_a_warp_spins.clear()
+
+	for corner in ["TL", "TR", "BL", "BR"]:
+		var getter: Callable
+		var setter_x: Callable
+		var setter_y: Callable
+		match corner:
+			"TL":
+				getter = func(): return _auth_bg_node.banner_a_warp_tl if _auth_bg_node else Vector2.ZERO
+				setter_x = func(v): if _auth_bg_node: _auth_bg_node.banner_a_warp_tl = Vector2(v, _auth_bg_node.banner_a_warp_tl.y)
+				setter_y = func(v): if _auth_bg_node: _auth_bg_node.banner_a_warp_tl = Vector2(_auth_bg_node.banner_a_warp_tl.x, v)
+			"TR":
+				getter = func(): return _auth_bg_node.banner_a_warp_tr if _auth_bg_node else Vector2.ZERO
+				setter_x = func(v): if _auth_bg_node: _auth_bg_node.banner_a_warp_tr = Vector2(v, _auth_bg_node.banner_a_warp_tr.y)
+				setter_y = func(v): if _auth_bg_node: _auth_bg_node.banner_a_warp_tr = Vector2(_auth_bg_node.banner_a_warp_tr.x, v)
+			"BL":
+				getter = func(): return _auth_bg_node.banner_a_warp_bl if _auth_bg_node else Vector2.ZERO
+				setter_x = func(v): if _auth_bg_node: _auth_bg_node.banner_a_warp_bl = Vector2(v, _auth_bg_node.banner_a_warp_bl.y)
+				setter_y = func(v): if _auth_bg_node: _auth_bg_node.banner_a_warp_bl = Vector2(_auth_bg_node.banner_a_warp_bl.x, v)
+			"BR":
+				getter = func(): return _auth_bg_node.banner_a_warp_br if _auth_bg_node else Vector2.ZERO
+				setter_x = func(v): if _auth_bg_node: _auth_bg_node.banner_a_warp_br = Vector2(v, _auth_bg_node.banner_a_warp_br.y)
+				setter_y = func(v): if _auth_bg_node: _auth_bg_node.banner_a_warp_br = Vector2(_auth_bg_node.banner_a_warp_br.x, v)
+		var res: Dictionary = _create_warp_corner_row(corner, getter, setter_x, setter_y)
+		_auth_ctrl_box.add_child(res["row"] as Control)
+		_ban_a_warp_spins.append(res["spin_x"] as SpinBox)
+		_ban_a_warp_spins.append(res["spin_y"] as SpinBox)
+
+	var reset_ban_a_btn: Button = Button.new(); reset_ban_a_btn.text = "RESET BANNER A WARP"
+	reset_ban_a_btn.pressed.connect(func():
+		if _auth_bg_node: _auth_bg_node.reset_banner_a_warp()
+		for s in _ban_a_warp_spins:
+			if s != null: s.set_value_no_signal(0.0)
+	)
+	_auth_ctrl_box.add_child(reset_ban_a_btn)
+
 	var ban_b_bright_lbl: Label = Label.new(); ban_b_bright_lbl.text = "Banner B Brightness (0.4..1.6):"
 	var ban_b_bright_slider: HSlider = HSlider.new(); ban_b_bright_slider.min_value = 0.4; ban_b_bright_slider.max_value = 1.6; ban_b_bright_slider.step = 0.05; ban_b_bright_slider.value = AuthLoginBackground.DEFAULT_BANNER_B_BRIGHTNESS
 	ban_b_bright_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_b_brightness = v)
 	_auth_ctrl_box.add_child(ban_b_bright_lbl); _auth_ctrl_box.add_child(ban_b_bright_slider)
 
-	var reset_ban_a_btn: Button = Button.new(); reset_ban_a_btn.text = "RESET BANNER A WARP"
-	reset_ban_a_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.reset_banner_a_warp())
-	_auth_ctrl_box.add_child(reset_ban_a_btn)
+	# BANNER B WARP CONTROLS (8 SpinBoxes)
+	var hdr_ban_b_warp: Label = Label.new(); hdr_ban_b_warp.text = "--- BANNER B WARP ---"
+	_auth_ctrl_box.add_child(hdr_ban_b_warp)
+	_ban_b_warp_spins.clear()
+
+	for corner in ["TL", "TR", "BL", "BR"]:
+		var getter: Callable
+		var setter_x: Callable
+		var setter_y: Callable
+		match corner:
+			"TL":
+				getter = func(): return _auth_bg_node.banner_b_warp_tl if _auth_bg_node else Vector2.ZERO
+				setter_x = func(v): if _auth_bg_node: _auth_bg_node.banner_b_warp_tl = Vector2(v, _auth_bg_node.banner_b_warp_tl.y)
+				setter_y = func(v): if _auth_bg_node: _auth_bg_node.banner_b_warp_tl = Vector2(_auth_bg_node.banner_b_warp_tl.x, v)
+			"TR":
+				getter = func(): return _auth_bg_node.banner_b_warp_tr if _auth_bg_node else Vector2.ZERO
+				setter_x = func(v): if _auth_bg_node: _auth_bg_node.banner_b_warp_tr = Vector2(v, _auth_bg_node.banner_b_warp_tr.y)
+				setter_y = func(v): if _auth_bg_node: _auth_bg_node.banner_b_warp_tr = Vector2(_auth_bg_node.banner_b_warp_tr.x, v)
+			"BL":
+				getter = func(): return _auth_bg_node.banner_b_warp_bl if _auth_bg_node else Vector2.ZERO
+				setter_x = func(v): if _auth_bg_node: _auth_bg_node.banner_b_warp_bl = Vector2(v, _auth_bg_node.banner_b_warp_bl.y)
+				setter_y = func(v): if _auth_bg_node: _auth_bg_node.banner_b_warp_bl = Vector2(_auth_bg_node.banner_b_warp_bl.x, v)
+			"BR":
+				getter = func(): return _auth_bg_node.banner_b_warp_br if _auth_bg_node else Vector2.ZERO
+				setter_x = func(v): if _auth_bg_node: _auth_bg_node.banner_b_warp_br = Vector2(v, _auth_bg_node.banner_b_warp_br.y)
+				setter_y = func(v): if _auth_bg_node: _auth_bg_node.banner_b_warp_br = Vector2(_auth_bg_node.banner_b_warp_br.x, v)
+		var res: Dictionary = _create_warp_corner_row(corner, getter, setter_x, setter_y)
+		_auth_ctrl_box.add_child(res["row"] as Control)
+		_ban_b_warp_spins.append(res["spin_x"] as SpinBox)
+		_ban_b_warp_spins.append(res["spin_y"] as SpinBox)
 
 	var reset_ban_b_btn: Button = Button.new(); reset_ban_b_btn.text = "RESET BANNER B WARP"
-	reset_ban_b_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.reset_banner_b_warp())
+	reset_ban_b_btn.pressed.connect(func():
+		if _auth_bg_node: _auth_bg_node.reset_banner_b_warp()
+		for s in _ban_b_warp_spins:
+			if s != null: s.set_value_no_signal(0.0)
+	)
 	_auth_ctrl_box.add_child(reset_ban_b_btn)
 
 	# SECTION 3: REAL PIXEL ART PARTICLES
@@ -669,7 +772,14 @@ func _build_ui_hierarchy() -> void:
 	_auth_ctrl_box.add_child(auth_play_btn)
 
 	var reset_auth_btn: Button = Button.new(); reset_auth_btn.text = "[ RESET ALL AUTH BG DEFAULTS ]"
-	reset_auth_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.reset_defaults(); auth_play_btn.text = "Pause")
+	reset_auth_btn.pressed.connect(func():
+		if _auth_bg_node: _auth_bg_node.reset_defaults()
+		auth_play_btn.text = "Pause"
+		for s in _ban_a_warp_spins:
+			if s != null: s.set_value_no_signal(0.0)
+		for s in _ban_b_warp_spins:
+			if s != null: s.set_value_no_signal(0.0)
+	)
 	_auth_ctrl_box.add_child(reset_auth_btn)
 
 	vbox.add_child(_auth_ctrl_box)
@@ -1076,9 +1186,33 @@ func reset_defaults() -> void:
 	if _auth_bg_node != null:
 		_auth_bg_node.reset_defaults()
 
+	for s in _ban_a_warp_spins:
+		if s != null: s.set_value_no_signal(0.0)
+	for s in _ban_b_warp_spins:
+		if s != null: s.set_value_no_signal(0.0)
+
 	_apply_parameters()
 
 # Accessors for testing & verification
+func get_banner_a_warp_spins() -> Array[SpinBox]:
+	if _ban_a_warp_spins.is_empty() and _ctrl_panel == null:
+		_build_ui_hierarchy()
+	return _ban_a_warp_spins
+
+func get_banner_b_warp_spins() -> Array[SpinBox]:
+	if _ban_b_warp_spins.is_empty() and _ctrl_panel == null:
+		_build_ui_hierarchy()
+	return _ban_b_warp_spins
+
+func get_all_warp_spins() -> Array[SpinBox]:
+	if _ban_a_warp_spins.is_empty() or _ban_b_warp_spins.is_empty():
+		if _ctrl_panel == null:
+			_build_ui_hierarchy()
+	var res: Array[SpinBox] = []
+	res.append_array(_ban_a_warp_spins)
+	res.append_array(_ban_b_warp_spins)
+	return res
+
 func get_fog_source_mode() -> FogSourceMode:
 	return _fog_source_mode
 

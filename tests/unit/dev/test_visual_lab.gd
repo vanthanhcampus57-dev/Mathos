@@ -30,7 +30,7 @@ const VisualLabClass = preload("res://dev/visual_lab/visual_lab.gd")
 const AuthLoginBackgroundClass = preload("res://src/ui/auth/auth_login_background.gd")
 
 func _initialize() -> void:
-	print("--- RUNNING MATHOS VISUAL LAB QA HARNESS (VIS-LAB-001..030) ---")
+	print("--- RUNNING MATHOS VISUAL LAB QA HARNESS (VIS-LAB-001..031) ---")
 	var ok: bool = run_all_tests()
 	if ok:
 		print("MATHOS VISUAL LAB QA HARNESS: PASS!")
@@ -71,9 +71,10 @@ static func run_all_tests() -> bool:
 	if test_vislab_028_locked_3_logo_splash_timings_unaltered(): passes += 1
 	if test_vislab_029_real_asset_inventory_verification(): passes += 1
 	if test_vislab_030_performance_one_time_resource_loading_and_throttled_diagnostics(): passes += 1
+	if test_vislab_031_banner_4_corner_warp_16_controls_and_reset_sync(): passes += 1
 
-	print("[VIS-LAB-HARNESS] %d / 30 test scenarios passed" % passes)
-	return passes == 30
+	print("[VIS-LAB-HARNESS] %d / 31 test scenarios passed" % passes)
+	return passes == 31
 
 static func _create_lab() -> VisualLab:
 	var scene: PackedScene = load("res://dev/visual_lab/visual_lab.tscn") as PackedScene
@@ -755,5 +756,82 @@ static func test_vislab_030_performance_one_time_resource_loading_and_throttled_
 		return false
 
 	print("[VIS-LAB-030] PASS: Performance contracts (one-time load, cheap getters, throttled diagnostics) verified!")
+	lab.queue_free()
+	return true
+
+static func test_vislab_031_banner_4_corner_warp_16_controls_and_reset_sync() -> bool:
+	print("[VIS-LAB-031] Verifying 16 Banner A/B 4-corner warp SpinBox controls, live bindings, and reset synchronization...")
+	var lab: VisualLab = _create_lab()
+	Engine.get_main_loop().root.add_child(lab)
+	lab.set_lab_mode(VisualLab.LabMode.AUTH_LOGIN_BG)
+
+	var spins_a: Array[SpinBox] = lab.get_banner_a_warp_spins()
+	var spins_b: Array[SpinBox] = lab.get_banner_b_warp_spins()
+	var spins_all: Array[SpinBox] = lab.get_all_warp_spins()
+
+	if spins_a.size() != 8 or spins_b.size() != 8 or spins_all.size() != 16:
+		print("[VIS-LAB-031] FAIL: Expected 8 Banner A, 8 Banner B, 16 Total SpinBoxes; got A=%d, B=%d, Total=%d" % [spins_a.size(), spins_b.size(), spins_all.size()])
+		lab.queue_free()
+		return false
+
+	# Verify range [-100, 100], step 1, default 0
+	for s in spins_all:
+		if s == null or abs(s.min_value - (-100.0)) > 0.001 or abs(s.max_value - 100.0) > 0.001 or abs(s.step - 1.0) > 0.001 or abs(s.value - 0.0) > 0.001:
+			print("[VIS-LAB-031] FAIL: SpinBox range/step/default invalid: min=%.1f, max=%.1f, step=%.1f, val=%.1f" % [s.min_value if s else 0.0, s.max_value if s else 0.0, s.step if s else 0.0, s.value if s else 0.0])
+			lab.queue_free()
+			return false
+
+	var auth_bg = lab.get_auth_background()
+
+	# 1. Live binding test: Banner A TL X & Y
+	spins_a[0].value = 25.0; spins_a[0].value_changed.emit(25.0)  # TL X
+	spins_a[1].value = -15.0; spins_a[1].value_changed.emit(-15.0) # TL Y
+	if abs(auth_bg.banner_a_warp_tl.x - 25.0) > 0.001 or abs(auth_bg.banner_a_warp_tl.y - (-15.0)) > 0.001:
+		print("[VIS-LAB-031] FAIL: Banner A TL warp binding failed! Got Vector2(%.1f, %.1f)" % [auth_bg.banner_a_warp_tl.x, auth_bg.banner_a_warp_tl.y])
+		lab.queue_free()
+		return false
+
+	# 2. Live binding test: Banner B BR X & Y
+	spins_b[6].value = 40.0; spins_b[6].value_changed.emit(40.0)  # BR X
+	spins_b[7].value = -30.0; spins_b[7].value_changed.emit(-30.0) # BR Y
+	if abs(auth_bg.banner_b_warp_br.x - 40.0) > 0.001 or abs(auth_bg.banner_b_warp_br.y - (-30.0)) > 0.001:
+		print("[VIS-LAB-031] FAIL: Banner B BR warp binding failed! Got Vector2(%.1f, %.1f)" % [auth_bg.banner_b_warp_br.x, auth_bg.banner_b_warp_br.y])
+		lab.queue_free()
+		return false
+
+	# 3. Reset Banner A Warp synchronization
+	auth_bg.reset_banner_a_warp()
+	for s in spins_a:
+		s.set_value_no_signal(0.0)
+
+	if auth_bg.banner_a_warp_tl != Vector2.ZERO or spins_a[0].value != 0.0 or spins_a[1].value != 0.0:
+		print("[VIS-LAB-031] FAIL: Reset Banner A Warp sync failed!")
+		lab.queue_free()
+		return false
+
+	# 4. Reset All Auth BG Defaults synchronization
+	spins_a[2].value = 10.0; spins_a[2].value_changed.emit(10.0) # TR X
+	spins_b[4].value = 20.0; spins_b[4].value_changed.emit(20.0) # BL X
+	lab.reset_defaults()
+	for s in spins_all:
+		if abs(s.value - 0.0) > 0.001:
+			print("[VIS-LAB-031] FAIL: Reset All Defaults left SpinBox non-zero! Value=%.1f" % s.value)
+			lab.queue_free()
+			return false
+
+	# 5. Performance lock check during warp manipulation
+	var initial_loads: int = auth_bg.resource_load_count
+	var initial_shaders: int = auth_bg.shader_compilation_count
+	for f in range(20):
+		lab._process(0.016667)
+		if auth_bg != null and auth_bg.visible:
+			auth_bg._process(0.016667)
+
+	if auth_bg.resource_load_count != initial_loads or auth_bg.shader_compilation_count != initial_shaders:
+		print("[VIS-LAB-031] FAIL: Warp animation re-triggered resource load or shader compilation!")
+		lab.queue_free()
+		return false
+
+	print("[VIS-LAB-031] PASS: All 16 warp SpinBoxes, live bindings, reset sync, and performance lock verified!")
 	lab.queue_free()
 	return true

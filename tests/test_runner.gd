@@ -165,7 +165,7 @@ func _count_suite_tests(name: String) -> int:
 		"RC4 Live Interaction UX & Composition QA": return 9
 		"RC4 Live Placed Row Layout QA": return 7
 		"RC4 D1 Pixel-Art Visual & Branding QA": return 9
-		"Visual Lab QA Harness": return 30
+		"Visual Lab QA Harness": return 31
 		"Mathos Production Boot Sequence QA": return 13
 		"Godot Auth API Client Foundation": return 24
 		"Mathos Production Auth UI QA": return 16
