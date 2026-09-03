@@ -182,6 +182,56 @@ func reset_password(reset_token: String, new_password: String):
 	var resp: Dictionary = await _transport.request(url, HTTPClient.METHOD_POST, headers, body)
 	return _process_response(resp)
 
+# CENTRALIZED PUBLIC ERROR MESSAGE EXTRACTION HELPER
+# Safely handles String, Array (FastAPI/Pydantic validation errors), Dictionary, or null/missing
+func _extract_public_error_message(parsed_data: Dictionary, default_fallback: String) -> String:
+	if parsed_data.is_empty():
+		return default_fallback
+
+	var detail_val: Variant = parsed_data.get("detail", parsed_data.get("message", parsed_data.get("msg", null)))
+
+	if detail_val == null:
+		return default_fallback
+
+	# Case 1: String
+	if detail_val is String:
+		var s: String = (detail_val as String).strip_edges()
+		return s if not s.is_empty() else default_fallback
+
+	# Case 2: Array of validation objects (FastAPI / Pydantic style detail)
+	if detail_val is Array:
+		var arr: Array = detail_val as Array
+		var msgs: Array[String] = []
+		for item in arr:
+			if item is Dictionary:
+				var item_dict: Dictionary = item as Dictionary
+				var m: String = item_dict.get("msg", item_dict.get("message", item_dict.get("detail", ""))) as String
+				m = m.strip_edges()
+				if not m.is_empty() and not msgs.has(m):
+					msgs.append(m)
+			elif item is String:
+				var s_item: String = (item as String).strip_edges()
+				if not s_item.is_empty() and not msgs.has(s_item):
+					msgs.append(s_item)
+
+		if not msgs.is_empty():
+			var max_msgs: int = mini(msgs.size(), 3)
+			var sub_list: Array[String] = []
+			for i in range(max_msgs):
+				sub_list.append(msgs[i])
+			return "; ".join(sub_list)
+
+		return default_fallback
+
+	# Case 3: Dictionary
+	if detail_val is Dictionary:
+		var dict_val: Dictionary = detail_val as Dictionary
+		var m_str: String = dict_val.get("message", dict_val.get("msg", dict_val.get("detail", ""))) as String
+		m_str = m_str.strip_edges()
+		return m_str if not m_str.is_empty() else default_fallback
+
+	return default_fallback
+
 # CENTRALIZED RESPONSE PARSER & ERROR MAPPER
 func _process_response(resp: Dictionary):
 	var status: int = resp.get("status_code", 0) as int
@@ -205,23 +255,21 @@ func _process_response(resp: Dictionary):
 
 	# 3. Handle Successful HTTP Response (200..299)
 	if status >= 200 and status < 300:
-		var ok_msg: String = parsed_data.get("message", "Request successful") as String
+		var ok_msg: String = _extract_public_error_message(parsed_data, "Request successful")
 		return AuthResultClass.ok(parsed_data, ok_msg, status)
 
 	# 4. Map Error HTTP Status Codes
-	var server_msg: String = parsed_data.get("detail", parsed_data.get("message", "")) as String
-
 	if status == 401 or status == 403:
-		var msg: String = server_msg if not server_msg.is_empty() else "Unauthorized or expired session"
+		var msg: String = _extract_public_error_message(parsed_data, "Unauthorized or expired session")
 		return AuthResultClass.fail("UNAUTHORIZED", msg, status, parsed_data)
 
 	if status == 400 or status == 422:
-		var msg: String = server_msg if not server_msg.is_empty() else "Validation failed for request parameters"
+		var msg: String = _extract_public_error_message(parsed_data, "Validation failed for request parameters")
 		return AuthResultClass.fail("VALIDATION_ERROR", msg, status, parsed_data)
 
 	if status >= 500:
-		var msg: String = server_msg if not server_msg.is_empty() else "Server error encountered. Please try again later."
+		var msg: String = _extract_public_error_message(parsed_data, "Server error encountered. Please try again later.")
 		return AuthResultClass.fail("SERVER_ERROR", msg, status, parsed_data)
 
-	var default_msg: String = server_msg if not server_msg.is_empty() else "Request failed with HTTP status %d" % status
+	var default_msg: String = _extract_public_error_message(parsed_data, "Request failed with HTTP status %d" % status)
 	return AuthResultClass.fail("SERVER_ERROR", default_msg, status, parsed_data)

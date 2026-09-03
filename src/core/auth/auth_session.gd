@@ -28,10 +28,38 @@ func update_from_dict(d: Dictionary) -> void:
 		refresh_token = d["refresh_token"]
 	if d.has("token_type") and d["token_type"] is String:
 		token_type = d["token_type"]
-	if d.has("expires_in") and (d["expires_in"] is int or d["expires_in"] is float):
-		expires_in = int(d["expires_in"])
+
+	# Safe type parsing for expires_in (handles int, float, string)
+	if d.has("expires_in"):
+		var raw_exp: Variant = d["expires_in"]
+		if raw_exp is int or raw_exp is float:
+			expires_in = int(raw_exp)
+		elif raw_exp is String and (raw_exp as String).is_valid_int():
+			expires_in = (raw_exp as String).to_int()
+
+	# User Profile parsing (supports BOTH flat backend shape and nested "user" dict fallback)
+	var prof: Dictionary = user_profile.duplicate(true)
+
+	# 1. Flat backend fields (Primary contract: user_id, email, display_name)
+	if d.has("user_id"):
+		prof["id"] = str(d["user_id"])
+	elif d.has("id"):
+		prof["id"] = str(d["id"])
+
+	if d.has("email") and d["email"] is String:
+		prof["email"] = d["email"]
+	if d.has("display_name") and d["display_name"] is String:
+		prof["display_name"] = d["display_name"]
+
+	# 2. Nested "user" dictionary fallback
 	if d.has("user") and d["user"] is Dictionary:
-		user_profile = d["user"].duplicate(true)
+		var u_dict: Dictionary = d["user"] as Dictionary
+		if u_dict.has("id"): prof["id"] = str(u_dict["id"])
+		if u_dict.has("user_id"): prof["id"] = str(u_dict["user_id"])
+		if u_dict.has("email") and u_dict["email"] is String: prof["email"] = u_dict["email"]
+		if u_dict.has("display_name") and u_dict["display_name"] is String: prof["display_name"] = u_dict["display_name"]
+
+	user_profile = prof
 
 func to_safe_summary() -> Dictionary:
 	return {
