@@ -2,7 +2,7 @@ class_name TestRunner
 extends SceneTree
 
 ## Headless Test Runner for Mathos canonical D1 final integration task.
-## Executes TEST-BOOT-001, TEST-SMOKE-001, TEST-CONFIG-001, CONTENT-001..028, QUESTION-001..026, Player/Reward contracts, PROGRESS-001..015, SAVE suites, FLOW-001..012, APPROOT-001..015, PRES suites, and Shared Mathos Theme suite.
+## Executes TEST-BOOT-001, TEST-SMOKE-001, TEST-CONFIG-001, CONTENT-001..028, QUESTION-001..026, Player/Reward contracts, PROGRESS-001..015, SAVE suites, FLOW-001..012, APPROOT-001..015, PRES suites, Shared Mathos Theme suite, and Auth API Client suite.
 ## Implements truthful tri-state test accounting (PASS, FAIL, WAITING).
 
 const TestProceduralQGenFoundation = preload("res://tests/unit/question/test_procedural_qgen_foundation.gd")
@@ -61,7 +61,8 @@ func _initialize() -> void:
 		{"name": "RC4 Live Placed Row Layout QA", "func": Callable(preload("res://tests/unit/presentation/test_rc4_live_placed_row_layout_verification.gd"), "run_all_tests")},
 		{"name": "RC4 D1 Pixel-Art Visual & Branding QA", "func": Callable(preload("res://tests/unit/presentation/test_d1_visual_branding_integration.gd"), "run_all_tests")},
 		{"name": "Visual Lab QA Harness", "func": Callable(preload("res://tests/unit/dev/test_visual_lab.gd"), "run_all_tests")},
-		{"name": "Mathos Production Boot Sequence QA", "func": Callable(preload("res://tests/unit/boot/test_boot_sequence.gd"), "run_all_tests")}
+		{"name": "Mathos Production Boot Sequence QA", "func": Callable(preload("res://tests/unit/boot/test_boot_sequence.gd"), "run_all_tests")},
+		{"name": "Godot Auth API Client Foundation", "func": Callable(preload("res://tests/unit/network/test_auth_api_client.gd"), "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -173,5 +174,7 @@ func _count_suite_tests(name: String) -> int:
 		"RC4 Live Interaction UX & Composition QA": return 9
 		"RC4 Live Placed Row Layout QA": return 7
 		"RC4 D1 Pixel-Art Visual & Branding QA": return 9
-		"Visual Lab QA Harness": return 22
+		"Visual Lab QA Harness": return 29
+		"Mathos Production Boot Sequence QA": return 13
+		"Godot Auth API Client Foundation": return 18
 		_: return 1
