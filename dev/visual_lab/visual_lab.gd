@@ -4,7 +4,7 @@ extends Control
 ## Developer & QA Visual Asset Lab for Mathos Engine.
 ## Provides isolated diagnosis of visual presentation, fog overlays, frame inspection,
 ## procedural fog animation, side-by-side old vs new comparison,
-## and Auth/Login Academy background visual tuning (V3 Quality), without mutating save/gameplay data.
+## and Auth/Login Academy background real asset tuning (V4 Wiring), without mutating save/gameplay data.
 
 enum LabMode { FOG_TEST, AUTH_LOGIN_BG, FUTURE_TAB_3 }
 enum MotionMode { CURRENT_ATLAS_ANIMATION, STATIC_FRAME }
@@ -110,7 +110,7 @@ var _breathing_slider: Slider = null
 var _breathing_spinbox: SpinBox = null
 var _layer_count_option: OptionButton = null
 
-# Auth Login Background Controls Box (Sectioned V3 UI)
+# Auth Login Background Controls Box (Sectioned V4 UI)
 var _auth_ctrl_box: VBoxContainer = null
 
 # State
@@ -173,10 +173,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			set_controls_visible(not _controls_visible)
 
 func _load_all_textures() -> void:
-	# 1. Background
 	_bg_texture = _load_texture([D1_BG_PATH, D1_BG_ALT_PATH])
 
-	# 2. Old Atlas Fog
 	if _fog_frames.is_empty():
 		_fog_source_texture = _load_texture([D1_FOG_PATH, D1_FOG_ALT_PATH])
 		if _fog_source_texture != null:
@@ -188,7 +186,6 @@ func _load_all_textures() -> void:
 					atlas_tex.region = Rect2(float(col * FOG_FRAME_WIDTH), float(row * FOG_FRAME_HEIGHT), float(FOG_FRAME_WIDTH), float(FOG_FRAME_HEIGHT))
 					_fog_frames.append(atlas_tex)
 
-	# 3. New Procedural Fog Layer
 	_procedural_texture = _load_texture([D1_PROCEDURAL_FOG_PATH, D1_PROCEDURAL_FOG_ALT_PATH])
 
 func _load_texture(paths: Array[String]) -> Texture2D:
@@ -217,6 +214,7 @@ func get_auth_background() -> AuthLoginBackground:
 		_auth_bg_node = AuthLoginBackground.new()
 		_auth_bg_node.name = "AuthLoginBackground"
 		_auth_bg_node.visible = false
+		_auth_bg_node._ensure_nodes()
 		add_child(_auth_bg_node)
 	return _auth_bg_node
 
@@ -371,7 +369,6 @@ func _update_procedural_motion() -> void:
 	_last_diag_edge_safe = is_edge_safe
 
 func _build_ui_hierarchy() -> void:
-	# 1. D1 Background Texture Rect
 	_bg_texture_rect = TextureRect.new()
 	_bg_texture_rect.name = "BackgroundTextureRect"
 	_bg_texture_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -382,7 +379,6 @@ func _build_ui_hierarchy() -> void:
 	_bg_texture_rect.texture = _bg_texture
 	add_child(_bg_texture_rect)
 
-	# 2. D1 Old Atlas Fog Overlay
 	_fog_texture_rect = TextureRect.new()
 	_fog_texture_rect.name = "FogOverlayTextureRect"
 	_fog_texture_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -394,7 +390,6 @@ func _build_ui_hierarchy() -> void:
 		_fog_texture_rect.texture = _fog_frames[0]
 	add_child(_fog_texture_rect)
 
-	# 3. D1 New Procedural Fog Layer Container
 	_proc_container = Control.new()
 	_proc_container.name = "ProceduralFogContainer"
 	_proc_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -410,13 +405,12 @@ func _build_ui_hierarchy() -> void:
 	_proc_container.add_child(_proc_layer_1)
 	add_child(_proc_container)
 
-	# 4. Auth Login Background Node
 	_auth_bg_node = AuthLoginBackground.new()
 	_auth_bg_node.name = "AuthLoginBackground"
 	_auth_bg_node.visible = false
+	_auth_bg_node._ensure_nodes()
 	add_child(_auth_bg_node)
 
-	# 5. Top Header & Mode Tabs
 	_top_bar = PanelContainer.new()
 	_top_bar.name = "TopBar"
 	_top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -438,7 +432,6 @@ func _build_ui_hierarchy() -> void:
 	_top_bar.add_child(top_box)
 	add_child(_top_bar)
 
-	# 6. Developer Control Dock (Left Floating Panel)
 	_ctrl_panel = PanelContainer.new()
 	_ctrl_panel.name = "ControlDock"
 	_ctrl_panel.set_anchors_preset(Control.PRESET_LEFT_WIDE)
@@ -451,7 +444,6 @@ func _build_ui_hierarchy() -> void:
 	var vbox: VBoxContainer = VBoxContainer.new()
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
-	# Fog Source Selector (D1 Mode Only)
 	_fog_source_box = VBoxContainer.new()
 	var src_lbl: Label = Label.new(); src_lbl.text = "FOG SOURCE:"
 	_fog_source_option = OptionButton.new()
@@ -463,7 +455,6 @@ func _build_ui_hierarchy() -> void:
 	_fog_source_box.add_child(_fog_source_option)
 	vbox.add_child(_fog_source_box)
 
-	# Global Play/Pause for D1
 	var play_box: HBoxContainer = HBoxContainer.new()
 	_play_pause_btn = Button.new(); _play_pause_btn.text = "Pause"; _play_pause_btn.pressed.connect(_on_play_pause_pressed)
 	play_box.add_child(_play_pause_btn)
@@ -571,7 +562,6 @@ func _build_ui_hierarchy() -> void:
 
 	vbox.add_child(_proc_ctrl_box)
 
-	# Global Toggles for D1
 	_global_toggles_box = VBoxContainer.new()
 	var hdr_glob: Label = Label.new(); hdr_glob.text = "=== GLOBAL TOGGLES ==="
 	_global_toggles_box.add_child(hdr_glob)
@@ -590,13 +580,13 @@ func _build_ui_hierarchy() -> void:
 
 	vbox.add_child(_global_toggles_box)
 
-	# --- AUTH LOGIN BACKGROUND CONTROLS BOX (Sectioned V3 Quality UI) ---
+	# --- AUTH LOGIN BACKGROUND CONTROLS BOX (V4 Real Asset Wiring UI) ---
 	_auth_ctrl_box = VBoxContainer.new()
 	_auth_ctrl_box.name = "AuthLoginControls"
 	_auth_ctrl_box.visible = false
 
-	# SECTION 1: FOG CLUSTERS
-	var hdr_auth_fog: Label = Label.new(); hdr_auth_fog.text = "=== FOG CLUSTERS ==="
+	# SECTION 1: FOG CLUSTERS & TINT / BRIGHTNESS / SATURATION
+	var hdr_auth_fog: Label = Label.new(); hdr_auth_fog.text = "=== FOG CLUSTERS & SHADER ==="
 	_auth_ctrl_box.add_child(hdr_auth_fog)
 
 	var afog_op_lbl: Label = Label.new(); afog_op_lbl.text = "Fog Master Opacity (0..1):"
@@ -604,33 +594,38 @@ func _build_ui_hierarchy() -> void:
 	afog_op_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_master_opacity = v)
 	_auth_ctrl_box.add_child(afog_op_lbl); _auth_ctrl_box.add_child(afog_op_slider)
 
-	var afog_cnt_lbl: Label = Label.new(); afog_cnt_lbl.text = "Cluster Count (1..20):"
+	var afog_bright_lbl: Label = Label.new(); afog_bright_lbl.text = "Fog Brightness (0.4..1.2):"
+	var afog_bright_slider: HSlider = HSlider.new(); afog_bright_slider.min_value = 0.4; afog_bright_slider.max_value = 1.2; afog_bright_slider.step = 0.05; afog_bright_slider.value = AuthLoginBackground.DEFAULT_FOG_BRIGHTNESS
+	afog_bright_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_brightness = v)
+	_auth_ctrl_box.add_child(afog_bright_lbl); _auth_ctrl_box.add_child(afog_bright_slider)
+
+	var afog_sat_lbl: Label = Label.new(); afog_sat_lbl.text = "Fog Saturation (0.3..1.2):"
+	var afog_sat_slider: HSlider = HSlider.new(); afog_sat_slider.min_value = 0.3; afog_sat_slider.max_value = 1.2; afog_sat_slider.step = 0.05; afog_sat_slider.value = AuthLoginBackground.DEFAULT_FOG_SATURATION
+	afog_sat_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_saturation = v)
+	_auth_ctrl_box.add_child(afog_sat_lbl); _auth_ctrl_box.add_child(afog_sat_slider)
+
+	var afog_cnt_lbl: Label = Label.new(); afog_cnt_lbl.text = "Visible Cluster Count (1..20):"
 	var afog_cnt_spin: SpinBox = SpinBox.new(); afog_cnt_spin.min_value = 1; afog_cnt_spin.max_value = 20; afog_cnt_spin.value = AuthLoginBackground.DEFAULT_FOG_CLUSTER_COUNT
 	afog_cnt_spin.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.set_fog_cluster_count(int(v)))
 	_auth_ctrl_box.add_child(afog_cnt_lbl); _auth_ctrl_box.add_child(afog_cnt_spin)
 
-	var afog_spd_lbl: Label = Label.new(); afog_spd_lbl.text = "Global Speed (0..2):"
-	var afog_spd_slider: HSlider = HSlider.new(); afog_spd_slider.min_value = 0.0; afog_spd_slider.max_value = 2.0; afog_spd_slider.step = 0.05; afog_spd_slider.value = AuthLoginBackground.DEFAULT_FOG_GLOBAL_SPEED
-	afog_spd_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_global_speed = v)
-	_auth_ctrl_box.add_child(afog_spd_lbl); _auth_ctrl_box.add_child(afog_spd_slider)
-
 	var reset_fog_btn: Button = Button.new(); reset_fog_btn.text = "RESET FOG DEFAULTS"
-	reset_fog_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.fog_master_opacity = AuthLoginBackground.DEFAULT_FOG_MASTER_OPACITY; _auth_bg_node.set_fog_cluster_count(AuthLoginBackground.DEFAULT_FOG_CLUSTER_COUNT); _auth_bg_node.fog_global_speed = AuthLoginBackground.DEFAULT_FOG_GLOBAL_SPEED)
+	reset_fog_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.fog_master_opacity = AuthLoginBackground.DEFAULT_FOG_MASTER_OPACITY; _auth_bg_node.fog_brightness = AuthLoginBackground.DEFAULT_FOG_BRIGHTNESS; _auth_bg_node.fog_saturation = AuthLoginBackground.DEFAULT_FOG_SATURATION; _auth_bg_node.set_fog_cluster_count(AuthLoginBackground.DEFAULT_FOG_CLUSTER_COUNT))
 	_auth_ctrl_box.add_child(reset_fog_btn)
 
-	# SECTION 2: BANNER CONTROLS & 4-CORNER WARP
-	var hdr_banner: Label = Label.new(); hdr_banner.text = "=== BANNERS & 4-CORNER WARP ==="
+	# SECTION 2: BANNER A & BANNER B
+	var hdr_banner: Label = Label.new(); hdr_banner.text = "=== REAL BANNERS & 4-CORNER WARP ==="
 	_auth_ctrl_box.add_child(hdr_banner)
 
-	var ban_bright_lbl: Label = Label.new(); ban_bright_lbl.text = "Banner Brightness (0.4..1.6):"
-	var ban_bright_slider: HSlider = HSlider.new(); ban_bright_slider.min_value = 0.4; ban_bright_slider.max_value = 1.6; ban_bright_slider.step = 0.05; ban_bright_slider.value = AuthLoginBackground.DEFAULT_BANNER_BRIGHTNESS
-	ban_bright_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_brightness = v)
-	_auth_ctrl_box.add_child(ban_bright_lbl); _auth_ctrl_box.add_child(ban_bright_slider)
+	var ban_a_bright_lbl: Label = Label.new(); ban_a_bright_lbl.text = "Banner A Brightness (0.4..1.6):"
+	var ban_a_bright_slider: HSlider = HSlider.new(); ban_a_bright_slider.min_value = 0.4; ban_a_bright_slider.max_value = 1.6; ban_a_bright_slider.step = 0.05; ban_a_bright_slider.value = AuthLoginBackground.DEFAULT_BANNER_A_BRIGHTNESS
+	ban_a_bright_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_a_brightness = v)
+	_auth_ctrl_box.add_child(ban_a_bright_lbl); _auth_ctrl_box.add_child(ban_a_bright_slider)
 
-	var ban_sway_lbl: Label = Label.new(); ban_sway_lbl.text = "Cloth Sway Amplitude (0..15px):"
-	var ban_sway_slider: HSlider = HSlider.new(); ban_sway_slider.min_value = 0.0; ban_sway_slider.max_value = 15.0; ban_sway_slider.step = 0.2; ban_sway_slider.value = AuthLoginBackground.DEFAULT_BANNER_SWAY
-	ban_sway_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_sway = v)
-	_auth_ctrl_box.add_child(ban_sway_lbl); _auth_ctrl_box.add_child(ban_sway_slider)
+	var ban_b_bright_lbl: Label = Label.new(); ban_b_bright_lbl.text = "Banner B Brightness (0.4..1.6):"
+	var ban_b_bright_slider: HSlider = HSlider.new(); ban_b_bright_slider.min_value = 0.4; ban_b_bright_slider.max_value = 1.6; ban_b_bright_slider.step = 0.05; ban_b_bright_slider.value = AuthLoginBackground.DEFAULT_BANNER_B_BRIGHTNESS
+	ban_b_bright_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_b_brightness = v)
+	_auth_ctrl_box.add_child(ban_b_bright_lbl); _auth_ctrl_box.add_child(ban_b_bright_slider)
 
 	var reset_ban_a_btn: Button = Button.new(); reset_ban_a_btn.text = "RESET BANNER A WARP"
 	reset_ban_a_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.reset_banner_a_warp())
@@ -640,9 +635,16 @@ func _build_ui_hierarchy() -> void:
 	reset_ban_b_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.reset_banner_b_warp())
 	_auth_ctrl_box.add_child(reset_ban_b_btn)
 
-	# SECTION 3: MAGIC LIGHT PARTICLES
-	var hdr_part: Label = Label.new(); hdr_part.text = "=== MAGIC LIGHT PARTICLES ==="
+	# SECTION 3: REAL PIXEL ART PARTICLES
+	var hdr_part: Label = Label.new(); hdr_part.text = "=== REAL PIXEL ART PARTICLES ==="
 	_auth_ctrl_box.add_child(hdr_part)
+
+	var part_type_lbl: Label = Label.new(); part_type_lbl.text = "Particle Type:"
+	var part_type_opt: OptionButton = OptionButton.new()
+	part_type_opt.add_item("MIXED", 0); part_type_opt.add_item("STAR", 1); part_type_opt.add_item("ORB", 2); part_type_opt.add_item("SPARKLE", 3)
+	part_type_opt.select(0)
+	part_type_opt.item_selected.connect(func(idx): if _auth_bg_node: _auth_bg_node.set_particle_type(part_type_opt.get_item_text(idx)))
+	_auth_ctrl_box.add_child(part_type_lbl); _auth_ctrl_box.add_child(part_type_opt)
 
 	var dust_chk: CheckBox = CheckBox.new(); dust_chk.text = "Particles Enabled"; dust_chk.button_pressed = true
 	dust_chk.toggled.connect(func(t): if _auth_bg_node: _auth_bg_node.dust_enabled = t)
@@ -650,7 +652,7 @@ func _build_ui_hierarchy() -> void:
 
 	var dust_cnt_lbl: Label = Label.new(); dust_cnt_lbl.text = "Particle Count (1..50):"
 	var dust_cnt_spin: SpinBox = SpinBox.new(); dust_cnt_spin.min_value = 1; dust_cnt_spin.max_value = 50; dust_cnt_spin.value = AuthLoginBackground.DEFAULT_DUST_COUNT
-	dust_cnt_spin.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.dust_count = int(v))
+	dust_cnt_spin.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.set_particle_count(int(v)))
 	_auth_ctrl_box.add_child(dust_cnt_lbl); _auth_ctrl_box.add_child(dust_cnt_spin)
 
 	# SECTION 4: GLOBAL PLAYBACK
@@ -671,7 +673,6 @@ func _build_ui_hierarchy() -> void:
 	_ctrl_panel.add_child(scroll)
 	add_child(_ctrl_panel)
 
-	# 7. Diagnostic Label Overlay
 	_diag_panel = PanelContainer.new()
 	_diag_panel.name = "DiagPanel"
 	_diag_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -799,37 +800,36 @@ func _update_diagnostic_display() -> void:
 			bg_w = _auth_bg_node.get_bg_texture().get_width()
 			bg_h = _auth_bg_node.get_bg_texture().get_height()
 
-		var fog_pack_str: String = "INSTALLED" if (_auth_bg_node and _auth_bg_node.fog_asset_pack_installed) else "NOT INSTALLED (Fallback Active)"
-		var part_pack_str: String = "INSTALLED" if (_auth_bg_node and _auth_bg_node.particle_asset_pack_installed) else "NOT INSTALLED (Fallback Active)"
+		var fog_cnt: int = _auth_bg_node.fog_asset_count if _auth_bg_node else 0
+		var ban_cnt: int = _auth_bg_node.banner_asset_count if _auth_bg_node else 0
+		var part_cnt: int = _auth_bg_node.particle_asset_count if _auth_bg_node else 0
 
 		_diag_label.text = "\n".join([
-			"MODE: AUTH LOGIN BACKGROUND LAB (V3 QUALITY)",
+			"MODE: AUTH LOGIN BACKGROUND LAB (REAL ASSET WIRING V4)",
 			"VIEWPORT: %.0fx%.0f" % [vp_size.x, vp_size.y],
 			"BACKGROUND: %dx%d (Aspect: %.3f)" % [bg_w, bg_h, float(bg_w) / float(bg_h)],
-			"FOG CLUSTER PACK: %s" % fog_pack_str,
-			"  Active Clusters: %d | Speed: %.2f | Master Opacity: %.2f" % [
+			"REAL FOG TEXTURES LOADED: %d / 15 (13 Clusters + 2 Ribbons)" % fog_cnt,
+			"  Active Visible Instances: %d | Speed: %.2f | Opacity: %.2f" % [
 				_auth_bg_node.get_fog_cluster_count() if _auth_bg_node else 0,
 				_auth_bg_node.fog_global_speed if _auth_bg_node else 0.5,
 				_auth_bg_node.fog_master_opacity if _auth_bg_node else 0.85
 			],
-			"BANNERS: 4-Corner Warp + Top 12%% Pin Shader",
-			"  Brightness: %.2f | Opacity: %.2f | Sway: %.1fpx",
-			"  Banner A: %s | Banner B: %s",
+			"  Fog Shader: Brightness=%.2f, Saturation=%.2f" % [
+				_auth_bg_node.fog_brightness if _auth_bg_node else 0.75,
+				_auth_bg_node.fog_saturation if _auth_bg_node else 0.75
+			],
+			"REAL BANNERS LOADED: %d / 2 (Nearest Pixel Art Sampling)" % ban_cnt,
+			"  Banner A Brightness: %.2f | Banner B Brightness: %.2f",
 			"CRYSTAL GLOW: Soft Radial Shaders (No ColorRect Boxes)",
-			"  Master=%.2f, Speed=%.2fHz",
-			"MAGIC PARTICLES: %s (No ColorRect Boxes)",
-			"  Count=%d, Opacity=%.2f",
+			"REAL PARTICLES LOADED: %d / 8 (Nearest Pixel Art Sampling)",
+			"  Type: %s | Active Count: %d | Opacity: %.2f",
 			"FPS: %d | PLAYING: %s | UI CONTROLS: %s"
 		]) % [
-			_auth_bg_node.banner_brightness if _auth_bg_node else 1.0,
-			_auth_bg_node.banner_opacity if _auth_bg_node else 1.0,
-			_auth_bg_node.banner_sway if _auth_bg_node else 3.5,
-			"ON" if (_auth_bg_node and _auth_bg_node.banner_a_visible) else "OFF",
-			"ON" if (_auth_bg_node and _auth_bg_node.banner_b_visible) else "OFF",
-			_auth_bg_node.crystal_master_opacity if _auth_bg_node else 0.65,
-			_auth_bg_node.crystal_pulse_speed if _auth_bg_node else 0.6,
-			part_pack_str,
-			_auth_bg_node.dust_count if _auth_bg_node else 16,
+			_auth_bg_node.banner_a_brightness if _auth_bg_node else 0.75,
+			_auth_bg_node.banner_b_brightness if _auth_bg_node else 0.72,
+			part_cnt,
+			_auth_bg_node.particle_type if _auth_bg_node else "MIXED",
+			_auth_bg_node.get_particle_count() if _auth_bg_node else 14,
 			_auth_bg_node.dust_opacity if _auth_bg_node else 0.35,
 			Engine.get_frames_per_second(),
 			str(_auth_bg_node.is_playing() if _auth_bg_node else true).to_lower(),
@@ -896,7 +896,6 @@ func _update_diagnostic_display() -> void:
 			"VISIBLE: %s" % str(_fog_visible)
 		])
 
-# Control Actions
 func _on_play_pause_pressed() -> void:
 	set_playing(not _is_playing)
 
