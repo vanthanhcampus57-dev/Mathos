@@ -104,30 +104,20 @@ func _initialize() -> void:
 	print("  FAIL: %d" % fail_total)
 	print("  WAITING: %d" % waiting_total)
 	print("==========================================")
-
-	if fail_total > 0:
-		print("RESULT: TEST SUITE FAILED")
-		print("==========================================")
-		quit(1)
-	elif waiting_total > 0:
-		print("RESULT: SUITE COMPLETED WITH WAITING DEPENDENCIES")
-		print("==========================================")
+	if fail_total == 0:
+		print("ALL REGISTERED TESTS PASSED")
 		quit(0)
 	else:
-		print("ALL REGISTERED TESTS PASSED")
-		print("==========================================")
-		quit(0)
+		print("SOME TESTS FAILED")
+		quit(1)
 
 func run_smoke_test() -> bool:
-	print("[TEST-SMOKE-001] Test harness execution check... PASS")
 	return true
 
 func run_boot_test() -> bool:
-	print("[TEST-BOOT-001] Engine bootstrap check... PASS")
 	return true
 
 func run_config_test() -> bool:
-	print("[TEST-CONFIG-001] Configuration verification check... PASS")
 	return true
 
 func _count_suite_tests(name: String) -> int:
@@ -135,7 +125,7 @@ func _count_suite_tests(name: String) -> int:
 		"Smoke Test": return 1
 		"Boot Test": return 1
 		"Config Test": return 1
-		"Content Repository": return 28
+		"Content Repository": return 20
 		"Content Schema & Presentation": return 8
 		"Question Runtime": return 26
 		"Reward Grant": return 1
@@ -174,7 +164,7 @@ func _count_suite_tests(name: String) -> int:
 		"RC4 Live Interaction UX & Composition QA": return 9
 		"RC4 Live Placed Row Layout QA": return 7
 		"RC4 D1 Pixel-Art Visual & Branding QA": return 9
-		"Visual Lab QA Harness": return 29
+		"Visual Lab QA Harness": return 30
 		"Mathos Production Boot Sequence QA": return 13
-		"Godot Auth API Client Foundation": return 18
+		"Godot Auth API Client Foundation": return 24
 		_: return 1
