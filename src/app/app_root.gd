@@ -36,6 +36,7 @@ var _boot_sequence_instance: Control = null
 var _auth_shell_instance: Control = null
 var _auth_client: RefCounted = null
 var _is_guest: bool = false
+var _launch_reset_token: String = ""
 
 func _ready() -> void:
 	_bootstrap_ui = get_node_or_null("BootstrapUI") as Control
@@ -320,15 +321,55 @@ func _is_skip_splash_mode() -> bool:
 			return true
 	return false
 
+func set_launch_reset_token(token: String) -> void:
+	_launch_reset_token = token.strip_edges()
+
+func get_launch_reset_token() -> String:
+	return _launch_reset_token
+
+func clear_launch_reset_token() -> void:
+	_launch_reset_token = ""
+	if _auth_shell_instance != null and _auth_shell_instance.has_method("clear_reset_token"):
+		_auth_shell_instance.call("clear_reset_token")
+
+func _get_cli_reset_token() -> String:
+	var args: PackedStringArray = OS.get_cmdline_args()
+	for a in args:
+		if a.begins_with("--reset-token="):
+			return a.substr(14).strip_edges()
+	var uargs: PackedStringArray = OS.get_cmdline_user_args()
+	for ua in uargs:
+		if ua.begins_with("--reset-token="):
+			return ua.substr(14).strip_edges()
+	return ""
+
+func _resolve_reset_token() -> String:
+	if not _launch_reset_token.is_empty():
+		return _launch_reset_token
+	return _get_cli_reset_token()
+
+func has_valid_reset_token() -> bool:
+	var token: String = _resolve_reset_token()
+	return not token.is_empty()
+
+func _route_post_splash() -> void:
+	if _auth_shell_instance == null:
+		return
+	_auth_shell_instance.visible = true
+	if has_valid_reset_token():
+		var token: String = _resolve_reset_token()
+		if _auth_shell_instance.has_method("show_reset_password"):
+			_auth_shell_instance.call("show_reset_password", token)
+	else:
+		if _auth_shell_instance.has_method("show_login"):
+			_auth_shell_instance.call("show_login")
+
 func _setup_boot_sequence() -> void:
 	if _is_visual_lab_mode():
 		return
 
 	if _boot_sequence_instance != null or _is_skip_splash_mode():
-		if _auth_shell_instance != null:
-			_auth_shell_instance.visible = true
-			if _auth_shell_instance.has_method("show_login"):
-				_auth_shell_instance.call("show_login")
+		_route_post_splash()
 		return
 
 	var boot_scene: Resource = load("res://src/ui/boot/boot_sequence.tscn")
@@ -382,18 +423,14 @@ func _setup_auth_shell() -> void:
 		if _boot_sequence_instance != null and _boot_sequence_instance.is_running():
 			_auth_shell_instance.visible = false
 		else:
-			_auth_shell_instance.visible = true
-			if _auth_shell_instance.has_method("show_login"):
-				_auth_shell_instance.call("show_login")
+			_route_post_splash()
 
 func _on_boot_sequence_completed() -> void:
-	if _auth_shell_instance != null:
-		_auth_shell_instance.visible = true
-		if _auth_shell_instance.has_method("show_login"):
-			_auth_shell_instance.call("show_login")
+	_route_post_splash()
 
 func _on_auth_completed(_result: RefCounted) -> void:
 	_is_guest = false
+	clear_launch_reset_token()
 	if _presentation_shell != null and _presentation_shell.has_method("set_guest_mode"):
 		_presentation_shell.call("set_guest_mode", false)
 	if _auth_shell_instance != null:
@@ -406,6 +443,7 @@ func _on_auth_completed(_result: RefCounted) -> void:
 
 func _on_guest_entered() -> void:
 	_is_guest = true
+	clear_launch_reset_token()
 	if _presentation_shell != null and _presentation_shell.has_method("set_guest_mode"):
 		_presentation_shell.call("set_guest_mode", true)
 	if _auth_shell_instance != null:
@@ -417,6 +455,7 @@ func _on_guest_entered() -> void:
 	refresh_continue_availability()
 
 func logout() -> void:
+	clear_launch_reset_token()
 	if not _is_guest:
 		if _auth_client != null and _auth_client.has_method("logout"):
 			_auth_client.logout()

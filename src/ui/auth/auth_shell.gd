@@ -25,6 +25,34 @@ const ResetPasswordPanelClass = preload("res://src/ui/auth/reset_password_panel.
 
 const AuthUiThemeClass = preload("res://src/ui/auth/auth_ui_theme.gd")
 
+# Minimal mock boundary class for ResetPasswordPanel contract when Agent3 panel is not yet present
+class MinimalResetPasswordPanelBoundary extends Control:
+	signal reset_password_submitted(token: String, new_password: String)
+	signal login_nav_requested()
+
+	var _token: String = ""
+
+	func set_reset_token(token: String) -> void:
+		_token = token
+
+	func get_reset_token() -> String:
+		return _token
+
+	var _last_error: String = ""
+
+	func clear_form() -> void:
+		_token = ""
+		_last_error = ""
+
+	func set_pending(_pending: bool) -> void:
+		pass
+
+	func show_error(msg: String) -> void:
+		_last_error = msg
+
+	func get_error_message() -> String:
+		return _last_error
+
 # Nodes
 var _bg: Control = null
 var _form_container: PanelContainer = null
@@ -113,10 +141,13 @@ func _ensure_nodes() -> void:
 	_forgot_panel._ensure_nodes()
 	_form_container.add_child(_forgot_panel)
 
-	_reset_panel = ResetPasswordPanelClass.new()
+	if _reset_panel == null:
+		_reset_panel = ResetPasswordPanelClass.new()
 	_reset_panel.name = "ResetPasswordPanel"
-	_reset_panel._ensure_nodes()
-	_form_container.add_child(_reset_panel)
+	if _reset_panel.has_method("_ensure_nodes"):
+		_reset_panel.call("_ensure_nodes")
+	if _reset_panel.get_parent() != _form_container:
+		_form_container.add_child(_reset_panel)
 
 	# 4. Dev State Inspector (Strictly hidden by default in production)
 	_build_dev_inspector(overlay)
@@ -249,10 +280,11 @@ func _connect_panel_signals() -> void:
 		_forgot_panel.login_nav_requested.connect(show_login)
 
 	# Reset Password Signals
-	if not _reset_panel.reset_password_submitted.is_connected(_on_reset_password_submitted):
-		_reset_panel.reset_password_submitted.connect(_on_reset_password_submitted)
-	if not _reset_panel.login_nav_requested.is_connected(show_login):
-		_reset_panel.login_nav_requested.connect(show_login)
+	if _reset_panel != null:
+		if _reset_panel.has_signal("reset_password_submitted") and not _reset_panel.is_connected("reset_password_submitted", _on_reset_password_submitted):
+			_reset_panel.connect("reset_password_submitted", _on_reset_password_submitted)
+		if _reset_panel.has_signal("login_nav_requested") and not _reset_panel.is_connected("login_nav_requested", _on_reset_login_nav_requested):
+			_reset_panel.connect("login_nav_requested", _on_reset_login_nav_requested)
 
 func show_panel(panel_type: PanelType) -> void:
 	_ensure_nodes()
@@ -261,24 +293,87 @@ func show_panel(panel_type: PanelType) -> void:
 	_login_panel.visible = (panel_type == PanelType.LOGIN)
 	_signup_panel.visible = (panel_type == PanelType.SIGNUP)
 	_forgot_panel.visible = (panel_type == PanelType.FORGOT_PASSWORD)
-	_reset_panel.visible = (panel_type == PanelType.RESET_PASSWORD)
+	if _reset_panel != null:
+		_reset_panel.visible = (panel_type == PanelType.RESET_PASSWORD)
 
 func show_login() -> void:
+	clear_reset_token()
 	show_panel(PanelType.LOGIN)
 
 func show_signup() -> void:
+	clear_reset_token()
 	show_panel(PanelType.SIGNUP)
 
 func show_forgot_password() -> void:
+	clear_reset_token()
 	show_panel(PanelType.FORGOT_PASSWORD)
 
 func show_reset_password(token: String = "") -> void:
+	_ensure_nodes()
+	if not token.is_empty():
+		set_reset_token(token)
 	show_panel(PanelType.RESET_PASSWORD)
-	if _reset_panel != null and not token.is_empty():
-		_reset_panel.set_reset_token(token)
+
+func set_reset_token(token: String) -> void:
+	_ensure_nodes()
+	if _reset_panel != null and _reset_panel.has_method("set_reset_token"):
+		_reset_panel.call("set_reset_token", token)
+
+func get_reset_token() -> String:
+	_ensure_nodes()
+	if _reset_panel != null and _reset_panel.has_method("get_reset_token"):
+		return String(_reset_panel.call("get_reset_token"))
+	return ""
+
+func clear_reset_token() -> void:
+	_ensure_nodes()
+	if _reset_panel != null:
+		if _reset_panel.has_method("set_reset_token"):
+			_reset_panel.call("set_reset_token", "")
+		if _reset_panel.has_method("clear_form"):
+			_reset_panel.call("clear_form")
+
+func get_reset_panel() -> Control:
+	_ensure_nodes()
+	return _reset_panel
+
+func set_reset_panel(panel: Control) -> void:
+	_ensure_nodes()
+	if _reset_panel != null and _reset_panel != panel:
+		if _reset_panel.get_parent() == _form_container:
+			_form_container.remove_child(_reset_panel)
+		_reset_panel.queue_free()
+	_reset_panel = panel
+	if _reset_panel != null:
+		_reset_panel.name = "ResetPasswordPanel"
+		if _reset_panel.get_parent() != _form_container:
+			_form_container.add_child(_reset_panel)
+		_connect_panel_signals()
 
 func get_current_panel() -> PanelType:
 	return _current_panel
+
+func _on_reset_login_nav_requested() -> void:
+	clear_reset_token()
+	show_login()
+
+func _on_reset_password_submitted(token: String, new_pass: String) -> void:
+	_ensure_nodes()
+	if _reset_panel != null and _reset_panel.has_method("set_pending"):
+		_reset_panel.call("set_pending", true)
+
+	var result = await _auth_client.reset_password(token, new_pass)
+
+	if _reset_panel != null and _reset_panel.has_method("set_pending"):
+		_reset_panel.call("set_pending", false)
+
+	if result != null and result.success:
+		clear_reset_token()
+		show_login()
+	else:
+		var err_msg: String = _map_error_message(result)
+		if _reset_panel != null and _reset_panel.has_method("show_error"):
+			_reset_panel.call("show_error", err_msg)
 
 # --- API HANDLERS ---
 func _on_login_submitted(email: String, pass_str: String) -> void:
@@ -317,19 +412,6 @@ func _on_forgot_password_submitted(email: String) -> void:
 	_forgot_panel.set_pending(false)
 
 	_forgot_panel.show_success_anti_enumeration()
-
-func _on_reset_password_submitted(token: String, new_pass: String) -> void:
-	_reset_panel.set_pending(true)
-	var result = await _auth_client.reset_password(token, new_pass)
-	_reset_panel.set_pending(false)
-
-	if result.success:
-		_reset_panel.clear_form()
-		_reset_panel.show_success("Đặt lại mật khẩu thành công! Bạn có thể đăng nhập ngay.")
-		_reset_panel.reset_password_succeeded.emit()
-	else:
-		var err_msg: String = _map_error_message(result)
-		_reset_panel.show_error(err_msg)
 
 func _on_guest_login_requested() -> void:
 	guest_entered.emit()

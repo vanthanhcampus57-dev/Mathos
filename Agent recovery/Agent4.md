@@ -2,113 +2,107 @@
 
 ## 1. IDENTITY & ROLE
 - AGENT_NAME: Agent4
-- ROLE: Auth Backend Core, Godot Auth Client, Production Boot Routing, Player-Facing Logout UI & Auth Integration Engineer
+- ROLE: Auth Backend Core, Godot Auth Client, Production Boot Routing, Player-Facing Logout UI & Reset Password Entry Routing Engineer
 - ACTIVE_WORKTREE: D:\Mathos_Worktrees\MATHOS-AUTH-PRODUCTION-BOOT-ROUTING-010
-- ACTIVE_BRANCH: task/mathos-production-logout-ui-011
-- BASE_HEAD: d29a3689548634dadb4ed390f2b195a4b82d8d15
+- ACTIVE_BRANCH: task/mathos-auth-reset-token-routing-012
+- BASE_HEAD: d6b0e26bac05a637756d98d6c8d520fc14c04992
 - CANONICAL_REPO: D:\Mathos
 
 ## 2. ACTIVE TASK
-- TASK_ID: MATHOS-PRODUCTION-LOGOUT-UI-011
+- TASK_ID: MATHOS-AUTH-RESET-TOKEN-ROUTING-012
 - PRIORITY: HIGH
-- GOAL: Add a real player-facing Logout action that calls the already-approved AppRoot.logout() production route.
+- GOAL: Prepare production-safe Reset Password entry routing without changing the ResetPasswordPanel implementation owned by Agent3. Implement a clean application boundary that can accept a reset token from an external launch/deep-link source and route AuthShell into RESET PASSWORD mode.
 - ACCEPTANCE_GATES:
-  1. Existing Contract: UI calls existing AppRoot.logout() route; no duplicate logout logic.
-  2. Location: Place Logout in PauseMenuOverlay, not permanently over gameplay HUD.
-  3. Label: Production-facing label "ĐĂNG XUẤT", consistent with existing menu style.
-  4. Confirmation: Accidental clicks blocked via confirmation prompt ("XÁC NHẬN" / "HỦY").
-  5. Guest Mode: Guest gameplay exits cleanly to AuthShell/Login without backend logout requirement or fake session state ("THOÁT VỀ ĐĂNG NHẬP").
-  6. Authenticated User: Invokes AppRoot.logout(), clears session, shows AuthShell Login, memory-only session preserved.
-  7. Duplicate Safety: Repeated Login -> Game -> Logout cycles do not duplicate AuthShell, StagePresentationShell, PauseMenuOverlay, or signals.
-  8. Dev Routes: Does not break --visual-lab, test harnesses, or direct QA entry.
-  9. Clean Scope: Limited to PauseMenuOverlay and existing menu signal wiring; no changes to server, D1 story/boss, Auth visual panels, warp, or splash timing.
-  10. Tests: Comprehensive test coverage for authenticated logout, guest exit, confirmation cancel/accept, session cleared, AuthShell Login shown, gameplay hidden, duplicate safety, dev routes unaffected; Full canonical (541/541 tests, 0 FAIL, 0 WAITING).
+  1. Token Input: Support safe explicit development/application entry (e.g. --reset-token=<value>), never print token, never persist token.
+  2. Routing: With valid reset-token entry: Splash -> AuthShell -> Reset Password mode. Pass token to ResetPasswordPanel via typed method/signal contract.
+  3. UI Preservation: Do not duplicate or redesign Agent3 UI; if ResetPasswordPanel is not present or partial, define routing interface and tests with minimal mock boundary only.
+  4. Normal Boot: Without reset token: Splash -> Login unchanged.
+  5. Invalid Token Handling: Empty or malformed token falls back safely to Login panel.
+  6. Security: Never log reset token, password, access token, or refresh token. Clear in-memory token after reset completion or leaving flow.
+  7. Side Effects: Visual Lab bypass, Guest mode, and Logout route remain 100% unaffected.
+  8. Tests: Targeted unit & integration tests covering normal boot, reset entry, token handoff, log safety, zero persistence, invalid token fallback, visual lab, guest, and logout.
+  9. Canonical Suites: Auth Boot Routing, Auth Client, and Full Canonical all pass.
 
 ## 3. CURRENT STATE
 - REPO_STATUS: CLEAN
 - ACTIVE_SUBAGENTS: None
-- CURRENT_BRANCH: task/mathos-production-logout-ui-011
+- CURRENT_BRANCH: task/mathos-auth-reset-token-routing-012
+- BASE_HEAD: d6b0e26bac05a637756d98d6c8d520fc14c04992
 
 ## 4. CONSTRAINTS & BOUNDARIES
-- STRICT_RULES: Do NOT modify backend. Do NOT modify Auth artwork. Do NOT modify D1 content/gameplay. Do NOT redesign Login/Signup/Forgot UI.
-- SCOPE_PRESERVED: D1_FILES_CHANGED: NO, SERVER_FILES_CHANGED: NO, AUTH_VISUAL_FILES_CHANGED: NO.
-- FILES_CHANGED:
-  - `src/ui/common/pause_menu_overlay.gd`
-  - `src/ui/stage/stage_presentation_shell.gd`
-  - `src/app/app_root.gd`
-  - `tests/unit/auth/test_auth_production_boot_routing.gd`
-  - `tests/test_runner.gd`
-  - `Agent recovery/Agent4.md`
+- STRICT_RULES: Do NOT build web pages. Do NOT modify backend. Do NOT modify ResetPasswordPanel owned by Agent3. Do NOT log or persist sensitive tokens.
+- SCOPE_PRESERVED: SERVER_FILES_CHANGED: NO, D1_FILES_CHANGED: NO, AUTH_VISUAL_PANELS_CHANGED: NO.
+- ALLOWED_FILES: src/app/app_root.gd, src/ui/auth/auth_shell.gd, 	ests/**, Agent recovery/Agent4.md
 
 ## 5. PROGRESS
 - COMPLETED:
-  1. Switched worktree to branch `task/mathos-production-logout-ui-011` from base `d29a3689548634dadb4ed390f2b195a4b82d8d15`.
-  2. Implemented player-facing Logout button and confirmation view in `src/ui/common/pause_menu_overlay.gd`:
-     - Added `_logout_button` with `MathosDestructiveButton` styling and "ĐĂNG XUẤT" label.
-     - Added confirmation view (`_confirm_vbox`) with prompt and dual buttons: "HỦY" (`MathosSecondaryButton`) and "XÁC NHẬN" (`MathosDestructiveButton`).
-     - Added guest mode awareness (`set_guest_mode`): dynamically adapts label to "THOÁT VỀ ĐĂNG NHẬP" and title to "XÁC NHẬN THOÁT".
-     - Added `_ensure_ui_built()` lifecycle safety ensuring UI nodes exist on demand.
-  3. Wired `logout_requested` signal in `src/ui/stage/stage_presentation_shell.gd`:
-     - Connected `_pause_overlay.logout_requested` -> `_on_pause_logout()` -> `logout_requested.emit()`.
-     - Added `set_guest_mode()` forwarding to `_pause_overlay`.
-  4. Wired `logout_requested` signal in `src/app/app_root.gd`:
-     - Connected `_presentation_shell.logout_requested` -> `logout()`.
-     - Tracked `_is_guest` state and forwarded to `_presentation_shell.set_guest_mode()`.
-     - Guarded backend `_auth_client.logout()` so guest exits do not trigger invalid network calls.
-  5. Added 6 targeted unit/integration tests (AUTH-BOOT-013..018) in `tests/unit/auth/test_auth_production_boot_routing.gd`:
-     - AUTH-BOOT-013: Logout button exists in pause UI with correct style & text.
-     - AUTH-BOOT-014: Guest mode label switching ("THOÁT VỀ ĐĂNG NHẬP" vs "ĐĂNG XUẤT").
-     - AUTH-BOOT-015: Clicking logout shows confirmation modal without premature logout.
-     - AUTH-BOOT-016: Cancelling confirmation keeps pause menu intact.
-     - AUTH-BOOT-017: Confirming logout invokes AppRoot.logout(), clears session, and shows Login.
-     - AUTH-BOOT-018: Guest exit without backend calls and full relogin cycle verified cleanly.
-  6. Verified all test suites pass:
-     - Auth Boot Routing: 18 / 18 PASS
-     - Auth UI: 16 / 16 PASS
-     - Auth Client: 24 / 24 PASS
-     - Boot Sequence: 13 / 13 PASS
-     - Visual Lab: 31 / 31 PASS
-     - D1 Visual Branding: 9 / 9 PASS
-     - Full Canonical Test Runner: 541 / 541 PASS (0 FAIL, 0 WAITING).
-  7. Verified `git diff --check` is 100% clean.
+  1. Switched worktree to branch 	ask/mathos-auth-reset-token-routing-012 from base d6b0e26bac05a637756d98d6c8d520fc14c04992.
+  2. Implemented reset token runtime entry and resolution in src/app/app_root.gd:
+     - Added _get_cli_reset_token() supporting --reset-token=<value> CLI parameter (both standard and user args).
+     - Added explicit runtime setters/getters/cleaners: set_launch_reset_token(), get_launch_reset_token(), clear_launch_reset_token().
+     - Added has_valid_reset_token() validation guard.
+     - Implemented _route_post_splash() routing to AuthShell.show_reset_password(token) when a valid token exists, otherwise defaulting cleanly to AuthShell.show_login().
+     - Ensured tokens are wiped upon authentication completion, guest entry, and player logout.
+  3. Extended src/ui/auth/auth_shell.gd with clean reset password panel boundary & routing:
+     - Added PanelType.RESET_PASSWORD enum entry.
+     - Defined MinimalResetPasswordPanelBoundary with typed contract: set_reset_token(token), get_reset_token(), clear_form(), set_pending(bool), show_error(msg), and get_error_message().
+     - Implemented dynamic panel instantiation: loads production scene/script if available (
+eset_password_panel.tscn/.gd), otherwise seamlessly falls back to MinimalResetPasswordPanelBoundary.
+     - Added typed routing methods: show_reset_password(token), set_reset_token(token), get_reset_token(), clear_reset_token(), get_reset_panel(), set_reset_panel().
+     - Connected signals
+eset_password_submitted -> _on_reset_password_submitted() and login_nav_requested -> _on_reset_login_nav_requested().
+     - Guaranteed memory-only token storage and immediate token wiping upon successful password reset or navigating to Login/Signup/Forgot panels.
+  4. Expanded test coverage in 	ests/unit/auth/test_auth_production_boot_routing.gd:
+     - Added 8 targeted scenarios (AUTH-BOOT-019..026):
+       - AUTH-BOOT-019: Normal boot without token routes post-splash to LOGIN mode.
+       - AUTH-BOOT-020: Boot with valid reset token routes post-splash to RESET_PASSWORD mode.
+       - AUTH-BOOT-021: Method/signal token handoff contract and reset completion verified.
+       - AUTH-BOOT-022: Token log safety verified (tokens never leaked in errors or log strings).
+       - AUTH-BOOT-023: Token zero disk persistence and complete in-memory cleanup verified.
+       - AUTH-BOOT-024: Invalid and whitespace-only reset token correctly falls back to LOGIN.
+       - AUTH-BOOT-025: Visual Lab bypass contract and reset routing distinction verified.
+       - AUTH-BOOT-026: Guest entry and logout routes unaffected with residual token clearing.
+  5. Updated 	ests/test_runner.gd registry to 26 scenarios.
+  6. Full test suite verification:
+     - Auth Production Boot Routing QA: 26 / 26 PASS
+     - Godot Auth API Client Foundation QA: 24 / 24 PASS
+     - Full Canonical Test Runner: 549 / 549 PASS (0 FAIL, 0 WAITING).
+  7. Code hygiene: git diff --check is 100% clean (0 whitespace warnings/errors).
 - IN_PROGRESS: None.
 - NOT_STARTED: None.
 
 ## 6. FINDINGS / DECISIONS
-- REUSE EXISTING ROUTE: Leveraged approved `AppRoot.logout()` route without duplicating auth revocation or presentation switching logic.
-- ACCIDENTAL CLICK PREVENTION: In-card confirmation modal inside `PauseMenuOverlay` cleanly replaces the menu list temporarily and restores state on cancel or dismissal without requiring an intrusive separate modal system.
-- GUEST SAFETY: Guest players bypass backend session revocation entirely, ensuring clean return to `AuthShell` without network errors or leaked fake tokens.
+- BOUNDARY ISOLATION: By implementing MinimalResetPasswordPanelBoundary inside AuthShell, Agent4 can deliver and fully verify production-safe routing and token handoff without touching or preempting Agent3's ResetPasswordPanel UI.
+- ZERO PERSISTENCE & PRIVACY: Reset tokens are held strictly in volatile memory, never logged to stdout/stderr, never interpolated into UI error messages, never written to user://, and purged immediately when exiting the reset flow.
+- ARCHITECTURAL CONTINUITY: Post-splash routing (_route_post_splash()) cleanly centralizes entry dispatch, preserving Splash timings, --visual-lab bypass, Guest mode, and the AppRoot.logout() route.
 
 ## 7. TEST / VERIFICATION EVIDENCE
-- AUTH_BOOT_ROUTING: 18 / 18 PASS
-- AUTH_UI: 16 / 16 PASS
+- AUTH_BOOT_ROUTING: 26 / 26 PASS
 - AUTH_CLIENT: 24 / 24 PASS
-- BOOT: 13 / 13 PASS
-- VISUAL_LAB: 31 / 31 PASS
-- D1: 9 / 9 PASS
-- FULL_CANONICAL: 541 / 541 PASS (0 FAIL, 0 WAITING)
-- GIT_DIFF_CHECK: 0 warnings, 0 errors
+- FULL_CANONICAL: 549 / 549 PASS (0 FAIL, 0 WAITING)
+- GIT_DIFF_CHECK: PASS (0 warnings, 0 errors)
 
 ## 8. BLOCKERS / AUTHORITY
 - BLOCKED: False.
 - EXACT_BLOCKER: None.
 
 ## 9. LATEST REPORT / DELIVERABLE
-- REPORT_STATUS: READY_FOR_LOGOUT_UI_INDEPENDENT_REQA
-- BASE_HEAD: d29a3689548634dadb4ed390f2b195a4b82d8d15
-- FINAL_HEAD: 274c6c57ed3f0ca3acd209847b2794437423e1ee
-- REPORT_SUMMARY: Completed player-facing Logout UI in PauseMenuOverlay with confirmation, guest awareness, signal wiring to AppRoot.logout(), and 541/541 canonical test pass.
+- REPORT_STATUS: READY_FOR_RESET_TOKEN_ROUTING_INDEPENDENT_REQA
+- BASE_HEAD: d6b0e26bac05a637756d98d6c8d520fc14c04992
+- FINAL_HEAD: a70d5184947db68e8a4d4a447e6dbf39698a8c86
+- BRANCH: task/mathos-auth-reset-token-routing-012
+- REPORT_SUMMARY: Completed production-safe Reset Password entry routing via CLI/deep-link reset token, minimal mock boundary for Agent3 panel, zero disk persistence, token log safety, and 549/549 canonical test pass.
 
 ## 10. RECOVERY HANDOFF
-- NEXT_ACTION: Independent QA then integrate with final Auth visual candidate.
+- NEXT_ACTION: Independent QA verification and handoff to Agent3 for visual panel integration.
 - LAST_UPDATED_BY: Agent4
-- LAST_UPDATED_AT: 2026-09-04T06:38:00+07:00
+- LAST_UPDATED_AT: 2026-09-04T07:35:00+07:00
 
 ## 11. RECENT PROMPT LOG
 
-### Prompt entry 34
-- RECEIVED_AT: 2026-09-04T06:29:43+07:00
-- TASK_ID: MATHOS-PRODUCTION-LOGOUT-UI-011
-- ONE_LINE_INTENT: Add player-facing Logout action in PauseMenuOverlay that routes to AppRoot.logout() with confirmation and guest safety.
-- RESULT / CURRENT_STATE: READY_FOR_LOGOUT_UI_INDEPENDENT_REQA
-- TEST_COUNTS: 541 / 541 PASS (0 FAIL, 0 WAITING)
+### Prompt entry 35
+- RECEIVED_AT: 2026-09-04T07:19:41+07:00
+- TASK_ID: MATHOS-AUTH-RESET-TOKEN-ROUTING-012
+- ONE_LINE_INTENT: Prepare production-safe Reset Password entry routing via CLI/deep-link reset token without modifying Agent3 UI or backend.
+- RESULT / CURRENT_STATE: READY_FOR_RESET_TOKEN_ROUTING_INDEPENDENT_REQA
+- TEST_COUNTS: 549 / 549 PASS (0 FAIL, 0 WAITING)

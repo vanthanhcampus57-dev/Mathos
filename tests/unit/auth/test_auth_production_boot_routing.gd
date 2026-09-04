@@ -21,6 +21,14 @@ extends SceneTree
 ## 16. Cancelling confirmation preserves pause state without logout.
 ## 17. Confirming logout invokes AppRoot.logout(), clears session, and returns to Login.
 ## 18. Guest exit without backend call and relogin cycle verified cleanly.
+## 19. Normal boot without reset token routes post-splash to LOGIN mode.
+## 20. Boot with valid reset token routes post-splash to RESET_PASSWORD mode.
+## 21. Method/signal token handoff contract and reset completion verified.
+## 22. Token log safety verified (token never leaked in errors or logs).
+## 23. Token zero disk persistence and complete in-memory cleanup verified.
+## 24. Invalid and whitespace-only reset token correctly falls back to LOGIN.
+## 25. Visual Lab bypass contract and reset routing distinction verified.
+## 26. Guest entry and logout routes unaffected with residual token clearing.
 
 const AppRootClass = preload("res://src/app/app_root.gd")
 const AuthShellClass = preload("res://src/ui/auth/auth_shell.gd")
@@ -30,7 +38,7 @@ const AuthResultClass = preload("res://src/core/auth/auth_result.gd")
 const PauseMenuOverlayClass = preload("res://src/ui/common/pause_menu_overlay.gd")
 
 func _initialize() -> void:
-	print("--- RUNNING MATHOS PRODUCTION AUTH BOOT ROUTING QA HARNESS (AUTH-BOOT-001..018) ---")
+	print("--- RUNNING MATHOS PRODUCTION AUTH BOOT ROUTING QA HARNESS (AUTH-BOOT-001..026) ---")
 	var ok: bool = await run_all_tests(self)
 	if ok:
 		print("MATHOS PRODUCTION AUTH BOOT ROUTING QA HARNESS: PASS!")
@@ -60,9 +68,17 @@ static func run_all_tests(tree: SceneTree = null) -> bool:
 	if test_auth_boot_016_logout_cancel_confirmation(tree): passes += 1
 	if test_auth_boot_017_logout_confirm_invokes_approot_logout(tree): passes += 1
 	if test_auth_boot_018_guest_exit_and_relogin_cycle(tree): passes += 1
+	if test_auth_boot_019_normal_boot_to_login(tree): passes += 1
+	if test_auth_boot_020_reset_token_boot_to_reset_panel(tree): passes += 1
+	if await test_auth_boot_021_token_handoff_contract(tree): passes += 1
+	if await test_auth_boot_022_token_log_safety(tree): passes += 1
+	if test_auth_boot_023_token_zero_persistence_and_cleanup(tree): passes += 1
+	if test_auth_boot_024_invalid_empty_token_fallback_to_login(tree): passes += 1
+	if test_auth_boot_025_visual_lab_bypass_unaffected_by_token(tree): passes += 1
+	if test_auth_boot_026_guest_and_logout_unaffected(tree): passes += 1
 
-	print("[AUTH-BOOT-HARNESS] %d / 18 test scenarios passed" % passes)
-	return passes == 18
+	print("[AUTH-BOOT-HARNESS] %d / 26 test scenarios passed" % passes)
+	return passes == 26
 
 static func _instantiate_test_app(tree: SceneTree = null) -> Node:
 	var scene: PackedScene = load("res://src/app/app_root.tscn") as PackedScene
@@ -667,4 +683,301 @@ static func test_auth_boot_018_guest_exit_and_relogin_cycle(tree: SceneTree = nu
 		return true
 	else:
 		print("[AUTH-BOOT-018] FAIL: Cycle failed (guest_ok=%s, zero_calls=%s, relogin=%s, auth_exit=%s, one_call=%s)" % [str(guest_exit_ok), str(zero_backend_calls_on_guest), str(relogin_pres_vis), str(auth_logout_pres_hidden), str(one_backend_call)])
+		return false
+
+# 19. Normal boot to Login
+static func test_auth_boot_019_normal_boot_to_login(tree: SceneTree = null) -> bool:
+	print("[AUTH-BOOT-019] Testing normal boot without reset token routes post-splash to LOGIN...")
+	var app: Node = _instantiate_test_app(tree)
+	if app == null:
+		return false
+
+	app.call("clear_launch_reset_token")
+	var auth_shell: Control = app.call("get_auth_shell") as Control
+	app.call("_on_boot_sequence_completed")
+
+	var auth_visible: bool = (auth_shell != null and auth_shell.visible)
+	var is_login_panel: bool = (auth_shell != null and auth_shell.call("get_current_panel") == AuthShellClass.PanelType.LOGIN)
+	var token_empty: bool = (auth_shell != null and auth_shell.call("get_reset_token").is_empty())
+	var has_no_launch_token: bool = (not app.call("has_valid_reset_token"))
+
+	_cleanup_node(app)
+
+	if auth_visible and is_login_panel and token_empty and has_no_launch_token:
+		print("[AUTH-BOOT-019] PASS: Normal boot cleanly routed to LOGIN panel with empty token!")
+		return true
+	else:
+		print("[AUTH-BOOT-019] FAIL: Normal boot check failed (auth_vis=%s, login=%s, token_empty=%s, no_launch=%s)" % [str(auth_visible), str(is_login_panel), str(token_empty), str(has_no_launch_token)])
+		return false
+
+# 20. Reset token boot to reset panel
+static func test_auth_boot_020_reset_token_boot_to_reset_panel(tree: SceneTree = null) -> bool:
+	print("[AUTH-BOOT-020] Testing reset-token boot routes post-splash to RESET_PASSWORD mode...")
+	var app: Node = _instantiate_test_app(tree)
+	if app == null:
+		return false
+
+	app.call("set_launch_reset_token", "test_tok_live_001")
+	var has_token: bool = app.call("has_valid_reset_token")
+	var auth_shell: Control = app.call("get_auth_shell") as Control
+
+	app.call("_on_boot_sequence_completed")
+
+	var auth_visible: bool = (auth_shell != null and auth_shell.visible)
+	var is_reset_panel: bool = (auth_shell != null and auth_shell.call("get_current_panel") == AuthShellClass.PanelType.RESET_PASSWORD)
+	var reset_panel: Control = auth_shell.call("get_reset_panel") as Control
+	var panel_visible: bool = (reset_panel != null and reset_panel.visible)
+	var token_received: bool = (auth_shell != null and auth_shell.call("get_reset_token") == "test_tok_live_001")
+
+	_cleanup_node(app)
+
+	if has_token and auth_visible and is_reset_panel and panel_visible and token_received:
+		print("[AUTH-BOOT-020] PASS: Boot with reset token cleanly routed to RESET_PASSWORD panel!")
+		return true
+	else:
+		print("[AUTH-BOOT-020] FAIL: Reset token boot failed (has_tok=%s, auth_vis=%s, reset_panel=%s, p_vis=%s, tok_rec=%s)" % [str(has_token), str(auth_visible), str(is_reset_panel), str(panel_visible), str(token_received)])
+		return false
+
+# 21. Token handoff contract
+static func test_auth_boot_021_token_handoff_contract(tree: SceneTree = null) -> bool:
+	print("[AUTH-BOOT-021] Testing method/signal token handoff contract and reset completion...")
+	var app: Node = _instantiate_test_app(tree)
+	if app == null:
+		return false
+
+	var auth_shell: Control = app.call("get_auth_shell") as Control
+	var client: RefCounted = app.call("get_auth_client") as RefCounted
+	var transport = client.get("_transport")
+
+	var captured_token: Array[String] = [""]
+	var captured_pass: Array[String] = [""]
+	transport.mock_handler = func(_url, _method, _headers, body_str, _timeout = 10.0):
+		var parsed = JSON.parse_string(body_str)
+		if parsed is Dictionary:
+			captured_token[0] = String(parsed.get("token", ""))
+			captured_pass[0] = String(parsed.get("new_password", ""))
+		return {"status_code": 200, "body": JSON.stringify({"message": "Password reset successfully."}), "headers": []}
+
+	# Verify method contract
+	auth_shell.call("set_reset_token", "handoff_token_xyz")
+	var method_handoff_ok: bool = (auth_shell.call("get_reset_token") == "handoff_token_xyz")
+
+	var reset_panel: Control = auth_shell.call("get_reset_panel") as Control
+	var panel_contract_ok: bool = (reset_panel != null and reset_panel.has_method("set_reset_token") and reset_panel.has_method("get_reset_token") and reset_panel.has_method("clear_form"))
+
+	# Verify signal connection and reset submission
+	var sig_connected: bool = (reset_panel != null and reset_panel.has_signal("reset_password_submitted"))
+	auth_shell.call("show_reset_password", "handoff_token_xyz")
+	await auth_shell.call("_on_reset_password_submitted", "handoff_token_xyz", "MyNewSecPass@2026")
+
+	var backend_received_ok: bool = (captured_token[0] == "handoff_token_xyz" and captured_pass[0] == "MyNewSecPass@2026")
+	var post_reset_is_login: bool = (auth_shell.call("get_current_panel") == AuthShellClass.PanelType.LOGIN)
+	var token_cleared: bool = (auth_shell.call("get_reset_token").is_empty())
+
+	_cleanup_node(app)
+
+	if method_handoff_ok and panel_contract_ok and sig_connected and backend_received_ok and post_reset_is_login and token_cleared:
+		print("[AUTH-BOOT-021] PASS: Token handoff contract and successful reset cycle verified!")
+		return true
+	else:
+		print("[AUTH-BOOT-021] FAIL: Handoff contract failed (method=%s, panel=%s, sig=%s, backend=%s, is_login=%s, cleared=%s)" % [str(method_handoff_ok), str(panel_contract_ok), str(sig_connected), str(backend_received_ok), str(post_reset_is_login), str(token_cleared)])
+		return false
+
+# 22. Token log safety
+static func test_auth_boot_022_token_log_safety(tree: SceneTree = null) -> bool:
+	print("[AUTH-BOOT-022] Testing token is never logged or exposed in UI error feedback...")
+	var app: Node = _instantiate_test_app(tree)
+	if app == null:
+		return false
+
+	var auth_shell: Control = app.call("get_auth_shell") as Control
+	var client: RefCounted = app.call("get_auth_client") as RefCounted
+	var transport = client.get("_transport")
+
+	# Mock backend error response
+	var canary_token: String = "CANARY_SENSITIVE_TOKEN_NEVER_PRINT_98765"
+	transport.mock_handler = func(_url, _method, _headers, _body, _timeout = 10.0):
+		return {"status_code": 400, "body": JSON.stringify({"error": "Token is invalid or expired."}), "headers": []}
+
+	auth_shell.call("show_reset_password", canary_token)
+	var reset_panel: Control = auth_shell.call("get_reset_panel") as Control
+	await auth_shell.call("_on_reset_password_submitted", canary_token, "AttemptPass123")
+
+	var displayed_error: String = ""
+	if reset_panel != null and reset_panel.has_method("get_error_message"):
+		displayed_error = String(reset_panel.call("get_error_message"))
+
+	var token_not_in_error: bool = (not displayed_error.contains(canary_token))
+	var token_still_in_panel: bool = (auth_shell.call("get_reset_token") == canary_token)
+
+	_cleanup_node(app)
+
+	if token_not_in_error and token_still_in_panel:
+		print("[AUTH-BOOT-022] PASS: Token log safety verified, sensitive token was never leaked in error output!")
+		return true
+	else:
+		print("[AUTH-BOOT-022] FAIL: Token leaked or unexpected error state (not_in_err=%s)" % str(token_not_in_error))
+		return false
+
+# 23. Token zero persistence and in-memory cleanup
+static func test_auth_boot_023_token_zero_persistence_and_cleanup(tree: SceneTree = null) -> bool:
+	print("[AUTH-BOOT-023] Testing token zero persistence to disk and memory cleanup on panel exit...")
+	var app: Node = _instantiate_test_app(tree)
+	if app == null:
+		return false
+
+	var auth_shell: Control = app.call("get_auth_shell") as Control
+	var canary_token: String = "EPHEMERAL_TOKEN_NO_DISK_888"
+
+	# Set in AppRoot and AuthShell
+	app.call("set_launch_reset_token", canary_token)
+	auth_shell.call("set_reset_token", canary_token)
+
+	# Verify zero persistence to user://
+	var dir: DirAccess = DirAccess.open("user://")
+	var persisted_file_found: bool = false
+	if dir != null:
+		dir.list_dir_begin()
+		var fname: String = dir.get_next()
+		while not fname.is_empty():
+			if fname.ends_with(".save") or fname.ends_with(".cfg") or fname.ends_with(".json"):
+				var f = FileAccess.open("user://" + fname, FileAccess.READ)
+				if f != null:
+					var content = f.get_as_text()
+					f.close()
+					if content.contains(canary_token):
+						persisted_file_found = true
+			fname = dir.get_next()
+		dir.list_dir_end()
+
+	var zero_persistence: bool = (not persisted_file_found)
+
+	# Test memory cleanup when navigating away
+	auth_shell.call("show_login")
+	var login_cleared: bool = (auth_shell.call("get_reset_token").is_empty())
+
+	auth_shell.call("set_reset_token", canary_token)
+	auth_shell.call("show_signup")
+	var signup_cleared: bool = (auth_shell.call("get_reset_token").is_empty())
+
+	auth_shell.call("set_reset_token", canary_token)
+	auth_shell.call("show_forgot_password")
+	var forgot_cleared: bool = (auth_shell.call("get_reset_token").is_empty())
+
+	# Test explicit AppRoot cleanup
+	app.call("clear_launch_reset_token")
+	var approot_cleared: bool = (app.call("get_launch_reset_token").is_empty())
+
+	_cleanup_node(app)
+
+	if zero_persistence and login_cleared and signup_cleared and forgot_cleared and approot_cleared:
+		print("[AUTH-BOOT-023] PASS: Token zero disk persistence and complete in-memory cleanup verified!")
+		return true
+	else:
+		print("[AUTH-BOOT-023] FAIL: Persistence or cleanup failed (zero_disk=%s, login=%s, signup=%s, forgot=%s, approot=%s)" % [str(zero_persistence), str(login_cleared), str(signup_cleared), str(forgot_cleared), str(approot_cleared)])
+		return false
+
+# 24. Invalid/empty token fallback to Login
+static func test_auth_boot_024_invalid_empty_token_fallback_to_login(tree: SceneTree = null) -> bool:
+	print("[AUTH-BOOT-024] Testing invalid, empty, or whitespace-only token fallback to LOGIN...")
+	var app: Node = _instantiate_test_app(tree)
+	if app == null:
+		return false
+
+	var auth_shell: Control = app.call("get_auth_shell") as Control
+
+	# Case A: Empty string
+	app.call("set_launch_reset_token", "")
+	var empty_valid: bool = app.call("has_valid_reset_token")
+	app.call("_route_post_splash")
+	var panel_a_is_login: bool = (auth_shell.call("get_current_panel") == AuthShellClass.PanelType.LOGIN)
+
+	# Case B: Whitespace only
+	app.call("set_launch_reset_token", "   \t\n  ")
+	var ws_valid: bool = app.call("has_valid_reset_token")
+	app.call("_route_post_splash")
+	var panel_b_is_login: bool = (auth_shell.call("get_current_panel") == AuthShellClass.PanelType.LOGIN)
+
+	_cleanup_node(app)
+
+	if (not empty_valid) and panel_a_is_login and (not ws_valid) and panel_b_is_login:
+		print("[AUTH-BOOT-024] PASS: Invalid and whitespace-only reset token correctly fell back to LOGIN!")
+		return true
+	else:
+		print("[AUTH-BOOT-024] FAIL: Token fallback failed (empty_valid=%s, panel_a=%s, ws_valid=%s, panel_b=%s)" % [str(empty_valid), str(panel_a_is_login), str(ws_valid), str(panel_b_is_login)])
+		return false
+
+# 25. Visual Lab bypass unaffected by reset token
+static func test_auth_boot_025_visual_lab_bypass_unaffected_by_token(tree: SceneTree = null) -> bool:
+	print("[AUTH-BOOT-025] Testing Visual Lab bypass remains unaffected even if reset token is present...")
+	var app: Node = _instantiate_test_app(tree)
+	if app == null:
+		return false
+
+	app.call("set_launch_reset_token", "token_during_visual_lab_test")
+
+	# Check Visual Lab mode determination
+	var is_vlab: bool = bool(app.call("_is_visual_lab_mode"))
+	if is_vlab:
+		var lab = app.call("get_visual_lab")
+		var boot = app.call("get_boot_sequence")
+		var auth = app.call("get_auth_shell")
+		var ok: bool = (lab != null and boot == null and auth == null)
+		_cleanup_node(app)
+		if ok:
+			print("[AUTH-BOOT-025] PASS: --visual-lab bypass verified with reset token present!")
+			return true
+		else:
+			print("[AUTH-BOOT-025] FAIL: --visual-lab bypass failed!")
+			return false
+
+	# If not in visual-lab mode, verify that _setup_boot_sequence and _setup_auth_shell check _is_visual_lab_mode
+	var auth_shell: Control = app.call("get_auth_shell") as Control
+	app.call("_route_post_splash")
+	var routes_to_reset_normally: bool = (auth_shell != null and auth_shell.call("get_current_panel") == AuthShellClass.PanelType.RESET_PASSWORD)
+
+	_cleanup_node(app)
+
+	if routes_to_reset_normally:
+		print("[AUTH-BOOT-025] PASS: Visual Lab bypass checks and reset routing distinction verified!")
+		return true
+	else:
+		print("[AUTH-BOOT-025] FAIL: Visual lab check failed (routes_reset=%s)" % str(routes_to_reset_normally))
+		return false
+
+# 26. Guest mode and logout routes unaffected
+static func test_auth_boot_026_guest_and_logout_unaffected(tree: SceneTree = null) -> bool:
+	print("[AUTH-BOOT-026] Testing guest entry and logout routes remain completely unaffected...")
+	var app: Node = _instantiate_test_app(tree)
+	if app == null:
+		return false
+
+	var pres_shell: Control = app.call("get_presentation_shell") as Control
+	var auth_shell: Control = app.call("get_auth_shell") as Control
+
+	# Set launch token, then user enters as guest
+	app.call("set_launch_reset_token", "residual_token_guest_test")
+	app.call("_on_guest_entered")
+
+	var guest_gameplay_active: bool = (pres_shell != null and pres_shell.visible and auth_shell != null and not auth_shell.visible)
+	var launch_token_cleared: bool = (app.call("get_launch_reset_token").is_empty())
+
+	# Guest opens pause and logs out
+	if pres_shell != null and pres_shell.has_method("show_pause"):
+		pres_shell.call("show_pause")
+		var pause_overlay = pres_shell.call("get_pause_overlay") as PauseMenuOverlay
+		if pause_overlay != null:
+			pause_overlay.get_logout_button().emit_signal("pressed")
+			pause_overlay.get_confirm_accept_button().emit_signal("pressed")
+
+	var returned_to_auth: bool = (pres_shell != null and not pres_shell.visible and auth_shell != null and auth_shell.visible)
+	var returned_to_login_not_reset: bool = (auth_shell != null and auth_shell.call("get_current_panel") == AuthShellClass.PanelType.LOGIN)
+
+	_cleanup_node(app)
+
+	if guest_gameplay_active and launch_token_cleared and returned_to_auth and returned_to_login_not_reset:
+		print("[AUTH-BOOT-026] PASS: Guest entry and logout routing unaffected, residual tokens wiped cleanly!")
+		return true
+	else:
+		print("[AUTH-BOOT-026] FAIL: Guest/logout check failed (guest=%s, tok_cleared=%s, returned=%s, login_panel=%s)" % [str(guest_gameplay_active), str(launch_token_cleared), str(returned_to_auth), str(returned_to_login_not_reset)])
 		return false

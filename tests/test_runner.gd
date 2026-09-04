@@ -170,5 +170,5 @@ func _count_suite_tests(name: String) -> int:
 		"Mathos Production Boot Sequence QA": return 13
 		"Godot Auth API Client Foundation": return 24
 		"Mathos Production Auth UI QA": return 31
-		"Auth Production Boot Routing QA": return 18
+		"Auth Production Boot Routing QA": return 26
 		_: return 1
