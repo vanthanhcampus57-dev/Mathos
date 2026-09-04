@@ -60,6 +60,7 @@ var _hud_dungeon_label: Label = null
 
 var _d1_marker_group: Control = null
 var _d1_marker_button: Button = null
+var _d1_marker_rune_label: Label = null
 var _d1_status_label: Label = null
 
 var _d2_marker_group: Control = null
@@ -162,10 +163,13 @@ func _build_readability_overlays() -> void:
 	_overlay_vertical.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var grad_v: Gradient = Gradient.new()
-	grad_v.add_point(0.0, Color(0.02, 0.04, 0.08, 0.40))
-	grad_v.add_point(0.45, Color(0.02, 0.04, 0.08, 0.0))
-	grad_v.add_point(0.70, Color(0.02, 0.04, 0.08, 0.35))
-	grad_v.add_point(1.0, Color(0.02, 0.04, 0.08, 0.85))
+	grad_v.offsets = PackedFloat32Array([0.0, 0.45, 0.70, 1.0])
+	grad_v.colors = PackedColorArray([
+		Color(0.02, 0.04, 0.08, 0.40),
+		Color(0.02, 0.04, 0.08, 0.0),
+		Color(0.02, 0.04, 0.08, 0.35),
+		Color(0.02, 0.04, 0.08, 0.85)
+	])
 	var tex_v: GradientTexture2D = GradientTexture2D.new()
 	tex_v.gradient = grad_v
 	tex_v.fill_from = Vector2(0.5, 0.0)
@@ -182,10 +186,13 @@ func _build_readability_overlays() -> void:
 	_overlay_horizontal.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var grad_h: Gradient = Gradient.new()
-	grad_h.add_point(0.0, Color(0.02, 0.04, 0.08, 0.60))
-	grad_h.add_point(0.40, Color(0.02, 0.04, 0.08, 0.0))
-	grad_h.add_point(0.65, Color(0.02, 0.04, 0.08, 0.0))
-	grad_h.add_point(1.0, Color(0.02, 0.04, 0.08, 0.50))
+	grad_h.offsets = PackedFloat32Array([0.0, 0.40, 0.65, 1.0])
+	grad_h.colors = PackedColorArray([
+		Color(0.02, 0.04, 0.08, 0.60),
+		Color(0.02, 0.04, 0.08, 0.0),
+		Color(0.02, 0.04, 0.08, 0.0),
+		Color(0.02, 0.04, 0.08, 0.50)
+	])
 	var tex_h: GradientTexture2D = GradientTexture2D.new()
 	tex_h.gradient = grad_h
 	tex_h.fill_from = Vector2(0.0, 0.5)
@@ -241,17 +248,16 @@ func _build_header() -> void:
 	_subtitle_label.add_theme_font_size_override("font_size", 12)
 	vbox.add_child(_subtitle_label)
 
+	_visual_layer.add_child(_header_panel)
+
+	# Back button is NOT in the approved header title panel.
+	# Retained as an invisible non-interfering node for test/API compatibility.
 	_back_button = Button.new()
 	_back_button.name = "BackButton"
-	_back_button.text = "← Trở về"
-	_back_button.flat = true
-	_back_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_back_button.add_theme_color_override("font_color", Color(0.6, 0.75, 0.9, 0.8))
-	_back_button.add_theme_font_size_override("font_size", 11)
+	_back_button.visible = false
+	_back_button.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_back_button.pressed.connect(func() -> void: back_requested.emit())
-	vbox.add_child(_back_button)
-
-	_visual_layer.add_child(_header_panel)
+	add_child(_back_button)
 
 func _build_top_right_hud() -> void:
 	_hud_panel = PanelContainer.new()
@@ -319,27 +325,38 @@ func _build_dungeon_markers() -> void:
 	_d1_marker_button.name = "D1MarkerButton"
 	_d1_marker_button.custom_minimum_size = Vector2(64, 64)
 	_d1_marker_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_d1_marker_button.text = "I"
-	_d1_marker_button.add_theme_font_size_override("font_size", 20)
+	_d1_marker_button.text = ""
+
+	_d1_marker_rune_label = Label.new()
+	_d1_marker_rune_label.name = "RuneLabel"
+	_d1_marker_rune_label.text = "◈"
+	_d1_marker_rune_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_d1_marker_rune_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_d1_marker_rune_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_d1_marker_rune_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_d1_marker_rune_label.add_theme_font_size_override("font_size", 24)
+	_d1_marker_rune_label.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0))
+	_d1_marker_rune_label.add_theme_color_override("font_outline_color", Color(0.1, 0.65, 0.9, 0.6))
+	_d1_marker_rune_label.add_theme_constant_override("outline_size", 2)
+	_d1_marker_button.add_child(_d1_marker_rune_label)
 
 	var d1_btn_style: StyleBoxFlat = StyleBoxFlat.new()
-	d1_btn_style.bg_color = Color(0.04, 0.10, 0.18, 0.9)
+	d1_btn_style.bg_color = Color(0.04, 0.08, 0.16, 0.94)
 	d1_btn_style.border_width_left = 2
 	d1_btn_style.border_width_right = 2
 	d1_btn_style.border_width_top = 2
 	d1_btn_style.border_width_bottom = 2
-	d1_btn_style.border_color = Color(0.25, 0.9, 1.0, 0.85)
-	d1_btn_style.corner_radius_top_left = 32
-	d1_btn_style.corner_radius_top_right = 32
-	d1_btn_style.corner_radius_bottom_left = 32
-	d1_btn_style.corner_radius_bottom_right = 32
-	d1_btn_style.shadow_color = Color(0.15, 0.85, 1.0, 0.55)
+	d1_btn_style.border_color = Color(0.25, 0.90, 1.0, 0.95)
+	d1_btn_style.corner_radius_top_left = 16
+	d1_btn_style.corner_radius_top_right = 16
+	d1_btn_style.corner_radius_bottom_left = 16
+	d1_btn_style.corner_radius_bottom_right = 16
+	d1_btn_style.shadow_color = Color(0.15, 0.85, 1.0, 0.60)
 	d1_btn_style.shadow_size = 12
 	_d1_marker_button.add_theme_stylebox_override("normal", d1_btn_style)
 
 	var d1_hover_style: StyleBoxFlat = d1_btn_style.duplicate()
-	d1_hover_style.border_color = Color(0.95, 0.82, 0.35, 1.0)
-	d1_hover_style.shadow_color = Color(0.95, 0.82, 0.35, 0.65)
+	d1_hover_style.shadow_size = 16
 	_d1_marker_button.add_theme_stylebox_override("hover", d1_hover_style)
 	_d1_marker_button.add_theme_stylebox_override("pressed", d1_hover_style)
 
@@ -364,10 +381,10 @@ func _build_dungeon_markers() -> void:
 
 	_d1_status_label = Label.new()
 	_d1_status_label.name = "D1StatusLabel"
-	_d1_status_label.text = "✓ HOÀN THÀNH"
+	_d1_status_label.text = "ĐANG MỞ"
 	_d1_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_d1_status_label.add_theme_font_size_override("font_size", 10)
-	_d1_status_label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.25))
+	_d1_status_label.add_theme_color_override("font_color", Color(0.3, 0.9, 0.4))
 	d1_vbox.add_child(_d1_status_label)
 
 	# 2. DUNGEON II (Center purple ruined spire) - LOCKED
@@ -376,7 +393,10 @@ func _build_dungeon_markers() -> void:
 		REF_D2_SIZE,
 		"II",
 		"DUNGEON II",
-		Color(0.65, 0.35, 0.95, 0.75),
+		Color(0.65, 0.35, 0.95, 0.80),
+		Color(0.08, 0.05, 0.14, 0.90),
+		Color(0.65, 0.35, 0.95, 0.35),
+		8,
 		0.75
 	)
 	_visual_layer.add_child(_d2_marker_group)
@@ -387,7 +407,10 @@ func _build_dungeon_markers() -> void:
 		REF_D3_SIZE,
 		"III",
 		"DUNGEON III",
-		Color(0.3, 0.85, 1.0, 0.75),
+		Color(0.30, 0.80, 0.95, 0.80),
+		Color(0.04, 0.08, 0.14, 0.90),
+		Color(0.30, 0.80, 0.95, 0.35),
+		8,
 		0.75
 	)
 	_visual_layer.add_child(_d3_marker_group)
@@ -398,12 +421,15 @@ func _build_dungeon_markers() -> void:
 		REF_D4_SIZE,
 		"IV",
 		"DUNGEON IV",
-		Color(0.45, 0.55, 0.65, 0.65),
+		Color(0.45, 0.55, 0.65, 0.70),
+		Color(0.06, 0.08, 0.10, 0.90),
+		Color(0.20, 0.25, 0.35, 0.30),
+		6,
 		0.65
 	)
 	_visual_layer.add_child(_d4_marker_group)
 
-func _create_locked_marker(group_name: String, group_size: Vector2, numeral: String, title: String, tint_color: Color, opacity: float) -> Control:
+func _create_locked_marker(group_name: String, group_size: Vector2, numeral: String, title: String, tint_color: Color, plate_bg: Color, glow_color: Color, glow_size: int, opacity: float) -> Control:
 	var ctrl: Control = Control.new()
 	ctrl.name = group_name
 	ctrl.custom_minimum_size = group_size
@@ -415,22 +441,23 @@ func _create_locked_marker(group_name: String, group_size: Vector2, numeral: Str
 	ctrl.add_child(vbox)
 
 	var icon_box: PanelContainer = PanelContainer.new()
+	icon_box.name = "LockedPlate"
 	icon_box.custom_minimum_size = Vector2(44, 44)
 	icon_box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
 	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Color(0.04, 0.06, 0.10, 0.85)
+	style.bg_color = plate_bg
 	style.border_width_left = 1
 	style.border_width_right = 1
 	style.border_width_top = 1
 	style.border_width_bottom = 1
 	style.border_color = tint_color
-	style.corner_radius_top_left = 22
-	style.corner_radius_top_right = 22
-	style.corner_radius_bottom_left = 22
-	style.corner_radius_bottom_right = 22
-	style.shadow_color = Color(tint_color.r, tint_color.g, tint_color.b, 0.3)
-	style.shadow_size = 6
+	style.corner_radius_top_left = 12
+	style.corner_radius_top_right = 12
+	style.corner_radius_bottom_left = 12
+	style.corner_radius_bottom_right = 12
+	style.shadow_color = glow_color
+	style.shadow_size = glow_size
 	icon_box.add_theme_stylebox_override("panel", style)
 
 	var lock_lbl: Label = Label.new()
@@ -638,6 +665,41 @@ func render_map() -> void:
 	if _d1_action_button != null:
 		_d1_action_button.text = "KHÁM PHÁ LẠI" if is_d1_completed else "BẮT ĐẦU"
 
+	if _d1_marker_button != null:
+		var d1_btn_style: StyleBoxFlat = StyleBoxFlat.new()
+		d1_btn_style.bg_color = Color(0.04, 0.08, 0.16, 0.94)
+		d1_btn_style.border_width_left = 2
+		d1_btn_style.border_width_right = 2
+		d1_btn_style.border_width_top = 2
+		d1_btn_style.border_width_bottom = 2
+		d1_btn_style.corner_radius_top_left = 16
+		d1_btn_style.corner_radius_top_right = 16
+		d1_btn_style.corner_radius_bottom_left = 16
+		d1_btn_style.corner_radius_bottom_right = 16
+
+		if is_d1_completed:
+			d1_btn_style.border_color = Color(0.95, 0.82, 0.30, 1.0)
+			d1_btn_style.shadow_color = Color(0.95, 0.82, 0.30, 0.60)
+			d1_btn_style.shadow_size = 12
+			if _d1_marker_rune_label != null:
+				_d1_marker_rune_label.text = "✓"
+				_d1_marker_rune_label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.25))
+				_d1_marker_rune_label.add_theme_color_override("font_outline_color", Color(0.5, 0.4, 0.1, 0.6))
+		else:
+			d1_btn_style.border_color = Color(0.25, 0.90, 1.0, 0.95)
+			d1_btn_style.shadow_color = Color(0.15, 0.85, 1.0, 0.60)
+			d1_btn_style.shadow_size = 12
+			if _d1_marker_rune_label != null:
+				_d1_marker_rune_label.text = "◈"
+				_d1_marker_rune_label.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0))
+				_d1_marker_rune_label.add_theme_color_override("font_outline_color", Color(0.1, 0.65, 0.9, 0.6))
+
+		_d1_marker_button.add_theme_stylebox_override("normal", d1_btn_style)
+		var d1_hover_style: StyleBoxFlat = d1_btn_style.duplicate()
+		d1_hover_style.shadow_size = 16
+		_d1_marker_button.add_theme_stylebox_override("hover", d1_hover_style)
+		_d1_marker_button.add_theme_stylebox_override("pressed", d1_hover_style)
+
 	_render_backing_dungeon_container()
 
 func _render_backing_dungeon_container() -> void:
@@ -736,3 +798,54 @@ func _load_texture_safe(p_path: String) -> Texture2D:
 			return ImageTexture.create_from_image(img_buf)
 	return null
 
+func has_white_endpoints_in_overlays() -> bool:
+	for tex_rect in [_overlay_vertical, _overlay_horizontal]:
+		if tex_rect == null or not (tex_rect.texture is GradientTexture2D):
+			continue
+		var grad_tex: GradientTexture2D = tex_rect.texture as GradientTexture2D
+		var grad: Gradient = grad_tex.gradient
+		if grad == null:
+			continue
+		for i in range(grad.get_point_count()):
+			var c: Color = grad.get_color(i)
+			if c.r >= 0.8 and c.g >= 0.8 and c.b >= 0.8 and c.a > 0.05:
+				return true
+	return false
+
+func is_d1_marker_non_circular() -> bool:
+	if _d1_marker_button == null:
+		return false
+	var style: StyleBoxFlat = _d1_marker_button.get_theme_stylebox("normal") as StyleBoxFlat
+	if style == null:
+		return false
+	return style.corner_radius_top_left <= 20 and style.corner_radius_top_left >= 8
+
+func are_locked_markers_rounded_squares() -> bool:
+	for group in [_d2_marker_group, _d3_marker_group, _d4_marker_group]:
+		if group == null:
+			return false
+		var plate: PanelContainer = group.find_child("LockedPlate", true, false) as PanelContainer
+		if plate == null:
+			return false
+		var style: StyleBoxFlat = plate.get_theme_stylebox("panel") as StyleBoxFlat
+		if style == null:
+			return false
+		if style.corner_radius_top_left > 16 or style.corner_radius_top_left < 8:
+			return false
+	return true
+
+func has_header_back_row() -> bool:
+	if _header_panel == null:
+		return false
+	for child in _header_panel.find_children("*", "", true, false):
+		if child.name == "BackButton":
+			return true
+		if child is Button:
+			var btn: Button = child as Button
+			if btn.text.contains("Trở về") or btn.text.contains("Back"):
+				return true
+		if child is Label:
+			var lbl: Label = child as Label
+			if lbl.text.contains("Trở về") or lbl.text.contains("←"):
+				return true
+	return false

@@ -325,7 +325,7 @@ func _update_background_texture() -> void:
 	var bg_rect: TextureRect = get_node_or_null("BackgroundTextureRect") as TextureRect
 	var fog_rect: TextureRect = get_node_or_null("FogOverlayTextureRect") as TextureRect
 
-	if not _is_dungeon_1_context():
+	if not _is_dungeon_1_context() or _current_mode == ViewMode.MODE_MAP:
 		if fog_rect != null:
 			fog_rect.visible = false
 		if _procedural_fog_container != null:
@@ -496,6 +496,14 @@ func is_old_fog_atlas_disabled_in_production() -> bool:
 	var fog_rect: TextureRect = get_node_or_null("FogOverlayTextureRect") as TextureRect
 	return fog_rect == null or not fog_rect.visible
 
+func is_atmospheric_overlay_active() -> bool:
+	if _procedural_fog_container != null and _procedural_fog_container.visible:
+		return true
+	var fog_rect: TextureRect = get_node_or_null("FogOverlayTextureRect") as TextureRect
+	if fog_rect != null and fog_rect.visible:
+		return true
+	return false
+
 func _update_branding_logos() -> void:
 	var logo_main_tex: Texture2D = _load_texture_from_paths([BRAND_LOGO_MAIN_PATH])
 	var start_vbox: VBoxContainer = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer") as VBoxContainer
@@ -659,9 +667,14 @@ func set_view_mode(mode: ViewMode) -> void:
 		_stage_map_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_stage_map_panel.visible = (_current_mode == ViewMode.MODE_MAP)
 		if _current_mode == ViewMode.MODE_MAP:
+			if _procedural_fog_container != null:
+				_procedural_fog_container.visible = false
+			var fog_rect: TextureRect = get_node_or_null("FogOverlayTextureRect") as TextureRect
+			if fog_rect != null:
+				fog_rect.visible = false
 			var target_size: Vector2 = size
 			if target_size.x <= 0 or target_size.y <= 0:
-				var root_win: Window = get_tree().root if get_tree() != null else null
+				var root_win: Window = get_tree().root if is_inside_tree() else null
 				if root_win != null and root_win.size.x > 0 and root_win.size.y > 0:
 					target_size = Vector2(root_win.size)
 				else:

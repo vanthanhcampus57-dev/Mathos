@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 static func run_all_tests() -> bool:
 	print("==========================================")
-	print("D1 WORLD MAP LAYOUT VERIFICATION (MAP-001..025)")
+	print("D1 WORLD MAP LAYOUT VERIFICATION (MAP-001..030)")
 	print("==========================================")
 	var pass_count: int = 0
 
@@ -43,11 +43,16 @@ static func run_all_tests() -> bool:
 	if test_map_023_1280x720_geometry_panel_cta_visible(): pass_count += 1
 	if test_map_024_1600x900_shell_map_visible_nonzero_size(): pass_count += 1
 	if test_map_025_1920x1080_shell_map_visible_nonzero_size(): pass_count += 1
+	if test_map_026_mode_map_does_not_retain_d1_fog_overlay(): pass_count += 1
+	if test_map_027_map_readability_overlays_no_white_endpoint(): pass_count += 1
+	if test_map_028_d1_marker_non_circular_container(): pass_count += 1
+	if test_map_029_d2_d4_locked_markers_rounded_square_plates(): pass_count += 1
+	if test_map_030_approved_header_no_injected_back_row(): pass_count += 1
 
 	print("==========================================")
-	print("D1 WORLD MAP LAYOUT SUMMARY: %d / 25 passed" % pass_count)
+	print("D1 WORLD MAP LAYOUT SUMMARY: %d / 30 passed" % pass_count)
 	print("==========================================")
-	return pass_count == 25
+	return pass_count == 30
 
 static func _create_panel(p_size: Vector2 = Vector2(1280, 720)) -> DungeonStageMapPanel:
 	var panel: DungeonStageMapPanel = DungeonStageMapPanelClass.new()
@@ -529,3 +534,220 @@ static func test_map_025_1920x1080_shell_map_visible_nonzero_size() -> bool:
 	shell.queue_free()
 	print("[MAP-025] PASS")
 	return true
+
+static func test_map_026_mode_map_does_not_retain_d1_fog_overlay() -> bool:
+	print("[MAP-026] Verifying MODE_MAP does not retain D1 fog/atmospheric overlay...")
+	var shell_scene: PackedScene = load("res://src/ui/stage/stage_presentation_shell.tscn") as PackedScene
+	var shell: StagePresentationShell = shell_scene.instantiate() as StagePresentationShell
+	(Engine.get_main_loop() as SceneTree).root.add_child(shell)
+
+	# Verify in MODE_LESSON atmospheric fog is active
+	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_LESSON)
+
+	# Switch to MODE_MAP
+	shell.show_stage_map()
+
+	if shell.is_atmospheric_overlay_active():
+		print("[MAP-026] FAIL: Atmospheric overlay is active in MODE_MAP!")
+		shell.queue_free()
+		return false
+
+	var fog_container: Control = shell.get_procedural_fog_container()
+	if fog_container != null and fog_container.visible:
+		print("[MAP-026] FAIL: ProceduralFogContainer is visible in MODE_MAP!")
+		shell.queue_free()
+		return false
+
+	var fog_rect: TextureRect = shell.get_node_or_null("FogOverlayTextureRect") as TextureRect
+	if fog_rect != null and fog_rect.visible:
+		print("[MAP-026] FAIL: FogOverlayTextureRect is visible in MODE_MAP!")
+		shell.queue_free()
+		return false
+
+	# Verify switching back to MODE_LESSON restores atmospheric behavior
+	shell.set_view_mode(StagePresentationShell.ViewMode.MODE_LESSON)
+	if not shell.is_atmospheric_overlay_active():
+		print("[MAP-026] FAIL: Atmospheric overlay was not restored when leaving MODE_MAP!")
+		shell.queue_free()
+		return false
+
+	shell.queue_free()
+	print("[MAP-026] PASS")
+	return true
+
+static func test_map_027_map_readability_overlays_no_white_endpoint() -> bool:
+	print("[MAP-027] Verifying Map readability overlays contain no opaque/visible white endpoint...")
+	var panel: DungeonStageMapPanel = _create_panel()
+	if panel.has_white_endpoints_in_overlays():
+		print("[MAP-027] FAIL: Readability overlays contain white endpoint!")
+		panel.free()
+		return false
+
+	# 1. Inspect vertical overlay gradient points
+	var tex_v: GradientTexture2D = panel._overlay_vertical.texture as GradientTexture2D
+	var grad_v: Gradient = tex_v.gradient
+	for i in range(grad_v.get_point_count()):
+		var c: Color = grad_v.get_color(i)
+		if c.r >= 0.8 and c.g >= 0.8 and c.b >= 0.8 and c.a > 0.05:
+			print("[MAP-027] FAIL: Vertical overlay has bright white point: %s at offset %f" % [str(c), grad_v.get_offset(i)])
+			panel.free()
+			return false
+
+	# 2. Inspect horizontal overlay gradient points
+	var tex_h: GradientTexture2D = panel._overlay_horizontal.texture as GradientTexture2D
+	var grad_h: Gradient = tex_h.gradient
+	for i in range(grad_h.get_point_count()):
+		var c: Color = grad_h.get_color(i)
+		if c.r >= 0.8 and c.g >= 0.8 and c.b >= 0.8 and c.a > 0.05:
+			print("[MAP-027] FAIL: Horizontal overlay has bright white point: %s at offset %f" % [str(c), grad_h.get_offset(i)])
+			panel.free()
+			return false
+
+	# 3. Check terminal endpoints: offset 1.0 must NOT be white
+	var term_v: Color = grad_v.sample(1.0)
+	var term_h: Color = grad_h.sample(1.0)
+	if (term_v.r > 0.5 and term_v.g > 0.5 and term_v.b > 0.5 and term_v.a > 0.1) or (term_h.r > 0.5 and term_h.g > 0.5 and term_h.b > 0.5 and term_h.a > 0.1):
+		print("[MAP-027] FAIL: Terminal endpoint is bright/white: term_v=%s, term_h=%s" % [str(term_v), str(term_h)])
+		panel.free()
+		return false
+
+	# 4. Sample right edge across offsets [0.65, 0.80, 0.90, 1.0] to verify no white wash
+	for off in [0.65, 0.80, 0.90, 1.0]:
+		var sampled_h: Color = grad_h.sample(off)
+		if sampled_h.r > 0.5 and sampled_h.g > 0.5 and sampled_h.b > 0.5 and sampled_h.a > 0.1:
+			print("[MAP-027] FAIL: Sampled right edge became bright/white at offset %f: %s" % [off, str(sampled_h)])
+			panel.free()
+			return false
+
+	# 5. Sample bottom edge across offsets [0.70, 0.80, 0.90, 1.0] to verify no white wash
+	for off in [0.70, 0.80, 0.90, 1.0]:
+		var sampled_v: Color = grad_v.sample(off)
+		if sampled_v.r > 0.5 and sampled_v.g > 0.5 and sampled_v.b > 0.5 and sampled_v.a > 0.1:
+			print("[MAP-027] FAIL: Sampled bottom edge became bright/white at offset %f: %s" % [off, str(sampled_v)])
+			panel.free()
+			return false
+
+	# 6. Verify bottom-right overlay combination does NOT approach opaque white
+	var br_v: Color = grad_v.sample(1.0)
+	var br_h: Color = grad_h.sample(1.0)
+	if br_v.r > 0.5 and br_h.r > 0.5:
+		print("[MAP-027] FAIL: Bottom-right overlay approaches white: v=%s, h=%s" % [str(br_v), str(br_h)])
+		panel.free()
+		return false
+
+	panel.free()
+	print("[MAP-027] PASS")
+	return true
+
+static func test_map_028_d1_marker_non_circular_container() -> bool:
+	print("[MAP-028] Verifying D1 marker uses approved non-circular marker container...")
+	var panel: DungeonStageMapPanel = _create_panel()
+	if not panel.is_d1_marker_non_circular():
+		print("[MAP-028] FAIL: D1 marker container is circular or has invalid corner radius")
+		panel.free()
+		return false
+
+	var btn: Button = panel._d1_marker_button
+	if btn.custom_minimum_size != Vector2(64, 64):
+		print("[MAP-028] FAIL: D1 marker footprint expected 64x64, got %s" % str(btn.custom_minimum_size))
+		panel.free()
+		return false
+
+	var style: StyleBoxFlat = btn.get_theme_stylebox("normal") as StyleBoxFlat
+	if style.corner_radius_top_left > 20 or style.corner_radius_top_left < 10:
+		print("[MAP-028] FAIL: D1 marker corner radius expected ~16, got %d" % style.corner_radius_top_left)
+		panel.free()
+		return false
+
+	# Verify fresh state: rune label is present, no completion check, status text is ĐANG MỞ
+	panel.render_map()
+	if panel._d1_status_label.text != "ĐANG MỞ":
+		print("[MAP-028] FAIL: Fresh state status label expected 'ĐANG MỞ', got '%s'" % panel._d1_status_label.text)
+		panel.free()
+		return false
+
+	# Verify completed state: gold completion badge/check, ✓ HOÀN THÀNH
+	panel.set_map_data({"completed_stages": ["stage_01_01", "stage_01_02", "stage_01_03", "stage_01_04", "stage_01_05"]})
+	if panel._d1_status_label.text != "✓ HOÀN THÀNH":
+		print("[MAP-028] FAIL: Completed state status label expected '✓ HOÀN THÀNH', got '%s'" % panel._d1_status_label.text)
+		panel.free()
+		return false
+
+	panel.free()
+	print("[MAP-028] PASS")
+	return true
+
+static func test_map_029_d2_d4_locked_markers_rounded_square_plates() -> bool:
+	print("[MAP-029] Verifying D2-D4 locked markers use approved rounded-square plate language...")
+	var panel: DungeonStageMapPanel = _create_panel()
+	if not panel.are_locked_markers_rounded_squares():
+		print("[MAP-029] FAIL: D2-D4 plates do not use rounded-square plate language")
+		panel.free()
+		return false
+
+	for dun_idx in [2, 3, 4]:
+		var group_name: String = "Dungeon%dMarkerGroup" % dun_idx
+		var group: Control = panel.find_child(group_name, true, false) as Control
+		if group == null:
+			print("[MAP-029] FAIL: Group %s missing" % group_name)
+			panel.free()
+			return false
+		var plate: PanelContainer = group.find_child("LockedPlate", true, false) as PanelContainer
+		if plate == null:
+			print("[MAP-029] FAIL: LockedPlate missing in %s" % group_name)
+			panel.free()
+			return false
+		if plate.custom_minimum_size != Vector2(44, 44):
+			print("[MAP-029] FAIL: Plate %s expected 44x44, got %s" % [group_name, str(plate.custom_minimum_size)])
+			panel.free()
+			return false
+		var style: StyleBoxFlat = plate.get_theme_stylebox("panel") as StyleBoxFlat
+		if style.corner_radius_top_left != 12:
+			print("[MAP-029] FAIL: Plate %s expected radius 12, got %d" % [group_name, style.corner_radius_top_left])
+			panel.free()
+			return false
+		var lock_lbl: Label = plate.find_child("*", true, false) as Label
+		if lock_lbl == null or not lock_lbl.text.contains("🔒"):
+			print("[MAP-029] FAIL: Lock icon missing in %s" % group_name)
+			panel.free()
+			return false
+
+	panel.free()
+	print("[MAP-029] PASS")
+	return true
+
+static func test_map_030_approved_header_no_injected_back_row() -> bool:
+	print("[MAP-030] Verifying approved header contains no injected Back row...")
+	var panel: DungeonStageMapPanel = _create_panel()
+	if panel.has_header_back_row():
+		print("[MAP-030] FAIL: Header panel contains injected Back row or button!")
+		panel.free()
+		return false
+
+	var header: PanelContainer = panel._header_panel
+	var labels: Array = []
+	for child in header.find_children("*", "Label", true, false):
+		labels.append(child.text)
+
+	# Verify only approved contents exist
+	var has_mathos: bool = false
+	var has_title: bool = false
+	var has_sub: bool = false
+	for t in labels:
+		if t == "MATHOS": has_mathos = true
+		if t == "BẢN ĐỒ HÀNH TRÌNH": has_title = true
+		if t.contains("Chọn thử thách tiếp theo"): has_sub = true
+		if t.contains("Trở về") or t.contains("←"):
+			print("[MAP-030] FAIL: Injected Back text found in header: '%s'" % t)
+			panel.free()
+			return false
+
+	if not has_mathos or not has_title or not has_sub:
+		print("[MAP-030] FAIL: Missing approved header labels: %s" % str(labels))
+		panel.free()
+		return false
+
+	panel.free()
+	print("[MAP-030] PASS")
+	return true
+
