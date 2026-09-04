@@ -169,6 +169,6 @@ func _count_suite_tests(name: String) -> int:
 		"Visual Lab QA Harness": return 31
 		"Mathos Production Boot Sequence QA": return 13
 		"Godot Auth API Client Foundation": return 24
-		"Mathos Production Auth UI QA": return 21
+		"Mathos Production Auth UI QA": return 31
 		"Auth Production Boot Routing QA": return 18
 		_: return 1

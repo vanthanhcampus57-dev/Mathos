@@ -12,7 +12,8 @@ signal guest_entered()
 enum PanelType {
 	LOGIN,
 	SIGNUP,
-	FORGOT_PASSWORD
+	FORGOT_PASSWORD,
+	RESET_PASSWORD
 }
 
 const AuthApiClientClass = preload("res://src/core/auth/auth_api_client.gd")
@@ -20,6 +21,7 @@ const AuthLoginBgClass = preload("res://src/ui/auth/auth_login_background.gd")
 const LoginPanelClass = preload("res://src/ui/auth/login_panel.gd")
 const SignUpPanelClass = preload("res://src/ui/auth/sign_up_panel.gd")
 const ForgotPasswordPanelClass = preload("res://src/ui/auth/forgot_password_panel.gd")
+const ResetPasswordPanelClass = preload("res://src/ui/auth/reset_password_panel.gd")
 
 const AuthUiThemeClass = preload("res://src/ui/auth/auth_ui_theme.gd")
 
@@ -29,6 +31,7 @@ var _form_container: PanelContainer = null
 var _login_panel: Control = null
 var _signup_panel: Control = null
 var _forgot_panel: Control = null
+var _reset_panel: Control = null
 var _dev_inspector: PanelContainer = null
 var _dev_inspector_enabled: bool = false
 
@@ -109,6 +112,11 @@ func _ensure_nodes() -> void:
 	_forgot_panel.name = "ForgotPasswordPanel"
 	_forgot_panel._ensure_nodes()
 	_form_container.add_child(_forgot_panel)
+
+	_reset_panel = ResetPasswordPanelClass.new()
+	_reset_panel.name = "ResetPasswordPanel"
+	_reset_panel._ensure_nodes()
+	_form_container.add_child(_reset_panel)
 
 	# 4. Dev State Inspector (Strictly hidden by default in production)
 	_build_dev_inspector(overlay)
@@ -240,6 +248,12 @@ func _connect_panel_signals() -> void:
 	if not _forgot_panel.login_nav_requested.is_connected(show_login):
 		_forgot_panel.login_nav_requested.connect(show_login)
 
+	# Reset Password Signals
+	if not _reset_panel.reset_password_submitted.is_connected(_on_reset_password_submitted):
+		_reset_panel.reset_password_submitted.connect(_on_reset_password_submitted)
+	if not _reset_panel.login_nav_requested.is_connected(show_login):
+		_reset_panel.login_nav_requested.connect(show_login)
+
 func show_panel(panel_type: PanelType) -> void:
 	_ensure_nodes()
 	_current_panel = panel_type
@@ -247,6 +261,7 @@ func show_panel(panel_type: PanelType) -> void:
 	_login_panel.visible = (panel_type == PanelType.LOGIN)
 	_signup_panel.visible = (panel_type == PanelType.SIGNUP)
 	_forgot_panel.visible = (panel_type == PanelType.FORGOT_PASSWORD)
+	_reset_panel.visible = (panel_type == PanelType.RESET_PASSWORD)
 
 func show_login() -> void:
 	show_panel(PanelType.LOGIN)
@@ -256,6 +271,11 @@ func show_signup() -> void:
 
 func show_forgot_password() -> void:
 	show_panel(PanelType.FORGOT_PASSWORD)
+
+func show_reset_password(token: String = "") -> void:
+	show_panel(PanelType.RESET_PASSWORD)
+	if _reset_panel != null and not token.is_empty():
+		_reset_panel.set_reset_token(token)
 
 func get_current_panel() -> PanelType:
 	return _current_panel
@@ -298,6 +318,19 @@ func _on_forgot_password_submitted(email: String) -> void:
 
 	_forgot_panel.show_success_anti_enumeration()
 
+func _on_reset_password_submitted(token: String, new_pass: String) -> void:
+	_reset_panel.set_pending(true)
+	var result = await _auth_client.reset_password(token, new_pass)
+	_reset_panel.set_pending(false)
+
+	if result.success:
+		_reset_panel.clear_form()
+		_reset_panel.show_success("Đặt lại mật khẩu thành công! Bạn có thể đăng nhập ngay.")
+		_reset_panel.reset_password_succeeded.emit()
+	else:
+		var err_msg: String = _map_error_message(result)
+		_reset_panel.show_error(err_msg)
+
 func _on_guest_login_requested() -> void:
 	guest_entered.emit()
 
@@ -308,6 +341,10 @@ func _map_error_message(result: RefCounted) -> String:
 
 	var code: String = result.error_code if "error_code" in result else ""
 	var status: int = result.http_status if "http_status" in result else 0
+	var msg: String = result.message if "message" in result else ""
+
+	if msg.to_lower().contains("expired") or msg.to_lower().contains("invalid token") or code == "INVALID_TOKEN":
+		return "Mã khôi phục không hợp lệ hoặc đã hết hạn."
 
 	match code:
 		"NETWORK_ERROR":
@@ -317,8 +354,8 @@ func _map_error_message(result: RefCounted) -> String:
 		"UNAUTHORIZED":
 			return "Email hoặc mật khẩu không chính xác."
 		"VALIDATION_ERROR":
-			return result.message if not result.message.is_empty() else "Thông tin tài khoản không hợp lệ."
+			return msg if not msg.is_empty() else "Thông tin tài khoản không hợp lệ."
 		"SERVER_ERROR":
 			return "Lỗi máy chủ (%d). Vui lòng thử lại sau." % status
 		_:
-			return result.message if not result.message.is_empty() else "Yêu cầu thất bại."
+			return msg if not msg.is_empty() else "Yêu cầu thất bại."

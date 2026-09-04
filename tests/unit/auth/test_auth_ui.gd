@@ -1,16 +1,17 @@
 extends SceneTree
 
-## Unit & Integration Test Suite for Production Mathos Auth UI (AUTH-UI-001..021)
+## Unit & Integration Test Suite for Production Mathos Auth UI (AUTH-UI-001..031)
 
 const AuthShellClass = preload("res://src/ui/auth/auth_shell.gd")
 const LoginPanelClass = preload("res://src/ui/auth/login_panel.gd")
 const SignUpPanelClass = preload("res://src/ui/auth/sign_up_panel.gd")
 const ForgotPasswordPanelClass = preload("res://src/ui/auth/forgot_password_panel.gd")
+const ResetPasswordPanelClass = preload("res://src/ui/auth/reset_password_panel.gd")
 const AuthApiClientClass = preload("res://src/core/auth/auth_api_client.gd")
 const AuthResultClass = preload("res://src/core/auth/auth_result.gd")
 
 func _initialize() -> void:
-	print("--- RUNNING MATHOS PRODUCTION AUTH UI QA HARNESS (AUTH-UI-001..021) ---")
+	print("--- RUNNING MATHOS PRODUCTION AUTH UI QA HARNESS (AUTH-UI-001..031) ---")
 	var ok: bool = run_all_tests()
 	if ok:
 		print("MATHOS PRODUCTION AUTH UI QA HARNESS: PASS!")
@@ -348,6 +349,162 @@ static func run_all_tests() -> bool:
 		"Official Mathos academy logo loaded and presented at top of auth panel!",
 		"Official Mathos academy logo check failed!")
 	login.free()
+
+	# TEST 022: Reset Password Panel Instantiation & Secret Fields
+	var reset = ResetPasswordPanelClass.new()
+	reset._ready()
+	var pass_secret: bool = reset._password_input.secret
+	var confirm_secret: bool = reset._confirm_password_input.secret
+	_assert.call(pass_secret and confirm_secret,
+		"AUTH-UI-022",
+		"ResetPasswordPanel password fields both instantiated with secret=true!",
+		"ResetPasswordPanel secret password fields check failed!")
+	reset.free()
+
+	# TEST 023: Reset Password Visibility Toggles
+	reset = ResetPasswordPanelClass.new()
+	reset._ready()
+	reset._password_toggle_button.emit_signal("pressed")
+	var pass_unmasked: bool = not reset._password_input.secret
+	var pass_icon_changed: bool = (reset._password_toggle_button.text == "🔒")
+	reset._confirm_toggle_button.emit_signal("pressed")
+	var confirm_unmasked: bool = not reset._confirm_password_input.secret
+	var confirm_icon_changed: bool = (reset._confirm_toggle_button.text == "🔒")
+	reset._password_toggle_button.emit_signal("pressed")
+	var pass_remasked: bool = reset._password_input.secret
+	_assert.call(pass_unmasked and pass_icon_changed and confirm_unmasked and confirm_icon_changed and pass_remasked,
+		"AUTH-UI-023",
+		"ResetPasswordPanel visibility toggles correctly switch secret mask and eye/lock icon!",
+		"ResetPasswordPanel visibility toggle failed!")
+	reset.free()
+
+	# TEST 024: Reset Password Client Validation (Missing Token, Empty Fields, Mismatch)
+	reset = ResetPasswordPanelClass.new()
+	reset._ready()
+	var state024 = {"submitted": false}
+	reset.reset_password_submitted.connect(func(_t, _p): state024["submitted"] = true)
+	# Case A: No token
+	reset._password_input.text = "NewPass123!"
+	reset._confirm_password_input.text = "NewPass123!"
+	reset._on_submit_pressed()
+	var err_no_token: bool = (not state024["submitted"]) and reset._status_label.text.contains("Token")
+	# Case B: Token set, but empty password
+	reset.set_reset_token("valid_token_xyz")
+	reset._password_input.text = ""
+	reset._confirm_password_input.text = "NewPass123!"
+	reset._on_submit_pressed()
+	var err_empty_pass: bool = (not state024["submitted"]) and reset._status_label.text.contains("Mật khẩu mới")
+	# Case C: Password mismatch
+	reset._password_input.text = "NewPass123!"
+	reset._confirm_password_input.text = "DifferentPass456!"
+	reset._on_submit_pressed()
+	var err_mismatch: bool = (not state024["submitted"]) and reset._status_label.text.contains("không khớp")
+	_assert.call(err_no_token and err_empty_pass and err_mismatch,
+		"AUTH-UI-024",
+		"ResetPasswordPanel validation blocks missing token, empty password, and password mismatch!",
+		"ResetPasswordPanel validation failed!")
+	reset.free()
+
+	# TEST 025: External Typed Token Setup & Security / No Disk Persistence
+	reset = ResetPasswordPanelClass.new()
+	reset._ready()
+	reset.set_reset_token("  secret_reset_token_abc123  ")
+	var token_stored: bool = (reset.get_reset_token() == "secret_reset_token_abc123")
+	var has_token: bool = reset.has_reset_token()
+	var disk_path: String = "user://reset_token.dat"
+	var no_disk: bool = not FileAccess.file_exists(disk_path)
+	_assert.call(token_stored and has_token and no_disk,
+		"AUTH-UI-025",
+		"External typed setup method sets token securely in-memory with zero disk persistence!",
+		"Reset token setup security failed!")
+	reset.free()
+
+	# TEST 026: Successful Reset Password Submission
+	reset = ResetPasswordPanelClass.new()
+	reset._ready()
+	var state026 = {"token": "", "pass": ""}
+	reset.reset_password_submitted.connect(func(t, p):
+		state026["token"] = t
+		state026["pass"] = p
+	)
+	reset.set_reset_token("tok_canonical_999")
+	reset._password_input.text = "BrandNewSecurePassword123!"
+	reset._confirm_password_input.text = "BrandNewSecurePassword123!"
+	reset._on_submit_pressed()
+	var submit_ok: bool = (state026["token"] == "tok_canonical_999") and (state026["pass"] == "BrandNewSecurePassword123!")
+	_assert.call(submit_ok,
+		"AUTH-UI-026",
+		"Valid reset form submission emits reset_password_submitted with exact token and password!",
+		"Reset password submission signal failed!")
+	reset.free()
+
+	# TEST 027: Loading State Disables Inputs & Buttons
+	reset = ResetPasswordPanelClass.new()
+	reset._ready()
+	reset.set_pending(true)
+	var disabled_ok: bool = (not reset._password_input.editable) and (not reset._confirm_password_input.editable) and reset._submit_button.disabled and reset._back_button.disabled and reset._password_toggle_button.disabled
+	var pending_text_ok: bool = reset._submit_button.text.contains("Đang cập nhật")
+	reset.set_pending(false)
+	var enabled_ok: bool = reset._password_input.editable and reset._confirm_password_input.editable and (not reset._submit_button.disabled) and (not reset._back_button.disabled)
+	_assert.call(disabled_ok and pending_text_ok and enabled_ok,
+		"AUTH-UI-027",
+		"Loading state disables reset inputs, toggles, and buttons during pending request!",
+		"Reset password loading state control failed!")
+	reset.free()
+
+	# TEST 028: Error Mapping for Invalid & Expired Token
+	shell = AuthShellClass.new()
+	shell._ready()
+	var res_invalid = AuthResultClass.fail("INVALID_TOKEN", "Invalid or expired reset token", 400)
+	var mapped_invalid: String = shell._map_error_message(res_invalid)
+	var ok_invalid: bool = mapped_invalid.contains("không hợp lệ hoặc đã hết hạn")
+	var res_expired = AuthResultClass.fail("TOKEN_EXPIRED", "Signature has expired", 400)
+	var mapped_expired: String = shell._map_error_message(res_expired)
+	var ok_expired: bool = mapped_expired.contains("không hợp lệ hoặc đã hết hạn")
+	_assert.call(ok_invalid and ok_expired,
+		"AUTH-UI-028",
+		"Invalid or expired reset token mapped to friendly user message without leaking raw tokens!",
+		"Reset token error mapping failed!")
+	shell.free()
+
+	# TEST 029: Panel Navigation in AuthShell for RESET_PASSWORD
+	shell = AuthShellClass.new()
+	shell._ready()
+	shell.show_reset_password("nav_token_123")
+	var is_reset_panel: bool = (shell.get_current_panel() == AuthShellClass.PanelType.RESET_PASSWORD)
+	var reset_visible: bool = shell._reset_panel.visible
+	var token_passed: bool = (shell._reset_panel.get_reset_token() == "nav_token_123")
+	shell._reset_panel._on_back_pressed()
+	var is_login_after_back: bool = (shell.get_current_panel() == AuthShellClass.PanelType.LOGIN)
+	_assert.call(is_reset_panel and reset_visible and token_passed and is_login_after_back,
+		"AUTH-UI-029",
+		"AuthShell seamlessly navigates to RESET_PASSWORD with token and back to LOGIN!",
+		"AuthShell reset password panel navigation failed!")
+	shell.free()
+
+	# TEST 030: Multi-Resolution Responsive Scrollability & Reserved Space
+	shell = AuthShellClass.new()
+	shell._ready()
+	var has_reset_scroll: bool = (shell._reset_panel.get_child(0) is ScrollContainer)
+	var has_reserved_space: bool = (shell._reset_panel._status_container != null) and (shell._reset_panel._status_container.custom_minimum_size.y >= 30)
+	_assert.call(has_reset_scroll and has_reserved_space,
+		"AUTH-UI-030",
+		"ResetPasswordPanel wrapped in ScrollContainer with reserved error/status container!",
+		"ResetPasswordPanel responsive scrollability and reserved space check failed!")
+	shell.free()
+
+	# TEST 031: Official Academy Branding & Titles on ResetPasswordPanel
+	reset = ResetPasswordPanelClass.new()
+	reset._ready()
+	var logo: TextureRect = reset.find_child("LogoRect", true, false) as TextureRect
+	var logo_ok: bool = (logo != null and logo.texture != null and logo.texture.resource_path.contains("mathos_logo_main"))
+	var subtitle: Label = reset.find_child("SubtitleLabel", true, false) as Label
+	var title_ok: bool = (subtitle != null and subtitle.text.contains("HỌC VIỆN"))
+	_assert.call(logo_ok and title_ok,
+		"AUTH-UI-031",
+		"ResetPasswordPanel integrates official Mathos academy logo and titles!",
+		"ResetPasswordPanel branding verification failed!")
+	reset.free()
 
 	print("==========================================")
 	print("MATHOS PRODUCTION AUTH UI QA HARNESS SUMMARY:")
