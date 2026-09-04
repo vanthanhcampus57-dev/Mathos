@@ -102,6 +102,9 @@ const DEFAULT_DUNGEONS: Array = [
 func _ready() -> void:
 	anchor_right = 1.0
 	anchor_bottom = 1.0
+	custom_minimum_size = Vector2(REF_WIDTH, REF_HEIGHT)
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	clip_contents = true
 	_build_base_layout()
 	render_map()
@@ -123,8 +126,7 @@ func _build_base_layout() -> void:
 	_bg_texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_bg_texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	_bg_texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if ResourceLoader.exists(WORLD_MAP_BG_PATH):
-		_bg_texture_rect.texture = load(WORLD_MAP_BG_PATH)
+	_bg_texture_rect.texture = _load_texture_safe(WORLD_MAP_BG_PATH)
 	add_child(_bg_texture_rect)
 
 	# 2. Readability Overlays
@@ -514,9 +516,11 @@ func _build_d1_context_panel() -> void:
 	_d1_panel_body_label.name = "DescriptionLabel"
 	_d1_panel_body_label.text = "Khởi đầu hành trình tại khu rừng cổ bị bao phủ bởi màn sương ma thuật."
 	_d1_panel_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_d1_panel_body_label.custom_minimum_size = Vector2(300, 0)
+	_d1_panel_body_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_d1_panel_body_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_d1_panel_body_label.add_theme_color_override("font_color", Color(0.72, 0.78, 0.86))
 	_d1_panel_body_label.add_theme_font_size_override("font_size", 12)
-	_d1_panel_body_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(_d1_panel_body_label)
 
 	_d1_action_button = Button.new()
@@ -573,8 +577,9 @@ func _update_responsive_layout() -> void:
 		_hud_panel.position = Vector2(vp_size.x - REF_HUD_RIGHT - REF_HUD_SIZE.x, REF_HUD_TOP)
 
 	if _d1_context_panel != null:
-		_d1_context_panel.size = REF_PANEL_SIZE
 		_d1_context_panel.position = Vector2(vp_size.x - REF_PANEL_RIGHT - REF_PANEL_SIZE.x, vp_size.y - REF_PANEL_BOTTOM - REF_PANEL_SIZE.y)
+		_d1_context_panel.size = REF_PANEL_SIZE
+		_d1_context_panel.reset_size()
 
 	var scale_factor: float = maxf(vp_size.x / REF_WIDTH, vp_size.y / REF_HEIGHT)
 	var offset_x: float = (vp_size.x - REF_WIDTH * scale_factor) * 0.5
@@ -712,3 +717,22 @@ func _on_stage_button_pressed(stage_id: String) -> void:
 
 	if is_unlocked or is_completed:
 		stage_selected.emit(stage_id)
+
+func _load_texture_safe(p_path: String) -> Texture2D:
+	if ResourceLoader.exists(p_path):
+		var res: Resource = load(p_path)
+		if res is Texture2D:
+			return res as Texture2D
+	var global_p: String = ProjectSettings.globalize_path(p_path)
+	var img: Image = Image.new()
+	if img.load(global_p) == OK or img.load(p_path) == OK:
+		return ImageTexture.create_from_image(img)
+	var bytes: PackedByteArray = FileAccess.get_file_as_bytes(p_path)
+	if bytes.is_empty() and FileAccess.file_exists(global_p):
+		bytes = FileAccess.get_file_as_bytes(global_p)
+	if not bytes.is_empty():
+		var img_buf: Image = Image.new()
+		if img_buf.load_jpg_from_buffer(bytes) == OK or img_buf.load_png_from_buffer(bytes) == OK:
+			return ImageTexture.create_from_image(img_buf)
+	return null
+

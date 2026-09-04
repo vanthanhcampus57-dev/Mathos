@@ -154,8 +154,18 @@ func _ensure_sub_components() -> void:
 		if _stage_map_panel == null:
 			_stage_map_panel = DungeonStageMapPanel.new()
 			_stage_map_panel.name = "DungeonStageMapPanel"
+			_stage_map_panel.custom_minimum_size = Vector2(1280, 720)
+			_stage_map_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			_stage_map_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 			_stage_map_panel.visible = false
 			main_content.add_child(_stage_map_panel)
+		else:
+			_stage_map_panel.custom_minimum_size = Vector2(1280, 720)
+			_stage_map_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			_stage_map_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+		if not _stage_map_panel.is_node_ready():
+			_stage_map_panel._ready()
 
 		if not _stage_map_panel.stage_selected.is_connected(_on_map_stage_selected):
 			_stage_map_panel.stage_selected.connect(_on_map_stage_selected)
@@ -218,6 +228,14 @@ func _ensure_sub_components() -> void:
 	var stage_complete_panel: StageCompletePanel = get_stage_complete_panel()
 	if stage_complete_panel != null and not stage_complete_panel.stage_continue_requested.is_connected(_on_stage_continue):
 		stage_complete_panel.stage_continue_requested.connect(_on_stage_continue)
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED:
+		if _stage_map_panel != null and _stage_map_panel.visible:
+			if size.x > 0 and size.y > 0:
+				_stage_map_panel.size = size
+				if _stage_map_panel.has_method("_update_responsive_layout"):
+					_stage_map_panel.call("_update_responsive_layout")
 
 func _process(delta: float) -> void:
 	_update_fog_animation(delta)
@@ -636,7 +654,37 @@ func set_view_mode(mode: ViewMode) -> void:
 	if f_host != null: f_host.visible = (_current_mode == ViewMode.MODE_FEEDBACK_HOST)
 	if complete_panel != null: complete_panel.visible = (_current_mode == ViewMode.MODE_STAGE_COMPLETE)
 	if _victory_panel != null: _victory_panel.visible = (_current_mode == ViewMode.MODE_VICTORY or _current_mode == ViewMode.MODE_DUNGEON_COMPLETE)
-	if _stage_map_panel != null: _stage_map_panel.visible = (_current_mode == ViewMode.MODE_MAP)
+	if _stage_map_panel != null:
+		_stage_map_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_stage_map_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_stage_map_panel.visible = (_current_mode == ViewMode.MODE_MAP)
+		if _current_mode == ViewMode.MODE_MAP:
+			var target_size: Vector2 = size
+			if target_size.x <= 0 or target_size.y <= 0:
+				var root_win: Window = get_tree().root if get_tree() != null else null
+				if root_win != null and root_win.size.x > 0 and root_win.size.y > 0:
+					target_size = Vector2(root_win.size)
+				else:
+					target_size = Vector2(1280, 720)
+			_stage_map_panel.size = target_size
+			if _stage_map_panel.has_method("_update_responsive_layout"):
+				_stage_map_panel.call("_update_responsive_layout")
+
+	var main_body: MarginContainer = get_node_or_null("VBoxContainer/MainBody") as MarginContainer
+	if main_body != null:
+		if _current_mode == ViewMode.MODE_MAP:
+			main_body.add_theme_constant_override("margin_left", 0)
+			main_body.add_theme_constant_override("margin_right", 0)
+			main_body.add_theme_constant_override("margin_top", 0)
+			main_body.add_theme_constant_override("margin_bottom", 0)
+			add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+		else:
+			main_body.add_theme_constant_override("margin_left", 16)
+			main_body.add_theme_constant_override("margin_right", 16)
+			main_body.add_theme_constant_override("margin_top", 16)
+			main_body.add_theme_constant_override("margin_bottom", 16)
+			if has_theme_stylebox_override("panel"):
+				remove_theme_stylebox_override("panel")
 
 	if _current_mode == ViewMode.MODE_STORY and lesson_panel != null and _context_info != null:
 		if lesson_panel.has_method("set_story_mode"):

@@ -3,100 +3,85 @@
 > Canonical recovery note for Agent1. This file is maintained as a complete, authoritative state ledger for Agent1.
 
 ## 1. CURRENT TASK
-- TASK_ID: MATHOS-MAP-FIGMA-FINAL-INTEGRATION-045
-- TITLE: D1 World Map Figma Final Integration
+- TASK_ID: MATHOS-MAP-RUNTIME-LAYOUT-HOTFIX-046
+- TITLE: Map Runtime Layout Hotfix
 - FROM: M1
 - PRIORITY: CRITICAL
-- STATUS: READY_FOR_MAP_INDEPENDENT_REQA
-- PROMPT_RECEIVED_AT: 2026-09-04T20:25:57+07:00
-- BASE_HEAD: b6e72158926dce4e899be1ceb0cd0d16a033f1e0
-- FINAL_HEAD: 5a26022ba9c0183d2cbc5e5afaa9a77506fda805
-- ACTIVE_GOAL: Replace current Demo V1 Map presentation with human-approved MATHOS fantasy world-map visual (1280x720 Figma reference) while preserving existing Map/D1 gameplay behavior, canonical D1 entry/replay, and keeping D2-D4 locked.
+- STATUS: COMPLETED
+- PROMPT_RECEIVED_AT: 2026-09-04T21:18:25+07:00
+- BASE_HEAD: 95ee75e4ed184198df9af3af4ca8f36952f67997
+- ACTIVE_GOAL: Fix the two independently reproduced runtime layout failures in the new Figma World Map implementation (Defect 1: D1 context panel size.y ~1270px offscreen CTA; Defect 2: Map panel collapsing to height 0 inside StagePresentationShell MainContentVBox) without redesigning the approved visual.
 
 ## 2. WORKSPACE / GIT
 - PROJECT: Mathos
-- WORKTREE: D:\\Mathos_Worktrees\\MATHOS-MAP-FIGMA-045
-- BRANCH: integration/mathos-map-figma-045
-- START_HEAD: b6e72158926dce4e899be1ceb0cd0d16a033f1e0
-- CURRENT_HEAD: 5a26022ba9c0183d2cbc5e5afaa9a77506fda805
+- WORKTREE: D:\Mathos_Worktrees\MATHOS-MAP-RUNTIME-HOTFIX-046
+- BRANCH: hotfix/mathos-map-runtime-046
+- START_HEAD: 95ee75e4ed184198df9af3af4ca8f36952f67997
+- CURRENT_HEAD: 95ee75e4ed184198df9af3af4ca8f36952f67997
 - WORKTREE_CLEAN: TRUE
 
 ## 3. EXACT PROMPT / INTENT SUMMARY
-- Start from exact base head b6e72158926dce4e899be1ceb0cd0d16a033f1e0.
-- Source of truth: Approved Figma 1280x720 specification. Translated into native Godot 4.7.1 Control nodes (no embedded browser/HTML/CSS runtime).
-- Art asset preflight: Located verified original approved artwork from local Figma/browser cache containing all 5 landmarks (ancient cyan stone gate lower-left, purple ruined spire center, cyan glacial/crystal cave upper-right, distant dark castle/citadel upper-left, cyan environmental path). Imported into canonical path `res://assets/backgrounds/map/d1_world_map_bg.jpg`.
-- Layout reference (1280x720):
-  - Header: x=40, y=28, w=408.32, h=111.5 (MATHOS gold tracking, strong display title, subtitle, subtle back button).
-  - Top-Right HUD: right=40 (x=950.31), top=28, w=289.69, h=42 (pill shape, cyan border & glow, real progress values: Mảnh vỡ: 1 | Dungeon: 1/4).
-  - D1 Marker: x=147.19, y=420, w=135.63, h=130 (64x64 marker, cyan glow, gold completion check ✓ HOÀN THÀNH).
-  - D2 Marker: x=595.94, y=311.88, w=98.13, h=87 (violet/indigo, locked 🔒).
-  - D3 Marker: x=927.66, y=186.88, w=104.69, h=87 (cyan, locked 🔒).
-  - D4 Marker: x=358.85, y=116.88, w=102.30, h=87 (dark slate, locked 🔒).
-  - D1 Context Panel: right=40 (x=890), bottom=32 (y=459.93), w=350, h=228.07 (navy gradient, cyan border/brackets, 300x44 gold gradient KHÁM PHÁ LẠI button).
-- Readability overlays: Vertical (dark bottom 0.85, trans middle, dark top 0.40) & Horizontal (dark left 0.60, trans center, dark right 0.50).
-- Preserve existing map functional contract: canonical D1 replay flow, D2-D4 locked, zero debug IDs visible, responsive scaling at 1280x720, 1600x900, 1920x1080 without landmark drift.
-- Auth UI, Auth background, Auth production preset, D1 gameplay/combat untouched.
-- Targeted tests (MAP-001..015) 15/15 PASS.
-- Canonical test runner: 599/599 PASS (584 baseline + 15 new).
+- Start from base head 95ee75e4ed184198df9af3af4ca8f36952f67997.
+- Defect 1: Fix D1 context panel layout order and sizing so height resolves to reference ~228.07px at (right=40, bottom=32, w=350, h=228.07) -> top-left ~ (890, 459.93) with CTA ~ (300, 44) fully visible and clickable.
+- Defect 2: Fix Map panel collapsing to height 0 inside StagePresentationShell MainContentVBox. Set size_flags_vertical = Control.SIZE_EXPAND_FILL, appropriate horizontal expansion, container contract, and ensure StagePresentationShell allocates vertical space.
+- Approved visual remains untouched: d1_world_map_bg.jpg, Header (40, 28, 408.32, 111.5), HUD (right 40, top 28, 289.69, 42), D1-D4 markers, D1 panel.
+- Add regression tests MAP-016 through MAP-025 covering actual runtime container integration, shell integration, AppRoot -> Hub -> Map flow, and multi-resolution.
+- Verify fresh save vs completed save state semantics, D2-D4 locked, canonical D1 entry.
+- Canonical test runner expected new total: 599 + 10 = 609 tests.
+- Do not build Windows binary yet.
 
 ## 4. SCOPE
-- IN_SCOPE: World map UI presentation (`src/ui/map/dungeon_stage_map_panel.gd`), map background asset (`assets/backgrounds/map/d1_world_map_bg.jpg`), targeted layout suite (`tests/unit/presentation/test_d1_world_map_layout.gd`), test runner registration (`tests/test_runner.gd`), Agent recovery ledger (`Agent recovery/Agent1.md`).
-- OUT_OF_SCOPE / PROHIBITED: Redesigning, generating images, using Stitch, modifying Auth UI/background/preset, changing D1 gameplay progression/combat, unlocking D2-D4, building final release package.
+- IN_SCOPE: src/ui/map/dungeon_stage_map_panel.gd, src/ui/stage/stage_presentation_shell.gd, tests/unit/presentation/test_d1_world_map_layout.gd, tests/test_runner.gd, Agent recovery/Agent1.md.
+- OUT_OF_SCOPE / PROHIBITED: Redesigning visuals, changing artwork, touching Auth, modifying D1 gameplay progression/combat, unlocking D2-D4, generating images, building Windows package.
 
 ## 5. PROGRESS
 - COMPLETED:
-  1. Recovery ledger initialized with pre-task state.
-  2. Created worktree `D:\\Mathos_Worktrees\\MATHOS-MAP-FIGMA-045` on branch `integration/mathos-map-figma-045` from base head `b6e72158926dce4e899be1ceb0cd0d16a033f1e0`.
-  3. Preflight art asset search: Located verified original JPEG artwork (1376x768, 16:9, 144,150 bytes) with all 5 approved landmarks; preserved original bytes and copied to `res://assets/backgrounds/map/d1_world_map_bg.jpg`.
-  4. Implemented native Godot 4.7.1 Control layout in `src/ui/map/dungeon_stage_map_panel.gd` according to exact 1280x720 Figma reference measurements.
-  5. Built readability overlays (vertical and horizontal gradients), top-left Header panel, top-right HUD pill, D1 completed marker with cyan/gold glow, locked D2-D4 markers, and bottom-right D1 context panel.
-  6. Implemented proportional scaling with zero landmark drift for 1600x900 and 1920x1080 viewports.
-  7. Maintained non-visible backing container for backward test compatibility.
-  8. Created comprehensive test suite `tests/unit/presentation/test_d1_world_map_layout.gd` covering MAP-001 through MAP-015 (15/15 PASS).
-  9. Registered suite in canonical test runner: 599/599 PASS (584 baseline + 15 new).
-  10. Updated Agent1 recovery ledger.
+  1. Read Agent RULE.md and Agent1.md.
+  2. Created worktree `D:\Mathos_Worktrees\MATHOS-MAP-RUNTIME-HOTFIX-046` on branch `hotfix/mathos-map-runtime-046` from `95ee75e4ed184198df9af3af4ca8f36952f67997`.
+  3. Pre-task update to Agent1.md in worktree and canonical repo.
+  4. Reproduced Defect 1 (`_d1_context_panel.size.y` becoming 1270.0 px due to DescriptionLabel autowrap at 1px) and Defect 2 (`DungeonStageMapPanel` size becoming (2504, 0) / (1224, 0) inside MainContentVBox due to missing SIZE_EXPAND flags).
+  5. Implemented Defect 1 fix in `src/ui/map/dungeon_stage_map_panel.gd`:
+     - Configured `_d1_panel_body_label` with `custom_minimum_size = Vector2(300, 0)`, `size_flags_horizontal = Control.SIZE_EXPAND_FILL`, `size_flags_vertical = Control.SIZE_SHRINK_BEGIN`.
+     - In `_update_responsive_layout()`, set position before size and called `reset_size()` so panel height conforms to reference 228.07 px.
+     - Added robust `_load_texture_safe()` helper for background artwork texture loading.
+  6. Implemented Defect 2 fix in `src/ui/stage/stage_presentation_shell.gd` and `src/ui/map/dungeon_stage_map_panel.gd`:
+     - Added `size_flags_horizontal = Control.SIZE_EXPAND_FILL` and `size_flags_vertical = Control.SIZE_EXPAND_FILL` on `DungeonStageMapPanel` in `_ready()` and in shell instantiation.
+     - Set `custom_minimum_size = Vector2(1280, 720)` on `DungeonStageMapPanel` and shell subcomponent creation.
+     - Adjusted `MainBody` margins to 0 and panel stylebox override to `StyleBoxEmpty` in `MODE_MAP`, cleanly restoring 16px margins and theme stylebox on map exit.
+     - Added `NOTIFICATION_RESIZED` handler to `StagePresentationShell` to forward viewport resizes to `_stage_map_panel`.
+  7. Added regression tests `MAP-016` through `MAP-025` to `tests/unit/presentation/test_d1_world_map_layout.gd`:
+     - MAP-016: D1 context panel size.y strictly bounded near ~228 px (<= 250 px, not ~1270 px).
+     - MAP-017: D1 CTA button fully inside 1280x720 viewport (pos + size within bounds).
+     - MAP-018: D1 CTA button is clickable and interactive (mouse_filter, not disabled, visible).
+     - MAP-019: StagePresentationShell integration allocates size > 0 for Map panel.
+     - MAP-020: DungeonStageMapPanel container flags have SIZE_EXPAND_FILL horizontal and vertical.
+     - MAP-021: AppRoot -> Hub -> Map flow renders World Map with bounds >= 1200x600.
+     - MAP-022: Map root visible rect intersects viewport substantially (area >= 1200x600).
+     - MAP-023: 1280x720 geometry inspection verifies panel + CTA fully visible.
+     - MAP-024: 1600x900 shell-integrated Map visible and non-zero size.
+     - MAP-025: 1920x1080 shell-integrated Map visible and non-zero size.
+  8. Updated `tests/test_runner.gd` count from 15 to 25 for "D1 World Map Layout QA".
+  9. Executed full canonical test runner: 609 / 609 PASS (599 previous + 10 new regression tests).
+- IN_PROGRESS: None.
+- NOT_STARTED: None.
 
 ## 6. FINDINGS / DECISIONS
-- Background Art Asset: Discovered unaltered 1376x768 JPEG artwork in local cache matching all 5 landmarks exactly; no image generated or substituted.
-- Font Substitution: Project lacks bundled Cinzel and Plus Jakarta Sans font files; native Godot system/theme typography applied with matching weights, sizes, and colors; reported for QA.
-- Test Compatibility: Preserved internal `_dungeon_container` structure so previous test suites (`test_batch_2a_components.gd`, `test_final_player_polish_v2.gd`) pass with zero regressions while hiding debug labels from player presentation.
+- Defect 1 Root Cause: `DescriptionLabel` had `autowrap_mode = TextServer.AUTOWRAP_WORD_SMART` without an explicit width constraint and with `size_flags_vertical = Control.SIZE_EXPAND_FILL`. During initial layout calculation at width 1px, Godot wrapped the text into over 70 lines, requiring 1117 px of height. Together with top row (17px), title (28px), button (44px), margins (40px), and spacing, the minimum size became 1270 px, pushing CTA to Y ≈ 1665-1693 px. Setting `custom_minimum_size = Vector2(300, 0)` and `size_flags_vertical = Control.SIZE_SHRINK_BEGIN` completely eliminated the 1px autowrap bug, locking panel height strictly at reference 228.07 px.
+- Defect 2 Root Cause: A Control child inside a Container (like `VBoxContainer`) ignores `anchor_right` and `anchor_bottom`. Without `SIZE_EXPAND`, the VBoxContainer allocated 0 height to `DungeonStageMapPanel`, and `clip_contents = true` rendered all child controls invisible. Setting `SIZE_EXPAND_FILL` both horizontally and vertically, setting `custom_minimum_size = Vector2(1280, 720)`, and eliminating shell margins in `MODE_MAP` allows the map to seamlessly fill 1280x720 (or larger viewports like 1600x900 and 1920x1080) edge-to-edge.
 
 ## 7. TEST / VERIFICATION EVIDENCE
-- MAP-001 through MAP-015: 15 / 15 PASS
-- Full Canonical Test Runner: 599 / 599 PASS (584 baseline + 15 new)
-- 1280x720 reference: PASS
-- 1600x900 landmark stability: PASS (distance to target < 1.5px)
-- 1920x1080 landmark stability: PASS (distance to target < 1.5px)
-- D2-D4 Locked verification: PASS
-- Canonical D1 replay entry flow: PASS
-- Zero debug labels: PASS
+- `tests/unit/presentation/test_d1_world_map_layout.gd`: 25 / 25 PASS
+- Full Canonical Test Runner `tests/test_runner.gd`: 609 / 609 PASS, 0 FAIL, 0 WAITING
+- Live AppRoot Flow test: Map panel visible at (1280, 720), D1 rect at (890, 459.93, 350, 228.07), CTA global pos at (914, 585.93, 302, 44), fully inside 1280x720 screen.
 
 ## 8. BLOCKERS / ESCALATIONS
 - BLOCKED: FALSE
 - EXACT_BLOCKER: None
 
 ## 9. LATEST REPORT / DELIVERABLE
-- STATUS: READY_FOR_MAP_INDEPENDENT_REQA
-- WORKTREE: D:\\Mathos_Worktrees\\MATHOS-MAP-FIGMA-045
-- BRANCH: integration/mathos-map-figma-045
+- STATUS: COMPLETED
+- BRANCH: hotfix/mathos-map-runtime-046
+- WORKTREE: D:\Mathos_Worktrees\MATHOS-MAP-RUNTIME-HOTFIX-046
 
 ## 10. RECOVERY HANDOFF
-- NEXT_ACTION: Independent human QA on source candidate.
-- LAST_UPDATED_BY: Agent1
-- LAST_UPDATED_AT: 2026-09-04T20:50:00+07:00
-
-## 11. RECENT PROMPT LOG
-
-### Prompt 31
-- RECEIVED_AT: 2026-09-04T20:25:57+07:00
-- TASK_ID: MATHOS-MAP-FIGMA-FINAL-INTEGRATION-045
-- ONE_LINE_INTENT: Replace Demo V1 Map presentation with human-approved MATHOS fantasy world-map visual from Figma (1280x720) while preserving canonical gameplay flow and locking D2-D4.
-- RESULT / CURRENT_STATE: READY_FOR_MAP_INDEPENDENT_REQA (15/15 MAP tests PASS, 599/599 Full Runner PASS, zero debug labels, 0-drift scaling)
-- HEAD_AFTER_WORK: 5a26022ba9c0183d2cbc5e5afaa9a77506fda805
-
-### Prompt 30
-- RECEIVED_AT: 2026-09-04T12:41:52+07:00
-- TASK_ID: MATHOS-AUTH-BG-PRESET-PRODUCTION-INTEGRATION-043
-- ONE_LINE_INTENT: Integrate approved Auth background tooling/runtime into Demo V1, promote human-approved preset to res://config/auth/auth_bg_production_preset.json, verify production runtime without gizmos.
-- RESULT / CURRENT_STATE: COMPLETED (584/584 canonical runner PASS)
-- HEAD_AFTER_WORK: b6e72158926dce4e899be1ceb0cd0d16a033f1e0
+- NEXT_ACTION: Commit hotfix branch, prepare report for M1 / Agent2 QA.

@@ -176,5 +176,5 @@ func _count_suite_tests(name: String) -> int:
 		"Auth Production Boot Routing QA": return 26
 		"D1 Stage 1.5 Boss Combat QA": return 14
 		"D1 Critical Flow Fixes": return 6
-		"D1 World Map Layout QA": return 15
+		"D1 World Map Layout QA": return 25
 		_: return 1

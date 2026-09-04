@@ -5,6 +5,8 @@ extends SceneTree
 ## Validates MAP-001 through MAP-015 according to TASK-045 specification.
 
 const DungeonStageMapPanelClass = preload("res://src/ui/map/dungeon_stage_map_panel.gd")
+const StagePresentationShellClass = preload("res://src/ui/stage/stage_presentation_shell.gd")
+const AppRootClass = preload("res://src/app/app_root.gd")
 
 func _initialize() -> void:
 	var ok: bool = run_all_tests()
@@ -12,7 +14,7 @@ func _initialize() -> void:
 
 static func run_all_tests() -> bool:
 	print("==========================================")
-	print("D1 WORLD MAP LAYOUT VERIFICATION (MAP-001..015)")
+	print("D1 WORLD MAP LAYOUT VERIFICATION (MAP-001..025)")
 	print("==========================================")
 	var pass_count: int = 0
 
@@ -31,11 +33,21 @@ static func run_all_tests() -> bool:
 	if test_map_013_no_dominant_duplicate_route(): pass_count += 1
 	if test_map_014_1600x900_landmark_stability(): pass_count += 1
 	if test_map_015_1920x1080_landmark_stability(): pass_count += 1
+	if test_map_016_d1_context_panel_bounded_height(): pass_count += 1
+	if test_map_017_d1_cta_button_fully_inside_viewport(): pass_count += 1
+	if test_map_018_d1_cta_button_clickable(): pass_count += 1
+	if test_map_019_stage_presentation_shell_map_panel_nonzero_size(): pass_count += 1
+	if test_map_020_map_panel_container_flags_expand_fill(): pass_count += 1
+	if test_map_021_approot_hub_map_flow_visible_bounds(): pass_count += 1
+	if test_map_022_map_visible_rect_intersects_viewport(): pass_count += 1
+	if test_map_023_1280x720_geometry_panel_cta_visible(): pass_count += 1
+	if test_map_024_1600x900_shell_map_visible_nonzero_size(): pass_count += 1
+	if test_map_025_1920x1080_shell_map_visible_nonzero_size(): pass_count += 1
 
 	print("==========================================")
-	print("D1 WORLD MAP LAYOUT SUMMARY: %d / 15 passed" % pass_count)
+	print("D1 WORLD MAP LAYOUT SUMMARY: %d / 25 passed" % pass_count)
 	print("==========================================")
-	return pass_count == 15
+	return pass_count == 25
 
 static func _create_panel(p_size: Vector2 = Vector2(1280, 720)) -> DungeonStageMapPanel:
 	var panel: DungeonStageMapPanel = DungeonStageMapPanelClass.new()
@@ -327,4 +339,193 @@ static func test_map_015_1920x1080_landmark_stability() -> bool:
 
 	panel.free()
 	print("[MAP-015] PASS")
+	return true
+
+static func test_map_016_d1_context_panel_bounded_height() -> bool:
+	print("[MAP-016] Verifying D1 context panel size.y strictly bounded near ~228 px...")
+	var panel: DungeonStageMapPanel = _create_panel(Vector2(1280, 720))
+	var h: float = panel._d1_context_panel.size.y
+	if h > 250.0 or h < 200.0:
+		print("[MAP-016] FAIL: D1 context panel height out of range: %f (expected <= 250 px, not ~1270 px)" % h)
+		panel.free()
+		return false
+	panel.free()
+	print("[MAP-016] PASS")
+	return true
+
+static func test_map_017_d1_cta_button_fully_inside_viewport() -> bool:
+	print("[MAP-017] Verifying D1 CTA button fully inside 1280x720 viewport...")
+	var panel: DungeonStageMapPanel = _create_panel(Vector2(1280, 720))
+	var btn: Button = panel._d1_action_button
+	var btn_pos: Vector2 = panel._d1_context_panel.position + btn.position
+	var btn_size: Vector2 = btn.size
+	if btn_pos.y < 0.0 or (btn_pos.y + btn_size.y) > 720.0 or btn_pos.x < 0.0 or (btn_pos.x + btn_size.x) > 1280.0:
+		print("[MAP-017] FAIL: D1 CTA button outside viewport bounds: pos=%s, size=%s" % [str(btn_pos), str(btn_size)])
+		panel.free()
+		return false
+	panel.free()
+	print("[MAP-017] PASS")
+	return true
+
+static func test_map_018_d1_cta_button_clickable() -> bool:
+	print("[MAP-018] Verifying D1 CTA button is clickable and interactive...")
+	var panel: DungeonStageMapPanel = _create_panel(Vector2(1280, 720))
+	var btn: Button = panel._d1_action_button
+	if btn == null or not btn.visible or btn.disabled:
+		print("[MAP-018] FAIL: CTA button missing, invisible, or disabled")
+		panel.free()
+		return false
+	if btn.mouse_filter == Control.MOUSE_FILTER_IGNORE:
+		print("[MAP-018] FAIL: CTA button mouse_filter is IGNORE")
+		panel.free()
+		return false
+	if panel._d1_context_panel.mouse_filter == Control.MOUSE_FILTER_IGNORE:
+		print("[MAP-018] FAIL: D1 context panel mouse_filter is IGNORE")
+		panel.free()
+		return false
+	panel.free()
+	print("[MAP-018] PASS")
+	return true
+
+static func test_map_019_stage_presentation_shell_map_panel_nonzero_size() -> bool:
+	print("[MAP-019] Verifying StagePresentationShell integration allocates size > 0 for Map panel...")
+	var shell_scene: PackedScene = load("res://src/ui/stage/stage_presentation_shell.tscn") as PackedScene
+	var shell: StagePresentationShell = shell_scene.instantiate() as StagePresentationShell
+	shell.size = Vector2(1280, 720)
+	(Engine.get_main_loop() as SceneTree).root.add_child(shell)
+	shell.show_stage_map()
+	var map_panel: DungeonStageMapPanel = shell.get_stage_map_panel()
+	if map_panel == null or not map_panel.visible:
+		print("[MAP-019] FAIL: Map panel null or invisible in shell")
+		shell.queue_free()
+		return false
+	if map_panel.size.x <= 0.0 or map_panel.size.y <= 0.0:
+		print("[MAP-019] FAIL: Map panel allocated 0 size: %s" % str(map_panel.size))
+		shell.queue_free()
+		return false
+	shell.queue_free()
+	print("[MAP-019] PASS")
+	return true
+
+static func test_map_020_map_panel_container_flags_expand_fill() -> bool:
+	print("[MAP-020] Verifying DungeonStageMapPanel container flags have SIZE_EXPAND_FILL...")
+	var shell_scene: PackedScene = load("res://src/ui/stage/stage_presentation_shell.tscn") as PackedScene
+	var shell: StagePresentationShell = shell_scene.instantiate() as StagePresentationShell
+	(Engine.get_main_loop() as SceneTree).root.add_child(shell)
+	shell.show_stage_map()
+	var map_panel: DungeonStageMapPanel = shell.get_stage_map_panel()
+	var has_h_expand: bool = bool(map_panel.size_flags_horizontal & Control.SIZE_EXPAND)
+	var has_v_expand: bool = bool(map_panel.size_flags_vertical & Control.SIZE_EXPAND)
+	if not has_h_expand or not has_v_expand:
+		print("[MAP-020] FAIL: Expected horizontal and vertical expand flags, got h=%d v=%d" % [map_panel.size_flags_horizontal, map_panel.size_flags_vertical])
+		shell.queue_free()
+		return false
+	shell.queue_free()
+	print("[MAP-020] PASS")
+	return true
+
+static func test_map_021_approot_hub_map_flow_visible_bounds() -> bool:
+	print("[MAP-021] Verifying AppRoot -> Hub -> Map flow renders World Map with bounds >= 1200x600...")
+	var app_scene: PackedScene = load("res://src/app/app_root.tscn") as PackedScene
+	var app: AppRoot = app_scene.instantiate() as AppRoot
+	(Engine.get_main_loop() as SceneTree).root.add_child(app)
+	if app.has_method("bootstrap_runtime"):
+		app.bootstrap_runtime()
+	app._on_guest_entered()
+	app.show_stage_map()
+	var shell: StagePresentationShell = app.get_presentation_shell()
+	var map_panel: DungeonStageMapPanel = shell.get_stage_map_panel() if shell else null
+	if map_panel == null or not map_panel.visible:
+		print("[MAP-021] FAIL: Map panel not visible in AppRoot flow")
+		app.queue_free()
+		return false
+	if map_panel.size.x < 1200.0 or map_panel.size.y < 600.0:
+		print("[MAP-021] FAIL: Map panel bounds < 1200x600 in AppRoot flow: %s" % str(map_panel.size))
+		app.queue_free()
+		return false
+	app.queue_free()
+	print("[MAP-021] PASS")
+	return true
+
+static func test_map_022_map_visible_rect_intersects_viewport() -> bool:
+	print("[MAP-022] Verifying Map root visible rect intersects viewport substantially...")
+	var shell_scene: PackedScene = load("res://src/ui/stage/stage_presentation_shell.tscn") as PackedScene
+	var shell: StagePresentationShell = shell_scene.instantiate() as StagePresentationShell
+	shell.size = Vector2(1280, 720)
+	(Engine.get_main_loop() as SceneTree).root.add_child(shell)
+	shell.show_stage_map()
+	var map_panel: DungeonStageMapPanel = shell.get_stage_map_panel()
+	var rect: Rect2 = map_panel.get_global_rect()
+	var vp_rect: Rect2 = Rect2(Vector2.ZERO, Vector2(1280, 720))
+	var inter: Rect2 = rect.intersection(vp_rect)
+	var inter_area: float = inter.size.x * inter.size.y
+	if inter_area < (1200.0 * 600.0):
+		print("[MAP-022] FAIL: Map intersection with viewport too small: %f" % inter_area)
+		shell.queue_free()
+		return false
+	shell.queue_free()
+	print("[MAP-022] PASS")
+	return true
+
+static func test_map_023_1280x720_geometry_panel_cta_visible() -> bool:
+	print("[MAP-023] Verifying 1280x720 geometry inspection: panel + CTA visible...")
+	var shell_scene: PackedScene = load("res://src/ui/stage/stage_presentation_shell.tscn") as PackedScene
+	var shell: StagePresentationShell = shell_scene.instantiate() as StagePresentationShell
+	shell.size = Vector2(1280, 720)
+	(Engine.get_main_loop() as SceneTree).root.add_child(shell)
+	shell.show_stage_map()
+	var map_panel: DungeonStageMapPanel = shell.get_stage_map_panel()
+	var d1: PanelContainer = map_panel._d1_context_panel
+	var cta: Button = map_panel._d1_action_button
+	var cta_global: Vector2 = d1.global_position + cta.position
+	if not d1.visible or not cta.visible:
+		print("[MAP-023] FAIL: D1 context panel or CTA button not visible")
+		shell.queue_free()
+		return false
+	if cta_global.y + cta.size.y > 720.0 or cta_global.y < 0.0:
+		print("[MAP-023] FAIL: CTA button out of vertical viewport bounds at 1280x720: Y=%f" % cta_global.y)
+		shell.queue_free()
+		return false
+	shell.queue_free()
+	print("[MAP-023] PASS")
+	return true
+
+static func test_map_024_1600x900_shell_map_visible_nonzero_size() -> bool:
+	print("[MAP-024] Verifying 1600x900 shell-integrated Map visible and non-zero size...")
+	var shell_scene: PackedScene = load("res://src/ui/stage/stage_presentation_shell.tscn") as PackedScene
+	var shell: StagePresentationShell = shell_scene.instantiate() as StagePresentationShell
+	shell.size = Vector2(1600, 900)
+	(Engine.get_main_loop() as SceneTree).root.add_child(shell)
+	shell.show_stage_map()
+	var map_panel: DungeonStageMapPanel = shell.get_stage_map_panel()
+	if map_panel == null or not map_panel.visible:
+		print("[MAP-024] FAIL: Map panel null or invisible at 1600x900")
+		shell.queue_free()
+		return false
+	if map_panel.size.x < 1500.0 or map_panel.size.y < 850.0:
+		print("[MAP-024] FAIL: Map panel size too small at 1600x900: %s" % str(map_panel.size))
+		shell.queue_free()
+		return false
+	shell.queue_free()
+	print("[MAP-024] PASS")
+	return true
+
+static func test_map_025_1920x1080_shell_map_visible_nonzero_size() -> bool:
+	print("[MAP-025] Verifying 1920x1080 shell-integrated Map visible and non-zero size...")
+	var shell_scene: PackedScene = load("res://src/ui/stage/stage_presentation_shell.tscn") as PackedScene
+	var shell: StagePresentationShell = shell_scene.instantiate() as StagePresentationShell
+	shell.size = Vector2(1920, 1080)
+	(Engine.get_main_loop() as SceneTree).root.add_child(shell)
+	shell.show_stage_map()
+	var map_panel: DungeonStageMapPanel = shell.get_stage_map_panel()
+	if map_panel == null or not map_panel.visible:
+		print("[MAP-025] FAIL: Map panel null or invisible at 1920x1080")
+		shell.queue_free()
+		return false
+	if map_panel.size.x < 1800.0 or map_panel.size.y < 1000.0:
+		print("[MAP-025] FAIL: Map panel size too small at 1920x1080: %s" % str(map_panel.size))
+		shell.queue_free()
+		return false
+	shell.queue_free()
+	print("[MAP-025] PASS")
 	return true
