@@ -15,8 +15,18 @@ func _ready() -> void:
 
 	var rev_btn: Button = _get_review_button()
 	if rev_btn != null:
+		rev_btn.visible = false
+		rev_btn.disabled = true
 		if not rev_btn.pressed.is_connected(_on_review_pressed):
 			rev_btn.pressed.connect(_on_review_pressed)
+
+func set_rewards_data(coins: int, exp_pts: int, fragment_id: String = "") -> void:
+	var rew_val: Label = get_node_or_null("MarginContainer/VBoxContainer/StatsHBox/RewardsPanel/VBox/Value") as Label
+	if rew_val != null:
+		var txt: String = "+%d Vàng  |  +%d XP" % [coins, exp_pts]
+		if not fragment_id.is_empty():
+			txt += "\n🔮 %s" % fragment_id
+		rew_val.text = txt
 
 func set_summary_data(stage_title: String, message: String = "") -> void:
 	var stage_name_label: Label = get_node_or_null("MarginContainer/VBoxContainer/StageNameLabel") as Label

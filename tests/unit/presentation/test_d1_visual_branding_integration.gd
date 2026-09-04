@@ -56,7 +56,8 @@ static func test_visual_001_asset_contracts_and_dimensions() -> bool:
 		{"paths": ["res://assets/backgrounds/dungeon_1/d1_misty_forest_fog_8f.png", "res://assets/backgrounds/d1_misty_forest_fog_8f.png"], "w": 2048, "h": 576},
 		{"paths": ["res://assets/backgrounds/d1_misty_forest_fog_layer.png"], "w": 2115, "h": 744},
 		{"paths": ["res://assets/branding/mathos_logo_main.png"], "w": 1536, "h": 512},
-		{"paths": ["res://assets/branding/mathos_logo_emblem.png"], "w": 512, "h": 512}
+		{"paths": ["res://assets/branding/mathos_logo_emblem.png"], "w": 512, "h": 512},
+		{"paths": ["res://assets/items/fragments/fragment_01.png"], "w": 512, "h": 512}
 	]
 
 	for item in assets:

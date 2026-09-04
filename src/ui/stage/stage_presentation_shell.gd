@@ -13,7 +13,9 @@ enum ViewMode {
 	MODE_FEEDBACK_HOST = 3,
 	MODE_STAGE_COMPLETE = 4,
 	MODE_VICTORY = 5,
-	MODE_MAP = 6
+	MODE_MAP = 6,
+	MODE_STORY = 7,
+	MODE_DUNGEON_COMPLETE = 8
 }
 
 signal new_game_requested()
@@ -21,6 +23,8 @@ signal continue_game_requested()
 signal show_map_requested()
 signal return_to_main_menu_requested()
 signal lesson_continue_requested()
+signal story_continue_requested()
+signal story_completed()
 signal question_host_ready(container: Control)
 signal feedback_host_ready(container: Control)
 signal stage_continue_requested()
@@ -113,8 +117,6 @@ func _ready() -> void:
 	if lesson_panel != null:
 		if not lesson_panel.continue_requested.is_connected(_on_lesson_continue):
 			lesson_panel.continue_requested.connect(_on_lesson_continue)
-		if not lesson_panel.lesson_completed.is_connected(_on_lesson_completed):
-			lesson_panel.lesson_completed.connect(_on_lesson_completed)
 
 	var stage_complete_panel: StageCompletePanel = get_stage_complete_panel()
 	if stage_complete_panel != null:
@@ -208,6 +210,14 @@ func _ensure_sub_components() -> void:
 			header_bar.add_child(_pause_button)
 			if not _pause_button.pressed.is_connected(toggle_pause):
 				_pause_button.pressed.connect(toggle_pause)
+
+	var lesson_panel: LessonPanel = get_lesson_panel()
+	if lesson_panel != null and not lesson_panel.continue_requested.is_connected(_on_lesson_continue):
+		lesson_panel.continue_requested.connect(_on_lesson_continue)
+
+	var stage_complete_panel: StageCompletePanel = get_stage_complete_panel()
+	if stage_complete_panel != null and not stage_complete_panel.stage_continue_requested.is_connected(_on_stage_continue):
+		stage_complete_panel.stage_continue_requested.connect(_on_stage_continue)
 
 func _process(delta: float) -> void:
 	_update_fog_animation(delta)
@@ -536,11 +546,22 @@ func set_stage_context(data: Variant) -> void:
 
 	var lesson_panel: LessonPanel = get_lesson_panel()
 	if lesson_panel != null and _context_info != null:
-		lesson_panel.set_lesson_data(_context_info.lesson_steps)
+		if _current_mode == ViewMode.MODE_STORY and not _context_info.story_steps.is_empty():
+			if lesson_panel.has_method("set_story_mode"):
+				lesson_panel.set_story_mode(true)
+			lesson_panel.set_lesson_data(_context_info.story_steps)
+		else:
+			if lesson_panel.has_method("set_story_mode"):
+				lesson_panel.set_story_mode(false)
+			lesson_panel.set_lesson_data(_context_info.lesson_steps)
 
 	var stage_complete_panel: StageCompletePanel = get_stage_complete_panel()
 	if stage_complete_panel != null and _context_info != null:
 		stage_complete_panel.set_summary_data(_context_info.stage_title)
+
+	var advisor_label: Label = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer/GameplayHBox/AdvisorPanel/AdvisorVBox/AdvisorDialogueLabel") as Label
+	if advisor_label != null and _context_info != null and not _context_info.stage_advisor_text.is_empty():
+		advisor_label.text = _context_info.stage_advisor_text
 
 func is_restored_context_displayed() -> bool:
 	return _context_info != null and _context_info.is_restored_context
@@ -562,7 +583,7 @@ func _update_header() -> void:
 	if badge_label != null:
 		badge_label.visible = (_context_info != null and _context_info.is_restored_context)
 
-	if _current_mode == ViewMode.MODE_ENTRY or _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_VICTORY:
+	if _current_mode == ViewMode.MODE_ENTRY or _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_VICTORY or _current_mode == ViewMode.MODE_DUNGEON_COMPLETE:
 		header_bar.visible = false
 		return
 
@@ -592,12 +613,39 @@ func set_view_mode(mode: ViewMode) -> void:
 	var complete_panel: StageCompletePanel = get_stage_complete_panel()
 
 	if start_container != null: start_container.visible = (_current_mode == ViewMode.MODE_ENTRY)
-	if lesson_panel != null: lesson_panel.visible = (_current_mode == ViewMode.MODE_LESSON)
-	if q_host != null: q_host.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
+	if lesson_panel != null: lesson_panel.visible = (_current_mode == ViewMode.MODE_LESSON or _current_mode == ViewMode.MODE_STORY)
+	if q_host != null:
+		q_host.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
+		var gameplay_hbox: Control = q_host.get_node_or_null("GameplayHBox") as Control
+		if gameplay_hbox != null:
+			var advisor: Control = gameplay_hbox.get_node_or_null("AdvisorPanel") as Control
+			var is_combat: bool = (_context_info != null and _context_info.encounter_mode == "card_combat")
+			if is_combat:
+				var boss_panel: BossCombatPanel = get_boss_combat_panel()
+				if boss_panel != null:
+					boss_panel.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
+				if advisor != null:
+					advisor.visible = false
+			else:
+				var existing_boss: Control = gameplay_hbox.get_node_or_null("BossCombatPanel") as Control
+				if existing_boss != null:
+					existing_boss.visible = false
+				if advisor != null:
+					advisor.visible = true
+
 	if f_host != null: f_host.visible = (_current_mode == ViewMode.MODE_FEEDBACK_HOST)
 	if complete_panel != null: complete_panel.visible = (_current_mode == ViewMode.MODE_STAGE_COMPLETE)
-	if _victory_panel != null: _victory_panel.visible = (_current_mode == ViewMode.MODE_VICTORY)
+	if _victory_panel != null: _victory_panel.visible = (_current_mode == ViewMode.MODE_VICTORY or _current_mode == ViewMode.MODE_DUNGEON_COMPLETE)
 	if _stage_map_panel != null: _stage_map_panel.visible = (_current_mode == ViewMode.MODE_MAP)
+
+	if _current_mode == ViewMode.MODE_STORY and lesson_panel != null and _context_info != null:
+		if lesson_panel.has_method("set_story_mode"):
+			lesson_panel.set_story_mode(true)
+		lesson_panel.set_lesson_data(_context_info.story_steps)
+	elif _current_mode == ViewMode.MODE_LESSON and lesson_panel != null and _context_info != null:
+		if lesson_panel.has_method("set_story_mode"):
+			lesson_panel.set_story_mode(false)
+		lesson_panel.set_lesson_data(_context_info.lesson_steps)
 
 	if _current_mode == ViewMode.MODE_QUESTION_HOST and q_host != null:
 		if get_question_panel() == null:
@@ -607,7 +655,27 @@ func set_view_mode(mode: ViewMode) -> void:
 
 	var sidebar: Control = get_node_or_null("VBoxContainer/MainBody/ContentHBox/LeftSidebar") as Control
 	if sidebar != null:
-		sidebar.visible = (_current_mode != ViewMode.MODE_ENTRY and _current_mode != ViewMode.MODE_MAP and _current_mode != ViewMode.MODE_VICTORY)
+		sidebar.visible = (_current_mode != ViewMode.MODE_ENTRY and _current_mode != ViewMode.MODE_MAP and _current_mode != ViewMode.MODE_VICTORY and _current_mode != ViewMode.MODE_DUNGEON_COMPLETE)
+
+func show_story_phase() -> void:
+	if _context_info != null and not _context_info.story_steps.is_empty():
+		set_view_mode(ViewMode.MODE_STORY)
+	else:
+		show_lesson_phase()
+
+func show_lesson_phase() -> void:
+	set_view_mode(ViewMode.MODE_LESSON)
+
+func show_dungeon_1_complete(gold: int = 0, exp_pts: int = 0, fragment_id: String = "Fragment 01") -> void:
+	_ensure_sub_components()
+	if _victory_panel != null:
+		_victory_panel.set_dungeon_complete_data("Khu Rừng Mù Sương", fragment_id, gold, exp_pts)
+	set_view_mode(ViewMode.MODE_DUNGEON_COMPLETE)
+
+func set_stage_complete_rewards(coins: int, exp_pts: int, fragment_id: String = "") -> void:
+	var complete_panel: StageCompletePanel = get_stage_complete_panel()
+	if complete_panel != null:
+		complete_panel.set_rewards_data(coins, exp_pts, fragment_id)
 
 func get_view_mode() -> ViewMode:
 	return _current_mode
@@ -631,10 +699,16 @@ func _on_journey_map_pressed() -> void:
 	show_map_requested.emit()
 
 func _on_lesson_continue() -> void:
-	lesson_continue_requested.emit()
+	if _current_mode == ViewMode.MODE_STORY:
+		story_continue_requested.emit()
+	else:
+		lesson_continue_requested.emit()
 
 func _on_lesson_completed() -> void:
-	set_view_mode(ViewMode.MODE_QUESTION_HOST)
+	if _current_mode == ViewMode.MODE_STORY:
+		story_completed.emit()
+	else:
+		set_view_mode(ViewMode.MODE_QUESTION_HOST)
 
 func _get_header_bar() -> HBoxContainer:
 	return get_node_or_null("VBoxContainer/HeaderBar") as HBoxContainer
@@ -723,6 +797,27 @@ func get_question_panel() -> QuestionPanel:
 			panel = q_host.get_node_or_null("QuestionPanel") as QuestionPanel
 		return panel
 	return null
+
+func get_boss_combat_panel() -> BossCombatPanel:
+	var q_host: MarginContainer = get_question_host_container()
+	if q_host == null:
+		return null
+	var gameplay_hbox: Control = q_host.get_node_or_null("GameplayHBox") as Control
+	if gameplay_hbox == null:
+		return null
+	var b_panel: BossCombatPanel = gameplay_hbox.get_node_or_null("BossCombatPanel") as BossCombatPanel
+	if b_panel == null:
+		var scene_res: Resource = load("res://src/ui/combat/boss_combat_panel.tscn")
+		if scene_res is PackedScene:
+			b_panel = (scene_res as PackedScene).instantiate() as BossCombatPanel
+		else:
+			var script_res: Resource = load("res://src/ui/combat/boss_combat_panel.gd")
+			if script_res is GDScript:
+				b_panel = (script_res as GDScript).new() as BossCombatPanel
+		if b_panel != null:
+			b_panel.name = "BossCombatPanel"
+			gameplay_hbox.add_child(b_panel)
+	return b_panel
 
 func get_feedback_host_container() -> MarginContainer:
 	var main_content: Control = _get_main_content_vbox()

@@ -3,116 +3,179 @@
 > Canonical recovery note for Agent1. This file is maintained as a complete, authoritative state ledger for Agent1.
 
 ## 1. CURRENT TASK
-- TASK_ID: MATHOS-RC4-QA-CHEAT-INPUT-ANSWER-REVEAL-FIX-004
-- TITLE: Input/Integer QA Answer Reveal Fix & Player Technical Text Removal
+- TASK_ID: MATHOS-AUTH-D1-DEMO-V1-INTEGRATION-036
+- TITLE: Demo V1 Integration Engineer (Auth V1 + Final Dungeon 1)
 - FROM: M1
-- PRIORITY: P0
-- STATUS: READY_FOR_INDEPENDENT_REQA
-- PROMPT_RECEIVED_AT: 2026-09-01T00:40:54+07:00
-- ACTIVE_GOAL: Trace real project data schema for input/integer/numeric/text questions; ensure QA answer reveal outputs canonical input answers cleanly (e.g. `ĐÁP ÁN ĐÚNG: 6`) without missing-answer warnings; remove player-facing technical string `"Input response type: integer"`.
+- PRIORITY: CRITICAL
+- STATUS: READY_FOR_DEMO_V1_INDEPENDENT_REQA
+- PROMPT_RECEIVED_AT: 2026-09-04T08:55:21+07:00
+- AUTH_HEAD: 48a088b980fa967554426d31ce54dfc0c9eba907
+- D1_HEAD: a13e872c443d014eeb977b72f083470f1bb500bb
+- COMMON_BASE: c1e93618e7dee89cb49f29a5681420945c455393
+- MERGE_HEAD: beb3a2161e80105ab01dba5b0d4565ce09f15e72
+- EXPECTED_FULL: 584
+- ACTUAL_FULL: 584 / 584 PASS
+- ACTIVE_GOAL: Complete ONE integrated Mathos Demo V1 candidate containing complete Auth V1, complete Dungeon 1, real STOCHAS, and real Fragment 01.
 
 ## 2. WORKSPACE / GIT
 - PROJECT: Mathos
-- WORKTREE: d:\Mathos
-- BRANCH: detached HEAD (at 52e4c594c4fa5cc175d22befbe687e4ccb74231f)
-- START_HEAD: b547266dd737f45bc3e213c1496c85c957b160db (Base HEAD)
-- CURRENT_HEAD: 52e4c594c4fa5cc175d22befbe687e4ccb74231f
-- CANONICAL_BASE: 48ede1db891e334a04e679bb906cfbebfe3d135c (Release Candidate 1 Base)
+- WORKTREE: D:\Mathos_Worktrees\MATHOS-DEMO-V1-036
+- BRANCH: integration/mathos-demo-v1-036
+- START_HEAD: 48a088b980fa967554426d31ce54dfc0c9eba907
+- D1_SOURCE_HEAD: a13e872c443d014eeb977b72f083470f1bb500bb
+- COMMON_BASE: c1e93618e7dee89cb49f29a5681420945c455393
+- CURRENT_HEAD: beb3a2161e80105ab01dba5b0d4565ce09f15e72
 - WORKTREE_CLEAN: TRUE
 
 ## 3. EXACT PROMPT / INTENT SUMMARY
-- GOAL: Fix Input/Integer QA answer reveal warning and remove technical text `"Input response type: integer"` from Question UI.
-- ACCEPTANCE_GATES:
-  1. Base commit is b547266dd737f45bc3e213c1496c85c957b160db.
-  2. Trace exact authoritative answer schema for input/integer questions across project catalog/QGen files.
-  3. QA reveal shows `ĐÁP ÁN ĐÚNG: 6` (or canonical answer) without missing-answer warning `⚠️ Không tìm thấy đáp án hợp lệ cho câu hỏi điền số`.
-  4. Trace and remove/localize player-facing technical string `Input response type: integer` from Question UI.
-  5. QA reveal remains display-only with zero input auto-fill, auto-submit, evaluator call, session mutation, or progress/save mutation.
-  6. Add real regression test for input integer question with canonical answer 6, asserting no missing-answer warning, no raw answer_spec, no internal field name, no stale answer, no automatic mutation.
-  7. Assert player-facing Question UI does NOT contain `Input response type:` or `integer`.
-  8. Run full verification suite (QA cheat, input presentation/evaluator, vertical/horizontal layout, live UX, session recovery, full runner, git diff --check).
-  9. Do NOT touch assets/backgrounds, do NOT merge main, do NOT build Windows yet.
-- DEPENDENCIES: Base commit b547266dd737f45bc3e213c1496c85c957b160db.
+- GOAL:
+  - Create dedicated branch `integration/mathos-demo-v1-036` in worktree `D:\Mathos_Worktrees\MATHOS-DEMO-V1-036` from `48a088b980fa967554426d31ce54dfc0c9eba907`.
+  - Integrate D1 changes from `a13e872c443d014eeb977b72f083470f1bb500bb`.
+  - Shared files (3 total): `src/app/app_root.gd`, `src/ui/stage/stage_presentation_shell.gd`, `tests/test_runner.gd`.
+  - AppRoot contract: Splash -> AuthShell -> Login -> Login/Guest -> D1 Story -> Lesson -> Practice -> Stage 1.5 STOCHAS -> D1 Complete -> Fragment 01 -> Hub/Map -> Logout -> Login; Reset Password preserved; D2 blocked.
+  - StagePresentationShell: Story mode, Boss Combat mode, D1 Complete mode AND logout_requested boundary.
+  - Test runner: 584 tests total (523 base + 41 auth + 20 d1).
+  - Auth lock: 31 Auth UI, 26 Auth Boot, 24 Auth Client.
+  - D1 lock: 14 Boss, 6 D1 Flow, 9 D1 Visual, STOCHAS 100 HP, Strike 10, Defend 8, Heal 15, Wrong 10, D2 frozen.
+  - Save/Auth isolation: AuthSession memory-only, save_v1.json intact on logout.
+  - Demo smoke: complete end-to-end traversal verified.
 
 ## 4. SCOPE
-- IN_SCOPE: `src/ui/qa/qa_answer_formatter.gd`, `src/ui/question/interactions/input_view.gd`, `tests/unit/presentation/test_qa_answer_reveal_cheat.gd`, `tests/test_runner.gd`, `Agent recovery/Agent1.md`.
-- OUT_OF_SCOPE: Gameplay evaluators, content definitions, assets, backgrounds.
-- FILES_ALLOWED:
-  - src/ui/qa/qa_answer_formatter.gd
-  - src/ui/question/interactions/input_view.gd
-  - tests/unit/presentation/test_qa_answer_reveal_cheat.gd
-  - tests/test_runner.gd
-  - Agent recovery/Agent1.md
-- FILES_CHANGED:
-  - src/ui/qa/qa_answer_formatter.gd
-  - src/ui/question/interactions/input_view.gd
-  - tests/unit/presentation/test_qa_answer_reveal_cheat.gd
-  - tests/test_runner.gd
-  - Agent recovery/Agent1.md
+- IN_SCOPE:
+  - Dedicated branch `integration/mathos-demo-v1-036` in `D:\Mathos_Worktrees\MATHOS-DEMO-V1-036`.
+  - Merging/integrating `a13e872c443d014eeb977b72f083470f1bb500bb` into `48a088b980fa967554426d31ce54dfc0c9eba907`.
+  - Resolving the 3 shared files carefully without regressions.
+  - Updating `Agent recovery/Agent1.md`.
+- OUT_OF_SCOPE / PROHIBITED:
+  - Merging unrelated branches.
+  - Altering test assertions just to pad numbers.
+  - Touching other agent recovery notes.
 
 ## 5. PROGRESS
 - COMPLETED:
-  - Checked out base commit b547266dd737f45bc3e213c1496c85c957b160db
-  - Traced exact root cause of input question reveal missing-answer warning (`_format_input` checked `acceptable_values` instead of canonical `accepted_values` key)
-  - Traced technical player-facing text `"Input response type: integer"` to `InputView._label` (`InputMetaLabel`)
-  - Updated `QaAnswerFormatter._format_input` to support `accepted_values`, `acceptable_values`, `answers`, `expected`, `numeric_value`, `target_value`, `value`, `exact`, `correct_answer`, `numeric_tolerance`, and `tolerance`
-  - Updated `InputView`: set `_label.text = ""` and `_label.visible = false` while preserving node structure for unit tests, and localized `placeholder_text` using `interaction_payload.get("placeholder_text")` or fallback `"Nhập câu trả lời..."`
-  - Added test scenario `QA-CHEAT-014` testing canonical answer `6` reveal with zero warning and verifying zero technical copy in `InputView` player UI
-  - Updated test runner registration for `RC4 QA Answer Reveal Cheat` suite from 13 to 14 tests
-  - Re-ran targeted QA cheat test suite (`test_qa_answer_reveal_cheat.gd`): 14 / 14 PASS
-  - Re-ran full canonical test runner (`test_runner.gd`): 438 PASS / 0 FAIL / 0 WAITING
-  - Verified `git diff --check`: Exit code 0 (clean)
-  - Committed candidate HEAD `52e4c594c4fa5cc175d22befbe687e4ccb74231f`
+  - Read `Agent RULE.md` and `Agent1.md`.
+  - Created dedicated worktree `D:\Mathos_Worktrees\MATHOS-DEMO-V1-036` on branch `integration/mathos-demo-v1-036` at `48a088b980fa967554426d31ce54dfc0c9eba907`.
+  - Merged D1 head `a13e872c443d014eeb977b72f083470f1bb500bb`. Auto-merged `app_root.gd` and `stage_presentation_shell.gd`.
+  - Manually resolved textual merge conflict in `tests/test_runner.gd` uniting all Auth and D1 test suites.
+  - Formed canonical merge commit `beb3a2161e80105ab01dba5b0d4565ce09f15e72`.
+  - Re-indexed `.godot` via `--editor --quit`.
+  - Executed and passed all targeted QA test suites:
+    - Auth UI QA: 31 / 31 PASS
+    - Boot Sequence QA: 13 / 13 PASS
+    - Auth Boot Routing QA: 26 / 26 PASS
+    - Auth API Client QA: 24 / 24 PASS
+    - D1 Boss Combat QA: 14 / 14 PASS
+    - D1 Visual & Branding QA: 9 / 9 PASS
+    - Full Canonical Test Runner: 584 / 584 PASS, 0 FAIL, 0 WAITING.
+  - Built and passed full 10-point end-to-end smoke harness covering entire Demo V1 user journey:
+    - Point 1: Boot -> AuthShell Login presented cleanly
+    - Point 2: Reset Password panel accessible and navigable
+    - Point 3: Guest Entry -> PresentationShell visible, start_new_game -> D1 Story / Lesson mounted
+    - Point 4: Story -> Lesson -> Gameplay transition
+    - Point 5: Stage 1.5 STOCHAS mounted with real sprite (512x512 RGBA transparent) and 100 HP
+    - Point 6: Combat actions Strike (-10), Defend (+8), Wrong answer attack (-10), Heal (+15)
+    - Point 7: Boss defeat -> victory overlay
+    - Point 8: D1 Complete -> Real Fragment 01 showcase (512x512 RGBA transparent)
+    - Point 9: D2 selection blocked, route frozen
+    - Point 10: Hub/Map -> Logout -> Session cleared -> Login panel restored -> Save intact
 - IN_PROGRESS: None.
 - NOT_STARTED: None.
 
 ## 6. FINDINGS / DECISIONS
-- ROOT_CAUSE:
-  1. `QaAnswerFormatter._format_input()` checked `answer_spec.has("acceptable_values")` (spelled with an 'a' and 'able') instead of the canonical `accepted_values` (spelled with 'ed') key used by `QuestionEvaluator` and question JSON content (`q_d1_01_4`). As a result, input questions with `accepted_values: [6]` fell through to `return "⚠️ Không tìm thấy đáp án hợp lệ cho câu hỏi điền số"`.
-  2. `InputView` instantiated `_label` (`InputMetaLabel`) with `_label.text = "Input response type: %s" % _input_type`, rendering `"Input response type: integer"` on the player's Question screen.
-- ARCHITECTURE_DECISIONS:
-  - `QaAnswerFormatter._format_input()` accepts both `accepted_values` (canonical) and legacy fallback keys (`acceptable_values`, `answers`, `expected`, `numeric_value`, `target_value`, `value`, `exact`), formatted with `numeric_tolerance` (e.g. `ĐÁP ÁN ĐÚNG: 6`).
-  - `InputView` keeps node `InputMetaLabel` present in the node tree to satisfy existing contract assertions, but sets `visible = false` and `text = ""` to eliminate all technical copy from player UI.
+- [MERGE INTEGRITY]: Merge commit `beb3a2161e80105ab01dba5b0d4565ce09f15e72` has valid dual lineage from `48a088b` (Auth) and `a13e872` (D1).
+- [SHARED FILE 1 - app_root.gd]: Merged seamlessly; retains Auth lifecycle (auth completed, guest mode, token routing, logout) and D1 combat/flow integration (combat setup, practice finish, dungeon complete).
+- [SHARED FILE 2 - stage_presentation_shell.gd]: Merged seamlessly; retains D1 view modes (Story, Dungeon Complete, Boss Combat) and pause menu logout boundary.
+- [SHARED FILE 3 - tests/test_runner.gd]: Combined test suites yield exactly 584 tests (523 common base + 41 auth + 20 D1). All 584 pass organically with zero assertion hacks.
+- [SESSION & SAVE ISOLATION]: AuthSession remains memory-only; no tokens persisted to disk; `save_v1.json` is preserved across user logout.
 
 ## 7. TEST / VERIFICATION EVIDENCE
-- TARGETED_TESTS:
-  - `tests/unit/presentation/test_qa_answer_reveal_cheat.gd`: 14 / 14 PASS
-- FULL_REGRESSION:
-  - `tests/test_runner.gd`: 438 PASS / 0 FAIL / 0 WAITING
-- DIFF_CHECK: Clean (`git diff --check` returned 0).
+- LINEAGE CHECK:
+  - `git merge-base --is-ancestor 48a088b980fa967554426d31ce54dfc0c9eba907 HEAD` -> EXIT CODE 0 (PASS)
+  - `git merge-base --is-ancestor a13e872c443d014eeb977b72f083470f1bb500bb HEAD` -> EXIT CODE 0 (PASS)
+- FULL CANONICAL TEST RUNNER (`tests/test_runner.gd`):
+  - 584 / 584 PASS, 0 FAIL, 0 WAITING (Exit Code 0)
+- AUTH SUITES:
+  - Auth UI QA (`test_auth_ui.gd`): 31 / 31 PASS
+  - Auth Boot Routing QA (`test_auth_production_boot_routing.gd`): 26 / 26 PASS
+  - Auth API Client QA (`test_auth_api_client.gd`): 24 / 24 PASS
+  - Boot Sequence QA (`test_boot_sequence.gd`): 13 / 13 PASS
+- D1 SUITES:
+  - Boss Combat QA (`test_stage_1_5_boss_combat.gd`): 14 / 14 PASS
+  - D1 Flow QA (`test_d1_critical_flow_fixes.gd`): 6 / 6 PASS
+  - D1 Visual & Branding QA (`test_d1_visual_branding_integration.gd`): 9 / 9 PASS
+- FULL DEMO V1 SMOKE HARNESS (`test_demo_v1_smoke.gd`):
+  - 10 / 10 GATES PASS (Exit Code 0)
+- ASSET SPECS:
+  - `stochas_boss.png`: 512x512 RGBA PNG, transparent, loads correctly (PASS)
+  - `fragment_01.png`: 512x512 RGBA PNG, transparent, loads correctly (PASS)
 
-## 8. BLOCKERS / AUTHORITY
+## 8. BLOCKERS / ESCALATIONS
 - BLOCKED: FALSE
 - EXACT_BLOCKER: None
 - BLOCKER_OWNER: N/A
-- M1_DECISION_REQUIRED: Authorize independent Re-QA / build export.
+- M1_DECISION_REQUIRED: None
 
 ## 9. LATEST REPORT / DELIVERABLE
-- REPORT_STATUS: READY_FOR_INDEPENDENT_REQA
-- BASE_HEAD: b547266dd737f45bc3e213c1496c85c957b160db
-- FINAL_HEAD: 52e4c594c4fa5cc175d22befbe687e4ccb74231f
-- WORKTREE_CLEAN: YES
-- QA_CHEAT_TESTS: 14/14 PASS
-- FULL: 438 PASS / 0 FAIL / 0 WAITING
-- DIFF_CHECK: CLEAN
-- FILES_CHANGED:
-  - src/ui/qa/qa_answer_formatter.gd
-  - src/ui/question/interactions/input_view.gd
-  - tests/unit/presentation/test_qa_answer_reveal_cheat.gd
-  - tests/test_runner.gd
-- ROOT_CAUSE: `QaAnswerFormatter` checked `acceptable_values` instead of canonical `accepted_values`, producing a missing-answer warning for input questions; `InputView._label` exposed `"Input response type: integer"` debug text in player UI.
+- STATUS: DEMO_V1_INTEGRATION_READY
+- HEAD: beb3a2161e80105ab01dba5b0d4565ce09f15e72
+- PARENTS: 48a088b980fa967554426d31ce54dfc0c9eba907 a13e872c443d014eeb977b72f083470f1bb500bb
+- TOTAL_TESTS: 584/584 PASS
+- FULL_DEMO_FLOW: PASS
+- VERDICT: READY_FOR_DEMO_V1_INDEPENDENT_REQA
 
 ## 10. RECOVERY HANDOFF
-- NEXT_ACTION: Independent Re-QA audit or Windows release build export.
-- DO_NOT_REPEAT: Do not expose technical debug copy to player UI. Check canonical `accepted_values` key for input question answer_spec.
+- NEXT_ACTION: Deliver integrated Demo V1 candidate to M1 and Independent QA agents.
 - LAST_UPDATED_BY: Agent1
-- LAST_UPDATED_AT: 2026-09-01T00:50:23+07:00
+- LAST_UPDATED_AT: 2026-09-04T09:22:00+07:00
 
 ## 11. RECENT PROMPT LOG
 
-### Prompt 18
-- RECEIVED_AT: 2026-09-01T00:40:54+07:00
-- TASK_ID: MATHOS-RC4-QA-CHEAT-INPUT-ANSWER-REVEAL-FIX-004
-- ONE_LINE_INTENT: Fix Input/Integer QA answer reveal warning and remove technical string "Input response type: integer" from Question UI into candidate HEAD 52e4c594c4fa5cc175d22befbe687e4ccb74231f.
-- RESULT / CURRENT_STATE: READY_FOR_INDEPENDENT_REQA (14/14 QA Cheat PASS, 438/438 Full Suite PASS, git diff --check clean).
-- HEAD_AFTER_WORK: 52e4c594c4fa5cc175d22befbe687e4ccb74231f
+### Prompt 26
+- RECEIVED_AT: 2026-09-04T08:55:21+07:00
+- TASK_ID: MATHOS-AUTH-D1-DEMO-V1-INTEGRATION-036
+- ONE_LINE_INTENT: Integrate Auth V1 and Dungeon 1 into single canonical Mathos Demo V1 candidate on integration/mathos-demo-v1-036.
+- RESULT / CURRENT_STATE: DEMO_V1_INTEGRATION_READY (Lineage PASS, 584/584 Full Suite PASS, Auth 31/26/24 PASS, D1 14/6/9 PASS, Full Demo V1 Smoke 10/10 PASS)
+- HEAD_AFTER_WORK: beb3a2161e80105ab01dba5b0d4565ce09f15e72
+
+### Prompt 25
+- RECEIVED_AT: 2026-09-04T08:46:05+07:00
+- TASK_ID: MATHOS-D1-FINAL-ASSETS-INDEPENDENT-REQA-035
+- ONE_LINE_INTENT: Final independent read-only D1 QA of complete unified candidate a13e872c443d014eeb977b72f083470f1bb500bb containing both real STOCHAS and real Fragment 01.
+- RESULT / CURRENT_STATE: PASS / READY_FOR_AUTH_D1_DEMO_INTEGRATION (Lineage 0, Both Assets PASS, Flow PASS, Combat PASS, Visual PASS, Completion PASS, 14/14 Boss, 6/6 Flow, 9/9 Visual, 543/543 Full PASS)
+- HEAD_AFTER_WORK: e613fbcbc0b8a35dd2e54cf9643efad375f460ee
+
+### Prompt 24
+- RECEIVED_AT: 2026-09-04T08:38:02+07:00
+- TASK_ID: MATHOS-FILMING-STOCHAS-COMBAT-READINESS-034
+- ONE_LINE_INTENT: Deterministic 11-shot filming plan for Stage 1.5 Boss STOCHAS combat based strictly on canonical implemented mechanics with zero source modification.
+- RESULT / CURRENT_STATE: FILMING_COMBAT_PLAN_READY (11/11 shots, Mechanic Accuracy PASS, Deterministic YES, Source Changed NO)
+- HEAD_AFTER_WORK: e613fbcbc0b8a35dd2e54cf9643efad375f460ee
+
+### Prompt 23
+- RECEIVED_AT: 2026-09-04T08:20:07+07:00
+- TASK_ID: MATHOS-D1-FRAGMENT01-INDEPENDENT-REQA-031
+- ONE_LINE_INTENT: Independent read-only QA audit of Agent3's real Fragment 01 integration (204a4e9cdda5efb425a71a30d4fa2b305f9f581a) against approved unified D1 head (d6b76ce).
+- RESULT / CURRENT_STATE: PASS (Lineage 0, Asset PASS, Presentation PASS, Rewards PASS, Routing PASS, Scope PASS, 14/14 Boss, 6/6 Flow, 9/9 Visual, 543/543 Full PASS)
+- HEAD_AFTER_WORK: e613fbcbc0b8a35dd2e54cf9643efad375f460ee
+
+### Prompt 22
+- RECEIVED_AT: 2026-09-04T08:05:53+07:00
+- TASK_ID: MATHOS-D1-STOCHAS-CANONICAL-REBASE-029
+- ONE_LINE_INTENT: Re-apply ONLY the approved real STOCHAS asset integration onto the approved unified D1 canonical head (d6b76ce), satisfying the ancestry gate and all QA suites.
+- RESULT / CURRENT_STATE: READY_FOR_STOCHAS_CANONICAL_INDEPENDENT_REQA (14/14 Boss, 6/6 Flow, 9/9 Visual, 543/543 Full PASS, Ancestry PASS)
+- HEAD_AFTER_WORK: e613fbcbc0b8a35dd2e54cf9643efad375f460ee
+
+### Prompt 21
+- RECEIVED_AT: 2026-09-04T07:19:30+07:00
+- TASK_ID: MATHOS-D1-STOCHAS-REAL-ASSET-INTEGRATION-025
+- ONE_LINE_INTENT: Integrate approved real STOCHAS sprite (512x512 RGBA) into Stage 1.5 BossCombatPanel.
+- RESULT / CURRENT_STATE: FUNCTIONAL_PASS_ANCESTRY_REJECTED (built on sibling branch instead of d6b76ce; returned to Agent1 for canonical rebase).
+- HEAD_AFTER_WORK: 1df7e16a1f35e33dfb7b1881ff357a7c550ea4b7
+
+### Prompt 20
+- RECEIVED_AT: 2026-09-03T17:04:35+07:00
+- TASK_ID: MATHOS-D1-CRITICAL-FLOW-FIX-024
+- ONE_LINE_INTENT: Fix confirmed D1 non-boss production flow blockers and defects (Story phase handoff, Speaker names, D1 completion modal/hub return, Real rewards, Question count enforcement, Stage-aware advisor/summary).
+- RESULT / CURRENT_STATE: PASS / MERGED
+- HEAD_AFTER_WORK: d6b76ce126773eacbae5a67a5ded3bb4e8766c05
+

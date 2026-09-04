@@ -7,7 +7,12 @@ extends Control
 
 signal return_to_main_menu_requested()
 
+const FRAGMENT_01_PATH: String = "res://assets/items/fragments/fragment_01.png"
+
 var _main_vbox: VBoxContainer = null
+var _fragment_container: PanelContainer = null
+var _fragment_rect: TextureRect = null
+var _fragment_title_label: Label = null
 var _dungeon_grid: HBoxContainer = null
 var _stats_hbox: HBoxContainer = null
 var _gold_value_label: Label = null
@@ -23,10 +28,57 @@ func _ready() -> void:
 
 func set_victory_data(player_gold: int = 0, player_xp: int = 0) -> void:
 	_ensure_ui_built()
+	if _fragment_container != null:
+		_fragment_container.visible = false
 	if _gold_value_label != null:
 		_gold_value_label.text = "%d" % player_gold
 	if _xp_value_label != null:
 		_xp_value_label.text = "%d" % player_xp
+
+func set_dungeon_complete_data(dungeon_title: String, fragment_id: String, player_gold: int = 0, player_xp: int = 0) -> void:
+	_ensure_ui_built()
+	if _main_vbox != null:
+		var title_lbl: Label = _main_vbox.get_node_or_null("TitleLabel") as Label
+		if title_lbl != null:
+			title_lbl.text = "HOÀN THÀNH " + dungeon_title.to_upper()
+		var sub_lbl: Label = _main_vbox.get_node_or_null("SubtitleLabel") as Label
+		if sub_lbl != null:
+			sub_lbl.text = "Chúc mừng bạn đã chinh phục %s và thu thập %s!" % [dungeon_title, fragment_id]
+	if _gold_value_label != null:
+		_gold_value_label.text = "%d" % player_gold
+	if _xp_value_label != null:
+		_xp_value_label.text = "%d" % player_xp
+
+	# Real Fragment 01 reward presentation
+	if _fragment_container != null:
+		_fragment_container.visible = true
+		if _fragment_rect != null:
+			if ResourceLoader.exists(FRAGMENT_01_PATH):
+				var tex: Texture2D = load(FRAGMENT_01_PATH) as Texture2D
+				if tex != null:
+					_fragment_rect.texture = tex
+			_fragment_rect.visible = true
+		if _fragment_title_label != null:
+			_fragment_title_label.text = fragment_id if not fragment_id.is_empty() else "Mảnh Vỡ Ma Thuật 01"
+
+	if _dungeon_grid != null:
+		var cards: Array = _dungeon_grid.get_children()
+		for idx in range(cards.size()):
+			var c = cards[idx]
+			var vbox = c.get_child(0) if c.get_child_count() > 0 else null
+			if vbox != null and vbox.get_child_count() >= 3:
+				var status_lbl: Label = vbox.get_child(2) as Label
+				if status_lbl != null:
+					if idx == 0:
+						status_lbl.text = "[Hoàn thành]"
+						status_lbl.theme_type_variation = &"MathosSuccess"
+					else:
+						status_lbl.text = "[Tạm khóa]"
+						status_lbl.theme_type_variation = &"MathosMeta"
+
+	var btn: Button = _get_return_button()
+	if btn != null:
+		btn.text = "Trở Về Trang Chủ"
 
 func set_rewards(gold: int = 0, xp: int = 0) -> void:
 	set_victory_data(gold, xp)
@@ -86,6 +138,45 @@ func _ensure_ui_built() -> void:
 	sub_lbl.text = "Chúc mừng bạn đã xuất sắc chinh phục toàn bộ 4 Dungeon xác suất!"
 	sub_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_main_vbox.add_child(sub_lbl)
+
+	# Fragment Reward Showcase Container (for Dungeon Complete reward presentation)
+	_fragment_container = PanelContainer.new()
+	_fragment_container.name = "FragmentRewardContainer"
+	_fragment_container.theme_type_variation = &"MathosPanelElevated"
+	_fragment_container.size_flags_horizontal = SIZE_SHRINK_CENTER
+	_fragment_container.visible = false
+
+	var frag_margin: MarginContainer = MarginContainer.new()
+	frag_margin.name = "FragmentMargin"
+	frag_margin.add_theme_constant_override("margin_left", 16)
+	frag_margin.add_theme_constant_override("margin_top", 12)
+	frag_margin.add_theme_constant_override("margin_right", 16)
+	frag_margin.add_theme_constant_override("margin_bottom", 12)
+	_fragment_container.add_child(frag_margin)
+
+	var frag_vbox: VBoxContainer = VBoxContainer.new()
+	frag_vbox.name = "FragmentVBox"
+	frag_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	frag_vbox.add_theme_constant_override("separation", 8)
+	frag_margin.add_child(frag_vbox)
+
+	_fragment_rect = TextureRect.new()
+	_fragment_rect.name = "FragmentTextureRect"
+	_fragment_rect.custom_minimum_size = Vector2(150, 150)
+	_fragment_rect.size_flags_horizontal = SIZE_SHRINK_CENTER
+	_fragment_rect.size_flags_vertical = SIZE_SHRINK_CENTER
+	_fragment_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_fragment_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	frag_vbox.add_child(_fragment_rect)
+
+	_fragment_title_label = Label.new()
+	_fragment_title_label.name = "FragmentTitleLabel"
+	_fragment_title_label.theme_type_variation = &"MathosHeading"
+	_fragment_title_label.text = "Mảnh Vỡ Ma Thuật 01"
+	_fragment_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	frag_vbox.add_child(_fragment_title_label)
+
+	_main_vbox.add_child(_fragment_container)
 
 	# Dungeons Grid (4 Dungeons)
 	_dungeon_grid = HBoxContainer.new()
@@ -216,3 +307,11 @@ func _get_return_button() -> Button:
 func get_dungeon_grid() -> HBoxContainer:
 	_ensure_ui_built()
 	return _dungeon_grid
+
+func get_fragment_rect() -> TextureRect:
+	_ensure_ui_built()
+	return _fragment_rect
+
+func get_fragment_container() -> Control:
+	_ensure_ui_built()
+	return _fragment_container

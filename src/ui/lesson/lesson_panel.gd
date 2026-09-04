@@ -10,6 +10,17 @@ signal lesson_completed()
 
 var _steps: Array[PresentationModels.LessonStepData] = []
 var _current_index: int = 0
+var _is_story_mode: bool = false
+
+const CANONICAL_SPEAKERS: Dictionary = {
+	"npc_arithmos": "Arithmos",
+	"npc_draven": "Draven",
+	"char_karl": "Karl",
+	"npc_aether": "Aether",
+	"npc_aphodius": "Aphodius",
+	"npc_stochas": "STOCHAS",
+	"enemy_d1_stochas": "STOCHAS"
+}
 
 func _ready() -> void:
 	var btn: Button = _get_continue_button()
@@ -19,11 +30,21 @@ func _ready() -> void:
 	_update_display()
 
 static func get_player_facing_speaker_name(raw_speaker: String, display_name: String = "") -> String:
-	if not display_name.is_empty() and not display_name.begins_with("npc_"):
+	if not display_name.is_empty() and not display_name.begins_with("npc_") and not display_name.begins_with("char_"):
 		return display_name
-	if raw_speaker.is_empty() or raw_speaker.begins_with("npc_"):
+	if CANONICAL_SPEAKERS.has(raw_speaker):
+		return CANONICAL_SPEAKERS[raw_speaker]
+	if raw_speaker.begins_with("npc_"):
+		return raw_speaker.trim_prefix("npc_").capitalize()
+	if raw_speaker.begins_with("char_"):
+		return raw_speaker.trim_prefix("char_").capitalize()
+	if raw_speaker.is_empty():
 		return "CỐ VẤN"
 	return raw_speaker
+
+func set_story_mode(is_story: bool) -> void:
+	_is_story_mode = is_story
+	_update_display()
 
 func set_lesson_data(steps: Array) -> void:
 	_steps.clear()
@@ -94,10 +115,15 @@ func _update_display() -> void:
 		page_indicator_label.text = "Bước %d / %d" % [_current_index + 1, _steps.size()]
 
 	if continue_button != null:
+		if not continue_button.pressed.is_connected(_on_continue_pressed):
+			continue_button.pressed.connect(_on_continue_pressed)
 		continue_button.focus_mode = FOCUS_ALL
 		continue_button.disabled = false
 		if _current_index == _steps.size() - 1:
-			continue_button.text = "Bắt đầu giải đố"
+			if _is_story_mode:
+				continue_button.text = "Vào bài học"
+			else:
+				continue_button.text = "Bắt đầu giải đố"
 		else:
 			continue_button.text = "Tiếp tục"
 

@@ -458,6 +458,10 @@ static func test_approot_qr_016_composed_f5_full_production_path() -> String:
 		app.free()
 		return "FAIL"
 
+	# If starting in Story mode, advance through story into lesson first
+	if pres_shell.get_view_mode() == StagePresentationShell.ViewMode.MODE_STORY:
+		pres_shell._on_lesson_continue()
+
 	# Simulate player clicking 'Start Puzzle' on lesson panel
 	pres_shell._on_lesson_continue()
 

@@ -79,8 +79,8 @@ static func test_002_map_unlocked_stage_selection() -> bool:
 		root.free()
 		return false
 
-	if shell.get_view_mode() != StagePresentationShell.ViewMode.MODE_LESSON:
-		print("[BATCH2B-002] FAIL: view mode is not MODE_LESSON after selecting stage_01_01")
+	if shell.get_view_mode() != StagePresentationShell.ViewMode.MODE_LESSON and shell.get_view_mode() != StagePresentationShell.ViewMode.MODE_STORY:
+		print("[BATCH2B-002] FAIL: view mode is not MODE_LESSON or MODE_STORY after selecting stage_01_01, got %d" % shell.get_view_mode())
 		root.free()
 		return false
 
@@ -119,8 +119,9 @@ static func test_004_pause_resume_exact_state_return() -> bool:
 
 	root.start_new_game()
 	var shell: StagePresentationShell = root.get_presentation_shell() as StagePresentationShell
-	if shell.get_view_mode() != StagePresentationShell.ViewMode.MODE_LESSON:
-		print("[BATCH2B-004] FAIL: expected MODE_LESSON initially")
+	var initial_mode = shell.get_view_mode()
+	if initial_mode != StagePresentationShell.ViewMode.MODE_LESSON and initial_mode != StagePresentationShell.ViewMode.MODE_STORY:
+		print("[BATCH2B-004] FAIL: expected MODE_LESSON or MODE_STORY initially, got %d" % initial_mode)
 		root.free()
 		return false
 
@@ -138,8 +139,8 @@ static func test_004_pause_resume_exact_state_return() -> bool:
 		root.free()
 		return false
 
-	if shell.get_view_mode() != StagePresentationShell.ViewMode.MODE_LESSON:
-		print("[BATCH2B-004] FAIL: shell did not return to MODE_LESSON on resume")
+	if shell.get_view_mode() != initial_mode:
+		print("[BATCH2B-004] FAIL: shell did not return to initial mode on resume (was %d, now %d)" % [initial_mode, shell.get_view_mode()])
 		root.free()
 		return false
 
