@@ -1,10 +1,19 @@
-class_name TestD1CriticalFlowFixes
-extends RefCounted
+extends SceneTree
 
 ## Unit & Integration test suite verifying D1 Critical Flow Fixes:
 ## Story phase handoff, story -> lesson transition, canonical speaker names,
 ## D1 completion screen & D2 freeze, real reward values, ReviewButton handling,
 ## stage-aware advisor text, stage-aware summary, and practice count capping.
+
+func _initialize() -> void:
+	print("--- RUNNING SUITE: D1 Critical Flow Fixes ---")
+	var ok: bool = run_all_tests()
+	if ok:
+		print("MATHOS D1 CRITICAL FLOW FIXES QA HARNESS: PASS!")
+		quit(0)
+	else:
+		print("MATHOS D1 CRITICAL FLOW FIXES QA HARNESS: FAIL!")
+		quit(1)
 
 static func run_all_tests() -> bool:
 	print("--- RUNNING SUITE: D1 Critical Flow Fixes ---")

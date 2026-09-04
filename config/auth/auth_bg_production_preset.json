@@ -1,0 +1,278 @@
+{
+	"banner_a": {
+		"brightness": 0.6,
+		"visible": true,
+		"warp_bl": {
+			"x": -127.620681762695,
+			"y": 149.404632568359
+		},
+		"warp_br": {
+			"x": -135.616149902344,
+			"y": 155.943511962891
+		},
+		"warp_tl": {
+			"x": -135.616149902344,
+			"y": 99.2734375
+		},
+		"warp_tr": {
+			"x": -137.796691894531,
+			"y": 137.053466796875
+		}
+	},
+	"banner_b": {
+		"brightness": 0.6,
+		"visible": true,
+		"warp_bl": {
+			"x": 36.7313842773438,
+			"y": 30.5469360351563
+		},
+		"warp_br": {
+			"x": 20.0,
+			"y": 28.6407775878906
+		},
+		"warp_tl": {
+			"x": 44.0,
+			"y": -57.0
+		},
+		"warp_tr": {
+			"x": 17.36572265625,
+			"y": -32.4530639648438
+		}
+	},
+	"banner_c": {
+		"brightness": 0.6,
+		"visible": true,
+		"warp_bl": {
+			"x": -135.616088867188,
+			"y": 41.7880554199219
+		},
+		"warp_br": {
+			"x": -155.968139648438,
+			"y": 48.8123474121094
+		},
+		"warp_tl": {
+			"x": -131.981811523438,
+			"y": -74.0938415527344
+		},
+		"warp_tr": {
+			"x": -155.968200683594,
+			"y": -49.4611511230469
+		}
+	},
+	"banner_motion": {
+		"opacity": 0.95,
+		"ripple": 0.04,
+		"speed": 0.8,
+		"sway": 6.0
+	},
+	"crystals": {
+		"master_opacity": 0.8,
+		"pulse_amount": 0.25,
+		"pulse_speed": 1.2
+	},
+	"fog": {
+		"breathing": 0.08,
+		"brightness": 0.75,
+		"cluster_count": 8,
+		"depth_spread": 80.0,
+		"drift_range": 60.0,
+		"fg_enabled": true,
+		"global_speed": 0.06,
+		"master_opacity": 0.35,
+		"mg_enabled": true,
+		"saturation": 0.65,
+		"scale_max": 1.35,
+		"scale_min": 0.75,
+		"seed": 1337,
+		"tint": {
+			"a": 1.0,
+			"b": 0.75,
+			"g": 0.449999988079071,
+			"r": 0.349999994039536
+		}
+	},
+	"local_lights": [
+		{
+			"color": {
+				"a": 1.0,
+				"b": 1.0,
+				"g": 0.75,
+				"r": 0.25
+			},
+			"enabled": true,
+			"id": 1,
+			"intensity": 1.0,
+			"position": {
+				"x": 571.311767578125,
+				"y": 365.449005126953
+			},
+			"radius": 134.0,
+			"softness": 0.8
+		},
+		{
+			"color": {
+				"a": 1.0,
+				"b": 1.0,
+				"g": 0.75,
+				"r": 0.25
+			},
+			"enabled": true,
+			"id": 2,
+			"intensity": 1.0,
+			"position": {
+				"x": 210.789306640625,
+				"y": 258.647796630859
+			},
+			"radius": 140.0,
+			"softness": 0.8
+		},
+		{
+			"color": {
+				"a": 1.0,
+				"b": 1.0,
+				"g": 0.75,
+				"r": 0.25
+			},
+			"enabled": true,
+			"id": 3,
+			"intensity": 1.0,
+			"position": {
+				"x": 258.035186767578,
+				"y": 395.237091064453
+			},
+			"radius": 83.0,
+			"softness": 0.8
+		},
+		{
+			"color": {
+				"a": 1.0,
+				"b": 1.0,
+				"g": 0.75,
+				"r": 0.25
+			},
+			"enabled": true,
+			"id": 4,
+			"intensity": 1.0,
+			"position": {
+				"x": 321.998840332031,
+				"y": 97.356201171875
+			},
+			"radius": 169.0,
+			"softness": 0.8
+		},
+		{
+			"color": {
+				"a": 1.0,
+				"b": 1.0,
+				"g": 0.75,
+				"r": 0.25
+			},
+			"enabled": true,
+			"id": 5,
+			"intensity": 1.0,
+			"position": {
+				"x": 454.287322998047,
+				"y": 120.605445861816
+			},
+			"radius": 183.220474243164,
+			"softness": 0.8
+		},
+		{
+			"color": {
+				"a": 1.0,
+				"b": 1.0,
+				"g": 0.75,
+				"r": 0.25
+			},
+			"enabled": true,
+			"id": 6,
+			"intensity": 1.0,
+			"position": {
+				"x": 523.338928222656,
+				"y": 406.861694335938
+			},
+			"radius": 45.0,
+			"softness": 0.8
+		},
+		{
+			"color": {
+				"a": 1.0,
+				"b": 1.0,
+				"g": 0.75,
+				"r": 0.25
+			},
+			"enabled": true,
+			"id": 7,
+			"intensity": 1.0,
+			"position": {
+				"x": 244.224838256836,
+				"y": 375.620574951172
+			},
+			"radius": 81.0,
+			"softness": 0.8
+		},
+		{
+			"color": {
+				"a": 1.0,
+				"b": 1.0,
+				"g": 0.75,
+				"r": 0.25
+			},
+			"enabled": true,
+			"id": 8,
+			"intensity": 1.0,
+			"position": {
+				"x": 93.0380401611328,
+				"y": 248.476272583008
+			},
+			"radius": 192.0,
+			"softness": 0.8
+		},
+		{
+			"color": {
+				"a": 1.0,
+				"b": 1.0,
+				"g": 0.75,
+				"r": 0.25
+			},
+			"enabled": true,
+			"id": 9,
+			"intensity": 1.0,
+			"position": {
+				"x": 182.441787719727,
+				"y": 488.234039306641
+			},
+			"radius": 137.0,
+			"softness": 0.8
+		},
+		{
+			"color": {
+				"a": 1.0,
+				"b": 1.0,
+				"g": 0.75,
+				"r": 0.25
+			},
+			"enabled": true,
+			"id": 10,
+			"intensity": 1.0,
+			"position": {
+				"x": 137.37646484375,
+				"y": 401.775939941406
+			},
+			"radius": 82.9626083374023,
+			"softness": 0.8
+		}
+	],
+	"particles": {
+		"count": 24,
+		"drift_speed": 15.0,
+		"enabled": true,
+		"opacity": 0.6,
+		"scale_max": 1.5,
+		"scale_min": 0.5,
+		"twinkle_amount": 0.4,
+		"twinkle_speed": 1.5,
+		"type": "MIXED"
+	},
+	"version": 1
+}

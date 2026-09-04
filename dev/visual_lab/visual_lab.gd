@@ -9,6 +9,10 @@ extends Control
 enum LabMode { FOG_TEST, AUTH_LOGIN_BG, FUTURE_TAB_3 }
 enum MotionMode { CURRENT_ATLAS_ANIMATION, STATIC_FRAME }
 enum FogSourceMode { NEW_PROCEDURAL_LAYER, OLD_ATLAS_8F }
+enum BannerSelection { NONE, BANNER_A, BANNER_B, BANNER_C }
+enum BannerCorner { NONE, TL, TR, BL, BR }
+enum BannerDragMode { NONE, CORNER, WHOLE }
+enum LightDragMode { NONE, CENTER, RADIUS }
 
 const D1_BG_PATH: String = "res://assets/backgrounds/dungeon_1/d1_misty_forest_bg.png"
 const D1_BG_ALT_PATH: String = "res://assets/backgrounds/d1_misty_forest_bg.png"
@@ -114,6 +118,53 @@ var _layer_count_option: OptionButton = null
 var _auth_ctrl_box: VBoxContainer = null
 var _ban_a_warp_spins: Array[SpinBox] = []
 var _ban_b_warp_spins: Array[SpinBox] = []
+var _ban_c_warp_spins: Array[SpinBox] = []
+var _banner_selection: BannerSelection = BannerSelection.NONE
+var _banner_warp_overlay: BannerWarpOverlay = null
+var _banner_sel_status_label: Label = null
+var _adv_warp_box: VBoxContainer = null
+var _adv_toggle_btn: Button = null
+
+# Local Light Spots UI State
+var _active_light_index: int = -1
+var _is_adding_light_spot: bool = false
+var _light_status_lbl: Label = null
+var _light_list_container: GridContainer = null
+var _light_editor_box: VBoxContainer = null
+var _light_intensity_slider: HSlider = null
+var _light_softness_slider: HSlider = null
+var _light_radius_slider: HSlider = null
+var _light_del_btn: Button = null
+var _add_light_btn: Button = null
+
+# Preset Persistence State
+var preset_directory: String = "D:/Mathos_Visual_Presets/AuthBackground"
+var auto_load_on_startup: bool = true
+var _autosave_enabled: bool = true
+var _autosave_pending: bool = false
+var _autosave_timer: float = 0.0
+const AUTOSAVE_DELAY: float = 1.0
+var _auth_session_loaded: bool = false
+var _preset_status_lbl: Label = null
+var _preset_dropdown: OptionButton = null
+var _save_as_name_edit: LineEdit = null
+var _save_current_btn: Button = null
+var _restore_session_btn: Button = null
+var _save_as_btn: Button = null
+var _load_preset_btn: Button = null
+var _autosave_chk: CheckBox = null
+
+# Auth BG Controls References for UI Sync
+var _afog_op_slider: HSlider = null
+var _afog_bright_slider: HSlider = null
+var _afog_sat_slider: HSlider = null
+var _afog_cnt_spin: SpinBox = null
+var _ban_a_bright_slider: HSlider = null
+var _ban_b_bright_slider: HSlider = null
+var _ban_c_bright_slider: HSlider = null
+var _dust_chk: CheckBox = null
+var _dust_cnt_spin: SpinBox = null
+var _part_type_opt: OptionButton = null
 
 # State
 var _current_lab_mode: LabMode = LabMode.FOG_TEST
@@ -166,7 +217,8 @@ var _compare_old_vs_new_mode: bool = false
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_load_all_textures()
-	_build_ui_hierarchy()
+	if _ctrl_panel == null:
+		_build_ui_hierarchy()
 	_apply_parameters()
 	set_lab_mode(LabMode.FOG_TEST)
 	_update_diagnostic_display()
@@ -261,6 +313,12 @@ func calculate_overscan_info(vp_size: Vector2) -> Dictionary:
 	}
 
 func _process(delta: float) -> void:
+	if _autosave_pending and _autosave_enabled:
+		_autosave_timer -= delta
+		if _autosave_timer <= 0.0:
+			_autosave_pending = false
+			save_current()
+
 	if _current_lab_mode == LabMode.FOG_TEST:
 		if _is_playing:
 			if not _fog_frames.is_empty() and _fps > 0.0 and _current_motion_mode == MotionMode.CURRENT_ATLAS_ANIMATION:
@@ -390,7 +448,11 @@ func _create_warp_corner_row(corner_label: String, get_val: Callable, set_val_x:
 	spin_x.step = 1.0
 	spin_x.value = get_val.call().x
 	spin_x.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	spin_x.value_changed.connect(func(v): set_val_x.call(v))
+	spin_x.value_changed.connect(func(v):
+		set_val_x.call(v)
+		if _banner_warp_overlay != null: _banner_warp_overlay.queue_redraw()
+		schedule_autosave()
+	)
 	row.add_child(spin_x)
 
 	var ly: Label = Label.new(); ly.text = "Y"
@@ -401,10 +463,459 @@ func _create_warp_corner_row(corner_label: String, get_val: Callable, set_val_x:
 	spin_y.step = 1.0
 	spin_y.value = get_val.call().y
 	spin_y.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	spin_y.value_changed.connect(func(v): set_val_y.call(v))
+	spin_y.value_changed.connect(func(v):
+		set_val_y.call(v)
+		if _banner_warp_overlay != null: _banner_warp_overlay.queue_redraw()
+		schedule_autosave()
+	)
 	row.add_child(spin_y)
 
 	return {"row": row, "spin_x": spin_x, "spin_y": spin_y}
+
+# ==============================================================================
+# Direct Mouse-Driven Interactive Visual Banner Warp Overlay
+# ==============================================================================
+class BannerWarpOverlay extends Control:
+	var lab: VisualLab = null
+	var drag_mode: BannerDragMode = BannerDragMode.NONE
+	var drag_corner: BannerCorner = BannerCorner.NONE
+	var drag_start_mouse: Vector2 = Vector2.ZERO
+	var drag_start_tl: Vector2 = Vector2.ZERO
+	var drag_start_tr: Vector2 = Vector2.ZERO
+	var drag_start_bl: Vector2 = Vector2.ZERO
+	var drag_start_br: Vector2 = Vector2.ZERO
+
+	# Light Dragging State
+	var drag_light_mode: LightDragMode = LightDragMode.NONE
+	var drag_start_light_pos: Vector2 = Vector2.ZERO
+	var drag_start_light_rad: float = 140.0
+
+	var hovered_corner: BannerCorner = BannerCorner.NONE
+	var hovered_banner: BannerSelection = BannerSelection.NONE
+
+	const HANDLE_RADIUS: float = 8.0
+	const HANDLE_HOVER_RADIUS: float = 14.0
+
+	func _init(p_lab: VisualLab = null) -> void:
+		lab = p_lab
+		mouse_filter = Control.MOUSE_FILTER_STOP
+
+	func _gui_input(event: InputEvent) -> void:
+		if lab == null:
+			return
+		var auth_bg: AuthLoginBackground = lab.get_auth_background()
+		if auth_bg == null or not auth_bg.visible:
+			return
+
+		var m_pos: Vector2 = auth_bg.get_global_transform().affine_inverse() * event.global_position
+
+		if event is InputEventMouseButton:
+			if event.button_index == MOUSE_BUTTON_LEFT:
+				if event.pressed:
+					# 0. If in Add Light Spot Mode, create light at click position
+					if lab.is_adding_light_spot():
+						var new_idx: int = auth_bg.add_light_spot(m_pos, 140.0, 1.0, Color(0.25, 0.75, 1.0, 1.0), 0.8)
+						lab.select_light(new_idx)
+						lab.cancel_adding_light_spot()
+						lab.schedule_autosave()
+						accept_event()
+						queue_redraw()
+						return
+
+					var cur_l_idx: int = lab.get_active_light_index()
+					var current_sel: BannerSelection = lab.get_banner_selection()
+
+					# 1. Selected light handle interaction (radius handle or center handle)
+					if cur_l_idx >= 0 and cur_l_idx < auth_bg.get_light_spot_count():
+						var sl: Dictionary = auth_bg.get_light_spot(cur_l_idx)
+						var r_hpos: Vector2 = sl["position"] + Vector2(sl["radius"], 0.0)
+						if m_pos.distance_to(r_hpos) <= 14.0:
+							drag_light_mode = LightDragMode.RADIUS
+							drag_start_mouse = m_pos
+							drag_start_light_rad = sl["radius"]
+							accept_event()
+							queue_redraw()
+							return
+						if m_pos.distance_to(sl["position"]) <= 14.0:
+							drag_light_mode = LightDragMode.CENTER
+							drag_start_mouse = m_pos
+							drag_start_light_pos = sl["position"]
+							accept_event()
+							queue_redraw()
+							return
+
+					# 2. Click any unselected light center handle to select and drag
+					for i in range(auth_bg.get_light_spot_count()):
+						var lspot: Dictionary = auth_bg.get_light_spot(i)
+						if m_pos.distance_to(lspot["position"]) <= 14.0:
+							lab.select_light(i)
+							drag_light_mode = LightDragMode.CENTER
+							drag_start_mouse = m_pos
+							drag_start_light_pos = lspot["position"]
+							accept_event()
+							queue_redraw()
+							return
+
+					# 3. If banner is selected, test corner handles first
+					if current_sel != BannerSelection.NONE:
+						var quad: Dictionary = _get_raw_banner_quad(current_sel, auth_bg)
+						var hit_c: BannerCorner = _hit_test_corners(m_pos, quad)
+						if hit_c != BannerCorner.NONE:
+							drag_mode = BannerDragMode.CORNER
+							drag_corner = hit_c
+							drag_start_mouse = m_pos
+							_save_drag_start_offsets(current_sel, auth_bg)
+							accept_event()
+							queue_redraw()
+							return
+
+					# 4. If banner is selected, test interior drag (whole banner translation)
+					if current_sel != BannerSelection.NONE:
+						var quad: Dictionary = _get_raw_banner_quad(current_sel, auth_bg)
+						if _is_point_in_quad(m_pos, quad):
+							drag_mode = BannerDragMode.WHOLE
+							drag_start_mouse = m_pos
+							_save_drag_start_offsets(current_sel, auth_bg)
+							accept_event()
+							queue_redraw()
+							return
+
+					# 5. Direct canvas selection with overlap priority: C above B above A
+					var c_quad: Dictionary = auth_bg.get_banner_c_quad_points()
+					if _is_point_in_quad(m_pos, c_quad):
+						lab.select_banner_c()
+						drag_mode = BannerDragMode.WHOLE
+						drag_start_mouse = m_pos
+						_save_drag_start_offsets(BannerSelection.BANNER_C, auth_bg)
+						accept_event()
+						queue_redraw()
+						return
+
+					var b_quad: Dictionary = auth_bg.get_banner_b_quad_points()
+					if _is_point_in_quad(m_pos, b_quad):
+						lab.select_banner_b()
+						drag_mode = BannerDragMode.WHOLE
+						drag_start_mouse = m_pos
+						_save_drag_start_offsets(BannerSelection.BANNER_B, auth_bg)
+						accept_event()
+						queue_redraw()
+						return
+
+					var a_quad: Dictionary = auth_bg.get_banner_a_quad_points()
+					if _is_point_in_quad(m_pos, a_quad):
+						lab.select_banner_a()
+						drag_mode = BannerDragMode.WHOLE
+						drag_start_mouse = m_pos
+						_save_drag_start_offsets(BannerSelection.BANNER_A, auth_bg)
+						accept_event()
+						queue_redraw()
+						return
+
+					# 6. If clicked inside selected light's influence radius, allow whole light drag
+					if cur_l_idx >= 0 and cur_l_idx < auth_bg.get_light_spot_count():
+						var sl: Dictionary = auth_bg.get_light_spot(cur_l_idx)
+						if m_pos.distance_to(sl["position"]) <= sl["radius"]:
+							drag_light_mode = LightDragMode.CENTER
+							drag_start_mouse = m_pos
+							drag_start_light_pos = sl["position"]
+							accept_event()
+							queue_redraw()
+							return
+
+					# 7. Empty background clicked -> deselect everything
+					lab.deselect_banner()
+					lab.deselect_light()
+					drag_mode = BannerDragMode.NONE
+					drag_light_mode = LightDragMode.NONE
+					accept_event()
+					queue_redraw()
+				else:
+					# Release mouse drag
+					var was_dragging: bool = (drag_mode != BannerDragMode.NONE or drag_light_mode != LightDragMode.NONE)
+					drag_mode = BannerDragMode.NONE
+					drag_corner = BannerCorner.NONE
+					drag_light_mode = LightDragMode.NONE
+					if was_dragging and lab != null:
+						lab.schedule_autosave()
+					accept_event()
+					queue_redraw()
+
+		elif event is InputEventMouseMotion:
+			if drag_light_mode != LightDragMode.NONE:
+				var delta: Vector2 = m_pos - drag_start_mouse
+				var active_idx: int = lab.get_active_light_index()
+				if active_idx >= 0 and active_idx < auth_bg.get_light_spot_count():
+					if drag_light_mode == LightDragMode.CENTER:
+						auth_bg.set_light_spot_position(active_idx, drag_start_light_pos + delta)
+					elif drag_light_mode == LightDragMode.RADIUS:
+						var cur_l: Dictionary = auth_bg.get_light_spot(active_idx)
+						var new_rad: float = (m_pos - cur_l["position"]).length()
+						auth_bg.set_light_spot_radius(active_idx, clampf(new_rad, 20.0, 600.0))
+				lab._update_light_ui()
+				accept_event()
+				queue_redraw()
+			elif drag_mode != BannerDragMode.NONE:
+				var delta: Vector2 = m_pos - drag_start_mouse
+				var current_sel: BannerSelection = lab.get_banner_selection()
+
+				if drag_mode == BannerDragMode.CORNER:
+					match drag_corner:
+						BannerCorner.TL:
+							if current_sel == BannerSelection.BANNER_A: auth_bg.banner_a_warp_tl = drag_start_tl + delta
+							elif current_sel == BannerSelection.BANNER_B: auth_bg.banner_b_warp_tl = drag_start_tl + delta
+							elif current_sel == BannerSelection.BANNER_C: auth_bg.banner_c_warp_tl = drag_start_tl + delta
+						BannerCorner.TR:
+							if current_sel == BannerSelection.BANNER_A: auth_bg.banner_a_warp_tr = drag_start_tr + delta
+							elif current_sel == BannerSelection.BANNER_B: auth_bg.banner_b_warp_tr = drag_start_tr + delta
+							elif current_sel == BannerSelection.BANNER_C: auth_bg.banner_c_warp_tr = drag_start_tr + delta
+						BannerCorner.BL:
+							if current_sel == BannerSelection.BANNER_A: auth_bg.banner_a_warp_bl = drag_start_bl + delta
+							elif current_sel == BannerSelection.BANNER_B: auth_bg.banner_b_warp_bl = drag_start_bl + delta
+							elif current_sel == BannerSelection.BANNER_C: auth_bg.banner_c_warp_bl = drag_start_bl + delta
+						BannerCorner.BR:
+							if current_sel == BannerSelection.BANNER_A: auth_bg.banner_a_warp_br = drag_start_br + delta
+							elif current_sel == BannerSelection.BANNER_B: auth_bg.banner_b_warp_br = drag_start_br + delta
+							elif current_sel == BannerSelection.BANNER_C: auth_bg.banner_c_warp_br = drag_start_br + delta
+				elif drag_mode == BannerDragMode.WHOLE:
+					if current_sel == BannerSelection.BANNER_A:
+						auth_bg.banner_a_warp_tl = drag_start_tl + delta
+						auth_bg.banner_a_warp_tr = drag_start_tr + delta
+						auth_bg.banner_a_warp_bl = drag_start_bl + delta
+						auth_bg.banner_a_warp_br = drag_start_br + delta
+					elif current_sel == BannerSelection.BANNER_B:
+						auth_bg.banner_b_warp_tl = drag_start_tl + delta
+						auth_bg.banner_b_warp_tr = drag_start_tr + delta
+						auth_bg.banner_b_warp_bl = drag_start_bl + delta
+						auth_bg.banner_b_warp_br = drag_start_br + delta
+					elif current_sel == BannerSelection.BANNER_C:
+						auth_bg.banner_c_warp_tl = drag_start_tl + delta
+						auth_bg.banner_c_warp_tr = drag_start_tr + delta
+						auth_bg.banner_c_warp_bl = drag_start_bl + delta
+						auth_bg.banner_c_warp_br = drag_start_br + delta
+
+				lab._sync_spinboxes_from_bg()
+				accept_event()
+				queue_redraw()
+			else:
+				_update_hover_state(m_pos, auth_bg)
+				queue_redraw()
+
+	func _hit_test_corners(p: Vector2, quad: Dictionary) -> BannerCorner:
+		if p.distance_to(quad["TL"]) <= HANDLE_HOVER_RADIUS:
+			return BannerCorner.TL
+		if p.distance_to(quad["TR"]) <= HANDLE_HOVER_RADIUS:
+			return BannerCorner.TR
+		if p.distance_to(quad["BL"]) <= HANDLE_HOVER_RADIUS:
+			return BannerCorner.BL
+		if p.distance_to(quad["BR"]) <= HANDLE_HOVER_RADIUS:
+			return BannerCorner.BR
+		return BannerCorner.NONE
+
+	func _is_point_in_quad(p: Vector2, quad: Dictionary) -> bool:
+		var poly: PackedVector2Array = PackedVector2Array([
+			quad["TL"],
+			quad["TR"],
+			quad["BR"],
+			quad["BL"]
+		])
+		return Geometry2D.is_point_in_polygon(p, poly)
+
+	func _get_raw_banner_quad(sel: BannerSelection, auth_bg: AuthLoginBackground) -> Dictionary:
+		if sel == BannerSelection.BANNER_A: return auth_bg.get_banner_a_quad_points()
+		elif sel == BannerSelection.BANNER_B: return auth_bg.get_banner_b_quad_points()
+		elif sel == BannerSelection.BANNER_C: return auth_bg.get_banner_c_quad_points()
+		return {}
+
+	func _save_drag_start_offsets(sel: BannerSelection, auth_bg: AuthLoginBackground) -> void:
+		if sel == BannerSelection.BANNER_A:
+			drag_start_tl = auth_bg.banner_a_warp_tl
+			drag_start_tr = auth_bg.banner_a_warp_tr
+			drag_start_bl = auth_bg.banner_a_warp_bl
+			drag_start_br = auth_bg.banner_a_warp_br
+		elif sel == BannerSelection.BANNER_B:
+			drag_start_tl = auth_bg.banner_b_warp_tl
+			drag_start_tr = auth_bg.banner_b_warp_tr
+			drag_start_bl = auth_bg.banner_b_warp_bl
+			drag_start_br = auth_bg.banner_b_warp_br
+		elif sel == BannerSelection.BANNER_C:
+			drag_start_tl = auth_bg.banner_c_warp_tl
+			drag_start_tr = auth_bg.banner_c_warp_tr
+			drag_start_bl = auth_bg.banner_c_warp_bl
+			drag_start_br = auth_bg.banner_c_warp_br
+
+	func _update_hover_state(m_pos: Vector2, auth_bg: AuthLoginBackground) -> void:
+		if lab.is_adding_light_spot():
+			mouse_default_cursor_shape = Control.CURSOR_CROSS
+			return
+
+		var current_light_idx: int = lab.get_active_light_index()
+		if current_light_idx >= 0 and current_light_idx < auth_bg.get_light_spot_count():
+			var sl: Dictionary = auth_bg.get_light_spot(current_light_idx)
+			var r_handle_pos: Vector2 = sl["position"] + Vector2(sl["radius"], 0.0)
+			if m_pos.distance_to(r_handle_pos) <= 14.0:
+				mouse_default_cursor_shape = Control.CURSOR_HSIZE
+				return
+			if m_pos.distance_to(sl["position"]) <= 14.0:
+				mouse_default_cursor_shape = Control.CURSOR_CROSS
+				return
+
+		for i in range(auth_bg.get_light_spot_count()):
+			var lspot: Dictionary = auth_bg.get_light_spot(i)
+			if m_pos.distance_to(lspot["position"]) <= 14.0:
+				mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+				return
+
+		var current_sel: BannerSelection = lab.get_banner_selection()
+		hovered_corner = BannerCorner.NONE
+		hovered_banner = BannerSelection.NONE
+
+		if current_sel != BannerSelection.NONE:
+			var quad: Dictionary = _get_raw_banner_quad(current_sel, auth_bg)
+			hovered_corner = _hit_test_corners(m_pos, quad)
+			if hovered_corner != BannerCorner.NONE:
+				mouse_default_cursor_shape = Control.CURSOR_CROSS
+				return
+			if _is_point_in_quad(m_pos, quad):
+				mouse_default_cursor_shape = Control.CURSOR_MOVE
+				return
+
+		var c_quad: Dictionary = auth_bg.get_banner_c_quad_points()
+		if _is_point_in_quad(m_pos, c_quad):
+			hovered_banner = BannerSelection.BANNER_C
+			mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			return
+
+		var b_quad: Dictionary = auth_bg.get_banner_b_quad_points()
+		if _is_point_in_quad(m_pos, b_quad):
+			hovered_banner = BannerSelection.BANNER_B
+			mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			return
+
+		var a_quad: Dictionary = auth_bg.get_banner_a_quad_points()
+		if _is_point_in_quad(m_pos, a_quad):
+			hovered_banner = BannerSelection.BANNER_A
+			mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			return
+
+		mouse_default_cursor_shape = Control.CURSOR_ARROW
+
+	func _to_overlay(p: Vector2, auth_bg: AuthLoginBackground) -> Vector2:
+		var global_pos: Vector2 = auth_bg.get_global_transform() * p
+		return get_global_transform().affine_inverse() * global_pos
+
+	func _get_overlay_quad(sel: BannerSelection, auth_bg: AuthLoginBackground) -> Dictionary:
+		var raw: Dictionary = _get_raw_banner_quad(sel, auth_bg)
+		return {
+			"TL": _to_overlay(raw["TL"], auth_bg),
+			"TR": _to_overlay(raw["TR"], auth_bg),
+			"BL": _to_overlay(raw["BL"], auth_bg),
+			"BR": _to_overlay(raw["BR"], auth_bg)
+		}
+
+	func _draw() -> void:
+		if lab == null:
+			return
+		var auth_bg: AuthLoginBackground = lab.get_auth_background()
+		if auth_bg == null or not auth_bg.visible:
+			return
+
+		var current_sel: BannerSelection = lab.get_banner_selection()
+		var active_light_idx: int = lab.get_active_light_index()
+
+		# 1. Unselected banner hover hints
+		if hovered_banner != BannerSelection.NONE and hovered_banner != current_sel:
+			var hint_text: String = "Banner C (Click to select)" if hovered_banner == BannerSelection.BANNER_C else ("Banner B (Click to select)" if hovered_banner == BannerSelection.BANNER_B else "Banner A (Click to select)")
+			_draw_hover_guide(_get_overlay_quad(hovered_banner, auth_bg), hint_text)
+
+		# 2. Selected banner quad outline, fill, 4 corner handles and labels
+		if current_sel != BannerSelection.NONE:
+			var quad: Dictionary = _get_overlay_quad(current_sel, auth_bg)
+			var banner_title: String = "BANNER A" if current_sel == BannerSelection.BANNER_A else ("BANNER B" if current_sel == BannerSelection.BANNER_B else "BANNER C")
+			var theme_col: Color = Color(0.18, 0.85, 1.0, 0.95) if current_sel == BannerSelection.BANNER_A else (Color(1.0, 0.78, 0.22, 0.95) if current_sel == BannerSelection.BANNER_B else Color(0.85, 0.45, 1.0, 0.95))
+			var fill_col: Color = Color(theme_col.r, theme_col.g, theme_col.b, 0.12)
+
+			var poly: PackedVector2Array = PackedVector2Array([quad["TL"], quad["TR"], quad["BR"], quad["BL"]])
+			draw_colored_polygon(poly, fill_col)
+
+			draw_line(quad["TL"], quad["TR"], theme_col, 2.0, true)
+			draw_line(quad["TR"], quad["BR"], theme_col, 2.0, true)
+			draw_line(quad["BR"], quad["BL"], theme_col, 2.0, true)
+			draw_line(quad["BL"], quad["TL"], theme_col, 2.0, true)
+
+			var top_mid: Vector2 = (quad["TL"] + quad["TR"]) * 0.5
+			var badge_pos: Vector2 = top_mid + Vector2(-40, -22)
+			draw_rect(Rect2(badge_pos, Vector2(80, 18)), Color(0.06, 0.06, 0.10, 0.85), true)
+			draw_rect(Rect2(badge_pos, Vector2(80, 18)), theme_col, false, 1.0)
+			draw_string(ThemeDB.fallback_font, badge_pos + Vector2(40, 13), banner_title, HORIZONTAL_ALIGNMENT_CENTER, -1, 11, theme_col)
+
+			_draw_handle("TL", quad["TL"], theme_col, BannerCorner.TL, Vector2(-24, -8))
+			_draw_handle("TR", quad["TR"], theme_col, BannerCorner.TR, Vector2(10, -8))
+			_draw_handle("BL", quad["BL"], theme_col, BannerCorner.BL, Vector2(-24, 18))
+			_draw_handle("BR", quad["BR"], theme_col, BannerCorner.BR, Vector2(10, 18))
+
+		# 3. Local Light Spots overlay rendering
+		var light_cnt: int = auth_bg.get_light_spot_count()
+		for i in range(light_cnt):
+			var l: Dictionary = auth_bg.get_light_spot(i)
+			var ov_pos: Vector2 = _to_overlay(l["position"], auth_bg)
+			var scale_factor: float = auth_bg.get_global_transform().get_scale().x
+			var ov_radius: float = l["radius"] * scale_factor
+
+			if i == active_light_idx:
+				# Selected light: circular boundary, soft tinted fill, center handle, radius handle
+				draw_arc(ov_pos, ov_radius, 0.0, TAU, 64, Color(0.3, 0.88, 1.0, 0.85), 2.0)
+				draw_circle(ov_pos, ov_radius, Color(0.2, 0.75, 1.0, 0.06 * l.get("intensity", 1.0)))
+
+				# Center handle
+				draw_circle(ov_pos, 9.0, Color(0.04, 0.04, 0.08, 0.95))
+				draw_circle(ov_pos, 7.0, Color(0.25, 0.85, 1.0, 1.0))
+				draw_circle(ov_pos, 3.0, Color.WHITE)
+
+				# Radius handle at circumference
+				var r_handle_pos: Vector2 = ov_pos + Vector2(ov_radius, 0.0)
+				draw_circle(r_handle_pos, 7.0, Color(0.04, 0.04, 0.08, 0.95))
+				draw_circle(r_handle_pos, 5.0, Color(1.0, 0.85, 0.3, 1.0))
+				draw_string(ThemeDB.fallback_font, r_handle_pos + Vector2(8, 4), "R", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.85, 0.3, 1.0))
+
+				# Info badge
+				var info_txt: String = "Light %d (R=%.0f, Int=%.2f)" % [i + 1, l["radius"], l["intensity"]]
+				draw_string(ThemeDB.fallback_font, ov_pos + Vector2(0, -14), info_txt, HORIZONTAL_ALIGNMENT_CENTER, -1, 11, Color(0.4, 0.95, 1.0, 1.0))
+			else:
+				# Unselected light: compact center dot with label
+				draw_circle(ov_pos, 6.0, Color(0.04, 0.04, 0.08, 0.9))
+				draw_circle(ov_pos, 4.0, Color(0.25, 0.75, 1.0, 0.75))
+				draw_string(ThemeDB.fallback_font, ov_pos + Vector2(8, 4), "L%d" % (i + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.3, 0.8, 1.0, 0.75))
+
+		# 4. Placement mode cursor preview
+		if lab.is_adding_light_spot():
+			var m_local: Vector2 = get_local_mouse_position()
+			var preview_rad: float = 140.0 * (auth_bg.get_global_transform().get_scale().x if auth_bg else 1.0)
+			draw_arc(m_local, preview_rad, 0.0, TAU, 48, Color(0.3, 0.9, 1.0, 0.5), 1.5)
+			draw_circle(m_local, 5.0, Color(0.3, 0.9, 1.0, 0.9))
+			draw_string(ThemeDB.fallback_font, m_local + Vector2(12, -8), "Click canvas to place Light Spot", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.4, 0.95, 1.0, 0.95))
+
+	func _draw_handle(label: String, pos: Vector2, col: Color, corner: BannerCorner, lbl_offset: Vector2) -> void:
+		var is_active: bool = (drag_corner == corner) or (hovered_corner == corner)
+		var rad: float = HANDLE_RADIUS + (2.0 if is_active else 0.0)
+		var highlight_col: Color = Color(1.0, 0.95, 0.35, 1.0) if is_active else col
+
+		draw_circle(pos, rad + 2.5, Color(0.04, 0.04, 0.08, 0.92))
+		draw_circle(pos, rad, highlight_col)
+		draw_circle(pos, rad * 0.4, Color(1.0, 1.0, 1.0, 1.0))
+
+		var badge_rect: Rect2 = Rect2(pos + lbl_offset + Vector2(-2, -9), Vector2(24, 14))
+		draw_rect(badge_rect, Color(0.05, 0.05, 0.08, 0.85), true)
+		draw_rect(badge_rect, highlight_col, false, 1.0)
+		draw_string(ThemeDB.fallback_font, pos + lbl_offset + Vector2(12, 2), label, HORIZONTAL_ALIGNMENT_CENTER, -1, 10, Color(1.0, 1.0, 1.0, 1.0))
+
+	func _draw_hover_guide(quad: Dictionary, hint: String) -> void:
+		var guide_col: Color = Color(1.0, 1.0, 1.0, 0.45)
+		draw_line(quad["TL"], quad["TR"], guide_col, 1.5, true)
+		draw_line(quad["TR"], quad["BR"], guide_col, 1.5, true)
+		draw_line(quad["BR"], quad["BL"], guide_col, 1.5, true)
+		draw_line(quad["BL"], quad["TL"], guide_col, 1.5, true)
+		var top_mid: Vector2 = (quad["TL"] + quad["TR"]) * 0.5
+		draw_string(ThemeDB.fallback_font, top_mid + Vector2(0, -8), hint, HORIZONTAL_ALIGNMENT_CENTER, -1, 11, guide_col)
 
 func _build_ui_hierarchy() -> void:
 	_bg_texture_rect = TextureRect.new()
@@ -448,6 +959,12 @@ func _build_ui_hierarchy() -> void:
 	_auth_bg_node.visible = false
 	_auth_bg_node._ensure_nodes()
 	add_child(_auth_bg_node)
+
+	_banner_warp_overlay = BannerWarpOverlay.new(self)
+	_banner_warp_overlay.name = "BannerWarpOverlay"
+	_banner_warp_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_banner_warp_overlay.visible = false
+	add_child(_banner_warp_overlay)
 
 	_top_bar = PanelContainer.new()
 	_top_bar.name = "TopBar"
@@ -623,46 +1140,243 @@ func _build_ui_hierarchy() -> void:
 	_auth_ctrl_box.name = "AuthLoginControls"
 	_auth_ctrl_box.visible = false
 
+	# SECTION 0: PRESETS & PERSISTENCE
+	var hdr_presets: Label = Label.new()
+	hdr_presets.text = "=== PRESETS & PERSISTENCE ==="
+	_auth_ctrl_box.add_child(hdr_presets)
+
+	_preset_status_lbl = Label.new()
+	_preset_status_lbl.text = "Preset: Ready"
+	_preset_status_lbl.modulate = Color(0.4, 0.9, 0.6, 1.0)
+	_auth_ctrl_box.add_child(_preset_status_lbl)
+
+	# Save Current & Restore Last Session Row
+	var p_row1: HBoxContainer = HBoxContainer.new()
+	_save_current_btn = Button.new()
+	_save_current_btn.text = "SAVE CURRENT"
+	_save_current_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_save_current_btn.pressed.connect(func():
+		var ok: bool = save_current()
+		if ok:
+			_preset_status_lbl.text = "Saved: last_session.json"
+			_preset_status_lbl.modulate = Color(0.4, 0.9, 0.6, 1.0)
+			_refresh_preset_dropdown()
+		else:
+			_preset_status_lbl.text = "Failed to save preset!"
+			_preset_status_lbl.modulate = Color(1.0, 0.4, 0.4, 1.0)
+	)
+	p_row1.add_child(_save_current_btn)
+
+	_restore_session_btn = Button.new()
+	_restore_session_btn.text = "RESTORE LAST SESSION"
+	_restore_session_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_restore_session_btn.pressed.connect(func():
+		var ok: bool = restore_last_session()
+		if ok:
+			_preset_status_lbl.text = "Restored: last_session.json"
+			_preset_status_lbl.modulate = Color(0.4, 0.9, 0.6, 1.0)
+		else:
+			_preset_status_lbl.text = "No last_session.json found!"
+			_preset_status_lbl.modulate = Color(1.0, 0.6, 0.3, 1.0)
+	)
+	p_row1.add_child(_restore_session_btn)
+	_auth_ctrl_box.add_child(p_row1)
+
+	# Save As Preset Row
+	var p_row2: HBoxContainer = HBoxContainer.new()
+	_save_as_name_edit = LineEdit.new()
+	_save_as_name_edit.placeholder_text = "preset_name"
+	_save_as_name_edit.text = "preset_custom"
+	_save_as_name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p_row2.add_child(_save_as_name_edit)
+
+	_save_as_btn = Button.new()
+	_save_as_btn.text = "SAVE AS"
+	_save_as_btn.custom_minimum_size = Vector2(90, 0)
+	_save_as_btn.pressed.connect(func():
+		var name_str: String = _save_as_name_edit.text.strip_edges()
+		if name_str.is_empty():
+			name_str = "preset_custom"
+		var ok: bool = save_as_preset(name_str)
+		if ok:
+			_preset_status_lbl.text = "Saved as: %s" % (name_str if name_str.ends_with(".json") else name_str + ".json")
+			_preset_status_lbl.modulate = Color(0.4, 0.9, 0.6, 1.0)
+			_refresh_preset_dropdown()
+		else:
+			_preset_status_lbl.text = "Failed to save as preset!"
+			_preset_status_lbl.modulate = Color(1.0, 0.4, 0.4, 1.0)
+	)
+	p_row2.add_child(_save_as_btn)
+	_auth_ctrl_box.add_child(p_row2)
+
+	# Load Preset Row
+	var p_row3: HBoxContainer = HBoxContainer.new()
+	_preset_dropdown = OptionButton.new()
+	_preset_dropdown.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p_row3.add_child(_preset_dropdown)
+
+	_load_preset_btn = Button.new()
+	_load_preset_btn.text = "LOAD PRESET"
+	_load_preset_btn.custom_minimum_size = Vector2(90, 0)
+	_load_preset_btn.pressed.connect(func():
+		if _preset_dropdown.item_count > 0:
+			var sel_idx: int = _preset_dropdown.selected
+			if sel_idx >= 0 and sel_idx < _preset_dropdown.item_count:
+				var fname: String = _preset_dropdown.get_item_text(sel_idx)
+				var ok: bool = load_preset(fname)
+				if ok:
+					_preset_status_lbl.text = "Loaded: %s" % fname
+					_preset_status_lbl.modulate = Color(0.4, 0.9, 0.6, 1.0)
+				else:
+					_preset_status_lbl.text = "Failed to load: %s" % fname
+					_preset_status_lbl.modulate = Color(1.0, 0.4, 0.4, 1.0)
+	)
+	p_row3.add_child(_load_preset_btn)
+	_auth_ctrl_box.add_child(p_row3)
+
+	# Auto-Save Toggle
+	_autosave_chk = CheckBox.new()
+	_autosave_chk.text = "Auto-save on edit"
+	_autosave_chk.button_pressed = _autosave_enabled
+	_autosave_chk.toggled.connect(func(t: bool):
+		set_autosave_enabled(t)
+		if not t:
+			_preset_status_lbl.text = "Auto-save disabled"
+		else:
+			_preset_status_lbl.text = "Auto-save enabled"
+	)
+	_auth_ctrl_box.add_child(_autosave_chk)
+
+	_refresh_preset_dropdown()
+
 	# SECTION 1: FOG CLUSTERS & TINT / BRIGHTNESS / SATURATION
 	var hdr_auth_fog: Label = Label.new(); hdr_auth_fog.text = "=== FOG CLUSTERS & SHADER ==="
 	_auth_ctrl_box.add_child(hdr_auth_fog)
 
 	var afog_op_lbl: Label = Label.new(); afog_op_lbl.text = "Fog Master Opacity (0..1):"
-	var afog_op_slider: HSlider = HSlider.new(); afog_op_slider.min_value = 0.0; afog_op_slider.max_value = 1.0; afog_op_slider.step = 0.02; afog_op_slider.value = AuthLoginBackground.DEFAULT_FOG_MASTER_OPACITY
-	afog_op_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_master_opacity = v)
-	_auth_ctrl_box.add_child(afog_op_lbl); _auth_ctrl_box.add_child(afog_op_slider)
+	_afog_op_slider = HSlider.new(); _afog_op_slider.min_value = 0.0; _afog_op_slider.max_value = 1.0; _afog_op_slider.step = 0.02; _afog_op_slider.value = AuthLoginBackground.DEFAULT_FOG_MASTER_OPACITY
+	_afog_op_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_master_opacity = v; schedule_autosave())
+	_auth_ctrl_box.add_child(afog_op_lbl); _auth_ctrl_box.add_child(_afog_op_slider)
 
 	var afog_bright_lbl: Label = Label.new(); afog_bright_lbl.text = "Fog Brightness (0.4..1.2):"
-	var afog_bright_slider: HSlider = HSlider.new(); afog_bright_slider.min_value = 0.4; afog_bright_slider.max_value = 1.2; afog_bright_slider.step = 0.05; afog_bright_slider.value = AuthLoginBackground.DEFAULT_FOG_BRIGHTNESS
-	afog_bright_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_brightness = v)
-	_auth_ctrl_box.add_child(afog_bright_lbl); _auth_ctrl_box.add_child(afog_bright_slider)
+	_afog_bright_slider = HSlider.new(); _afog_bright_slider.min_value = 0.4; _afog_bright_slider.max_value = 1.2; _afog_bright_slider.step = 0.05; _afog_bright_slider.value = AuthLoginBackground.DEFAULT_FOG_BRIGHTNESS
+	_afog_bright_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_brightness = v; schedule_autosave())
+	_auth_ctrl_box.add_child(afog_bright_lbl); _auth_ctrl_box.add_child(_afog_bright_slider)
 
 	var afog_sat_lbl: Label = Label.new(); afog_sat_lbl.text = "Fog Saturation (0.3..1.2):"
-	var afog_sat_slider: HSlider = HSlider.new(); afog_sat_slider.min_value = 0.3; afog_sat_slider.max_value = 1.2; afog_sat_slider.step = 0.05; afog_sat_slider.value = AuthLoginBackground.DEFAULT_FOG_SATURATION
-	afog_sat_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_saturation = v)
-	_auth_ctrl_box.add_child(afog_sat_lbl); _auth_ctrl_box.add_child(afog_sat_slider)
+	_afog_sat_slider = HSlider.new(); _afog_sat_slider.min_value = 0.3; _afog_sat_slider.max_value = 1.2; _afog_sat_slider.step = 0.05; _afog_sat_slider.value = AuthLoginBackground.DEFAULT_FOG_SATURATION
+	_afog_sat_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.fog_saturation = v; schedule_autosave())
+	_auth_ctrl_box.add_child(afog_sat_lbl); _auth_ctrl_box.add_child(_afog_sat_slider)
 
 	var afog_cnt_lbl: Label = Label.new(); afog_cnt_lbl.text = "Visible Cluster Count (1..20):"
-	var afog_cnt_spin: SpinBox = SpinBox.new(); afog_cnt_spin.min_value = 1; afog_cnt_spin.max_value = 20; afog_cnt_spin.value = AuthLoginBackground.DEFAULT_FOG_CLUSTER_COUNT
-	afog_cnt_spin.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.set_fog_cluster_count(int(v)))
-	_auth_ctrl_box.add_child(afog_cnt_lbl); _auth_ctrl_box.add_child(afog_cnt_spin)
+	_afog_cnt_spin = SpinBox.new(); _afog_cnt_spin.min_value = 1; _afog_cnt_spin.max_value = 20; _afog_cnt_spin.value = AuthLoginBackground.DEFAULT_FOG_CLUSTER_COUNT
+	_afog_cnt_spin.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.set_fog_cluster_count(int(v)); schedule_autosave())
+	_auth_ctrl_box.add_child(afog_cnt_lbl); _auth_ctrl_box.add_child(_afog_cnt_spin)
 
 	var reset_fog_btn: Button = Button.new(); reset_fog_btn.text = "RESET FOG DEFAULTS"
-	reset_fog_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.fog_master_opacity = AuthLoginBackground.DEFAULT_FOG_MASTER_OPACITY; _auth_bg_node.fog_brightness = AuthLoginBackground.DEFAULT_FOG_BRIGHTNESS; _auth_bg_node.fog_saturation = AuthLoginBackground.DEFAULT_FOG_SATURATION; _auth_bg_node.set_fog_cluster_count(AuthLoginBackground.DEFAULT_FOG_CLUSTER_COUNT))
+	reset_fog_btn.pressed.connect(func(): if _auth_bg_node: _auth_bg_node.fog_master_opacity = AuthLoginBackground.DEFAULT_FOG_MASTER_OPACITY; _auth_bg_node.fog_brightness = AuthLoginBackground.DEFAULT_FOG_BRIGHTNESS; _auth_bg_node.fog_saturation = AuthLoginBackground.DEFAULT_FOG_SATURATION; _auth_bg_node.set_fog_cluster_count(AuthLoginBackground.DEFAULT_FOG_CLUSTER_COUNT); _sync_all_auth_controls_from_bg())
 	_auth_ctrl_box.add_child(reset_fog_btn)
-
-	# SECTION 2: BANNER A & BANNER B (Brightness + 16 4-Corner Warp Controls)
-	var hdr_banner: Label = Label.new(); hdr_banner.text = "=== REAL BANNERS & 4-CORNER WARP ==="
+	# SECTION 2: BANNER A, B & C (Direct Visual Warp + Collapsible Advanced Section)
+	var hdr_banner: Label = Label.new()
+	hdr_banner.text = "=== REAL BANNERS & VISUAL WARP ==="
 	_auth_ctrl_box.add_child(hdr_banner)
 
-	var ban_a_bright_lbl: Label = Label.new(); ban_a_bright_lbl.text = "Banner A Brightness (0.4..1.6):"
-	var ban_a_bright_slider: HSlider = HSlider.new(); ban_a_bright_slider.min_value = 0.4; ban_a_bright_slider.max_value = 1.6; ban_a_bright_slider.step = 0.05; ban_a_bright_slider.value = AuthLoginBackground.DEFAULT_BANNER_A_BRIGHTNESS
-	ban_a_bright_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_a_brightness = v)
-	_auth_ctrl_box.add_child(ban_a_bright_lbl); _auth_ctrl_box.add_child(ban_a_bright_slider)
+	# Active Banner Status Indicator
+	_banner_sel_status_label = Label.new()
+	_banner_sel_status_label.text = "Active Banner: NONE (Click canvas or button below)"
+	_banner_sel_status_label.modulate = Color(0.75, 0.85, 0.95, 1.0)
+	_auth_ctrl_box.add_child(_banner_sel_status_label)
 
-	# BANNER A WARP CONTROLS (8 SpinBoxes)
-	var hdr_ban_a_warp: Label = Label.new(); hdr_ban_a_warp.text = "--- BANNER A WARP ---"
-	_auth_ctrl_box.add_child(hdr_ban_a_warp)
+	# Quick Select Buttons Row
+	var sel_btn_row: HBoxContainer = HBoxContainer.new()
+	var sel_a_btn: Button = Button.new()
+	sel_a_btn.text = "Select Banner A"
+	sel_a_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sel_a_btn.pressed.connect(func(): select_banner_a())
+	sel_btn_row.add_child(sel_a_btn)
+
+	var sel_b_btn: Button = Button.new()
+	sel_b_btn.text = "Select Banner B"
+	sel_b_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sel_b_btn.pressed.connect(func(): select_banner_b())
+	sel_btn_row.add_child(sel_b_btn)
+
+	var sel_c_btn: Button = Button.new()
+	sel_c_btn.text = "Select Banner C"
+	sel_c_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sel_c_btn.pressed.connect(func(): select_banner_c())
+	sel_btn_row.add_child(sel_c_btn)
+
+	var desel_btn: Button = Button.new()
+	desel_btn.text = "Deselect"
+	desel_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	desel_btn.pressed.connect(func(): deselect_banner())
+	sel_btn_row.add_child(desel_btn)
+	_auth_ctrl_box.add_child(sel_btn_row)
+
+	# Interactive Usage Hint
+	var warp_hint_lbl: Label = Label.new()
+	warp_hint_lbl.text = "Direct Mouse Interaction:\n  • Click banner on canvas to select\n  • Drag 4 corner handles (TL/TR/BL/BR) to warp\n  • Drag inside quad to translate entire banner\n  • Click empty space to deselect"
+	warp_hint_lbl.modulate = Color(0.7, 0.85, 1.0, 0.85)
+	_auth_ctrl_box.add_child(warp_hint_lbl)
+
+	# Independent Reset Buttons
+	var reset_row: HBoxContainer = HBoxContainer.new()
+	var reset_ban_a_btn: Button = Button.new()
+	reset_ban_a_btn.text = "Reset Banner A"
+	reset_ban_a_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	reset_ban_a_btn.pressed.connect(func(): reset_banner_a())
+	reset_row.add_child(reset_ban_a_btn)
+
+	var reset_ban_b_btn: Button = Button.new()
+	reset_ban_b_btn.text = "Reset Banner B"
+	reset_ban_b_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	reset_ban_b_btn.pressed.connect(func(): reset_banner_b())
+	reset_row.add_child(reset_ban_b_btn)
+
+	var reset_ban_c_btn: Button = Button.new()
+	reset_ban_c_btn.text = "Reset Banner C"
+	reset_ban_c_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	reset_ban_c_btn.pressed.connect(func(): reset_banner_c())
+	reset_row.add_child(reset_ban_c_btn)
+	_auth_ctrl_box.add_child(reset_row)
+
+	var reset_both_btn: Button = Button.new()
+	reset_both_btn.text = "[ RESET ALL BANNERS ]"
+	reset_both_btn.pressed.connect(func(): reset_all_banners())
+	_auth_ctrl_box.add_child(reset_both_btn)
+
+	# Brightness Controls
+	var ban_a_bright_lbl: Label = Label.new(); ban_a_bright_lbl.text = "Banner A Brightness (0.4..1.6):"
+	_ban_a_bright_slider = HSlider.new(); _ban_a_bright_slider.min_value = 0.4; _ban_a_bright_slider.max_value = 1.6; _ban_a_bright_slider.step = 0.05; _ban_a_bright_slider.value = AuthLoginBackground.DEFAULT_BANNER_A_BRIGHTNESS
+	_ban_a_bright_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_a_brightness = v; schedule_autosave())
+	_auth_ctrl_box.add_child(ban_a_bright_lbl); _auth_ctrl_box.add_child(_ban_a_bright_slider)
+
+	var ban_b_bright_lbl: Label = Label.new(); ban_b_bright_lbl.text = "Banner B Brightness (0.4..1.6):"
+	_ban_b_bright_slider = HSlider.new(); _ban_b_bright_slider.min_value = 0.4; _ban_b_bright_slider.max_value = 1.6; _ban_b_bright_slider.step = 0.05; _ban_b_bright_slider.value = AuthLoginBackground.DEFAULT_BANNER_B_BRIGHTNESS
+	_ban_b_bright_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_b_brightness = v; schedule_autosave())
+	_auth_ctrl_box.add_child(ban_b_bright_lbl); _auth_ctrl_box.add_child(_ban_b_bright_slider)
+
+	var ban_c_bright_lbl: Label = Label.new(); ban_c_bright_lbl.text = "Banner C Brightness (0.4..1.6):"
+	_ban_c_bright_slider = HSlider.new(); _ban_c_bright_slider.min_value = 0.4; _ban_c_bright_slider.max_value = 1.6; _ban_c_bright_slider.step = 0.05; _ban_c_bright_slider.value = AuthLoginBackground.DEFAULT_BANNER_C_BRIGHTNESS
+	_ban_c_bright_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_c_brightness = v; schedule_autosave())
+	_auth_ctrl_box.add_child(ban_c_bright_lbl); _auth_ctrl_box.add_child(_ban_c_bright_slider)
+
+	# Collapsible Advanced Warp SpinBoxes (Preserved for compatibility & exact debugging, collapsed by default)
+	_adv_toggle_btn = Button.new()
+	_adv_toggle_btn.text = "▶ ADVANCED / PRECISE VALUES (Collapsed)"
+	_adv_toggle_btn.pressed.connect(func():
+		_adv_warp_box.visible = not _adv_warp_box.visible
+		_adv_toggle_btn.text = "▼ ADVANCED / PRECISE VALUES (Expanded)" if _adv_warp_box.visible else "▶ ADVANCED / PRECISE VALUES (Collapsed)"
+	)
+	_auth_ctrl_box.add_child(_adv_toggle_btn)
+
+	_adv_warp_box = VBoxContainer.new()
+	_adv_warp_box.name = "AdvancedWarpBox"
+	_adv_warp_box.visible = false
+
+	var hdr_ban_a_warp: Label = Label.new(); hdr_ban_a_warp.text = "--- BANNER A WARP (8 Controls) ---"
+	_adv_warp_box.add_child(hdr_ban_a_warp)
 	_ban_a_warp_spins.clear()
 
 	for corner in ["TL", "TR", "BL", "BR"]:
@@ -687,26 +1401,12 @@ func _build_ui_hierarchy() -> void:
 				setter_x = func(v): if _auth_bg_node: _auth_bg_node.banner_a_warp_br = Vector2(v, _auth_bg_node.banner_a_warp_br.y)
 				setter_y = func(v): if _auth_bg_node: _auth_bg_node.banner_a_warp_br = Vector2(_auth_bg_node.banner_a_warp_br.x, v)
 		var res: Dictionary = _create_warp_corner_row(corner, getter, setter_x, setter_y)
-		_auth_ctrl_box.add_child(res["row"] as Control)
+		_adv_warp_box.add_child(res["row"] as Control)
 		_ban_a_warp_spins.append(res["spin_x"] as SpinBox)
 		_ban_a_warp_spins.append(res["spin_y"] as SpinBox)
 
-	var reset_ban_a_btn: Button = Button.new(); reset_ban_a_btn.text = "RESET BANNER A WARP"
-	reset_ban_a_btn.pressed.connect(func():
-		if _auth_bg_node: _auth_bg_node.reset_banner_a_warp()
-		for s in _ban_a_warp_spins:
-			if s != null: s.set_value_no_signal(0.0)
-	)
-	_auth_ctrl_box.add_child(reset_ban_a_btn)
-
-	var ban_b_bright_lbl: Label = Label.new(); ban_b_bright_lbl.text = "Banner B Brightness (0.4..1.6):"
-	var ban_b_bright_slider: HSlider = HSlider.new(); ban_b_bright_slider.min_value = 0.4; ban_b_bright_slider.max_value = 1.6; ban_b_bright_slider.step = 0.05; ban_b_bright_slider.value = AuthLoginBackground.DEFAULT_BANNER_B_BRIGHTNESS
-	ban_b_bright_slider.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.banner_b_brightness = v)
-	_auth_ctrl_box.add_child(ban_b_bright_lbl); _auth_ctrl_box.add_child(ban_b_bright_slider)
-
-	# BANNER B WARP CONTROLS (8 SpinBoxes)
-	var hdr_ban_b_warp: Label = Label.new(); hdr_ban_b_warp.text = "--- BANNER B WARP ---"
-	_auth_ctrl_box.add_child(hdr_ban_b_warp)
+	var hdr_ban_b_warp: Label = Label.new(); hdr_ban_b_warp.text = "--- BANNER B WARP (8 Controls) ---"
+	_adv_warp_box.add_child(hdr_ban_b_warp)
 	_ban_b_warp_spins.clear()
 
 	for corner in ["TL", "TR", "BL", "BR"]:
@@ -731,37 +1431,170 @@ func _build_ui_hierarchy() -> void:
 				setter_x = func(v): if _auth_bg_node: _auth_bg_node.banner_b_warp_br = Vector2(v, _auth_bg_node.banner_b_warp_br.y)
 				setter_y = func(v): if _auth_bg_node: _auth_bg_node.banner_b_warp_br = Vector2(_auth_bg_node.banner_b_warp_br.x, v)
 		var res: Dictionary = _create_warp_corner_row(corner, getter, setter_x, setter_y)
-		_auth_ctrl_box.add_child(res["row"] as Control)
+		_adv_warp_box.add_child(res["row"] as Control)
 		_ban_b_warp_spins.append(res["spin_x"] as SpinBox)
 		_ban_b_warp_spins.append(res["spin_y"] as SpinBox)
 
-	var reset_ban_b_btn: Button = Button.new(); reset_ban_b_btn.text = "RESET BANNER B WARP"
-	reset_ban_b_btn.pressed.connect(func():
-		if _auth_bg_node: _auth_bg_node.reset_banner_b_warp()
-		for s in _ban_b_warp_spins:
-			if s != null: s.set_value_no_signal(0.0)
+	var hdr_ban_c_warp: Label = Label.new(); hdr_ban_c_warp.text = "--- BANNER C WARP (8 Controls) ---"
+	_adv_warp_box.add_child(hdr_ban_c_warp)
+	_ban_c_warp_spins.clear()
+
+	for corner in ["TL", "TR", "BL", "BR"]:
+		var getter: Callable
+		var setter_x: Callable
+		var setter_y: Callable
+		match corner:
+			"TL":
+				getter = func(): return _auth_bg_node.banner_c_warp_tl if _auth_bg_node else Vector2.ZERO
+				setter_x = func(v): if _auth_bg_node: _auth_bg_node.banner_c_warp_tl = Vector2(v, _auth_bg_node.banner_c_warp_tl.y)
+				setter_y = func(v): if _auth_bg_node: _auth_bg_node.banner_c_warp_tl = Vector2(_auth_bg_node.banner_c_warp_tl.x, v)
+			"TR":
+				getter = func(): return _auth_bg_node.banner_c_warp_tr if _auth_bg_node else Vector2.ZERO
+				setter_x = func(v): if _auth_bg_node: _auth_bg_node.banner_c_warp_tr = Vector2(v, _auth_bg_node.banner_c_warp_tr.y)
+				setter_y = func(v): if _auth_bg_node: _auth_bg_node.banner_c_warp_tr = Vector2(_auth_bg_node.banner_c_warp_tr.x, v)
+			"BL":
+				getter = func(): return _auth_bg_node.banner_c_warp_bl if _auth_bg_node else Vector2.ZERO
+				setter_x = func(v): if _auth_bg_node: _auth_bg_node.banner_c_warp_bl = Vector2(v, _auth_bg_node.banner_c_warp_bl.y)
+				setter_y = func(v): if _auth_bg_node: _auth_bg_node.banner_c_warp_bl = Vector2(_auth_bg_node.banner_c_warp_bl.x, v)
+			"BR":
+				getter = func(): return _auth_bg_node.banner_c_warp_br if _auth_bg_node else Vector2.ZERO
+				setter_x = func(v): if _auth_bg_node: _auth_bg_node.banner_c_warp_br = Vector2(v, _auth_bg_node.banner_c_warp_br.y)
+				setter_y = func(v): if _auth_bg_node: _auth_bg_node.banner_c_warp_br = Vector2(_auth_bg_node.banner_c_warp_br.x, v)
+		var res: Dictionary = _create_warp_corner_row(corner, getter, setter_x, setter_y)
+		_adv_warp_box.add_child(res["row"] as Control)
+		_ban_c_warp_spins.append(res["spin_x"] as SpinBox)
+		_ban_c_warp_spins.append(res["spin_y"] as SpinBox)
+
+	_auth_ctrl_box.add_child(_adv_warp_box)
+
+	# SECTION 3: LOCAL LIGHT SPOTS (Procedural Environmental Illumination)
+	var hdr_lights: Label = Label.new()
+	hdr_lights.text = "=== LOCAL LIGHT SPOTS ==="
+	_auth_ctrl_box.add_child(hdr_lights)
+
+	_light_status_lbl = Label.new()
+	_light_status_lbl.text = "Lights: 0 / 16 (Click '+ LIGHT SPOT' then click canvas)"
+	_light_status_lbl.modulate = Color(0.7, 0.9, 1.0, 1.0)
+	_auth_ctrl_box.add_child(_light_status_lbl)
+
+	var light_action_row: HBoxContainer = HBoxContainer.new()
+	_add_light_btn = Button.new()
+	_add_light_btn.text = "+ LIGHT SPOT"
+	_add_light_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_add_light_btn.pressed.connect(func(): start_adding_light_spot())
+	light_action_row.add_child(_add_light_btn)
+
+	_light_del_btn = Button.new()
+	_light_del_btn.text = "DELETE LIGHT"
+	_light_del_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_light_del_btn.disabled = true
+	_light_del_btn.pressed.connect(func(): delete_active_light())
+	light_action_row.add_child(_light_del_btn)
+
+	var reset_lights_btn: Button = Button.new()
+	reset_lights_btn.text = "RESET LIGHTS"
+	reset_lights_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	reset_lights_btn.pressed.connect(func(): reset_lights())
+	light_action_row.add_child(reset_lights_btn)
+	_auth_ctrl_box.add_child(light_action_row)
+
+	# Compact Light Selection Grid Container (Wrapped 5 columns)
+	_light_list_container = GridContainer.new()
+	_light_list_container.columns = 5
+	_auth_ctrl_box.add_child(_light_list_container)
+
+	# Selected Light Editor Box
+	_light_editor_box = VBoxContainer.new()
+	_light_editor_box.visible = false
+
+	var hdr_sel_light: Label = Label.new()
+	hdr_sel_light.text = "--- SELECTED LIGHT PROPERTIES ---"
+	_light_editor_box.add_child(hdr_sel_light)
+
+	var int_lbl: Label = Label.new(); int_lbl.text = "Intensity (0.0 .. 2.5):"
+	_light_intensity_slider = HSlider.new()
+	_light_intensity_slider.min_value = 0.0
+	_light_intensity_slider.max_value = 2.5
+	_light_intensity_slider.step = 0.05
+	_light_intensity_slider.value = 1.0
+	_light_intensity_slider.value_changed.connect(func(v):
+		if _active_light_index >= 0 and _auth_bg_node:
+			_auth_bg_node.set_light_spot_intensity(_active_light_index, v)
+			if _banner_warp_overlay: _banner_warp_overlay.queue_redraw()
+			schedule_autosave()
 	)
-	_auth_ctrl_box.add_child(reset_ban_b_btn)
+	_light_editor_box.add_child(int_lbl); _light_editor_box.add_child(_light_intensity_slider)
+
+	var soft_lbl: Label = Label.new(); soft_lbl.text = "Softness / Falloff (0.2 .. 2.0):"
+	_light_softness_slider = HSlider.new()
+	_light_softness_slider.min_value = 0.2
+	_light_softness_slider.max_value = 2.0
+	_light_softness_slider.step = 0.05
+	_light_softness_slider.value = 0.8
+	_light_softness_slider.value_changed.connect(func(v):
+		if _active_light_index >= 0 and _auth_bg_node:
+			_auth_bg_node.set_light_spot_softness(_active_light_index, v)
+			if _banner_warp_overlay: _banner_warp_overlay.queue_redraw()
+			schedule_autosave()
+	)
+	_light_editor_box.add_child(soft_lbl); _light_editor_box.add_child(_light_softness_slider)
+
+	var rad_lbl: Label = Label.new(); rad_lbl.text = "Radius (20 .. 500 px):"
+	_light_radius_slider = HSlider.new()
+	_light_radius_slider.min_value = 20.0
+	_light_radius_slider.max_value = 500.0
+	_light_radius_slider.step = 5.0
+	_light_radius_slider.value = 140.0
+	_light_radius_slider.value_changed.connect(func(v):
+		if _active_light_index >= 0 and _auth_bg_node:
+			_auth_bg_node.set_light_spot_radius(_active_light_index, v)
+			if _banner_warp_overlay: _banner_warp_overlay.queue_redraw()
+			schedule_autosave()
+	)
+	_light_editor_box.add_child(rad_lbl); _light_editor_box.add_child(_light_radius_slider)
+
+	var col_lbl: Label = Label.new(); col_lbl.text = "Color Palette Presets:"
+	_light_editor_box.add_child(col_lbl)
+
+	var col_row: HBoxContainer = HBoxContainer.new()
+	var cyan_btn: Button = Button.new(); cyan_btn.text = "Cyan"; cyan_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cyan_btn.pressed.connect(func(): _set_active_light_color(Color(0.25, 0.75, 1.0, 1.0)))
+	col_row.add_child(cyan_btn)
+
+	var amber_btn: Button = Button.new(); amber_btn.text = "Gold"; amber_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	amber_btn.pressed.connect(func(): _set_active_light_color(Color(1.0, 0.8, 0.3, 1.0)))
+	col_row.add_child(amber_btn)
+
+	var white_btn: Button = Button.new(); white_btn.text = "White"; white_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	white_btn.pressed.connect(func(): _set_active_light_color(Color(1.0, 1.0, 1.0, 1.0)))
+	col_row.add_child(white_btn)
+
+	var violet_btn: Button = Button.new(); violet_btn.text = "Violet"; violet_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	violet_btn.pressed.connect(func(): _set_active_light_color(Color(0.75, 0.4, 1.0, 1.0)))
+	col_row.add_child(violet_btn)
+	_light_editor_box.add_child(col_row)
+
+	_auth_ctrl_box.add_child(_light_editor_box)
 
 	# SECTION 3: REAL PIXEL ART PARTICLES
 	var hdr_part: Label = Label.new(); hdr_part.text = "=== REAL PIXEL ART PARTICLES ==="
 	_auth_ctrl_box.add_child(hdr_part)
 
 	var part_type_lbl: Label = Label.new(); part_type_lbl.text = "Particle Type:"
-	var part_type_opt: OptionButton = OptionButton.new()
-	part_type_opt.add_item("MIXED", 0); part_type_opt.add_item("STAR", 1); part_type_opt.add_item("ORB", 2); part_type_opt.add_item("SPARKLE", 3)
-	part_type_opt.select(0)
-	part_type_opt.item_selected.connect(func(idx): if _auth_bg_node: _auth_bg_node.set_particle_type(part_type_opt.get_item_text(idx)))
-	_auth_ctrl_box.add_child(part_type_lbl); _auth_ctrl_box.add_child(part_type_opt)
+	_part_type_opt = OptionButton.new()
+	_part_type_opt.add_item("MIXED", 0); _part_type_opt.add_item("STAR", 1); _part_type_opt.add_item("ORB", 2); _part_type_opt.add_item("SPARKLE", 3)
+	_part_type_opt.select(0)
+	_part_type_opt.item_selected.connect(func(idx): if _auth_bg_node: _auth_bg_node.set_particle_type(_part_type_opt.get_item_text(idx)); schedule_autosave())
+	_auth_ctrl_box.add_child(part_type_lbl); _auth_ctrl_box.add_child(_part_type_opt)
 
-	var dust_chk: CheckBox = CheckBox.new(); dust_chk.text = "Particles Enabled"; dust_chk.button_pressed = true
-	dust_chk.toggled.connect(func(t): if _auth_bg_node: _auth_bg_node.dust_enabled = t)
-	_auth_ctrl_box.add_child(dust_chk)
+	_dust_chk = CheckBox.new(); _dust_chk.text = "Particles Enabled"; _dust_chk.button_pressed = true
+	_dust_chk.toggled.connect(func(t): if _auth_bg_node: _auth_bg_node.dust_enabled = t; schedule_autosave())
+	_auth_ctrl_box.add_child(_dust_chk)
 
 	var dust_cnt_lbl: Label = Label.new(); dust_cnt_lbl.text = "Particle Count (1..50):"
-	var dust_cnt_spin: SpinBox = SpinBox.new(); dust_cnt_spin.min_value = 1; dust_cnt_spin.max_value = 50; dust_cnt_spin.value = AuthLoginBackground.DEFAULT_DUST_COUNT
-	dust_cnt_spin.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.set_particle_count(int(v)))
-	_auth_ctrl_box.add_child(dust_cnt_lbl); _auth_ctrl_box.add_child(dust_cnt_spin)
+	_dust_cnt_spin = SpinBox.new(); _dust_cnt_spin.min_value = 1; _dust_cnt_spin.max_value = 50; _dust_cnt_spin.value = AuthLoginBackground.DEFAULT_DUST_COUNT
+	_dust_cnt_spin.value_changed.connect(func(v): if _auth_bg_node: _auth_bg_node.set_particle_count(int(v)); schedule_autosave())
+	_auth_ctrl_box.add_child(dust_cnt_lbl); _auth_ctrl_box.add_child(_dust_cnt_spin)
 
 	# SECTION 4: GLOBAL PLAYBACK
 	var auth_act_hdr: Label = Label.new(); auth_act_hdr.text = "=== GLOBAL PLAYBACK ==="
@@ -779,6 +1612,9 @@ func _build_ui_hierarchy() -> void:
 			if s != null: s.set_value_no_signal(0.0)
 		for s in _ban_b_warp_spins:
 			if s != null: s.set_value_no_signal(0.0)
+		for s in _ban_c_warp_spins:
+			if s != null: s.set_value_no_signal(0.0)
+		_update_light_ui()
 	)
 	_auth_ctrl_box.add_child(reset_auth_btn)
 
@@ -790,12 +1626,14 @@ func _build_ui_hierarchy() -> void:
 
 	_diag_panel = PanelContainer.new()
 	_diag_panel.name = "DiagPanel"
+	_diag_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_diag_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_diag_panel.offset_left = -380.0
 	_diag_panel.offset_top = 48.0
 	_diag_panel.offset_right = -16.0
 
 	_diag_label = Label.new(); _diag_label.text = "VISUAL LAB DIAGNOSTICS"
+	_diag_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_diag_panel.add_child(_diag_label)
 	add_child(_diag_panel)
 
@@ -854,9 +1692,19 @@ func _apply_parameters() -> void:
 		_update_procedural_motion()
 
 func set_lab_mode(mode: LabMode) -> void:
+	if _ctrl_panel == null:
+		_build_ui_hierarchy()
 	_current_lab_mode = mode
+	if _current_lab_mode == LabMode.AUTH_LOGIN_BG:
+		if not _auth_session_loaded:
+			_auth_session_loaded = true
+			if _should_autoload_session() and has_last_session():
+				restore_last_session()
 	if _auth_ctrl_box != null:
 		_auth_ctrl_box.visible = (_current_lab_mode == LabMode.AUTH_LOGIN_BG)
+	if _banner_warp_overlay != null:
+		_banner_warp_overlay.visible = (_current_lab_mode == LabMode.AUTH_LOGIN_BG)
+		_banner_warp_overlay.queue_redraw()
 	if _fog_source_box != null:
 		_fog_source_box.visible = (_current_lab_mode == LabMode.FOG_TEST)
 	if _play_pause_btn != null:
@@ -868,6 +1716,34 @@ func set_lab_mode(mode: LabMode) -> void:
 		_proc_ctrl_box.visible = (_current_lab_mode == LabMode.FOG_TEST and _fog_source_mode == FogSourceMode.NEW_PROCEDURAL_LAYER)
 	if _old_ctrl_box != null:
 		_old_ctrl_box.visible = (_current_lab_mode == LabMode.FOG_TEST and _fog_source_mode == FogSourceMode.OLD_ATLAS_8F)
+
+	if _ctrl_panel != null and _diag_panel != null:
+		if _current_lab_mode == LabMode.AUTH_LOGIN_BG:
+			# Dock control panel on the right so left-side banners are completely unobstructed
+			_ctrl_panel.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
+			_ctrl_panel.offset_left = -360.0
+			_ctrl_panel.offset_right = 0.0
+			_ctrl_panel.offset_top = 48.0
+			_ctrl_panel.offset_bottom = -16.0
+			# Place diagnostics at bottom left
+			_diag_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+			_diag_panel.offset_left = 16.0
+			_diag_panel.offset_top = -280.0
+			_diag_panel.offset_right = 440.0
+			_diag_panel.offset_bottom = -16.0
+		else:
+			# Default left dock for D1 fog lab
+			_ctrl_panel.set_anchors_preset(Control.PRESET_LEFT_WIDE)
+			_ctrl_panel.offset_left = 0.0
+			_ctrl_panel.offset_right = 360.0
+			_ctrl_panel.offset_top = 48.0
+			_ctrl_panel.offset_bottom = -16.0
+			# Default top right for diagnostics
+			_diag_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+			_diag_panel.offset_left = -380.0
+			_diag_panel.offset_top = 48.0
+			_diag_panel.offset_right = -16.0
+			_diag_panel.offset_bottom = 0.0
 
 	_apply_parameters()
 
@@ -1183,15 +2059,267 @@ func reset_defaults() -> void:
 	if _fog_source_option != null: _fog_source_option.select(0)
 	if _motion_option != null: _motion_option.select(0)
 
+	cancel_autosave()
 	if _auth_bg_node != null:
 		_auth_bg_node.reset_defaults()
+
+	_banner_selection = BannerSelection.NONE
+	_update_banner_sel_ui()
+	_sync_all_auth_controls_from_bg()
+	if _banner_warp_overlay != null:
+		_banner_warp_overlay.queue_redraw()
 
 	for s in _ban_a_warp_spins:
 		if s != null: s.set_value_no_signal(0.0)
 	for s in _ban_b_warp_spins:
 		if s != null: s.set_value_no_signal(0.0)
+	for s in _ban_c_warp_spins:
+		if s != null: s.set_value_no_signal(0.0)
 
 	_apply_parameters()
+
+# Direct Banner Warp Manipulation & Selection Accessors
+func get_banner_selection() -> BannerSelection:
+	return _banner_selection
+
+func set_banner_selection(sel: BannerSelection) -> void:
+	_banner_selection = sel
+	_update_banner_sel_ui()
+	if _banner_warp_overlay != null:
+		_banner_warp_overlay.queue_redraw()
+
+func select_banner_a() -> void:
+	set_banner_selection(BannerSelection.BANNER_A)
+
+func select_banner_b() -> void:
+	set_banner_selection(BannerSelection.BANNER_B)
+
+func select_banner_c() -> void:
+	set_banner_selection(BannerSelection.BANNER_C)
+
+func deselect_banner() -> void:
+	set_banner_selection(BannerSelection.NONE)
+
+func reset_banner_a() -> void:
+	if _auth_bg_node != null:
+		_auth_bg_node.reset_banner_a_warp()
+	_sync_spinboxes_from_bg()
+	if _banner_warp_overlay != null:
+		_banner_warp_overlay.queue_redraw()
+
+func reset_banner_b() -> void:
+	if _auth_bg_node != null:
+		_auth_bg_node.reset_banner_b_warp()
+	_sync_spinboxes_from_bg()
+	if _banner_warp_overlay != null:
+		_banner_warp_overlay.queue_redraw()
+
+func reset_banner_c() -> void:
+	if _auth_bg_node != null:
+		_auth_bg_node.reset_banner_c_warp()
+	_sync_spinboxes_from_bg()
+	if _banner_warp_overlay != null:
+		_banner_warp_overlay.queue_redraw()
+
+func reset_all_banners() -> void:
+	if _auth_bg_node != null:
+		_auth_bg_node.reset_all_banners_warp()
+	_sync_spinboxes_from_bg()
+	if _banner_warp_overlay != null:
+		_banner_warp_overlay.queue_redraw()
+
+func reset_both_banners() -> void:
+	reset_all_banners()
+
+# Local Light Spots Management & Accessors
+func start_adding_light_spot() -> void:
+	if _is_adding_light_spot:
+		cancel_adding_light_spot()
+		return
+	_is_adding_light_spot = true
+	_banner_selection = BannerSelection.NONE
+	_update_banner_sel_ui()
+	if _add_light_btn != null:
+		_add_light_btn.text = "CANCEL PLACEMENT"
+	if _light_status_lbl != null:
+		_light_status_lbl.text = "Click anywhere on canvas to place light spot"
+		_light_status_lbl.modulate = Color(1.0, 0.9, 0.3, 1.0)
+	if _banner_warp_overlay != null:
+		_banner_warp_overlay.queue_redraw()
+
+func cancel_adding_light_spot() -> void:
+	_is_adding_light_spot = false
+	if _add_light_btn != null:
+		_add_light_btn.text = "+ LIGHT SPOT"
+	_update_light_ui()
+	if _banner_warp_overlay != null:
+		_banner_warp_overlay.queue_redraw()
+
+func is_adding_light_spot() -> bool:
+	return _is_adding_light_spot
+
+func select_light(idx: int) -> void:
+	_is_adding_light_spot = false
+	if _add_light_btn != null:
+		_add_light_btn.text = "+ LIGHT SPOT"
+	_active_light_index = idx
+	_banner_selection = BannerSelection.NONE
+	_update_banner_sel_ui()
+	_update_light_ui()
+	if _banner_warp_overlay != null:
+		_banner_warp_overlay.queue_redraw()
+
+func deselect_light() -> void:
+	_active_light_index = -1
+	_update_light_ui()
+	if _banner_warp_overlay != null:
+		_banner_warp_overlay.queue_redraw()
+
+func get_active_light_index() -> int:
+	return _active_light_index
+
+func get_light_count() -> int:
+	if _auth_bg_node != null:
+		return _auth_bg_node.get_light_spot_count()
+	return 0
+
+func delete_active_light() -> void:
+	if _active_light_index >= 0 and _auth_bg_node != null:
+		_auth_bg_node.remove_light_spot(_active_light_index)
+		_active_light_index = -1
+		_update_light_ui()
+		if _banner_warp_overlay != null:
+			_banner_warp_overlay.queue_redraw()
+		schedule_autosave()
+
+func reset_lights() -> void:
+	cancel_autosave()
+	if _auth_bg_node != null:
+		_auth_bg_node.reset_lights()
+	_active_light_index = -1
+	_is_adding_light_spot = false
+	if _add_light_btn != null:
+		_add_light_btn.text = "+ LIGHT SPOT"
+	_update_light_ui()
+	if _banner_warp_overlay != null:
+		_banner_warp_overlay.queue_redraw()
+
+func _set_active_light_color(col: Color) -> void:
+	if _active_light_index >= 0 and _auth_bg_node != null:
+		_auth_bg_node.set_light_spot_color(_active_light_index, col)
+		if _banner_warp_overlay != null:
+			_banner_warp_overlay.queue_redraw()
+		schedule_autosave()
+
+func _update_light_ui() -> void:
+	if _auth_bg_node == null:
+		return
+	var count: int = _auth_bg_node.get_light_spot_count()
+	if _light_status_lbl != null:
+		if _active_light_index >= 0 and _active_light_index < count:
+			var cur_l: Dictionary = _auth_bg_node.get_light_spot(_active_light_index)
+			_light_status_lbl.text = "Active: Light %d (R=%.0f, Int=%.2f) - Drag center to move, 'R' to resize" % [
+				_active_light_index + 1, cur_l.get("radius", 140.0), cur_l.get("intensity", 1.0)
+			]
+			_light_status_lbl.modulate = Color(0.35, 0.95, 1.0, 1.0)
+		else:
+			_light_status_lbl.text = "Lights: %d / 16 (Click '+ LIGHT SPOT' or select light)" % count
+			_light_status_lbl.modulate = Color(0.7, 0.9, 1.0, 1.0)
+
+	if _light_del_btn != null:
+		_light_del_btn.disabled = (_active_light_index < 0 or _active_light_index >= count)
+
+	if _light_editor_box != null:
+		var has_sel: bool = (_active_light_index >= 0 and _active_light_index < count)
+		_light_editor_box.visible = has_sel
+		if has_sel:
+			var lspot: Dictionary = _auth_bg_node.get_light_spot(_active_light_index)
+			if _light_intensity_slider != null:
+				_light_intensity_slider.set_value_no_signal(lspot.get("intensity", 1.0))
+			if _light_softness_slider != null:
+				_light_softness_slider.set_value_no_signal(lspot.get("softness", 0.8))
+			if _light_radius_slider != null:
+				_light_radius_slider.set_value_no_signal(lspot.get("radius", 140.0))
+
+	if _light_list_container != null:
+		for c in _light_list_container.get_children():
+			_light_list_container.remove_child(c)
+			c.queue_free()
+		for i in range(count):
+			var l_btn: Button = Button.new()
+			l_btn.name = "LightBtn_%d" % (i + 1)
+			l_btn.text = "L%d" % (i + 1)
+			l_btn.custom_minimum_size = Vector2(40, 28)
+			if i == _active_light_index:
+				l_btn.modulate = Color(0.3, 0.9, 1.0, 1.0)
+			else:
+				l_btn.modulate = Color(0.8, 0.8, 0.8, 0.8)
+			var idx_capture: int = i
+			l_btn.pressed.connect(func(): select_light(idx_capture))
+			_light_list_container.add_child(l_btn)
+
+func get_banner_warp_overlay() -> Control:
+	if _banner_warp_overlay == null and _ctrl_panel == null:
+		_build_ui_hierarchy()
+	return _banner_warp_overlay
+
+func get_advanced_warp_box() -> VBoxContainer:
+	if _adv_warp_box == null and _ctrl_panel == null:
+		_build_ui_hierarchy()
+	return _adv_warp_box
+
+func get_advanced_toggle_button() -> Button:
+	if _adv_toggle_btn == null and _ctrl_panel == null:
+		_build_ui_hierarchy()
+	return _adv_toggle_btn
+
+func _sync_spinboxes_from_bg() -> void:
+	if _auth_bg_node == null:
+		return
+	if _ban_a_warp_spins.size() >= 8:
+		_ban_a_warp_spins[0].set_value_no_signal(_auth_bg_node.banner_a_warp_tl.x)
+		_ban_a_warp_spins[1].set_value_no_signal(_auth_bg_node.banner_a_warp_tl.y)
+		_ban_a_warp_spins[2].set_value_no_signal(_auth_bg_node.banner_a_warp_tr.x)
+		_ban_a_warp_spins[3].set_value_no_signal(_auth_bg_node.banner_a_warp_tr.y)
+		_ban_a_warp_spins[4].set_value_no_signal(_auth_bg_node.banner_a_warp_bl.x)
+		_ban_a_warp_spins[5].set_value_no_signal(_auth_bg_node.banner_a_warp_bl.y)
+		_ban_a_warp_spins[6].set_value_no_signal(_auth_bg_node.banner_a_warp_br.x)
+		_ban_a_warp_spins[7].set_value_no_signal(_auth_bg_node.banner_a_warp_br.y)
+	if _ban_b_warp_spins.size() >= 8:
+		_ban_b_warp_spins[0].set_value_no_signal(_auth_bg_node.banner_b_warp_tl.x)
+		_ban_b_warp_spins[1].set_value_no_signal(_auth_bg_node.banner_b_warp_tl.y)
+		_ban_b_warp_spins[2].set_value_no_signal(_auth_bg_node.banner_b_warp_tr.x)
+		_ban_b_warp_spins[3].set_value_no_signal(_auth_bg_node.banner_b_warp_tr.y)
+		_ban_b_warp_spins[4].set_value_no_signal(_auth_bg_node.banner_b_warp_bl.x)
+		_ban_b_warp_spins[5].set_value_no_signal(_auth_bg_node.banner_b_warp_bl.y)
+		_ban_b_warp_spins[6].set_value_no_signal(_auth_bg_node.banner_b_warp_br.x)
+		_ban_b_warp_spins[7].set_value_no_signal(_auth_bg_node.banner_b_warp_br.y)
+	if _ban_c_warp_spins.size() >= 8:
+		_ban_c_warp_spins[0].set_value_no_signal(_auth_bg_node.banner_c_warp_tl.x)
+		_ban_c_warp_spins[1].set_value_no_signal(_auth_bg_node.banner_c_warp_tl.y)
+		_ban_c_warp_spins[2].set_value_no_signal(_auth_bg_node.banner_c_warp_tr.x)
+		_ban_c_warp_spins[3].set_value_no_signal(_auth_bg_node.banner_c_warp_tr.y)
+		_ban_c_warp_spins[4].set_value_no_signal(_auth_bg_node.banner_c_warp_bl.x)
+		_ban_c_warp_spins[5].set_value_no_signal(_auth_bg_node.banner_c_warp_bl.y)
+		_ban_c_warp_spins[6].set_value_no_signal(_auth_bg_node.banner_c_warp_br.x)
+		_ban_c_warp_spins[7].set_value_no_signal(_auth_bg_node.banner_c_warp_br.y)
+
+func _update_banner_sel_ui() -> void:
+	if _banner_sel_status_label == null:
+		return
+	match _banner_selection:
+		BannerSelection.BANNER_A:
+			_banner_sel_status_label.text = "Active Banner: BANNER A (TL/TR/BL/BR active)"
+			_banner_sel_status_label.modulate = Color(0.3, 0.9, 1.0, 1.0)
+		BannerSelection.BANNER_B:
+			_banner_sel_status_label.text = "Active Banner: BANNER B (TL/TR/BL/BR active)"
+			_banner_sel_status_label.modulate = Color(1.0, 0.85, 0.3, 1.0)
+		BannerSelection.BANNER_C:
+			_banner_sel_status_label.text = "Active Banner: BANNER C (TL/TR/BL/BR active)"
+			_banner_sel_status_label.modulate = Color(0.85, 0.45, 1.0, 1.0)
+		_:
+			_banner_sel_status_label.text = "Active Banner: NONE (Click canvas or button below)"
+			_banner_sel_status_label.modulate = Color(0.75, 0.85, 0.95, 1.0)
 
 # Accessors for testing & verification
 func get_banner_a_warp_spins() -> Array[SpinBox]:
@@ -1204,6 +2332,11 @@ func get_banner_b_warp_spins() -> Array[SpinBox]:
 		_build_ui_hierarchy()
 	return _ban_b_warp_spins
 
+func get_banner_c_warp_spins() -> Array[SpinBox]:
+	if _ban_c_warp_spins.is_empty() and _ctrl_panel == null:
+		_build_ui_hierarchy()
+	return _ban_c_warp_spins
+
 func get_all_warp_spins() -> Array[SpinBox]:
 	if _ban_a_warp_spins.is_empty() or _ban_b_warp_spins.is_empty():
 		if _ctrl_panel == null:
@@ -1211,6 +2344,16 @@ func get_all_warp_spins() -> Array[SpinBox]:
 	var res: Array[SpinBox] = []
 	res.append_array(_ban_a_warp_spins)
 	res.append_array(_ban_b_warp_spins)
+	return res
+
+func get_all_warp_spins_with_c() -> Array[SpinBox]:
+	if _ban_a_warp_spins.is_empty() or _ban_b_warp_spins.is_empty() or _ban_c_warp_spins.is_empty():
+		if _ctrl_panel == null:
+			_build_ui_hierarchy()
+	var res: Array[SpinBox] = []
+	res.append_array(_ban_a_warp_spins)
+	res.append_array(_ban_b_warp_spins)
+	res.append_array(_ban_c_warp_spins)
 	return res
 
 func get_fog_source_mode() -> FogSourceMode:
@@ -1263,3 +2406,254 @@ func get_left_overscan() -> float:
 
 func get_right_overscan() -> float:
 	return _last_diag_right_overscan
+
+# ==============================================================================
+# Preset Persistence & Session State Methods
+# ==============================================================================
+
+func get_preset_dir() -> String:
+	return preset_directory
+
+func set_preset_dir(dir_path: String) -> void:
+	preset_directory = dir_path
+	_refresh_preset_dropdown()
+
+func _should_autoload_session() -> bool:
+	if not auto_load_on_startup:
+		return false
+	var args := OS.get_cmdline_args()
+	for i in range(args.size()):
+		if args[i] == "-s" and i + 1 < args.size() and args[i + 1].contains("tests/"):
+			if not args.has("--visual-lab") and preset_directory == "D:/Mathos_Visual_Presets/AuthBackground":
+				return false
+	return true
+
+func save_preset(filename: String, is_backup: bool = false) -> bool:
+	if _auth_bg_node == null:
+		return false
+	if not DirAccess.dir_exists_absolute(preset_directory):
+		var err := DirAccess.make_dir_recursive_absolute(preset_directory)
+		if err != OK:
+			push_warning("Failed to create preset directory: %s" % preset_directory)
+			return false
+	var file_path := preset_directory.path_join(filename)
+	var data: Dictionary = _auth_bg_node.to_preset_dict()
+	var json_str := JSON.stringify(data, "\t")
+	var f := FileAccess.open(file_path, FileAccess.WRITE)
+	if f == null:
+		push_warning("Failed to open file for writing: %s (Error: %s)" % [file_path, FileAccess.get_open_error()])
+		return false
+	f.store_string(json_str)
+	f.close()
+	if not is_backup:
+		_refresh_preset_dropdown()
+	return true
+
+func save_current() -> bool:
+	if _auth_bg_node == null:
+		return false
+	_create_backup_before_overwrite()
+	var ok := save_preset("last_session.json", false)
+	if ok and _preset_status_lbl != null:
+		_preset_status_lbl.text = "Saved: last_session.json"
+		_preset_status_lbl.modulate = Color(0.4, 0.9, 0.6, 1.0)
+	return ok
+
+func restore_last_session() -> bool:
+	return load_preset("last_session.json")
+
+func has_last_session() -> bool:
+	var path := preset_directory.path_join("last_session.json")
+	return FileAccess.file_exists(path)
+
+func save_as_preset(custom_name: String) -> bool:
+	var trimmed := custom_name.strip_edges()
+	if trimmed.is_empty():
+		return false
+	var filename := trimmed if trimmed.ends_with(".json") else trimmed + ".json"
+	return save_preset(filename, false)
+
+func load_preset(filename: String) -> bool:
+	if _auth_bg_node == null:
+		return false
+	var file_path := preset_directory.path_join(filename)
+	if not FileAccess.file_exists(file_path):
+		return false
+	var f := FileAccess.open(file_path, FileAccess.READ)
+	if f == null:
+		return false
+	var content := f.get_as_text()
+	f.close()
+	var parsed: Variant = JSON.parse_string(content)
+	if not (parsed is Dictionary):
+		return false
+	var ok: bool = _auth_bg_node.apply_preset_dict(parsed as Dictionary)
+	if ok:
+		_sync_all_auth_controls_from_bg()
+		if _preset_status_lbl != null:
+			_preset_status_lbl.text = "Loaded: %s" % filename
+			_preset_status_lbl.modulate = Color(0.4, 0.9, 0.6, 1.0)
+	return ok
+
+func _create_backup_before_overwrite() -> void:
+	var last_session_path := preset_directory.path_join("last_session.json")
+	if not FileAccess.file_exists(last_session_path):
+		return
+	var f := FileAccess.open(last_session_path, FileAccess.READ)
+	if f == null:
+		return
+	var old_content := f.get_as_text()
+	f.close()
+	if old_content.strip_edges().is_empty():
+		return
+
+	var dt := Time.get_datetime_dict_from_system()
+	var base_name := "auth_bg_%04d-%02d-%02d_%02d%02d" % [dt["year"], dt["month"], dt["day"], dt["hour"], dt["minute"]]
+	var backup_filename := base_name + ".json"
+	var backup_path := preset_directory.path_join(backup_filename)
+
+	if FileAccess.file_exists(backup_path):
+		base_name = "auth_bg_%04d-%02d-%02d_%02d%02d%02d" % [dt["year"], dt["month"], dt["day"], dt["hour"], dt["minute"], dt["second"]]
+		backup_filename = base_name + ".json"
+		backup_path = preset_directory.path_join(backup_filename)
+
+	var bf := FileAccess.open(backup_path, FileAccess.WRITE)
+	if bf != null:
+		bf.store_string(old_content)
+		bf.close()
+
+	_prune_old_backups(15)
+
+func _prune_old_backups(max_keep: int = 15) -> void:
+	if not DirAccess.dir_exists_absolute(preset_directory):
+		return
+	var dir := DirAccess.open(preset_directory)
+	if dir == null:
+		return
+	var backups: Array[String] = []
+	dir.list_dir_begin()
+	var f := dir.get_next()
+	while f != "":
+		if not dir.current_is_dir() and f.begins_with("auth_bg_") and f.ends_with(".json"):
+			backups.append(f)
+		f = dir.get_next()
+	dir.list_dir_end()
+	backups.sort()
+	while backups.size() > max_keep:
+		var oldest := backups[0]
+		dir.remove(oldest)
+		backups.remove_at(0)
+
+func get_available_presets() -> Array[String]:
+	var list: Array[String] = []
+	if not DirAccess.dir_exists_absolute(preset_directory):
+		return list
+	var dir := DirAccess.open(preset_directory)
+	if dir != null:
+		dir.list_dir_begin()
+		var f := dir.get_next()
+		while f != "":
+			if not dir.current_is_dir() and f.ends_with(".json"):
+				list.append(f)
+			f = dir.get_next()
+		dir.list_dir_end()
+	list.sort()
+	return list
+
+func _refresh_preset_dropdown() -> void:
+	if _preset_dropdown == null:
+		return
+	_preset_dropdown.clear()
+	var list := get_available_presets()
+	for i in range(list.size()):
+		_preset_dropdown.add_item(list[i], i)
+
+func schedule_autosave() -> void:
+	if not _autosave_enabled:
+		return
+	_autosave_pending = true
+	_autosave_timer = AUTOSAVE_DELAY
+
+func cancel_autosave() -> void:
+	_autosave_pending = false
+	_autosave_timer = 0.0
+
+func is_autosave_pending() -> bool:
+	return _autosave_pending
+
+func set_autosave_enabled(en: bool) -> void:
+	_autosave_enabled = en
+	if not en:
+		cancel_autosave()
+
+func is_autosave_enabled() -> bool:
+	return _autosave_enabled
+
+func add_light_spot(pos: Vector2 = Vector2.ZERO, radius: float = 140.0, intensity: float = 1.0, color: Color = Color(0.25, 0.75, 1.0, 1.0), softness: float = 0.8) -> int:
+	if _auth_bg_node == null:
+		return -1
+	var idx: int = _auth_bg_node.add_light_spot(pos, radius, intensity, color, softness)
+	select_light(idx)
+	schedule_autosave()
+	return idx
+
+func get_light_list_container() -> Control:
+	if _light_list_container == null and _ctrl_panel == null:
+		_build_ui_hierarchy()
+	return _light_list_container
+
+func get_save_current_button() -> Button:
+	if _save_current_btn == null and _ctrl_panel == null:
+		_build_ui_hierarchy()
+	return _save_current_btn
+
+func get_restore_session_button() -> Button:
+	if _restore_session_btn == null and _ctrl_panel == null:
+		_build_ui_hierarchy()
+	return _restore_session_btn
+
+func get_save_as_button() -> Button:
+	if _save_as_btn == null and _ctrl_panel == null:
+		_build_ui_hierarchy()
+	return _save_as_btn
+
+func get_load_preset_button() -> Button:
+	if _load_preset_btn == null and _ctrl_panel == null:
+		_build_ui_hierarchy()
+	return _load_preset_btn
+
+func get_autosave_checkbox() -> CheckBox:
+	if _autosave_chk == null and _ctrl_panel == null:
+		_build_ui_hierarchy()
+	return _autosave_chk
+
+func _sync_all_auth_controls_from_bg() -> void:
+	if _auth_bg_node == null:
+		return
+	_sync_spinboxes_from_bg()
+	if _afog_op_slider != null:
+		_afog_op_slider.set_value_no_signal(_auth_bg_node.fog_master_opacity)
+	if _afog_bright_slider != null:
+		_afog_bright_slider.set_value_no_signal(_auth_bg_node.fog_brightness)
+	if _afog_sat_slider != null:
+		_afog_sat_slider.set_value_no_signal(_auth_bg_node.fog_saturation)
+	if _afog_cnt_spin != null:
+		_afog_cnt_spin.set_value_no_signal(_auth_bg_node.fog_cluster_count)
+	if _ban_a_bright_slider != null:
+		_ban_a_bright_slider.set_value_no_signal(_auth_bg_node.banner_a_brightness)
+	if _ban_b_bright_slider != null:
+		_ban_b_bright_slider.set_value_no_signal(_auth_bg_node.banner_b_brightness)
+	if _ban_c_bright_slider != null:
+		_ban_c_bright_slider.set_value_no_signal(_auth_bg_node.banner_c_brightness)
+	if _dust_chk != null:
+		_dust_chk.set_pressed_no_signal(_auth_bg_node.dust_enabled)
+	if _dust_cnt_spin != null:
+		_dust_cnt_spin.set_value_no_signal(_auth_bg_node.dust_count)
+	if _part_type_opt != null:
+		for i in range(_part_type_opt.item_count):
+			if _part_type_opt.get_item_text(i) == _auth_bg_node.particle_type:
+				_part_type_opt.select(i)
+				break
+	_update_light_ui()
+	if _banner_warp_overlay != null:
+		_banner_warp_overlay.queue_redraw()

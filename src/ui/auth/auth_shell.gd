@@ -97,6 +97,7 @@ func _ensure_nodes() -> void:
 	_bg = AuthLoginBgClass.new()
 	_bg.name = "AuthLoginBackground"
 	add_child(_bg)
+	_bg.load_production_preset()
 
 	# 2. Right-Side Form Overlay Safe Area Container
 	var overlay: Control = Control.new()
