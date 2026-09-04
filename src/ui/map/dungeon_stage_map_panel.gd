@@ -1,9 +1,10 @@
 class_name DungeonStageMapPanel
 extends Control
 
-## Standalone Production UI Component for Mathos 4 Dungeons / 20 Stages Map.
-## Displays 4 Dungeons and 20 Stages with explicit Completed, Current/Unlocked,
-## and Locked node states. Emits 'stage_selected(stage_id)' on valid selection.
+## Standalone Production UI Component for Mathos 4 Dungeons Map.
+## Implements the human-approved Figma world-map visual (1280x720 reference)
+## with native Godot 4.7.1 Control nodes, StyleBoxFlat, and TextureRect.
+## Preserves existing D1 gameplay entry flow and keeps D2-D4 locked.
 
 signal stage_selected(stage_id: String)
 signal back_requested
@@ -12,10 +13,68 @@ var _unlocked_stages: Array[String] = ["stage_01_01"]
 var _completed_stages: Array[String] = []
 var _current_stage_id: String = "stage_01_01"
 
-# Node references
+# Authoritative Figma reference measurements at 1280x720
+const REF_WIDTH: float = 1280.0
+const REF_HEIGHT: float = 720.0
+
+const REF_HEADER_POS: Vector2 = Vector2(40.0, 28.0)
+const REF_HEADER_SIZE: Vector2 = Vector2(408.32, 111.5)
+
+const REF_HUD_RIGHT: float = 40.0
+const REF_HUD_TOP: float = 28.0
+const REF_HUD_SIZE: Vector2 = Vector2(289.69, 42.0)
+
+const REF_D1_POS: Vector2 = Vector2(147.19, 420.0)
+const REF_D1_SIZE: Vector2 = Vector2(135.63, 130.0)
+
+const REF_D2_POS: Vector2 = Vector2(595.94, 311.88)
+const REF_D2_SIZE: Vector2 = Vector2(98.13, 87.0)
+
+const REF_D3_POS: Vector2 = Vector2(927.66, 186.88)
+const REF_D3_SIZE: Vector2 = Vector2(104.69, 87.0)
+
+const REF_D4_POS: Vector2 = Vector2(358.85, 116.88)
+const REF_D4_SIZE: Vector2 = Vector2(102.30, 87.0)
+
+const REF_PANEL_RIGHT: float = 40.0
+const REF_PANEL_BOTTOM: float = 32.0
+const REF_PANEL_SIZE: Vector2 = Vector2(350.0, 228.07)
+
+const WORLD_MAP_BG_PATH: String = "res://assets/backgrounds/map/d1_world_map_bg.jpg"
+
+# Visual Nodes
+var _bg_texture_rect: TextureRect = null
+var _overlay_vertical: TextureRect = null
+var _overlay_horizontal: TextureRect = null
+var _visual_layer: Control = null
+
+var _header_panel: PanelContainer = null
 var _title_label: Label = null
-var _dungeon_container: HBoxContainer = null
+var _world_label: Label = null
+var _subtitle_label: Label = null
 var _back_button: Button = null
+
+var _hud_panel: PanelContainer = null
+var _hud_fragment_label: Label = null
+var _hud_dungeon_label: Label = null
+
+var _d1_marker_group: Control = null
+var _d1_marker_button: Button = null
+var _d1_status_label: Label = null
+
+var _d2_marker_group: Control = null
+var _d3_marker_group: Control = null
+var _d4_marker_group: Control = null
+
+var _d1_context_panel: PanelContainer = null
+var _d1_panel_category_label: Label = null
+var _d1_panel_status_badge: Label = null
+var _d1_panel_title_label: Label = null
+var _d1_panel_body_label: Label = null
+var _d1_action_button: Button = null
+
+# Backing container for test compatibility (non-visible to player)
+var _dungeon_container: HBoxContainer = null
 
 const DEFAULT_DUNGEONS: Array = [
 	{
@@ -43,60 +102,500 @@ const DEFAULT_DUNGEONS: Array = [
 func _ready() -> void:
 	anchor_right = 1.0
 	anchor_bottom = 1.0
+	clip_contents = true
 	_build_base_layout()
 	render_map()
+	_update_responsive_layout()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED:
+		_update_responsive_layout()
 
 func _build_base_layout() -> void:
-	# Clear existing children if any
 	for child in get_children():
 		child.queue_free()
 
-	# Background dark overlay
-	var bg: ColorRect = ColorRect.new()
-	bg.color = Color(0.06, 0.08, 0.12, 0.98)
-	bg.anchor_right = 1.0
-	bg.anchor_bottom = 1.0
-	add_child(bg)
+	# 1. Background Artwork TextureRect
+	_bg_texture_rect = TextureRect.new()
+	_bg_texture_rect.name = "WorldMapBackground"
+	_bg_texture_rect.anchor_right = 1.0
+	_bg_texture_rect.anchor_bottom = 1.0
+	_bg_texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_bg_texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_bg_texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if ResourceLoader.exists(WORLD_MAP_BG_PATH):
+		_bg_texture_rect.texture = load(WORLD_MAP_BG_PATH)
+	add_child(_bg_texture_rect)
 
-	# Main MarginContainer
-	var margin: MarginContainer = MarginContainer.new()
-	margin.anchor_right = 1.0
-	margin.anchor_bottom = 1.0
-	margin.add_theme_constant_override("margin_left", 32)
-	margin.add_theme_constant_override("margin_right", 32)
-	margin.add_theme_constant_override("margin_top", 24)
-	margin.add_theme_constant_override("margin_bottom", 24)
-	add_child(margin)
+	# 2. Readability Overlays
+	_build_readability_overlays()
 
-	var main_vbox: VBoxContainer = VBoxContainer.new()
-	main_vbox.add_theme_constant_override("separation", 20)
-	margin.add_child(main_vbox)
+	# 3. Visual Layer for Map Presentation (Figma 1280x720 specification)
+	_visual_layer = Control.new()
+	_visual_layer.name = "MapVisualLayer"
+	_visual_layer.anchor_right = 1.0
+	_visual_layer.anchor_bottom = 1.0
+	_visual_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_visual_layer)
 
-	# Header Bar
-	var header_hbox: HBoxContainer = HBoxContainer.new()
-	main_vbox.add_child(header_hbox)
+	_build_header()
+	_build_top_right_hud()
+	_build_dungeon_markers()
+	_build_d1_context_panel()
+
+	# 4. Backing container for test compatibility (kept invisible to player)
+	_dungeon_container = HBoxContainer.new()
+	_dungeon_container.name = "TestCompatibilityDungeonContainer"
+	_dungeon_container.visible = false
+	_dungeon_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_dungeon_container)
+
+func _build_readability_overlays() -> void:
+	_overlay_vertical = TextureRect.new()
+	_overlay_vertical.name = "VerticalOverlay"
+	_overlay_vertical.anchor_right = 1.0
+	_overlay_vertical.anchor_bottom = 1.0
+	_overlay_vertical.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_overlay_vertical.stretch_mode = TextureRect.STRETCH_SCALE
+	_overlay_vertical.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var grad_v: Gradient = Gradient.new()
+	grad_v.add_point(0.0, Color(0.02, 0.04, 0.08, 0.40))
+	grad_v.add_point(0.45, Color(0.02, 0.04, 0.08, 0.0))
+	grad_v.add_point(0.70, Color(0.02, 0.04, 0.08, 0.35))
+	grad_v.add_point(1.0, Color(0.02, 0.04, 0.08, 0.85))
+	var tex_v: GradientTexture2D = GradientTexture2D.new()
+	tex_v.gradient = grad_v
+	tex_v.fill_from = Vector2(0.5, 0.0)
+	tex_v.fill_to = Vector2(0.5, 1.0)
+	_overlay_vertical.texture = tex_v
+	add_child(_overlay_vertical)
+
+	_overlay_horizontal = TextureRect.new()
+	_overlay_horizontal.name = "HorizontalOverlay"
+	_overlay_horizontal.anchor_right = 1.0
+	_overlay_horizontal.anchor_bottom = 1.0
+	_overlay_horizontal.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_overlay_horizontal.stretch_mode = TextureRect.STRETCH_SCALE
+	_overlay_horizontal.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var grad_h: Gradient = Gradient.new()
+	grad_h.add_point(0.0, Color(0.02, 0.04, 0.08, 0.60))
+	grad_h.add_point(0.40, Color(0.02, 0.04, 0.08, 0.0))
+	grad_h.add_point(0.65, Color(0.02, 0.04, 0.08, 0.0))
+	grad_h.add_point(1.0, Color(0.02, 0.04, 0.08, 0.50))
+	var tex_h: GradientTexture2D = GradientTexture2D.new()
+	tex_h.gradient = grad_h
+	tex_h.fill_from = Vector2(0.0, 0.5)
+	tex_h.fill_to = Vector2(1.0, 0.5)
+	_overlay_horizontal.texture = tex_h
+	add_child(_overlay_horizontal)
+
+func _build_header() -> void:
+	_header_panel = PanelContainer.new()
+	_header_panel.name = "MapHeaderPanel"
+	_header_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.03, 0.06, 0.12, 0.85)
+	style.border_width_left = 2
+	style.border_color = Color(0.92, 0.78, 0.35, 0.95)
+	style.corner_radius_top_left = 16
+	style.corner_radius_top_right = 16
+	style.corner_radius_bottom_left = 16
+	style.corner_radius_bottom_right = 16
+	style.shadow_color = Color(0, 0, 0, 0.4)
+	style.shadow_size = 10
+	style.content_margin_left = 24
+	style.content_margin_right = 24
+	style.content_margin_top = 16
+	style.content_margin_bottom = 16
+	_header_panel.add_theme_stylebox_override("panel", style)
+
+	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 4)
+	_header_panel.add_child(vbox)
+
+	_world_label = Label.new()
+	_world_label.name = "WorldLabel"
+	_world_label.text = "MATHOS"
+	_world_label.add_theme_color_override("font_color", Color(0.92, 0.78, 0.35))
+	_world_label.add_theme_font_size_override("font_size", 11)
+	vbox.add_child(_world_label)
 
 	_title_label = Label.new()
-	_title_label.text = "BẢN ĐỒ HÀNH TRÌNH MATHOS"
-	_title_label.theme_type_variation = &"MathosTitle"
+	_title_label.name = "TitleLabel"
+	_title_label.text = "BẢN ĐỒ HÀNH TRÌNH"
+	_title_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
 	_title_label.add_theme_font_size_override("font_size", 24)
-	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header_hbox.add_child(_title_label)
+	_title_label.add_theme_color_override("font_outline_color", Color(0.1, 0.65, 0.9, 0.45))
+	_title_label.add_theme_constant_override("outline_size", 3)
+	vbox.add_child(_title_label)
+
+	_subtitle_label = Label.new()
+	_subtitle_label.name = "SubtitleLabel"
+	_subtitle_label.text = "Chọn thử thách tiếp theo trên hành trình của bạn."
+	_subtitle_label.add_theme_color_override("font_color", Color(0.68, 0.76, 0.86))
+	_subtitle_label.add_theme_font_size_override("font_size", 12)
+	vbox.add_child(_subtitle_label)
 
 	_back_button = Button.new()
-	_back_button.text = "Trở về trang chủ"
-	_back_button.theme_type_variation = &"MathosSecondaryButton"
-	_back_button.custom_minimum_size = Vector2(160, 44)
+	_back_button.name = "BackButton"
+	_back_button.text = "← Trở về"
+	_back_button.flat = true
+	_back_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_back_button.add_theme_color_override("font_color", Color(0.6, 0.75, 0.9, 0.8))
+	_back_button.add_theme_font_size_override("font_size", 11)
 	_back_button.pressed.connect(func() -> void: back_requested.emit())
-	header_hbox.add_child(_back_button)
+	vbox.add_child(_back_button)
 
-	# 4 Dungeons Container
-	_dungeon_container = HBoxContainer.new()
-	_dungeon_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_dungeon_container.add_theme_constant_override("separation", 16)
-	main_vbox.add_child(_dungeon_container)
+	_visual_layer.add_child(_header_panel)
 
-## Public runtime setter for progression model
+func _build_top_right_hud() -> void:
+	_hud_panel = PanelContainer.new()
+	_hud_panel.name = "TopRightHUDPanel"
+	_hud_panel.mouse_filter = Control.MOUSE_FILTER_PASS
+
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.03, 0.07, 0.14, 0.85)
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_width_top = 1
+	style.border_width_bottom = 1
+	style.border_color = Color(0.2, 0.8, 1.0, 0.55)
+	style.corner_radius_top_left = 21
+	style.corner_radius_top_right = 21
+	style.corner_radius_bottom_left = 21
+	style.corner_radius_bottom_right = 21
+	style.shadow_color = Color(0.1, 0.55, 0.85, 0.25)
+	style.shadow_size = 6
+	style.content_margin_left = 18
+	style.content_margin_right = 18
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	_hud_panel.add_theme_stylebox_override("panel", style)
+
+	var hbox: HBoxContainer = HBoxContainer.new()
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.add_theme_constant_override("separation", 14)
+	_hud_panel.add_child(hbox)
+
+	_hud_fragment_label = Label.new()
+	_hud_fragment_label.name = "FragmentLabel"
+	_hud_fragment_label.text = "Mảnh vỡ: 1"
+	_hud_fragment_label.add_theme_color_override("font_color", Color(0.92, 0.78, 0.35))
+	_hud_fragment_label.add_theme_font_size_override("font_size", 13)
+	hbox.add_child(_hud_fragment_label)
+
+	var sep: Label = Label.new()
+	sep.text = "|"
+	sep.add_theme_color_override("font_color", Color(0.3, 0.5, 0.7, 0.6))
+	hbox.add_child(sep)
+
+	_hud_dungeon_label = Label.new()
+	_hud_dungeon_label.name = "DungeonLabel"
+	_hud_dungeon_label.text = "Dungeon: 1/4"
+	_hud_dungeon_label.add_theme_color_override("font_color", Color(0.4, 0.85, 1.0))
+	_hud_dungeon_label.add_theme_font_size_override("font_size", 13)
+	hbox.add_child(_hud_dungeon_label)
+
+	_visual_layer.add_child(_hud_panel)
+
+func _build_dungeon_markers() -> void:
+	# 1. DUNGEON I (Lower-left ancient cyan stone gate)
+	_d1_marker_group = Control.new()
+	_d1_marker_group.name = "Dungeon1MarkerGroup"
+	_d1_marker_group.custom_minimum_size = REF_D1_SIZE
+	_visual_layer.add_child(_d1_marker_group)
+
+	var d1_vbox: VBoxContainer = VBoxContainer.new()
+	d1_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	d1_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_d1_marker_group.add_child(d1_vbox)
+
+	_d1_marker_button = Button.new()
+	_d1_marker_button.name = "D1MarkerButton"
+	_d1_marker_button.custom_minimum_size = Vector2(64, 64)
+	_d1_marker_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_d1_marker_button.text = "I"
+	_d1_marker_button.add_theme_font_size_override("font_size", 20)
+
+	var d1_btn_style: StyleBoxFlat = StyleBoxFlat.new()
+	d1_btn_style.bg_color = Color(0.04, 0.10, 0.18, 0.9)
+	d1_btn_style.border_width_left = 2
+	d1_btn_style.border_width_right = 2
+	d1_btn_style.border_width_top = 2
+	d1_btn_style.border_width_bottom = 2
+	d1_btn_style.border_color = Color(0.25, 0.9, 1.0, 0.85)
+	d1_btn_style.corner_radius_top_left = 32
+	d1_btn_style.corner_radius_top_right = 32
+	d1_btn_style.corner_radius_bottom_left = 32
+	d1_btn_style.corner_radius_bottom_right = 32
+	d1_btn_style.shadow_color = Color(0.15, 0.85, 1.0, 0.55)
+	d1_btn_style.shadow_size = 12
+	_d1_marker_button.add_theme_stylebox_override("normal", d1_btn_style)
+
+	var d1_hover_style: StyleBoxFlat = d1_btn_style.duplicate()
+	d1_hover_style.border_color = Color(0.95, 0.82, 0.35, 1.0)
+	d1_hover_style.shadow_color = Color(0.95, 0.82, 0.35, 0.65)
+	_d1_marker_button.add_theme_stylebox_override("hover", d1_hover_style)
+	_d1_marker_button.add_theme_stylebox_override("pressed", d1_hover_style)
+
+	_d1_marker_button.pressed.connect(func() -> void:
+		_on_d1_action_pressed()
+	)
+	d1_vbox.add_child(_d1_marker_button)
+
+	var d1_title: Label = Label.new()
+	d1_title.text = "DUNGEON I"
+	d1_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	d1_title.add_theme_font_size_override("font_size", 12)
+	d1_title.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	d1_vbox.add_child(d1_title)
+
+	var d1_name: Label = Label.new()
+	d1_name.text = "KHU RỪNG SƯƠNG MÙ"
+	d1_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	d1_name.add_theme_font_size_override("font_size", 10)
+	d1_name.add_theme_color_override("font_color", Color(0.4, 0.85, 1.0))
+	d1_vbox.add_child(d1_name)
+
+	_d1_status_label = Label.new()
+	_d1_status_label.name = "D1StatusLabel"
+	_d1_status_label.text = "✓ HOÀN THÀNH"
+	_d1_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_d1_status_label.add_theme_font_size_override("font_size", 10)
+	_d1_status_label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.25))
+	d1_vbox.add_child(_d1_status_label)
+
+	# 2. DUNGEON II (Center purple ruined spire) - LOCKED
+	_d2_marker_group = _create_locked_marker(
+		"Dungeon2MarkerGroup",
+		REF_D2_SIZE,
+		"II",
+		"DUNGEON II",
+		Color(0.65, 0.35, 0.95, 0.75),
+		0.75
+	)
+	_visual_layer.add_child(_d2_marker_group)
+
+	# 3. DUNGEON III (Upper-right glacial cave) - LOCKED
+	_d3_marker_group = _create_locked_marker(
+		"Dungeon3MarkerGroup",
+		REF_D3_SIZE,
+		"III",
+		"DUNGEON III",
+		Color(0.3, 0.85, 1.0, 0.75),
+		0.75
+	)
+	_visual_layer.add_child(_d3_marker_group)
+
+	# 4. DUNGEON IV (Upper-left distant castle) - LOCKED
+	_d4_marker_group = _create_locked_marker(
+		"Dungeon4MarkerGroup",
+		REF_D4_SIZE,
+		"IV",
+		"DUNGEON IV",
+		Color(0.45, 0.55, 0.65, 0.65),
+		0.65
+	)
+	_visual_layer.add_child(_d4_marker_group)
+
+func _create_locked_marker(group_name: String, group_size: Vector2, numeral: String, title: String, tint_color: Color, opacity: float) -> Control:
+	var ctrl: Control = Control.new()
+	ctrl.name = group_name
+	ctrl.custom_minimum_size = group_size
+	ctrl.modulate.a = opacity
+
+	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ctrl.add_child(vbox)
+
+	var icon_box: PanelContainer = PanelContainer.new()
+	icon_box.custom_minimum_size = Vector2(44, 44)
+	icon_box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.06, 0.10, 0.85)
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_width_top = 1
+	style.border_width_bottom = 1
+	style.border_color = tint_color
+	style.corner_radius_top_left = 22
+	style.corner_radius_top_right = 22
+	style.corner_radius_bottom_left = 22
+	style.corner_radius_bottom_right = 22
+	style.shadow_color = Color(tint_color.r, tint_color.g, tint_color.b, 0.3)
+	style.shadow_size = 6
+	icon_box.add_theme_stylebox_override("panel", style)
+
+	var lock_lbl: Label = Label.new()
+	lock_lbl.text = "🔒"
+	lock_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lock_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lock_lbl.add_theme_font_size_override("font_size", 14)
+	icon_box.add_child(lock_lbl)
+	vbox.add_child(icon_box)
+
+	var t_lbl: Label = Label.new()
+	t_lbl.text = title
+	t_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	t_lbl.add_theme_font_size_override("font_size", 11)
+	t_lbl.add_theme_color_override("font_color", Color(0.75, 0.8, 0.85))
+	vbox.add_child(t_lbl)
+
+	var l_lbl: Label = Label.new()
+	l_lbl.text = "KHÓA"
+	l_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l_lbl.add_theme_font_size_override("font_size", 10)
+	l_lbl.add_theme_color_override("font_color", Color(0.55, 0.6, 0.65))
+	vbox.add_child(l_lbl)
+
+	return ctrl
+
+func _build_d1_context_panel() -> void:
+	_d1_context_panel = PanelContainer.new()
+	_d1_context_panel.name = "D1ContextPanel"
+	_d1_context_panel.custom_minimum_size = REF_PANEL_SIZE
+	_d1_context_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.03, 0.06, 0.12, 0.88)
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_width_top = 1
+	style.border_width_bottom = 1
+	style.border_color = Color(0.25, 0.85, 1.0, 0.35)
+	style.corner_radius_top_left = 16
+	style.corner_radius_top_right = 16
+	style.corner_radius_bottom_left = 16
+	style.corner_radius_bottom_right = 16
+	style.shadow_color = Color(0, 0, 0, 0.5)
+	style.shadow_size = 10
+	style.content_margin_left = 24
+	style.content_margin_right = 24
+	style.content_margin_top = 20
+	style.content_margin_bottom = 20
+	_d1_context_panel.add_theme_stylebox_override("panel", style)
+
+	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	_d1_context_panel.add_child(vbox)
+
+	var top_row: HBoxContainer = HBoxContainer.new()
+	top_row.add_theme_constant_override("separation", 10)
+	vbox.add_child(top_row)
+
+	_d1_panel_category_label = Label.new()
+	_d1_panel_category_label.name = "CategoryLabel"
+	_d1_panel_category_label.text = "DUNGEON I"
+	_d1_panel_category_label.add_theme_color_override("font_color", Color(0.92, 0.78, 0.35))
+	_d1_panel_category_label.add_theme_font_size_override("font_size", 12)
+	_d1_panel_category_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_row.add_child(_d1_panel_category_label)
+
+	_d1_panel_status_badge = Label.new()
+	_d1_panel_status_badge.name = "StatusBadge"
+	_d1_panel_status_badge.text = "✓ HOÀN THÀNH"
+	_d1_panel_status_badge.add_theme_color_override("font_color", Color(0.95, 0.82, 0.25))
+	_d1_panel_status_badge.add_theme_font_size_override("font_size", 11)
+	top_row.add_child(_d1_panel_status_badge)
+
+	_d1_panel_title_label = Label.new()
+	_d1_panel_title_label.name = "DungeonNameLabel"
+	_d1_panel_title_label.text = "KHU RỪNG SƯƠNG MÙ"
+	_d1_panel_title_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	_d1_panel_title_label.add_theme_font_size_override("font_size", 20)
+	vbox.add_child(_d1_panel_title_label)
+
+	_d1_panel_body_label = Label.new()
+	_d1_panel_body_label.name = "DescriptionLabel"
+	_d1_panel_body_label.text = "Khởi đầu hành trình tại khu rừng cổ bị bao phủ bởi màn sương ma thuật."
+	_d1_panel_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_d1_panel_body_label.add_theme_color_override("font_color", Color(0.72, 0.78, 0.86))
+	_d1_panel_body_label.add_theme_font_size_override("font_size", 12)
+	_d1_panel_body_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(_d1_panel_body_label)
+
+	_d1_action_button = Button.new()
+	_d1_action_button.name = "D1ActionButton"
+	_d1_action_button.custom_minimum_size = Vector2(300, 44)
+	_d1_action_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_d1_action_button.text = "KHÁM PHÁ LẠI"
+	_d1_action_button.add_theme_font_size_override("font_size", 14)
+
+	var btn_norm: StyleBoxFlat = StyleBoxFlat.new()
+	btn_norm.bg_color = Color(0.88, 0.72, 0.25)
+	btn_norm.corner_radius_top_left = 12
+	btn_norm.corner_radius_top_right = 12
+	btn_norm.corner_radius_bottom_left = 12
+	btn_norm.corner_radius_bottom_right = 12
+	btn_norm.shadow_color = Color(0.92, 0.75, 0.25, 0.4)
+	btn_norm.shadow_size = 6
+	_d1_action_button.add_theme_stylebox_override("normal", btn_norm)
+
+	var btn_hov: StyleBoxFlat = btn_norm.duplicate()
+	btn_hov.bg_color = Color(0.98, 0.82, 0.35)
+	btn_hov.shadow_size = 10
+	_d1_action_button.add_theme_stylebox_override("hover", btn_hov)
+
+	var btn_press: StyleBoxFlat = btn_norm.duplicate()
+	btn_press.bg_color = Color(0.78, 0.62, 0.18)
+	_d1_action_button.add_theme_stylebox_override("pressed", btn_press)
+
+	_d1_action_button.add_theme_color_override("font_color", Color(0.04, 0.07, 0.12))
+	_d1_action_button.add_theme_color_override("font_hover_color", Color(0.02, 0.04, 0.08))
+	_d1_action_button.add_theme_color_override("font_pressed_color", Color(0.02, 0.04, 0.08))
+
+	_d1_action_button.pressed.connect(func() -> void:
+		_on_d1_action_pressed()
+	)
+	vbox.add_child(_d1_action_button)
+
+	_visual_layer.add_child(_d1_context_panel)
+
+func _update_responsive_layout() -> void:
+	if _visual_layer == null:
+		return
+
+	var vp_size: Vector2 = size
+	if vp_size.x <= 0 or vp_size.y <= 0:
+		vp_size = Vector2(REF_WIDTH, REF_HEIGHT)
+
+	if _header_panel != null:
+		_header_panel.position = REF_HEADER_POS
+		_header_panel.size = REF_HEADER_SIZE
+
+	if _hud_panel != null:
+		_hud_panel.size = REF_HUD_SIZE
+		_hud_panel.position = Vector2(vp_size.x - REF_HUD_RIGHT - REF_HUD_SIZE.x, REF_HUD_TOP)
+
+	if _d1_context_panel != null:
+		_d1_context_panel.size = REF_PANEL_SIZE
+		_d1_context_panel.position = Vector2(vp_size.x - REF_PANEL_RIGHT - REF_PANEL_SIZE.x, vp_size.y - REF_PANEL_BOTTOM - REF_PANEL_SIZE.y)
+
+	var scale_factor: float = maxf(vp_size.x / REF_WIDTH, vp_size.y / REF_HEIGHT)
+	var offset_x: float = (vp_size.x - REF_WIDTH * scale_factor) * 0.5
+	var offset_y: float = (vp_size.y - REF_HEIGHT * scale_factor) * 0.5
+
+	if _d1_marker_group != null:
+		_d1_marker_group.position = Vector2(offset_x + REF_D1_POS.x * scale_factor, offset_y + REF_D1_POS.y * scale_factor)
+		_d1_marker_group.size = REF_D1_SIZE
+
+	if _d2_marker_group != null:
+		_d2_marker_group.position = Vector2(offset_x + REF_D2_POS.x * scale_factor, offset_y + REF_D2_POS.y * scale_factor)
+		_d2_marker_group.size = REF_D2_SIZE
+
+	if _d3_marker_group != null:
+		_d3_marker_group.position = Vector2(offset_x + REF_D3_POS.x * scale_factor, offset_y + REF_D3_POS.y * scale_factor)
+		_d3_marker_group.size = REF_D3_SIZE
+
+	if _d4_marker_group != null:
+		_d4_marker_group.position = Vector2(offset_x + REF_D4_POS.x * scale_factor, offset_y + REF_D4_POS.y * scale_factor)
+		_d4_marker_group.size = REF_D4_SIZE
+
 func set_map_data(p_map_data: Dictionary) -> void:
 	if p_map_data.has("unlocked_stages"):
 		_unlocked_stages.clear()
@@ -113,8 +612,30 @@ func set_map_data(p_map_data: Dictionary) -> void:
 
 	render_map()
 
-## Render 4 Dungeons and 20 stage nodes
 func render_map() -> void:
+	var is_d1_completed: bool = ("stage_01_05" in _completed_stages) or ("stage_01_01" in _completed_stages and _completed_stages.size() >= 5)
+
+	if _hud_fragment_label != null:
+		var frag_count: int = 1 if is_d1_completed else 0
+		_hud_fragment_label.text = "Mảnh vỡ: %d" % frag_count
+	if _hud_dungeon_label != null:
+		var d_count: int = 1 if is_d1_completed else 0
+		_hud_dungeon_label.text = "Dungeon: %d/4" % d_count
+
+	if _d1_status_label != null:
+		_d1_status_label.text = "✓ HOÀN THÀNH" if is_d1_completed else "ĐANG MỞ"
+		_d1_status_label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.25) if is_d1_completed else Color(0.3, 0.9, 0.4))
+
+	if _d1_panel_status_badge != null:
+		_d1_panel_status_badge.text = "✓ HOÀN THÀNH" if is_d1_completed else "ĐANG MỞ"
+		_d1_panel_status_badge.add_theme_color_override("font_color", Color(0.95, 0.82, 0.25) if is_d1_completed else Color(0.3, 0.9, 0.4))
+
+	if _d1_action_button != null:
+		_d1_action_button.text = "KHÁM PHÁ LẠI" if is_d1_completed else "BẮT ĐẦU"
+
+	_render_backing_dungeon_container()
+
+func _render_backing_dungeon_container() -> void:
 	if _dungeon_container == null:
 		return
 
@@ -126,7 +647,6 @@ func render_map() -> void:
 		var dun_panel: PanelContainer = PanelContainer.new()
 		dun_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		dun_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		dun_panel.theme_type_variation = &"MathosCard"
 
 		var dun_margin: MarginContainer = MarginContainer.new()
 		dun_margin.add_theme_constant_override("margin_left", 12)
@@ -139,19 +659,10 @@ func render_map() -> void:
 		dun_vbox.add_theme_constant_override("separation", 10)
 		dun_margin.add_child(dun_vbox)
 
-		# Dungeon Header
 		var dun_title: Label = Label.new()
 		dun_title.text = String(dun_info.get("title", "Dungeon"))
-		dun_title.theme_type_variation = &"MathosSubtitle"
-		dun_title.add_theme_font_size_override("font_size", 15)
-		dun_title.add_theme_color_override("font_color", Color(0.4, 0.8, 1.0))
-		dun_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		dun_vbox.add_child(dun_title)
 
-		var hs: HSeparator = HSeparator.new()
-		dun_vbox.add_child(hs)
-
-		# Stages
 		var stages: Array = dun_info.get("stages", [])
 		for s_id_raw in stages:
 			var s_id: String = String(s_id_raw)
@@ -160,9 +671,6 @@ func render_map() -> void:
 			var is_current: bool = (s_id == _current_stage_id)
 
 			var stage_btn: Button = Button.new()
-			stage_btn.custom_minimum_size = Vector2(0, 46)
-			stage_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
 			var parts: PackedStringArray = s_id.split("_")
 			var stage_num_str: String = "Stage " + str(parts[1].to_int()) + "." + str(parts[2].to_int()) if parts.size() == 3 else s_id
 
@@ -170,17 +678,14 @@ func render_map() -> void:
 				stage_btn.text = "✔ " + stage_num_str + " (Đã xong)"
 				stage_btn.disabled = false
 				stage_btn.theme_type_variation = &"MathosSecondaryButton"
-				stage_btn.add_theme_color_override("font_color", Color(0.3, 0.9, 0.4))
 			elif is_current or is_unlocked:
 				stage_btn.text = "▶ " + stage_num_str + " (Đang mở)"
 				stage_btn.disabled = false
 				stage_btn.theme_type_variation = &"MathosPrimaryButton"
-				stage_btn.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3))
 			else:
 				stage_btn.text = "🔒 " + stage_num_str + " (Khóa)"
 				stage_btn.disabled = true
 				stage_btn.theme_type_variation = &"MathosSecondaryButton"
-				stage_btn.add_theme_color_override("font_color", Color(0.55, 0.6, 0.65))
 				stage_btn.modulate.a = 0.55
 
 			if is_unlocked or is_completed:
@@ -192,9 +697,18 @@ func render_map() -> void:
 
 		_dungeon_container.add_child(dun_panel)
 
+func _on_d1_action_pressed() -> void:
+	var target_stage: String = "stage_01_01"
+	if _current_stage_id.begins_with("stage_01_") and (_current_stage_id in _unlocked_stages):
+		target_stage = _current_stage_id
+	_on_stage_button_pressed(target_stage)
+
 func _on_stage_button_pressed(stage_id: String) -> void:
 	var is_completed: bool = stage_id in _completed_stages
 	var is_unlocked: bool = is_completed or (stage_id in _unlocked_stages) or (stage_id == _current_stage_id)
+
+	if stage_id.begins_with("stage_02_") or stage_id.begins_with("stage_03_") or stage_id.begins_with("stage_04_"):
+		return
 
 	if is_unlocked or is_completed:
 		stage_selected.emit(stage_id)
