@@ -2,12 +2,16 @@ class_name BossCombatPanel
 extends PanelContainer
 
 ## Production Boss Combat Panel for Stage 1.5 (Boss STOCHAS).
-## Renders Boss HP, Intent telegraph, coded visual placeholder, Player HP/Shield,
+## Renders Boss HP, Intent telegraph, real approved STOCHAS sprite, Player HP/Shield,
 ## Card Selection Bar, Combat Log, and Defeat/Retry overlay.
 
 signal card_selected(card_id: String)
 signal retry_pressed()
 signal victory_acknowledged()
+
+const STOCHAS_TEXTURE_PATH: String = "res://assets/characters/bosses/dungeon_1/stochas_boss.png"
+const BOSS_VISUAL_CONTAINER_HEIGHT: float = 180.0
+const SAFE_MARGIN_PERCENT: float = 0.10 # 10% safe visual margin (8–12% requirement)
 
 var _combat_controller: CardCombatController = null
 
@@ -17,6 +21,7 @@ var _boss_hp_bar: ProgressBar = null
 var _boss_hp_label: Label = null
 var _boss_intent_label: Label = null
 var _boss_visual_rect: PanelContainer = null
+var _boss_sprite_rect: TextureRect = null
 
 var _player_hp_bar: ProgressBar = null
 var _player_hp_label: Label = null
@@ -121,16 +126,18 @@ func _ensure_ui() -> void:
 	role_tag.add_theme_color_override("font_color", Color(0.8, 0.7, 1.0, 0.8))
 	title_box.add_child(role_tag)
 
-	# Boss Visual Container (Coded Placeholder)
+	# Boss Visual Container (Real Approved STOCHAS Sprite)
 	_boss_visual_rect = PanelContainer.new()
-	_boss_visual_rect.custom_minimum_size = Vector2(0, 72)
+	_boss_visual_rect.name = "BossVisualContainer"
+	_boss_visual_rect.custom_minimum_size = Vector2(0, BOSS_VISUAL_CONTAINER_HEIGHT)
+	_boss_visual_rect.clip_contents = true
 	var boss_vbox_style: StyleBoxFlat = StyleBoxFlat.new()
-	boss_vbox_style.bg_color = Color(0.12, 0.08, 0.22, 0.85)
+	boss_vbox_style.bg_color = Color(0.10, 0.07, 0.18, 0.88)
 	boss_vbox_style.border_width_left = 1
 	boss_vbox_style.border_width_top = 1
 	boss_vbox_style.border_width_right = 1
 	boss_vbox_style.border_width_bottom = 1
-	boss_vbox_style.border_color = Color(0.7, 0.3, 0.9, 0.4)
+	boss_vbox_style.border_color = Color(0.3, 0.7, 0.9, 0.5)
 	boss_vbox_style.corner_radius_top_left = 8
 	boss_vbox_style.corner_radius_top_right = 8
 	boss_vbox_style.corner_radius_bottom_right = 8
@@ -138,22 +145,28 @@ func _ensure_ui() -> void:
 	_boss_visual_rect.add_theme_stylebox_override("panel", boss_vbox_style)
 	boss_section.add_child(_boss_visual_rect)
 
-	var bv_box: VBoxContainer = VBoxContainer.new()
-	bv_box.alignment = BoxContainer.ALIGNMENT_CENTER
-	_boss_visual_rect.add_child(bv_box)
+	# Safe Margin Container: 8–12% margin ensures staff, hood, runes, robe, probability shapes do not clip
+	var sprite_margin: MarginContainer = MarginContainer.new()
+	sprite_margin.name = "SpriteMarginContainer"
+	var margin_px: int = int(round(BOSS_VISUAL_CONTAINER_HEIGHT * SAFE_MARGIN_PERCENT)) # 18px = 10%
+	sprite_margin.add_theme_constant_override("margin_left", margin_px)
+	sprite_margin.add_theme_constant_override("margin_top", margin_px)
+	sprite_margin.add_theme_constant_override("margin_right", margin_px)
+	sprite_margin.add_theme_constant_override("margin_bottom", margin_px)
+	sprite_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sprite_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_boss_visual_rect.add_child(sprite_margin)
 
-	var boss_icon: Label = Label.new()
-	boss_icon.text = "👁️ ✦ 🌀"
-	boss_icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	boss_icon.add_theme_font_size_override("font_size", 20)
-	bv_box.add_child(boss_icon)
-
-	var boss_art_note: Label = Label.new()
-	boss_art_note.text = "STOCHAS • KHÔNG GIAN MẪU"
-	boss_art_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	boss_art_note.add_theme_font_size_override("font_size", 11)
-	boss_art_note.add_theme_color_override("font_color", Color(0.75, 0.65, 0.9, 0.8))
-	bv_box.add_child(boss_art_note)
+	_boss_sprite_rect = TextureRect.new()
+	_boss_sprite_rect.name = "BossSpriteRect"
+	_boss_sprite_rect.texture = _load_boss_texture()
+	_boss_sprite_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_boss_sprite_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_boss_sprite_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_boss_sprite_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_boss_sprite_rect.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_boss_sprite_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sprite_margin.add_child(_boss_sprite_rect)
 
 	# Boss HP Bar
 	var hp_box: HBoxContainer = HBoxContainer.new()
@@ -447,3 +460,37 @@ func _on_combat_reset() -> void:
 
 func _on_retry_pressed() -> void:
 	retry_pressed.emit()
+
+func get_boss_sprite_rect() -> TextureRect:
+	_ensure_ui()
+	return _boss_sprite_rect
+
+func get_boss_texture() -> Texture2D:
+	_ensure_ui()
+	return _boss_sprite_rect.texture if _boss_sprite_rect != null else null
+
+func _load_boss_texture() -> Texture2D:
+	return load_boss_sprite()
+
+static func load_boss_sprite() -> Texture2D:
+	var path: String = STOCHAS_TEXTURE_PATH
+	if ResourceLoader.exists(path):
+		var res: Resource = load(path)
+		if res is Texture2D:
+			return res as Texture2D
+
+	var global_path: String = ProjectSettings.globalize_path(path)
+	var img: Image = Image.new()
+	if img.load(global_path) == OK or img.load(path) == OK:
+		return ImageTexture.create_from_image(img)
+
+	if FileAccess.file_exists(path) or FileAccess.file_exists(global_path):
+		var bytes: PackedByteArray = FileAccess.get_file_as_bytes(path)
+		if bytes.is_empty():
+			bytes = FileAccess.get_file_as_bytes(global_path)
+		if not bytes.is_empty():
+			var img_buf: Image = Image.new()
+			if img_buf.load_png_from_buffer(bytes) == OK:
+				return ImageTexture.create_from_image(img_buf)
+
+	return null

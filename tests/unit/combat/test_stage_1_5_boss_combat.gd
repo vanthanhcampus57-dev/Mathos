@@ -387,7 +387,7 @@ static func test_app_root_stage_1_5_combat_wiring(tree: SceneTree) -> bool:
 	return true
 
 static func test_boss_hp_bar_visual_update(tree: SceneTree) -> bool:
-	print("[BOSS-013] Verifying BossCombatPanel visual controls reflect HP changes...")
+	print("[BOSS-013] Verifying BossCombatPanel visual controls, real STOCHAS sprite, and HP updates...")
 	var catalog: ValidatedCatalog = _get_loaded_catalog()
 	var stats: PlayerStats = PlayerStats.new(catalog.get_config())
 	var player: PlayerRuntime = PlayerRuntime.new("stage_01_05", stats)
@@ -402,6 +402,61 @@ static func test_boss_hp_bar_visual_update(tree: SceneTree) -> bool:
 		tree.root.add_child(panel)
 	panel.set_controller(ctrl)
 
+	# 1. Real Stochas Asset Verification
+	var sprite_rect: TextureRect = panel.get_boss_sprite_rect()
+	if sprite_rect == null:
+		_cleanup(panel)
+		return _fail("BOSS-013", "BossCombatPanel missing BossSpriteRect TextureRect")
+
+	var tex: Texture2D = panel.get_boss_texture()
+	if tex == null:
+		_cleanup(panel)
+		return _fail("BOSS-013", "BossCombatPanel failed to load STOCHAS texture from %s" % BossCombatPanel.STOCHAS_TEXTURE_PATH)
+
+	if tex.get_width() != 512 or tex.get_height() != 512:
+		_cleanup(panel)
+		return _fail("BOSS-013", "STOCHAS texture dimensions expected 512x512, got %dx%d" % [tex.get_width(), tex.get_height()])
+
+	var img: Image = tex.get_image()
+	if img != null:
+		if img.detect_alpha() == Image.ALPHA_NONE:
+			_cleanup(panel)
+			return _fail("BOSS-013", "STOCHAS texture must have alpha channel transparency")
+
+	# 2. Rendering Configuration: Nearest neighbor pixel filter, aspect ratio preservation
+	if sprite_rect.texture_filter != CanvasItem.TEXTURE_FILTER_NEAREST:
+		_cleanup(panel)
+		return _fail("BOSS-013", "BossSpriteRect must use CanvasItem.TEXTURE_FILTER_NEAREST")
+
+	if sprite_rect.stretch_mode != TextureRect.STRETCH_KEEP_ASPECT_CENTERED:
+		_cleanup(panel)
+		return _fail("BOSS-013", "BossSpriteRect must use STRETCH_KEEP_ASPECT_CENTERED to prevent stretching")
+
+	if sprite_rect.expand_mode != TextureRect.EXPAND_IGNORE_SIZE:
+		_cleanup(panel)
+		return _fail("BOSS-013", "BossSpriteRect must use EXPAND_IGNORE_SIZE")
+
+	# 3. Safe Visual Margin Verification (8–12%)
+	var margin_container: MarginContainer = sprite_rect.get_parent() as MarginContainer
+	if margin_container == null:
+		_cleanup(panel)
+		return _fail("BOSS-013", "BossSpriteRect must be contained in a MarginContainer")
+
+	var top_margin: int = margin_container.get_theme_constant("margin_top")
+	var base_h: float = BossCombatPanel.BOSS_VISUAL_CONTAINER_HEIGHT
+	var margin_ratio: float = float(top_margin) / base_h
+	if margin_ratio < 0.08 or margin_ratio > 0.12:
+		_cleanup(panel)
+		return _fail("BOSS-013", "Safe visual margin ratio expected between 8% and 12%, got %.2f%%" % (margin_ratio * 100.0))
+
+	# 4. Coded Placeholder Removal Verification
+	for label in panel.find_children("", "Label", true, false):
+		var lbl: Label = label as Label
+		if lbl.text.contains("👁️") or lbl.text.contains("KHÔNG GIAN MẪU"):
+			_cleanup(panel)
+			return _fail("BOSS-013", "Old coded placeholder label '%s' should be completely removed" % lbl.text)
+
+	# 5. HP Bar Verification
 	var hp_bar: ProgressBar = null
 	for child in panel.find_children("", "ProgressBar", true, false):
 		hp_bar = child as ProgressBar
@@ -420,7 +475,7 @@ static func test_boss_hp_bar_visual_update(tree: SceneTree) -> bool:
 		return _fail("BOSS-013", "HP bar value should update to 90, got: %f" % hp_bar.value)
 
 	_cleanup(panel)
-	print("[BOSS-013] PASS: Boss HP bar visually updates upon strike damage")
+	print("[BOSS-013] PASS: Boss visual panel with real STOCHAS sprite (512x512 RGBA, nearest filter, 10% margin) & HP updates verified")
 	return true
 
 static func test_victory_handoff_prepares_stage_clear(tree: SceneTree) -> bool:
