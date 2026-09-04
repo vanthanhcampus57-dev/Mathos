@@ -274,6 +274,61 @@ static func test_006_d1_completion_and_d2_frozen() -> bool:
 		_cleanup_node(app)
 		return false
 
+	var v_panel: GameVictoryPanel = shell.get_victory_panel()
+	if v_panel == null or not v_panel.visible:
+		print("[D1-FLOW-006] FAIL: GameVictoryPanel not visible in MODE_DUNGEON_COMPLETE")
+		_cleanup_node(app)
+		return false
+
+	# Verify Real Fragment 01 reward container & asset
+	var frag_rect: TextureRect = v_panel.get_fragment_rect()
+	if frag_rect == null or not frag_rect.visible:
+		print("[D1-FLOW-006] FAIL: FragmentTextureRect is null or invisible")
+		_cleanup_node(app)
+		return false
+
+	if frag_rect.texture == null or not frag_rect.texture.resource_path.ends_with("fragment_01.png"):
+		print("[D1-FLOW-006] FAIL: Fragment texture missing or not pointing to fragment_01.png")
+		_cleanup_node(app)
+		return false
+
+	if frag_rect.texture.get_width() != 512 or frag_rect.texture.get_height() != 512:
+		print("[D1-FLOW-006] FAIL: Fragment texture not 512x512 (%dx%d)" % [frag_rect.texture.get_width(), frag_rect.texture.get_height()])
+		_cleanup_node(app)
+		return false
+
+	if frag_rect.stretch_mode != TextureRect.STRETCH_KEEP_ASPECT_CENTERED:
+		print("[D1-FLOW-006] FAIL: Fragment stretch_mode not STRETCH_KEEP_ASPECT_CENTERED")
+		_cleanup_node(app)
+		return false
+
+	var frag_cont: Control = v_panel.get_fragment_container()
+	if frag_cont == null or not frag_cont.visible:
+		print("[D1-FLOW-006] FAIL: FragmentRewardContainer is null or invisible")
+		_cleanup_node(app)
+		return false
+
+	# Verify generic placeholder removed from Dungeon 1 card
+	var d1_card: PanelContainer = v_panel.get_dungeon_grid().get_child(0) as PanelContainer
+	var d1_vbox = d1_card.get_child(0) if d1_card != null and d1_card.get_child_count() > 0 else null
+	var d1_status: Label = d1_vbox.get_child(2) as Label if d1_vbox != null and d1_vbox.get_child_count() >= 3 else null
+	if d1_status == null or d1_status.text.contains("[Hoàn thành - "):
+		print("[D1-FLOW-006] FAIL: Generic placeholder not removed from D1 card: '%s'" % (d1_status.text if d1_status else "null"))
+		_cleanup_node(app)
+		return false
+
+	# Verify runtime reward values preserved (actual gold and XP)
+	var exp_val: int = app._player_persistent.exp_total if app._player_persistent != null else 0
+	var gold_val: int = app._player_persistent.coin_balance if app._player_persistent != null else 0
+	if v_panel._xp_value_label == null or v_panel._xp_value_label.text != ("%d" % exp_val):
+		print("[D1-FLOW-006] FAIL: Runtime XP reward not preserved: expected %d, got '%s'" % [exp_val, v_panel._xp_value_label.text if v_panel._xp_value_label else "null"])
+		_cleanup_node(app)
+		return false
+	if v_panel._gold_value_label == null or v_panel._gold_value_label.text != ("%d" % gold_val):
+		print("[D1-FLOW-006] FAIL: Runtime Gold reward not preserved: expected %d, got '%s'" % [gold_val, v_panel._gold_value_label.text if v_panel._gold_value_label else "null"])
+		_cleanup_node(app)
+		return false
+
 	var curr_st: String = app.get_game_flow_service().get_current_stage_id()
 	if curr_st == "stage_02_01":
 		print("[D1-FLOW-006] FAIL: Current stage advanced to stage_02_01! D2 auto-entry occurred!")
@@ -281,5 +336,5 @@ static func test_006_d1_completion_and_d2_frozen() -> bool:
 		return false
 
 	_cleanup_node(app)
-	print("[D1-FLOW-006] PASS: D1 completion screen triggers and D2 route remains frozen.")
+	print("[D1-FLOW-006] PASS: D1 completion screen triggers with real Fragment 01 and D2 route remains frozen.")
 	return true
