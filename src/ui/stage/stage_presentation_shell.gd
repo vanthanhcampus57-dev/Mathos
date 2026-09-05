@@ -41,6 +41,7 @@ var _context_info: PresentationModels.StageContextInfo = null
 var _victory_panel: GameVictoryPanel = null
 var _stage_map_panel: DungeonStageMapPanel = null
 var _pause_overlay: PauseMenuOverlay = null
+var _story_panel: StoryPanel = null
 
 # Buttons in Main Menu
 var _journey_map_button: Button = null
@@ -172,6 +173,42 @@ func _ensure_sub_components() -> void:
 		if not _stage_map_panel.back_requested.is_connected(_on_map_return_pressed):
 			_stage_map_panel.back_requested.connect(_on_map_return_pressed)
 
+	# Story Panel
+	if _story_panel == null:
+		_story_panel = get_node_or_null("StoryPanel") as StoryPanel
+		if _story_panel == null and main_content != null:
+			_story_panel = main_content.get_node_or_null("StoryPanel") as StoryPanel
+		if _story_panel == null:
+			var story_scene: Resource = load("res://src/ui/story/story_panel.tscn")
+			if story_scene is PackedScene:
+				_story_panel = (story_scene as PackedScene).instantiate() as StoryPanel
+			else:
+				var story_script: Resource = load("res://src/ui/story/story_panel.gd")
+				if story_script is GDScript:
+					_story_panel = (story_script as GDScript).new() as StoryPanel
+			if _story_panel != null:
+				_story_panel.name = "StoryPanel"
+				_story_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+				_story_panel.custom_minimum_size = Vector2(1280, 720)
+				_story_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				_story_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+				_story_panel.visible = false
+				add_child(_story_panel)
+				if _pause_overlay != null:
+					move_child(_story_panel, _pause_overlay.get_index())
+		else:
+			_story_panel.custom_minimum_size = Vector2(1280, 720)
+			_story_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			_story_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+		if _story_panel != null:
+			if not _story_panel.is_node_ready():
+				_story_panel._ready()
+			if not _story_panel.continue_requested.is_connected(_on_story_continue):
+				_story_panel.continue_requested.connect(_on_story_continue)
+			if not _story_panel.pause_requested.is_connected(toggle_pause):
+				_story_panel.pause_requested.connect(toggle_pause)
+
 	# Pause Menu Overlay
 	if _pause_overlay == null:
 		_pause_overlay = get_node_or_null("PauseMenuOverlay") as PauseMenuOverlay
@@ -236,6 +273,9 @@ func _notification(what: int) -> void:
 				_stage_map_panel.size = size
 				if _stage_map_panel.has_method("_update_responsive_layout"):
 					_stage_map_panel.call("_update_responsive_layout")
+		if _story_panel != null and _story_panel.visible:
+			if size.x > 0 and size.y > 0:
+				_story_panel.size = size
 
 func _process(delta: float) -> void:
 	_update_fog_animation(delta)
@@ -581,6 +621,10 @@ func set_stage_context(data: Variant) -> void:
 				lesson_panel.set_story_mode(false)
 			lesson_panel.set_lesson_data(_context_info.lesson_steps)
 
+	_ensure_sub_components()
+	if _story_panel != null and _context_info != null:
+		_story_panel.set_context_info(_context_info)
+
 	var stage_complete_panel: StageCompletePanel = get_stage_complete_panel()
 	if stage_complete_panel != null and _context_info != null:
 		stage_complete_panel.set_summary_data(_context_info.stage_title)
@@ -609,7 +653,7 @@ func _update_header() -> void:
 	if badge_label != null:
 		badge_label.visible = (_context_info != null and _context_info.is_restored_context)
 
-	if _current_mode == ViewMode.MODE_ENTRY or _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_VICTORY or _current_mode == ViewMode.MODE_DUNGEON_COMPLETE:
+	if _current_mode == ViewMode.MODE_ENTRY or _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_VICTORY or _current_mode == ViewMode.MODE_DUNGEON_COMPLETE or _current_mode == ViewMode.MODE_STORY:
 		header_bar.visible = false
 		return
 
@@ -640,6 +684,21 @@ func set_view_mode(mode: ViewMode) -> void:
 
 	if start_container != null: start_container.visible = (_current_mode == ViewMode.MODE_ENTRY)
 	if lesson_panel != null: lesson_panel.visible = (_current_mode == ViewMode.MODE_LESSON or _current_mode == ViewMode.MODE_STORY)
+	if _story_panel != null:
+		_story_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_story_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_story_panel.visible = (_current_mode == ViewMode.MODE_STORY)
+		if _current_mode == ViewMode.MODE_STORY:
+			var target_size: Vector2 = size
+			if target_size.x <= 0 or target_size.y <= 0:
+				var root_win: Window = get_tree().root if is_inside_tree() else null
+				if root_win != null and root_win.size.x > 0 and root_win.size.y > 0:
+					target_size = Vector2(root_win.size)
+				else:
+					target_size = Vector2(1280, 720)
+			_story_panel.size = target_size
+			if _context_info != null:
+				_story_panel.set_context_info(_context_info)
 	if q_host != null:
 		q_host.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
 		var gameplay_hbox: Control = q_host.get_node_or_null("GameplayHBox") as Control
@@ -685,7 +744,7 @@ func set_view_mode(mode: ViewMode) -> void:
 
 	var main_body: MarginContainer = get_node_or_null("VBoxContainer/MainBody") as MarginContainer
 	if main_body != null:
-		if _current_mode == ViewMode.MODE_MAP:
+		if _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_STORY:
 			main_body.add_theme_constant_override("margin_left", 0)
 			main_body.add_theme_constant_override("margin_right", 0)
 			main_body.add_theme_constant_override("margin_top", 0)
@@ -699,10 +758,13 @@ func set_view_mode(mode: ViewMode) -> void:
 			if has_theme_stylebox_override("panel"):
 				remove_theme_stylebox_override("panel")
 
-	if _current_mode == ViewMode.MODE_STORY and lesson_panel != null and _context_info != null:
-		if lesson_panel.has_method("set_story_mode"):
-			lesson_panel.set_story_mode(true)
-		lesson_panel.set_lesson_data(_context_info.story_steps)
+	if _current_mode == ViewMode.MODE_STORY:
+		if _story_panel != null and _context_info != null:
+			_story_panel.set_context_info(_context_info)
+		if lesson_panel != null and _context_info != null:
+			if lesson_panel.has_method("set_story_mode"):
+				lesson_panel.set_story_mode(true)
+			lesson_panel.set_lesson_data(_context_info.story_steps)
 	elif _current_mode == ViewMode.MODE_LESSON and lesson_panel != null and _context_info != null:
 		if lesson_panel.has_method("set_story_mode"):
 			lesson_panel.set_story_mode(false)
@@ -716,7 +778,7 @@ func set_view_mode(mode: ViewMode) -> void:
 
 	var sidebar: Control = get_node_or_null("VBoxContainer/MainBody/ContentHBox/LeftSidebar") as Control
 	if sidebar != null:
-		sidebar.visible = (_current_mode != ViewMode.MODE_ENTRY and _current_mode != ViewMode.MODE_MAP and _current_mode != ViewMode.MODE_VICTORY and _current_mode != ViewMode.MODE_DUNGEON_COMPLETE)
+		sidebar.visible = (_current_mode != ViewMode.MODE_ENTRY and _current_mode != ViewMode.MODE_MAP and _current_mode != ViewMode.MODE_VICTORY and _current_mode != ViewMode.MODE_DUNGEON_COMPLETE and _current_mode != ViewMode.MODE_STORY)
 
 func show_story_phase() -> void:
 	if _context_info != null and not _context_info.story_steps.is_empty():
@@ -764,6 +826,9 @@ func _on_lesson_continue() -> void:
 		story_continue_requested.emit()
 	else:
 		lesson_continue_requested.emit()
+
+func _on_story_continue() -> void:
+	story_continue_requested.emit()
 
 func _on_lesson_completed() -> void:
 	if _current_mode == ViewMode.MODE_STORY:
@@ -843,6 +908,10 @@ func get_lesson_panel() -> LessonPanel:
 	if main_content != null:
 		return main_content.get_node_or_null("LessonPanel") as LessonPanel
 	return null
+
+func get_story_panel() -> StoryPanel:
+	_ensure_sub_components()
+	return _story_panel
 
 func get_question_host_container() -> MarginContainer:
 	var main_content: Control = _get_main_content_vbox()
