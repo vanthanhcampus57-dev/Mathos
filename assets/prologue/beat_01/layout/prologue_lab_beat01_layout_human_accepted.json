@@ -1,0 +1,132 @@
+{
+	"layers": {
+		"ArcaneTrails": {
+			"opacity": 0.45,
+			"rotation": 0.0,
+			"scale_x": 1.0,
+			"scale_y": 1.0,
+			"visible": true,
+			"x": 320.0,
+			"y": 140.0
+		},
+		"Background": {
+			"opacity": 1.0,
+			"rotation": 0.0,
+			"scale_x": 1.0,
+			"scale_y": 1.0,
+			"visible": true,
+			"x": -30.0,
+			"y": -20.0
+		},
+		"Birds": {
+			"opacity": 0.9,
+			"rotation": 0.0,
+			"scale_x": 1.0,
+			"scale_y": 1.0,
+			"visible": true,
+			"x": 260.0,
+			"y": 48.0
+		},
+		"CyanMotes": {
+			"opacity": 0.65,
+			"rotation": 0.0,
+			"scale_x": 1.0,
+			"scale_y": 1.0,
+			"visible": true,
+			"x": 0.0,
+			"y": 0.0
+		},
+		"FlyingCreatures": {
+			"opacity": 0.4,
+			"rotation": 0.0,
+			"scale_x": 1.0,
+			"scale_y": 1.0,
+			"visible": true,
+			"x": 110.0,
+			"y": 110.0
+		},
+		"FoliageLeft": {
+			"opacity": 1.0,
+			"rotation": 0.0,
+			"scale_x": 1.38999998569489,
+			"scale_y": 1.38999998569489,
+			"visible": true,
+			"x": -34.9119873046875,
+			"y": -52.1493377685547
+		},
+		"FoliageRight": {
+			"opacity": 1.0,
+			"rotation": 0.0,
+			"scale_x": 1.24000000953674,
+			"scale_y": 1.24000000953674,
+			"visible": true,
+			"x": 828.79052734375,
+			"y": 21.9576263427734
+		},
+		"FoliageTop": {
+			"opacity": 1.0,
+			"rotation": 0.0,
+			"scale_x": 1.0,
+			"scale_y": 1.0,
+			"visible": true,
+			"x": -29.6477355957031,
+			"y": -42.5630569458008
+		},
+		"GoldFlicker01": {
+			"opacity": 0.85,
+			"rotation": 0.0,
+			"scale_x": 1.0,
+			"scale_y": 1.0,
+			"visible": true,
+			"x": 620.0,
+			"y": 240.0
+		},
+		"GoldFlicker02": {
+			"opacity": 0.8,
+			"rotation": 0.0,
+			"scale_x": 1.0,
+			"scale_y": 1.0,
+			"visible": true,
+			"x": 780.0,
+			"y": 310.0
+		},
+		"GoldFlicker03": {
+			"opacity": 0.75,
+			"rotation": 0.0,
+			"scale_x": 1.0,
+			"scale_y": 1.0,
+			"visible": true,
+			"x": 490.0,
+			"y": 290.0
+		},
+		"MistFar": {
+			"opacity": 0.5,
+			"rotation": 0.0,
+			"scale_x": 1.0,
+			"scale_y": 1.0,
+			"visible": true,
+			"x": -60.0,
+			"y": 260.0
+		},
+		"MistNear": {
+			"opacity": 0.55,
+			"rotation": 0.0,
+			"scale_x": 1.0,
+			"scale_y": 1.0,
+			"visible": true,
+			"x": -100.0,
+			"y": 420.0
+		},
+		"RunePrimary": {
+			"opacity": 0.75,
+			"rotation": 0.0,
+			"scale_x": 1.0,
+			"scale_y": 1.0,
+			"visible": true,
+			"x": 530.0,
+			"y": 200.0
+		}
+	},
+	"saved_at": "2026-09-05T21:16:26",
+	"schema": "prologue_lab_beat01_layout_v1"
+}

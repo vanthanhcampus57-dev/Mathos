@@ -68,7 +68,8 @@ func _initialize() -> void:
 		{"name": "D1 Stage 1.5 Boss Combat QA", "func": Callable(preload("res://tests/unit/combat/test_stage_1_5_boss_combat.gd"), "run_all_tests").bind(self)},
 		{"name": "D1 Critical Flow Fixes", "func": Callable(preload("res://tests/unit/presentation/test_d1_critical_flow_fixes.gd"), "run_all_tests")},
 		{"name": "D1 World Map Layout QA", "func": Callable(preload("res://tests/unit/presentation/test_d1_world_map_layout.gd"), "run_all_tests")},
-		{"name": "D1 Story Visual QA", "func": Callable(preload("res://tests/unit/presentation/test_d1_story_visual.gd"), "run_all_tests")}
+		{"name": "D1 Story Visual QA", "func": Callable(preload("res://tests/unit/presentation/test_d1_story_visual.gd"), "run_all_tests")},
+		{"name": "Prologue Production Integration QA", "func": Callable(preload("res://tests/unit/presentation/test_prologue_production_integration.gd"), "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -179,4 +180,5 @@ func _count_suite_tests(name: String) -> int:
 		"D1 Critical Flow Fixes": return 6
 		"D1 World Map Layout QA": return 30
 		"D1 Story Visual QA": return 15
+		"Prologue Production Integration QA": return 20
 		_: return 1

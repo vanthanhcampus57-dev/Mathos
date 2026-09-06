@@ -1,6 +1,8 @@
 class_name AppRoot
 extends Node
 
+const PrologueGateService = preload("res://src/gameplay/prologue/prologue_gate_service.gd")
+
 ## Authoritative Production Composition Root for Mathos Engine.
 ## Bootstraps ContentCatalog, Save/Progress Services, GameFlowService,
 ## ProgressSaveBridge, QuestionService, and StagePresentationShell UI.
@@ -14,6 +16,7 @@ var _progress_service: ProgressService = null
 var _bridge: ProgressSaveBridge = null
 var _question_service: QuestionService = null
 var _game_flow_service: GameFlowService = null
+var _prologue_gate: PrologueGateService = null
 var _question_controller: RefCounted = null
 var _active_question_res: Dictionary = {}
 
@@ -96,6 +99,14 @@ func _ensure_qa_overlay() -> void:
 	elif _qa_overlay != null and _qa_overlay.get_parent() == null:
 		add_child(_qa_overlay)
 
+func get_prologue_gate() -> PrologueGateService:
+	if _prologue_gate == null:
+		_prologue_gate = PrologueGateService.new()
+	return _prologue_gate
+
+func set_prologue_gate(gate: PrologueGateService) -> void:
+	_prologue_gate = gate
+
 func get_qa_overlay() -> Control:
 	_ensure_qa_overlay()
 	return _qa_overlay
@@ -115,11 +126,19 @@ func start_new_game() -> Dictionary:
 
 	var context: Dictionary = _game_flow_service.get_stage_context(false)
 	if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
-		var story_steps: Array = context.get("story_steps", []) as Array
-		if not story_steps.is_empty() and _presentation_shell.has_method("set_view_mode"):
-			_presentation_shell.call("set_view_mode", 7) # MODE_STORY
-		elif _presentation_shell.has_method("set_view_mode"):
-			_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
+		var is_first_run: bool = false
+		var prog_snap: ProgressState = _progress_service.create_snapshot_view() if _progress_service != null else null
+		if get_prologue_gate().is_first_dungeon_entry(stage_id, prog_snap):
+			is_first_run = true
+
+		if is_first_run and _presentation_shell.has_method("set_view_mode"):
+			_presentation_shell.call("set_view_mode", 9) # MODE_PROLOGUE
+		else:
+			var story_steps: Array = context.get("story_steps", []) as Array
+			if not story_steps.is_empty() and _presentation_shell.has_method("set_view_mode"):
+				_presentation_shell.call("set_view_mode", 7) # MODE_STORY
+			elif _presentation_shell.has_method("set_view_mode"):
+				_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
 		_presentation_shell.call("set_stage_context", context)
 		if _bootstrap_ui != null:
 			_bootstrap_ui.visible = false
@@ -246,11 +265,19 @@ func select_stage(stage_id: String) -> Dictionary:
 	var context: Dictionary = _game_flow_service.get_stage_context(is_cleared)
 
 	if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
-		var story_steps: Array = context.get("story_steps", []) as Array
-		if not story_steps.is_empty() and not is_cleared and _presentation_shell.has_method("set_view_mode"):
-			_presentation_shell.call("set_view_mode", 7) # MODE_STORY
-		elif _presentation_shell.has_method("set_view_mode"):
-			_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
+		var is_first_run: bool = false
+		var prog_snap: ProgressState = _progress_service.create_snapshot_view() if _progress_service != null else null
+		if not is_cleared and get_prologue_gate().is_first_dungeon_entry(stage_id, prog_snap):
+			is_first_run = true
+
+		if is_first_run and _presentation_shell.has_method("set_view_mode"):
+			_presentation_shell.call("set_view_mode", 9) # MODE_PROLOGUE
+		else:
+			var story_steps: Array = context.get("story_steps", []) as Array
+			if not story_steps.is_empty() and not is_cleared and _presentation_shell.has_method("set_view_mode"):
+				_presentation_shell.call("set_view_mode", 7) # MODE_STORY
+			elif _presentation_shell.has_method("set_view_mode"):
+				_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
 		_presentation_shell.call("set_stage_context", context)
 		if _bootstrap_ui != null:
 			_bootstrap_ui.visible = false
@@ -633,6 +660,8 @@ func _setup_presentation_shell() -> void:
 			_presentation_shell.connect("story_completed", _on_story_completed)
 		if _presentation_shell.has_signal("story_continue_requested") and not _presentation_shell.is_connected("story_continue_requested", _on_story_completed):
 			_presentation_shell.connect("story_continue_requested", _on_story_completed)
+		if _presentation_shell.has_signal("prologue_completed") and not _presentation_shell.is_connected("prologue_completed", _on_prologue_completed):
+			_presentation_shell.connect("prologue_completed", _on_prologue_completed)
 		if _presentation_shell.has_signal("question_host_ready") and not _presentation_shell.is_connected("question_host_ready", _on_question_host_ready):
 			_presentation_shell.connect("question_host_ready", _on_question_host_ready)
 		if _presentation_shell.has_signal("feedback_host_ready") and not _presentation_shell.is_connected("feedback_host_ready", _on_feedback_host_ready):
@@ -693,6 +722,14 @@ func _show_game_victory() -> void:
 
 	if _presentation_shell != null and _presentation_shell.has_method("show_game_victory"):
 		_presentation_shell.call("show_game_victory", gold, xp)
+
+func _on_prologue_completed() -> void:
+	get_prologue_gate().mark_prologue_completed()
+	if _presentation_shell != null:
+		if _presentation_shell.has_method("show_story_phase"):
+			_presentation_shell.call("show_story_phase")
+		elif _presentation_shell.has_method("set_view_mode"):
+			_presentation_shell.call("set_view_mode", 7) # MODE_STORY
 
 func _on_story_completed() -> void:
 	if _presentation_shell != null:

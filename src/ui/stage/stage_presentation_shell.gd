@@ -15,7 +15,8 @@ enum ViewMode {
 	MODE_VICTORY = 5,
 	MODE_MAP = 6,
 	MODE_STORY = 7,
-	MODE_DUNGEON_COMPLETE = 8
+	MODE_DUNGEON_COMPLETE = 8,
+	MODE_PROLOGUE = 9
 }
 
 signal new_game_requested()
@@ -32,6 +33,8 @@ signal stage_selected(stage_id: String)
 signal pause_requested()
 signal resume_requested()
 signal logout_requested()
+signal prologue_completed()
+signal prologue_skipped()
 
 var _current_mode: ViewMode = ViewMode.MODE_ENTRY
 var _previous_mode: ViewMode = ViewMode.MODE_LESSON
@@ -42,6 +45,7 @@ var _victory_panel: GameVictoryPanel = null
 var _stage_map_panel: DungeonStageMapPanel = null
 var _pause_overlay: PauseMenuOverlay = null
 var _story_panel: StoryPanel = null
+var _prologue_player: Control = null
 
 # Buttons in Main Menu
 var _journey_map_button: Button = null
@@ -209,6 +213,34 @@ func _ensure_sub_components() -> void:
 			if not _story_panel.pause_requested.is_connected(toggle_pause):
 				_story_panel.pause_requested.connect(toggle_pause)
 
+	# Prologue Player
+	if _prologue_player == null:
+		var pro_scene: Resource = load("res://src/ui/prologue/prologue_player.tscn")
+		if pro_scene is PackedScene:
+			_prologue_player = (pro_scene as PackedScene).instantiate() as Control
+		else:
+			var pro_script: Resource = load("res://src/ui/prologue/prologue_player.gd")
+			if pro_script is GDScript:
+				_prologue_player = (pro_script as GDScript).new() as Control
+		if _prologue_player != null:
+			_prologue_player.name = "ProloguePlayer"
+			_prologue_player.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			_prologue_player.custom_minimum_size = Vector2(1280, 720)
+			_prologue_player.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			_prologue_player.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			_prologue_player.visible = false
+			add_child(_prologue_player)
+			if _pause_overlay != null:
+				move_child(_prologue_player, _pause_overlay.get_index())
+			if _prologue_player.has_signal("prologue_completed") and not _prologue_player.prologue_completed.is_connected(_on_prologue_completed):
+				_prologue_player.prologue_completed.connect(_on_prologue_completed)
+			if _prologue_player.has_signal("prologue_skipped") and not _prologue_player.prologue_skipped.is_connected(_on_prologue_skipped):
+				_prologue_player.prologue_skipped.connect(_on_prologue_skipped)
+			if _prologue_player.has_signal("volume_pressed") and not _prologue_player.volume_pressed.is_connected(toggle_pause):
+				_prologue_player.volume_pressed.connect(toggle_pause)
+			if _prologue_player.has_signal("settings_pressed") and not _prologue_player.settings_pressed.is_connected(toggle_pause):
+				_prologue_player.settings_pressed.connect(toggle_pause)
+
 	# Pause Menu Overlay
 	if _pause_overlay == null:
 		_pause_overlay = get_node_or_null("PauseMenuOverlay") as PauseMenuOverlay
@@ -276,6 +308,11 @@ func _notification(what: int) -> void:
 		if _story_panel != null and _story_panel.visible:
 			if size.x > 0 and size.y > 0:
 				_story_panel.size = size
+		if _prologue_player != null and _prologue_player.visible:
+			if size.x > 0 and size.y > 0:
+				_prologue_player.size = size
+				if _prologue_player.has_method("_update_responsive_layout"):
+					_prologue_player.call("_update_responsive_layout")
 
 func _process(delta: float) -> void:
 	_update_fog_animation(delta)
@@ -365,7 +402,7 @@ func _update_background_texture() -> void:
 	var bg_rect: TextureRect = get_node_or_null("BackgroundTextureRect") as TextureRect
 	var fog_rect: TextureRect = get_node_or_null("FogOverlayTextureRect") as TextureRect
 
-	if not _is_dungeon_1_context() or _current_mode == ViewMode.MODE_MAP:
+	if not _is_dungeon_1_context() or _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_PROLOGUE:
 		if fog_rect != null:
 			fog_rect.visible = false
 		if _procedural_fog_container != null:
@@ -653,7 +690,7 @@ func _update_header() -> void:
 	if badge_label != null:
 		badge_label.visible = (_context_info != null and _context_info.is_restored_context)
 
-	if _current_mode == ViewMode.MODE_ENTRY or _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_VICTORY or _current_mode == ViewMode.MODE_DUNGEON_COMPLETE or _current_mode == ViewMode.MODE_STORY:
+	if _current_mode == ViewMode.MODE_ENTRY or _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_VICTORY or _current_mode == ViewMode.MODE_DUNGEON_COMPLETE or _current_mode == ViewMode.MODE_STORY or _current_mode == ViewMode.MODE_PROLOGUE:
 		header_bar.visible = false
 		return
 
@@ -682,12 +719,11 @@ func set_view_mode(mode: ViewMode) -> void:
 	var f_host: MarginContainer = get_feedback_host_container()
 	var complete_panel: StageCompletePanel = get_stage_complete_panel()
 
-	if start_container != null: start_container.visible = (_current_mode == ViewMode.MODE_ENTRY)
-	if lesson_panel != null: lesson_panel.visible = (_current_mode == ViewMode.MODE_LESSON or _current_mode == ViewMode.MODE_STORY)
 	if _story_panel != null:
 		_story_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_story_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_story_panel.visible = (_current_mode == ViewMode.MODE_STORY)
+		_story_panel.mouse_filter = Control.MOUSE_FILTER_STOP if (_current_mode == ViewMode.MODE_STORY) else Control.MOUSE_FILTER_IGNORE
 		if _current_mode == ViewMode.MODE_STORY:
 			var target_size: Vector2 = size
 			if target_size.x <= 0 or target_size.y <= 0:
@@ -699,6 +735,25 @@ func set_view_mode(mode: ViewMode) -> void:
 			_story_panel.size = target_size
 			if _context_info != null:
 				_story_panel.set_context_info(_context_info)
+
+	if _prologue_player != null:
+		_prologue_player.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_prologue_player.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_prologue_player.visible = (_current_mode == ViewMode.MODE_PROLOGUE)
+		if _current_mode == ViewMode.MODE_PROLOGUE:
+			var target_size_pro: Vector2 = size
+			if target_size_pro.x <= 0 or target_size_pro.y <= 0:
+				var root_win_pro: Window = get_tree().root if is_inside_tree() else null
+				if root_win_pro != null and root_win_pro.size.x > 0 and root_win_pro.size.y > 0:
+					target_size_pro = Vector2(root_win_pro.size)
+				else:
+					target_size_pro = Vector2(1280, 720)
+			_prologue_player.size = target_size_pro
+			if _prologue_player.has_method("start_prologue"):
+				_prologue_player.call("start_prologue")
+
+	if start_container != null: start_container.visible = (_current_mode == ViewMode.MODE_ENTRY)
+	if lesson_panel != null: lesson_panel.visible = (_current_mode == ViewMode.MODE_LESSON or _current_mode == ViewMode.MODE_STORY)
 	if q_host != null:
 		q_host.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
 		var gameplay_hbox: Control = q_host.get_node_or_null("GameplayHBox") as Control
@@ -744,7 +799,7 @@ func set_view_mode(mode: ViewMode) -> void:
 
 	var main_body: MarginContainer = get_node_or_null("VBoxContainer/MainBody") as MarginContainer
 	if main_body != null:
-		if _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_STORY:
+		if _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_STORY or _current_mode == ViewMode.MODE_PROLOGUE:
 			main_body.add_theme_constant_override("margin_left", 0)
 			main_body.add_theme_constant_override("margin_right", 0)
 			main_body.add_theme_constant_override("margin_top", 0)
@@ -778,7 +833,7 @@ func set_view_mode(mode: ViewMode) -> void:
 
 	var sidebar: Control = get_node_or_null("VBoxContainer/MainBody/ContentHBox/LeftSidebar") as Control
 	if sidebar != null:
-		sidebar.visible = (_current_mode != ViewMode.MODE_ENTRY and _current_mode != ViewMode.MODE_MAP and _current_mode != ViewMode.MODE_VICTORY and _current_mode != ViewMode.MODE_DUNGEON_COMPLETE and _current_mode != ViewMode.MODE_STORY)
+		sidebar.visible = (_current_mode != ViewMode.MODE_ENTRY and _current_mode != ViewMode.MODE_MAP and _current_mode != ViewMode.MODE_VICTORY and _current_mode != ViewMode.MODE_DUNGEON_COMPLETE and _current_mode != ViewMode.MODE_STORY and _current_mode != ViewMode.MODE_PROLOGUE)
 
 func show_story_phase() -> void:
 	if _context_info != null and not _context_info.story_steps.is_empty():
@@ -1071,3 +1126,16 @@ func set_continue_available(available: bool, summary_data: Dictionary = {}) -> v
 			_save_summary_label.visible = true
 		else:
 			_save_summary_label.visible = false
+
+func show_prologue_phase() -> void:
+	set_view_mode(ViewMode.MODE_PROLOGUE)
+
+func get_prologue_player() -> Control:
+	_ensure_sub_components()
+	return _prologue_player
+
+func _on_prologue_completed() -> void:
+	prologue_completed.emit()
+
+func _on_prologue_skipped() -> void:
+	prologue_skipped.emit()

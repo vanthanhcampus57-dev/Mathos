@@ -18,8 +18,67 @@ signal story_completed()
 const DRAVEN_PORTRAIT_PATH: String = "res://assets/characters/story/draven/draven_portrait.png"
 const DRAVEN_PORTRAIT_ALT_PATH: String = "D:/Mathos_Art_Source/characters/Draven/draven_portrait.png"
 
+# Canonical Speaker Profiles for Story Mode
+const SPEAKER_CONFIGS: Dictionary = {
+	"npc_draven": {
+		"id": "npc_draven",
+		"name": "DRAVEN",
+		"subtitle": "ĐẠI PHÁP SƯ HƯỚNG DẪN",
+		"portrait_path": "res://assets/characters/story/draven/draven_portrait.png"
+	},
+	"draven": {
+		"id": "npc_draven",
+		"name": "DRAVEN",
+		"subtitle": "ĐẠI PHÁP SƯ HƯỚNG DẪN",
+		"portrait_path": "res://assets/characters/story/draven/draven_portrait.png"
+	},
+	"npc_arithmos": {
+		"id": "npc_arithmos",
+		"name": "ARITHMOS",
+		"subtitle": "TRƯỞNG THƯ VIỆN TRI THỨC",
+		"portrait_path": "res://assets/characters/story/arithmos/arithmos_portrait.png"
+	},
+	"arithmos": {
+		"id": "npc_arithmos",
+		"name": "ARITHMOS",
+		"subtitle": "TRƯỞNG THƯ VIỆN TRI THỨC",
+		"portrait_path": "res://assets/characters/story/arithmos/arithmos_portrait.png"
+	},
+	"char_karl": {
+		"id": "char_karl",
+		"name": "KARL",
+		"subtitle": "HỌC VIÊN PHÁP THUẬT",
+		"portrait_path": ""
+	},
+	"karl": {
+		"id": "char_karl",
+		"name": "KARL",
+		"subtitle": "HỌC VIÊN PHÁP THUẬT",
+		"portrait_path": ""
+	},
+	"npc_aether": {
+		"id": "npc_aether",
+		"name": "AETHER",
+		"subtitle": "LINH HỒN CỔ ĐẠI",
+		"portrait_path": ""
+	},
+	"aether": {
+		"id": "npc_aether",
+		"name": "AETHER",
+		"subtitle": "LINH HỒN CỔ ĐẠI",
+		"portrait_path": ""
+	}
+}
+
 # Subtitle approved in Figma design (presentation copy)
 const DRAVEN_PRESENTATION_SUBTITLE: String = "ĐẠI PHÁP SƯ HƯỚNG DẪN"
+const ARITHMOS_PRESENTATION_SUBTITLE: String = "TRƯỞNG THƯ VIỆN TRI THỨC"
+
+var _custom_speaker_configs: Dictionary = {}
+var _active_speaker_id: String = "npc_draven"
+var _active_speaker_name: String = "DRAVEN"
+var _active_speaker_subtitle: String = "ĐẠI PHÁP SƯ HƯỚNG DẪN"
+var _active_portrait_path: String = DRAVEN_PORTRAIT_PATH
 
 var _steps: Array[PresentationModels.LessonStepData] = []
 var _current_index: int = 0
@@ -102,7 +161,7 @@ func is_on_last_step() -> bool:
 	return _steps.is_empty() or _current_index >= _steps.size() - 1
 
 func _build_ui_structure() -> void:
-	mouse_filter = MOUSE_FILTER_IGNORE
+	mouse_filter = MOUSE_FILTER_STOP
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -111,7 +170,7 @@ func _build_ui_structure() -> void:
 	var root_vbox: VBoxContainer = VBoxContainer.new()
 	root_vbox.name = "RootVBox"
 	root_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root_vbox.mouse_filter = MOUSE_FILTER_IGNORE
+	root_vbox.mouse_filter = MOUSE_FILTER_STOP
 	root_vbox.add_theme_constant_override("separation", 0)
 	add_child(root_vbox)
 
@@ -519,17 +578,12 @@ func _update_display() -> void:
 		return
 
 	var step: PresentationModels.LessonStepData = _steps[_current_index]
+	var raw_spk: String = step.speaker_label
+	if raw_spk.is_empty():
+		raw_spk = "npc_draven"
 
-	if _speaker_label != null:
-		var raw_spk: String = step.speaker_label
-		var spk_name: String = LessonPanel.get_player_facing_speaker_name(raw_spk)
-		if spk_name.to_lower().begins_with("draven"):
-			spk_name = "DRAVEN"
-		else:
-			spk_name = spk_name.to_upper()
-		_speaker_label.text = spk_name
-		if _nameplate_name_label != null:
-			_nameplate_name_label.text = spk_name
+	var cfg: Dictionary = get_speaker_config(raw_spk)
+	_apply_speaker_config(cfg)
 
 	if _body_label != null:
 		_body_label.text = step.body_text
@@ -544,6 +598,126 @@ func _update_display() -> void:
 			_continue_button.text = "VÀO BÀI HỌC"
 		else:
 			_continue_button.text = "TIẾP TỤC"
+
+func register_speaker_config(speaker_id: String, display_name: String, subtitle: String, portrait_path: String = "") -> void:
+	_custom_speaker_configs[speaker_id.to_lower().strip_edges()] = {
+		"id": speaker_id,
+		"name": display_name,
+		"subtitle": subtitle,
+		"portrait_path": portrait_path
+	}
+
+func get_speaker_config(speaker_id: String) -> Dictionary:
+	var key: String = speaker_id.to_lower().strip_edges()
+	if _custom_speaker_configs.has(key):
+		return (_custom_speaker_configs[key] as Dictionary).duplicate()
+	if SPEAKER_CONFIGS.has(key):
+		return (SPEAKER_CONFIGS[key] as Dictionary).duplicate()
+	var fallback_name: String = LessonPanel.get_player_facing_speaker_name(speaker_id)
+	return {
+		"id": speaker_id,
+		"name": fallback_name.to_upper(),
+		"subtitle": "CỐ VẤN HƯỚNG DẪN",
+		"portrait_path": ""
+	}
+
+func configure_speaker(speaker_id: String, custom_name: String = "", custom_subtitle: String = "", custom_portrait_path: String = "") -> void:
+	var cfg: Dictionary = get_speaker_config(speaker_id).duplicate()
+	if not custom_name.is_empty():
+		cfg["name"] = custom_name
+	if not custom_subtitle.is_empty():
+		cfg["subtitle"] = custom_subtitle
+	if not custom_portrait_path.is_empty():
+		cfg["portrait_path"] = custom_portrait_path
+	_apply_speaker_config(cfg)
+
+func set_speaker(speaker_id: String, custom_name: String = "", custom_subtitle: String = "", custom_portrait_path: String = "") -> void:
+	configure_speaker(speaker_id, custom_name, custom_subtitle, custom_portrait_path)
+
+func _apply_speaker_config(cfg: Dictionary) -> void:
+	_active_speaker_id = str(cfg.get("id", "unknown"))
+	_active_speaker_name = str(cfg.get("name", "CỐ VẤN"))
+	_active_speaker_subtitle = str(cfg.get("subtitle", ""))
+	var p_path: String = str(cfg.get("portrait_path", ""))
+
+	if _speaker_label != null:
+		_speaker_label.text = _active_speaker_name
+	if _nameplate_name_label != null:
+		_nameplate_name_label.text = _active_speaker_name
+	if _nameplate_subtitle_label != null:
+		_nameplate_subtitle_label.text = _active_speaker_subtitle
+
+	if not p_path.is_empty():
+		load_portrait(p_path)
+
+func set_speaker_name(p_name: String) -> void:
+	_active_speaker_name = p_name
+	if _speaker_label != null:
+		_speaker_label.text = p_name
+	if _nameplate_name_label != null:
+		_nameplate_name_label.text = p_name
+
+func set_speaker_subtitle(p_sub: String) -> void:
+	_active_speaker_subtitle = p_sub
+	if _nameplate_subtitle_label != null:
+		_nameplate_subtitle_label.text = p_sub
+
+func set_dialogue_text(text: String) -> void:
+	if _body_label != null:
+		_body_label.text = text
+
+func set_story_title(title: String, dungeon_label: String = "") -> void:
+	if _stage_title_label != null:
+		_stage_title_label.text = title
+	if _dungeon_context_label != null and not dungeon_label.is_empty():
+		_dungeon_context_label.text = dungeon_label
+
+func set_portrait_texture(texture: Texture2D) -> void:
+	if _draven_rect != null:
+		_draven_rect.texture = texture
+		_draven_rect.visible = (texture != null)
+
+func load_portrait(path: String) -> bool:
+	if path.is_empty():
+		return false
+	if ResourceLoader.exists(path):
+		var res = load(path)
+		if res is Texture2D:
+			set_portrait_texture(res as Texture2D)
+			_active_portrait_path = path
+			return true
+	elif FileAccess.file_exists(path):
+		var img: Image = Image.load_from_file(path)
+		if img != null and not img.is_empty():
+			var tex: ImageTexture = ImageTexture.create_from_image(img)
+			set_portrait_texture(tex)
+			_active_portrait_path = path
+			return true
+	return false
+
+func is_input_isolated() -> bool:
+	return mouse_filter == Control.MOUSE_FILTER_STOP and visible
+
+func get_active_speaker_id() -> String:
+	return _active_speaker_id
+
+func get_active_speaker_name() -> String:
+	return _active_speaker_name
+
+func get_active_speaker_subtitle() -> String:
+	return _active_speaker_subtitle
+
+func get_active_portrait_path() -> String:
+	return _active_portrait_path
+
+func get_character_texture_rect() -> TextureRect:
+	return _draven_rect
+
+func get_character_slot() -> Control:
+	return _character_slot
+
+func get_nameplate_panel() -> Control:
+	return _nameplate_panel
 
 func _on_continue_pressed() -> void:
 	if not next_step():
