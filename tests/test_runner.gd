@@ -180,5 +180,5 @@ func _count_suite_tests(name: String) -> int:
 		"D1 Critical Flow Fixes": return 6
 		"D1 World Map Layout QA": return 30
 		"D1 Story Visual QA": return 15
-		"Prologue Production Integration QA": return 20
+		"Prologue Production Integration QA": return 23
 		_: return 1

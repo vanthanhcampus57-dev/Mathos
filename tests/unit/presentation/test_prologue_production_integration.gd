@@ -58,7 +58,10 @@ static func run_all_tests() -> bool:
 		Callable(TestPrologueProductionIntegration, "test_prod_017_responsive_1366x768"),
 		Callable(TestPrologueProductionIntegration, "test_prod_018_responsive_1600x900"),
 		Callable(TestPrologueProductionIntegration, "test_prod_019_responsive_1920x1080"),
-		Callable(TestPrologueProductionIntegration, "test_prod_020_map_regression")
+		Callable(TestPrologueProductionIntegration, "test_prod_020_map_regression"),
+		Callable(TestPrologueProductionIntegration, "test_prod_rune_001_layer_dict_contains_runeprimary"),
+		Callable(TestPrologueProductionIntegration, "test_prod_rune_002_runeprimary_layout_applies_exact_human_values"),
+		Callable(TestPrologueProductionIntegration, "test_prod_rune_003_no_stale_runepulse_production_key")
 	]
 
 	var pass_count: int = 0
@@ -584,3 +587,92 @@ static func test_prod_020_map_regression() -> bool:
 	app.free()
 	print("[PROLOGUE-PROD-020] PASS")
 	return true
+
+# PROLOGUE-PROD-RUNE-001: Production Beat 1 layer dictionary contains RunePrimary.
+static func test_prod_rune_001_layer_dict_contains_runeprimary() -> bool:
+	print("[PROLOGUE-PROD-RUNE-001] Verifying Production Beat 1 layer dictionary contains RunePrimary...")
+	var player: Control = ProloguePlayerClass.new()
+	player.call("_ensure_built")
+
+	var rune_node: Control = player.call("get_layer_node", 1, "RunePrimary")
+	if rune_node == null:
+		print("[PROLOGUE-PROD-RUNE-001] FAIL: RunePrimary layer node is null")
+		player.free()
+		return false
+
+	var b1_layers: Dictionary = player.get("_b1_layers") as Dictionary
+	if not b1_layers.has("RunePrimary"):
+		print("[PROLOGUE-PROD-RUNE-001] FAIL: _b1_layers does not have 'RunePrimary' key")
+		player.free()
+		return false
+
+	player.free()
+	print("[PROLOGUE-PROD-RUNE-001] PASS")
+	return true
+
+# PROLOGUE-PROD-RUNE-002: RunePrimary layout applies exact human position and opacity.
+static func test_prod_rune_002_runeprimary_layout_applies_exact_human_values() -> bool:
+	print("[PROLOGUE-PROD-RUNE-002] Verifying RunePrimary layout applies exact human position (530.0, 200.0) and opacity 0.75...")
+	var player: Control = ProloguePlayerClass.new()
+	player.call("_ensure_built")
+
+	var rune_node: Control = player.call("get_layer_node", 1, "RunePrimary")
+	if rune_node == null:
+		print("[PROLOGUE-PROD-RUNE-002] FAIL: RunePrimary layer node is null")
+		player.free()
+		return false
+
+	if not rune_node.position.is_equal_approx(Vector2(530.0, 200.0)):
+		print("[PROLOGUE-PROD-RUNE-002] FAIL: RunePrimary position mismatch: expected (530.0, 200.0), got %v" % rune_node.position)
+		player.free()
+		return false
+
+	if not is_equal_approx(rune_node.modulate.a, 0.75):
+		print("[PROLOGUE-PROD-RUNE-002] FAIL: RunePrimary opacity mismatch: expected 0.75, got %f" % rune_node.modulate.a)
+		player.free()
+		return false
+
+	if not rune_node.scale.is_equal_approx(Vector2(1.0, 1.0)):
+		print("[PROLOGUE-PROD-RUNE-002] FAIL: RunePrimary scale mismatch: expected (1.0, 1.0), got %v" % rune_node.scale)
+		player.free()
+		return false
+
+	# Also verify full 14/14 Beat 1 layer parity
+	var expected_14_layers: Array[String] = [
+		"ArcaneTrails", "Background", "Birds", "CyanMotes", "FlyingCreatures",
+		"FoliageLeft", "FoliageRight", "FoliageTop", "GoldFlicker01", "GoldFlicker02",
+		"GoldFlicker03", "MistFar", "MistNear", "RunePrimary"
+	]
+	var b1_layers: Dictionary = player.get("_b1_layers") as Dictionary
+	for l_name in expected_14_layers:
+		if not b1_layers.has(l_name):
+			print("[PROLOGUE-PROD-RUNE-002] FAIL: Missing layer %s in Beat 1 layout" % l_name)
+			player.free()
+			return false
+
+	player.free()
+	print("[PROLOGUE-PROD-RUNE-002] PASS: RunePrimary loaded at (530.0, 200.0), opacity 0.75; Beat 1 parity is 14/14.")
+	return true
+
+# PROLOGUE-PROD-RUNE-003: No stale RunePulse production key remains.
+static func test_prod_rune_003_no_stale_runepulse_production_key() -> bool:
+	print("[PROLOGUE-PROD-RUNE-003] Verifying no stale RunePulse production key remains...")
+	var player: Control = ProloguePlayerClass.new()
+	player.call("_ensure_built")
+
+	var stale_node: Control = player.call("get_layer_node", 1, "RunePulse")
+	if stale_node != null:
+		print("[PROLOGUE-PROD-RUNE-003] FAIL: Stale RunePulse node still exists!")
+		player.free()
+		return false
+
+	var b1_layers: Dictionary = player.get("_b1_layers") as Dictionary
+	if b1_layers.has("RunePulse"):
+		print("[PROLOGUE-PROD-RUNE-003] FAIL: Stale 'RunePulse' key still in _b1_layers!")
+		player.free()
+		return false
+
+	player.free()
+	print("[PROLOGUE-PROD-RUNE-003] PASS")
+	return true
+

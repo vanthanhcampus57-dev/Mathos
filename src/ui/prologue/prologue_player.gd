@@ -208,7 +208,7 @@ func _build_beat01_structure() -> void:
 		{"name": "GoldFlicker02", "path": "res://assets/prologue/beat_01/ambient/lights/beat01_gold_flicker_02.png", "sz": Vector2(75, 75)},
 		{"name": "GoldFlicker03", "path": "res://assets/prologue/beat_01/ambient/lights/beat01_gold_flicker_03.png", "sz": Vector2(65, 65)},
 		{"name": "ArcaneTrails", "path": "res://assets/prologue/beat_01/ambient/trails/beat01_arcane_trails.png", "sz": Vector2(700, 394)},
-		{"name": "RunePulse", "path": "res://assets/prologue/beat_01/ambient/runes/beat01_rune_pulse.png", "sz": Vector2(220, 220)},
+		{"name": "RunePrimary", "path": "res://assets/prologue/beat_01/ambient/runes/beat01_rune_pulse.png", "sz": Vector2(220, 220)},
 		{"name": "MistNear", "path": "res://assets/prologue/beat_01/ambient/mist/beat01_mist_02.png", "sz": Vector2(1500, 400)},
 		{"name": "CyanMotes", "path": "res://assets/prologue/beat_01/ambient/particles/beat01_cyan_motes.png", "sz": Vector2(1280, 720)},
 		{"name": "FoliageLeft", "path": "res://assets/prologue/beat_01/ambient/foliage/beat01_foliage_left.png", "sz": Vector2(400, 740)},
