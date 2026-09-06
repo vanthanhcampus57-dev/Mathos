@@ -8,6 +8,13 @@ signal submit_requested(interaction_payload: Dictionary)
 signal retry_requested()
 signal continue_requested()
 
+enum LifecycleState {
+	FRESH,
+	VALIDATION_WARNING,
+	EVALUATED_WRONG,
+	EVALUATED_CORRECT
+}
+
 var _question_view: Dictionary = {}
 var _active_interaction_view: Control = null
 var _prompt_text: String = ""
@@ -16,7 +23,12 @@ var _feedback_text: String = ""
 var _is_correct: bool = false
 var _has_feedback: bool = false
 var _is_submitting: bool = false
+var _lifecycle_state: LifecycleState = LifecycleState.FRESH
+var _hint_visible: bool = false
+var _validation_warning_visible: bool = false
+var _feedback_visible: bool = false
 var _panel_tween: Tween = null
+var _feedback_tween: Tween = null
 
 # UI Control nodes
 var _main_vbox: VBoxContainer = null
@@ -183,8 +195,15 @@ func _ensure_ui_built() -> void:
 				_active_interaction_view.get_parent().remove_child(_active_interaction_view)
 			target_parent.add_child(_active_interaction_view)
 
-func setup_question(question_view: Dictionary) -> bool:
+func clear_question() -> void:
 	_question_view = {}
+	if _panel_tween != null and _panel_tween.is_running():
+		_panel_tween.kill()
+		_panel_tween = null
+	if _feedback_tween != null and _feedback_tween.is_running():
+		_feedback_tween.kill()
+		_feedback_tween = null
+
 	if _active_interaction_view != null:
 		if _active_interaction_view.get_parent() != null:
 			_active_interaction_view.get_parent().remove_child(_active_interaction_view)
@@ -194,12 +213,57 @@ func setup_question(question_view: Dictionary) -> bool:
 			_active_interaction_view.free()
 		_active_interaction_view = null
 
+	var scroll_target: Control = get_interaction_scroll_container()
+	if scroll_target != null:
+		for child in scroll_target.get_children():
+			scroll_target.remove_child(child)
+			if child.is_inside_tree():
+				child.queue_free()
+			else:
+				child.free()
+
+	if _interaction_container != null:
+		for child in _interaction_container.get_children():
+			if child != scroll_target:
+				_interaction_container.remove_child(child)
+				if child.is_inside_tree():
+					child.queue_free()
+				else:
+					child.free()
+
 	_prompt_text = ""
 	_objective_text = ""
 	_feedback_text = ""
 	_is_correct = false
 	_has_feedback = false
 	_is_submitting = false
+	_lifecycle_state = LifecycleState.FRESH
+	_hint_visible = false
+	_validation_warning_visible = false
+	_feedback_visible = false
+
+	if _feedback_label != null:
+		_feedback_label.visible = false
+		_feedback_label.text = ""
+		_feedback_label.modulate.a = 0.0
+
+	if _prompt_label != null:
+		_prompt_label.text = ""
+		_prompt_label.visible = false
+
+	if _objective_label != null:
+		_objective_label.text = ""
+		_objective_label.visible = false
+
+	if _submit_button != null:
+		_submit_button.text = "Xác nhận"
+		_submit_button.disabled = false
+
+	if _hint_button != null:
+		_hint_button.disabled = false
+
+func setup_question(question_view: Dictionary) -> bool:
+	clear_question()
 
 	if not (question_view is Dictionary) or question_view.is_empty():
 		return false
@@ -252,6 +316,7 @@ func setup_question(question_view: Dictionary) -> bool:
 
 	if _submit_button != null:
 		_submit_button.text = "Xác nhận"
+		_submit_button.disabled = false
 
 	if _active_interaction_view != null:
 		if _active_interaction_view.get_parent() != null:
@@ -297,12 +362,21 @@ func request_submit() -> void:
 	submit_requested.emit(payload)
 
 func show_feedback(attempt_result: Dictionary) -> bool:
-	if not (attempt_result is Dictionary) or not attempt_result.has("is_correct") or not attempt_result.has("feedback_text"):
+	if not (attempt_result is Dictionary) or not attempt_result.has("is_correct"):
 		return false
 	_is_correct = bool(attempt_result["is_correct"])
-	_feedback_text = String(attempt_result["feedback_text"])
+	if attempt_result.has("feedback_text"):
+		_feedback_text = String(attempt_result["feedback_text"])
+	elif attempt_result.has("player_facing_feedback"):
+		_feedback_text = String(attempt_result["player_facing_feedback"])
+	elif attempt_result.has("explanation"):
+		_feedback_text = String(attempt_result["explanation"])
+	else:
+		_feedback_text = ""
 	_has_feedback = true
+	_feedback_visible = true
 	_is_submitting = false
+	_lifecycle_state = LifecycleState.EVALUATED_CORRECT if _is_correct else LifecycleState.EVALUATED_WRONG
 
 	_ensure_ui_built()
 	if _feedback_label != null:
@@ -312,12 +386,15 @@ func show_feedback(attempt_result: Dictionary) -> bool:
 		_feedback_label.text = "[%s] %s\n%s" % [header_str, _feedback_text, explanation_str]
 		_feedback_label.modulate.a = 0.0
 		_feedback_label.visible = true
-		var fb_tween: Tween = create_tween()
-		if fb_tween != null:
-			fb_tween.tween_property(_feedback_label, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		if _feedback_tween != null and _feedback_tween.is_running():
+			_feedback_tween.kill()
+		_feedback_tween = create_tween()
+		if _feedback_tween != null:
+			_feedback_tween.tween_property(_feedback_label, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 	if _submit_button != null:
 		_submit_button.text = "TIẾP TỤC" if _is_correct else "THỬ LẠI"
+		_submit_button.disabled = false
 
 	if _active_interaction_view != null and _active_interaction_view.has_method("show_feedback"):
 		_active_interaction_view.call("show_feedback", attempt_result)
@@ -346,6 +423,21 @@ func is_correct() -> bool:
 func has_feedback() -> bool:
 	return _has_feedback
 
+func get_lifecycle_state() -> LifecycleState:
+	return _lifecycle_state
+
+func is_hint_visible() -> bool:
+	return _hint_visible
+
+func is_validation_warning_visible() -> bool:
+	return _validation_warning_visible
+
+func get_submit_button() -> Button:
+	return _submit_button
+
+func get_feedback_label() -> Label:
+	return _feedback_label
+
 func get_active_interaction_view() -> Control:
 	return _active_interaction_view
 
@@ -366,54 +458,73 @@ func _update_labels() -> void:
 			_feedback_label.text = "[%s] %s" % [header_str, _feedback_text]
 
 func _on_submit_button_pressed() -> void:
-	if _has_feedback:
-		if _is_correct or (_submit_button != null and _submit_button.text == "TIẾP TỤC"):
-			continue_requested.emit()
-		else:
-			_has_feedback = false
-			_feedback_text = ""
-			_is_submitting = false
-			if _feedback_label != null:
-				_feedback_label.visible = false
-			if _submit_button != null:
-				_submit_button.text = "Xác nhận"
-			if _active_interaction_view != null:
-				if _active_interaction_view.has_method("reset_interaction"):
-					_active_interaction_view.call("reset_interaction")
-				elif _active_interaction_view.has_method("set_disabled"):
-					_active_interaction_view.call("set_disabled", false)
-			retry_requested.emit()
-	else:
-		if _is_submitting:
-			return
-		_is_submitting = true
-		var payload: Dictionary = get_current_interaction_payload()
-		if not is_payload_complete(payload):
-			_is_submitting = false
-			var itype: String = String(_question_view.get("interaction_type", ""))
-			var uncompleted_msg: String = "Hãy hoàn tất tất cả các mục trước khi xác nhận."
-			if itype == "multiple_choice":
-				uncompleted_msg = "Vui lòng chọn một đáp án trước khi xác nhận."
-			elif itype == "input":
-				uncompleted_msg = "Vui lòng nhập câu trả lời trước khi xác nhận."
-			elif itype == "matching":
-				uncompleted_msg = "Vui lòng chọn ghép đôi cho tất cả các mục trước khi xác nhận."
-			elif itype == "drag_drop":
-				uncompleted_msg = "Hãy phân loại tất cả các mục trước khi xác nhận."
+	if _lifecycle_state == LifecycleState.EVALUATED_CORRECT:
+		continue_requested.emit()
+		return
+	elif _lifecycle_state == LifecycleState.EVALUATED_WRONG:
+		_lifecycle_state = LifecycleState.FRESH
+		_has_feedback = false
+		_feedback_visible = false
+		_feedback_text = ""
+		_is_submitting = false
+		if _feedback_tween != null and _feedback_tween.is_running():
+			_feedback_tween.kill()
+			_feedback_tween = null
+		if _feedback_label != null:
+			_feedback_label.visible = false
+			_feedback_label.text = ""
+			_feedback_label.modulate.a = 0.0
+		if _submit_button != null:
+			_submit_button.text = "Xác nhận"
+		if _active_interaction_view != null:
+			if _active_interaction_view.has_method("reset_interaction"):
+				_active_interaction_view.call("reset_interaction")
+			elif _active_interaction_view.has_method("set_disabled"):
+				_active_interaction_view.call("set_disabled", false)
+		retry_requested.emit()
+		return
 
-			_feedback_text = "⚠️ %s" % uncompleted_msg
-			_has_feedback = true
-			if _feedback_label != null:
-				_feedback_label.theme_type_variation = &"MathosMeta"
-				_feedback_label.text = _feedback_text
-				_feedback_label.modulate.a = 0.0
-				_feedback_label.visible = true
-				var fb_tween: Tween = create_tween()
-				if fb_tween != null:
-					fb_tween.tween_property(_feedback_label, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-			return
+	# In FRESH or VALIDATION_WARNING state
+	if _is_submitting:
+		return
 
-		request_submit()
+	var payload: Dictionary = get_current_interaction_payload()
+	if not is_payload_complete(payload):
+		_lifecycle_state = LifecycleState.VALIDATION_WARNING
+		_validation_warning_visible = true
+		_has_feedback = true
+		var itype: String = String(_question_view.get("interaction_type", ""))
+		var uncompleted_msg: String = "Hãy hoàn tất tất cả các mục trước khi xác nhận."
+		if itype == "multiple_choice":
+			uncompleted_msg = "Vui lòng chọn một đáp án trước khi xác nhận."
+		elif itype == "input":
+			uncompleted_msg = "Vui lòng nhập câu trả lời trước khi xác nhận."
+		elif itype == "matching":
+			uncompleted_msg = "Vui lòng chọn ghép đôi cho tất cả các mục trước khi xác nhận."
+		elif itype == "drag_drop":
+			uncompleted_msg = "Hãy phân loại tất cả các mục trước khi xác nhận."
+
+		_feedback_text = "⚠️ %s" % uncompleted_msg
+		if _feedback_label != null:
+			_feedback_label.theme_type_variation = &"MathosMeta"
+			_feedback_label.text = _feedback_text
+			_feedback_label.modulate.a = 0.0
+			_feedback_label.visible = true
+			if _feedback_tween != null and _feedback_tween.is_running():
+				_feedback_tween.kill()
+			_feedback_tween = create_tween()
+			if _feedback_tween != null:
+				_feedback_tween.tween_property(_feedback_label, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		return
+
+	# Valid payload submitted
+	_is_submitting = true
+	_validation_warning_visible = false
+	if not _feedback_visible:
+		_has_feedback = false
+		if _feedback_label != null:
+			_feedback_label.visible = false
+	request_submit()
 
 func is_payload_complete(payload: Dictionary) -> bool:
 	var itype: String = String(_question_view.get("interaction_type", ""))
@@ -421,7 +532,7 @@ func is_payload_complete(payload: Dictionary) -> bool:
 		"multiple_choice":
 			return payload.has("selected_option_id") and not String(payload["selected_option_id"]).strip_edges().is_empty()
 		"input":
-			return payload.has("value") and not String(payload["value"]).strip_edges().is_empty()
+			return payload.has("value") and payload["value"] != null and not str(payload["value"]).strip_edges().is_empty()
 		"matching":
 			return payload.has("pairs") and (payload["pairs"] is Array) and not (payload["pairs"] as Array).is_empty()
 		"drag_drop":
@@ -430,6 +541,9 @@ func is_payload_complete(payload: Dictionary) -> bool:
 			return not payload.is_empty()
 
 func _on_hint_button_pressed() -> void:
+	if _lifecycle_state == LifecycleState.EVALUATED_CORRECT or _lifecycle_state == LifecycleState.EVALUATED_WRONG:
+		return
+
 	var hint: String = String(_question_view.get("hint", "")).strip_edges()
 	if hint.is_empty():
 		hint = String(_question_view.get("explanation", "")).strip_edges()
@@ -439,6 +553,7 @@ func _on_hint_button_pressed() -> void:
 		hint = "Đọc kỹ các giả thiết và phân tích không gian mẫu hoặc các biến cố độc lập để chọn đáp án."
 
 	_feedback_text = "💡 Gợi ý: %s" % hint
+	_hint_visible = true
 	_has_feedback = true
 	_ensure_ui_built()
 
@@ -447,18 +562,22 @@ func _on_hint_button_pressed() -> void:
 		_feedback_label.text = _feedback_text
 		_feedback_label.modulate.a = 0.0
 		_feedback_label.visible = true
-		var fb_tween: Tween = create_tween()
-		if fb_tween != null:
-			fb_tween.tween_property(_feedback_label, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		if _feedback_tween != null and _feedback_tween.is_running():
+			_feedback_tween.kill()
+		_feedback_tween = create_tween()
+		if _feedback_tween != null:
+			_feedback_tween.tween_property(_feedback_label, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func on_submission_failed(error_info: Dictionary = {}) -> void:
 	_is_submitting = false
+	_validation_warning_visible = true
+	_has_feedback = true
+	_lifecycle_state = LifecycleState.VALIDATION_WARNING
 	_ensure_ui_built()
 
 	if _submit_button != null:
 		_submit_button.disabled = false
-		if not _has_feedback:
-			_submit_button.text = "Xác nhận"
+		_submit_button.text = "Xác nhận"
 
 	if _active_interaction_view != null and _active_interaction_view.has_method("set_disabled"):
 		_active_interaction_view.call("set_disabled", false)
@@ -481,13 +600,14 @@ func on_submission_failed(error_info: Dictionary = {}) -> void:
 		player_facing_msg = "Hãy hoàn tất tất cả các mục trước khi xác nhận."
 
 	_feedback_text = "⚠️ %s" % player_facing_msg
-	_has_feedback = true
 
 	if _feedback_label != null:
 		_feedback_label.theme_type_variation = &"MathosMeta"
 		_feedback_label.text = _feedback_text
 		_feedback_label.modulate.a = 0.0
 		_feedback_label.visible = true
-		var fb_tween: Tween = create_tween()
-		if fb_tween != null:
-			fb_tween.tween_property(_feedback_label, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		if _feedback_tween != null and _feedback_tween.is_running():
+			_feedback_tween.kill()
+		_feedback_tween = create_tween()
+		if _feedback_tween != null:
+			_feedback_tween.tween_property(_feedback_label, "modulate:a", 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)

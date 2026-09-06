@@ -705,6 +705,11 @@ func _reset_practice_metrics(stage_id: String) -> void:
 	_finalized_question_ids.clear()
 	_first_attempt_results.clear()
 	_current_question_id = ""
+	_active_question_res = {}
+	_retry_question_id = ""
+	var panel: QuestionPanel = get_question_panel()
+	if panel != null:
+		panel.clear_question()
 
 # Signal Event Handlers
 func _on_new_game_requested() -> void:
@@ -745,6 +750,7 @@ func _on_lesson_continue_requested() -> void:
 			_active_question_res = orch.advance_to_question_phase()
 	if _presentation_shell != null and _presentation_shell.has_method("set_view_mode"):
 		_presentation_shell.call("set_view_mode", 2) # MODE_QUESTION_HOST
+	_start_current_question()
 
 func _on_question_host_ready(host_container: Control) -> void:
 	if host_container == null:
@@ -1004,22 +1010,22 @@ func _start_next_question_in_stage() -> Dictionary:
 				if orch != null:
 					orch.set("_current_phase", "QUESTION_ACTIVE")
 					orch.set("_active_question_session_id", String(session.get("session_id", "")))
+				_active_question_res = {}
 			return bind_res
 
 	if _question_service != null and _question_service.has_active_session():
 		var active_sess: Dictionary = _question_service.get_active_session()
+		var active_sess_id: String = String(active_sess.get("session_id", ""))
+		if _question_controller != null and _question_controller.has_method("get_active_session_id") and _question_controller.call("get_active_session_id") == active_sess_id and not active_sess_id.is_empty():
+			return {"success": true, "session": active_sess}
+
 		var active_q: Dictionary = _question_service.get_active_question()
 		if not active_sess.is_empty() and not active_q.is_empty():
-			_active_question_res = {
-				"success": true,
-				"session": active_sess,
-				"question": active_q
-			}
 			var bind_res: Dictionary = {}
 			if _question_controller.has_method("bind_existing_session"):
 				bind_res = _question_controller.call("bind_existing_session", active_sess, active_q) as Dictionary
 			else:
-				bind_res = _active_question_res
+				bind_res = {"success": true, "session": active_sess, "question": active_q}
 			if bool(bind_res.get("success", false)):
 				_current_question_id = String(active_q.get("question_id", ""))
 				if _qa_overlay != null: _qa_overlay.on_question_changed(_current_question_id)
@@ -1027,6 +1033,7 @@ func _start_next_question_in_stage() -> Dictionary:
 				if orch != null:
 					orch.set("_current_phase", "QUESTION_ACTIVE")
 					orch.set("_active_question_session_id", String(active_sess.get("session_id", "")))
+				_active_question_res = {}
 			return bind_res
 
 	var stage_data: Dictionary = _catalog.get_stage(current_stage_id)

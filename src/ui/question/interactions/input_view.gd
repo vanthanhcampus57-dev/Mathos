@@ -113,6 +113,18 @@ func set_disabled(disabled: bool) -> void:
 		_line_edit.editable = not disabled
 	_apply_line_edit_styles()
 
+func reset_interaction() -> void:
+	_current_raw_value = ""
+	if _line_edit != null:
+		_line_edit.text = ""
+	set_disabled(false)
+
+func get_line_edit() -> LineEdit:
+	return _line_edit
+
+func show_feedback(_attempt_result: Dictionary) -> void:
+	set_disabled(true)
+
 func _apply_line_edit_styles() -> void:
 	if _line_edit == null:
 		return

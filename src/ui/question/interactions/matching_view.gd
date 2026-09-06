@@ -120,6 +120,15 @@ func set_disabled(p_disabled: bool) -> void:
 func is_disabled() -> bool:
 	return _disabled
 
+func reset_interaction() -> void:
+	_pairs.clear()
+	_active_left_id = ""
+	_disabled = false
+	_update_option_selections()
+
+func show_feedback(_attempt_result: Dictionary) -> void:
+	set_disabled(true)
+
 func select_left_card(left_id: String) -> void:
 	if _disabled:
 		return

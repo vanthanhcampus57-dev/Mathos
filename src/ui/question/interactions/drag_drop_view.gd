@@ -115,6 +115,14 @@ func set_disabled(p_disabled: bool) -> void:
 func is_disabled() -> bool:
 	return _disabled
 
+func reset_interaction() -> void:
+	_placements.clear()
+	_disabled = false
+	_update_option_selections()
+
+func show_feedback(_attempt_result: Dictionary) -> void:
+	set_disabled(true)
+
 func _rebuild_ui() -> void:
 	if _vbox == null:
 		return
