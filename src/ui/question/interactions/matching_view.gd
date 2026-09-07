@@ -237,6 +237,12 @@ func _rebuild_ui() -> void:
 
 	_update_option_selections()
 	custom_minimum_size = Vector2(0, maxf(100.0, total_min_height))
+	update_minimum_size()
+
+func _get_minimum_size() -> Vector2:
+	if _vbox != null:
+		return _vbox.get_combined_minimum_size()
+	return custom_minimum_size
 
 func _calc_required_row_height(left_text: String, avail_width: float) -> float:
 	var font: Font = ThemeDB.fallback_font

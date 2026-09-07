@@ -44,7 +44,7 @@ var _context_info: PresentationModels.StageContextInfo = null
 var _victory_panel: GameVictoryPanel = null
 var _stage_map_panel: DungeonStageMapPanel = null
 var _pause_overlay: PauseMenuOverlay = null
-var _story_panel: StoryPanel = null
+var _story_panel: Control = null
 var _prologue_player: Control = null
 
 # Buttons in Main Menu
@@ -179,17 +179,17 @@ func _ensure_sub_components() -> void:
 
 	# Story Panel
 	if _story_panel == null:
-		_story_panel = get_node_or_null("StoryPanel") as StoryPanel
+		_story_panel = get_node_or_null("StoryPanel") as Control
 		if _story_panel == null and main_content != null:
-			_story_panel = main_content.get_node_or_null("StoryPanel") as StoryPanel
+			_story_panel = main_content.get_node_or_null("StoryPanel") as Control
 		if _story_panel == null:
 			var story_scene: Resource = load("res://src/ui/story/story_panel.tscn")
 			if story_scene is PackedScene:
-				_story_panel = (story_scene as PackedScene).instantiate() as StoryPanel
+				_story_panel = (story_scene as PackedScene).instantiate() as Control
 			else:
 				var story_script: Resource = load("res://src/ui/story/story_panel.gd")
 				if story_script is GDScript:
-					_story_panel = (story_script as GDScript).new() as StoryPanel
+					_story_panel = (story_script as GDScript).new() as Control
 			if _story_panel != null:
 				_story_panel.name = "StoryPanel"
 				_story_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -765,7 +765,7 @@ func set_view_mode(mode: ViewMode) -> void:
 				_prologue_player.call("start_prologue")
 
 	if start_container != null: start_container.visible = (_current_mode == ViewMode.MODE_ENTRY)
-	if lesson_panel != null: lesson_panel.visible = (_current_mode == ViewMode.MODE_LESSON or _current_mode == ViewMode.MODE_STORY)
+	if lesson_panel != null: lesson_panel.visible = (_current_mode == ViewMode.MODE_LESSON)
 	if q_host != null:
 		q_host.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
 		var gameplay_hbox: Control = q_host.get_node_or_null("GameplayHBox") as Control
@@ -836,10 +836,6 @@ func set_view_mode(mode: ViewMode) -> void:
 	if _current_mode == ViewMode.MODE_STORY:
 		if _story_panel != null and _context_info != null:
 			_story_panel.set_context_info(_context_info)
-		if lesson_panel != null and _context_info != null:
-			if lesson_panel.has_method("set_story_mode"):
-				lesson_panel.set_story_mode(true)
-			lesson_panel.set_lesson_data(_context_info.story_steps)
 	elif _current_mode == ViewMode.MODE_LESSON and lesson_panel != null and _context_info != null:
 		if lesson_panel.has_method("set_story_mode"):
 			lesson_panel.set_story_mode(false)
@@ -984,7 +980,7 @@ func get_lesson_panel() -> LessonPanel:
 		return main_content.get_node_or_null("LessonPanel") as LessonPanel
 	return null
 
-func get_story_panel() -> StoryPanel:
+func get_story_panel() -> Control:
 	_ensure_sub_components()
 	return _story_panel
 

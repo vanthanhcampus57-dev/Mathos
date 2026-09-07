@@ -13,6 +13,7 @@ extends SceneTree
 ## 8. Config toggle: when D2 is configured playable, Hub and progression agree on D2.
 
 const TEST_DIR: String = "user://test_save_progression_consistency/"
+const PrologueGateService = preload("res://src/gameplay/prologue/prologue_gate_service.gd")
 
 func _initialize() -> void:
 	var ok: bool = run_all_tests()

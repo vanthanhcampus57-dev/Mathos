@@ -18,7 +18,7 @@ const REF_WIDTH: float = 1280.0
 const REF_HEIGHT: float = 720.0
 
 const REF_HEADER_POS: Vector2 = Vector2(40.0, 28.0)
-const REF_HEADER_SIZE: Vector2 = Vector2(408.32, 111.5)
+const REF_HEADER_SIZE: Vector2 = Vector2(310.0, 112.0)
 
 const REF_HUD_RIGHT: float = 40.0
 const REF_HUD_TOP: float = 28.0
@@ -236,7 +236,7 @@ func _build_header() -> void:
 	_title_label.name = "TitleLabel"
 	_title_label.text = "BẢN ĐỒ HÀNH TRÌNH"
 	_title_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
-	_title_label.add_theme_font_size_override("font_size", 24)
+	_title_label.add_theme_font_size_override("font_size", 22)
 	_title_label.add_theme_color_override("font_outline_color", Color(0.1, 0.65, 0.9, 0.45))
 	_title_label.add_theme_constant_override("outline_size", 3)
 	vbox.add_child(_title_label)
@@ -245,19 +245,24 @@ func _build_header() -> void:
 	_subtitle_label.name = "SubtitleLabel"
 	_subtitle_label.text = "Chọn thử thách tiếp theo trên hành trình của bạn."
 	_subtitle_label.add_theme_color_override("font_color", Color(0.68, 0.76, 0.86))
-	_subtitle_label.add_theme_font_size_override("font_size", 12)
+	_subtitle_label.add_theme_font_size_override("font_size", 11)
+	_subtitle_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_subtitle_label.custom_minimum_size = Vector2(260, 0)
 	vbox.add_child(_subtitle_label)
 
 	_visual_layer.add_child(_header_panel)
 
-	# Back button is NOT in the approved header title panel.
-	# Retained as an invisible non-interfering node for test/API compatibility.
+	# Dedicated Hub / Back return button positioned cleanly in HUD row
 	_back_button = Button.new()
 	_back_button.name = "BackButton"
-	_back_button.visible = false
-	_back_button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_back_button.text = "← TRANG CHỦ"
+	_back_button.theme_type_variation = &"MathosSecondaryButton"
+	_back_button.custom_minimum_size = Vector2(124, 36)
+	_back_button.focus_mode = Control.FOCUS_ALL
+	_back_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	_back_button.visible = true
 	_back_button.pressed.connect(func() -> void: back_requested.emit())
-	add_child(_back_button)
+	_visual_layer.add_child(_back_button)
 
 func _build_top_right_hud() -> void:
 	_hud_panel = PanelContainer.new()
@@ -602,6 +607,11 @@ func _update_responsive_layout() -> void:
 	if _hud_panel != null:
 		_hud_panel.size = REF_HUD_SIZE
 		_hud_panel.position = Vector2(vp_size.x - REF_HUD_RIGHT - REF_HUD_SIZE.x, REF_HUD_TOP)
+
+	if _back_button != null and _back_button.visible:
+		var hud_x: float = vp_size.x - REF_HUD_RIGHT - REF_HUD_SIZE.x
+		_back_button.position = Vector2(hud_x - 136.0, REF_HUD_TOP + 3.0)
+		_back_button.size = Vector2(124.0, 36.0)
 
 	if _d1_context_panel != null:
 		_d1_context_panel.position = Vector2(vp_size.x - REF_PANEL_RIGHT - REF_PANEL_SIZE.x, vp_size.y - REF_PANEL_BOTTOM - REF_PANEL_SIZE.y)

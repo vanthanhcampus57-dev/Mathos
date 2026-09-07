@@ -67,6 +67,30 @@ const SPEAKER_CONFIGS: Dictionary = {
 		"name": "AETHER",
 		"subtitle": "LINH HỒN CỔ ĐẠI",
 		"portrait_path": ""
+	},
+	"npc_aphodius": {
+		"id": "npc_aphodius",
+		"name": "APHODIUS",
+		"subtitle": "ĐẠI PHÁP SƯ BÓNG TỐI",
+		"portrait_path": ""
+	},
+	"aphodius": {
+		"id": "npc_aphodius",
+		"name": "APHODIUS",
+		"subtitle": "ĐẠI PHÁP SƯ BÓNG TỐI",
+		"portrait_path": ""
+	},
+	"enemy_d1_stochas": {
+		"id": "enemy_d1_stochas",
+		"name": "STOCHAS",
+		"subtitle": "THẦN THÚ HỖN MANG",
+		"portrait_path": "res://assets/characters/bosses/dungeon_1/stochas_boss.png"
+	},
+	"stochas": {
+		"id": "enemy_d1_stochas",
+		"name": "STOCHAS",
+		"subtitle": "THẦN THÚ HỖN MANG",
+		"portrait_path": "res://assets/characters/bosses/dungeon_1/stochas_boss.png"
 	}
 }
 
@@ -647,8 +671,18 @@ func _apply_speaker_config(cfg: Dictionary) -> void:
 	if _nameplate_subtitle_label != null:
 		_nameplate_subtitle_label.text = _active_speaker_subtitle
 
+	var portrait_loaded: bool = false
 	if not p_path.is_empty():
-		load_portrait(p_path)
+		portrait_loaded = load_portrait(p_path)
+
+	if not portrait_loaded:
+		set_portrait_texture(null)
+		_active_portrait_path = ""
+		if _character_slot != null:
+			_character_slot.visible = false
+	else:
+		if _character_slot != null:
+			_character_slot.visible = true
 
 func set_speaker_name(p_name: String) -> void:
 	_active_speaker_name = p_name

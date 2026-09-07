@@ -124,14 +124,14 @@ func show_feedback(attempt_result: Dictionary) -> void:
 
 			if opt_id == _selected_option_id:
 				if is_correct:
-					card.set_selected(true)
-					card.text = "[✓] %s (Chính xác)" % raw_label
+					card.set_feedback(true)
+					card.text = "✓ %s (Chính xác)" % raw_label
 				else:
 					card.set_feedback(false)
-					card.text = "[X] BẠN CHỌN: %s" % raw_label
+					card.text = "✗ BẠN CHỌN: %s" % raw_label
 			elif not is_correct and not correct_opt_id.is_empty() and opt_id == correct_opt_id:
-				card.set_selected(true)
-				card.text = "[✓] ĐÁP ÁN ĐÚNG: %s" % raw_label
+				card.set_feedback(true)
+				card.text = "✓ ĐÁP ÁN ĐÚNG: %s" % raw_label
 
 func _rebuild_option_buttons() -> void:
 	if _vbox == null:
@@ -169,6 +169,18 @@ func _rebuild_option_buttons() -> void:
 
 	_update_button_states()
 
+	var total_h: float = 0.0
+	for child in _vbox.get_children():
+		if child is Control and (child as Control).visible:
+			total_h += (child as Control).get_combined_minimum_size().y + float(MathosTokens.SPACING_SM)
+	custom_minimum_size = Vector2(240, maxf(100.0, total_h))
+	update_minimum_size()
+
+func _get_minimum_size() -> Vector2:
+	if _vbox != null:
+		return _vbox.get_combined_minimum_size()
+	return custom_minimum_size
+
 func _update_button_states() -> void:
 	for i in range(_options.size()):
 		var opt: Dictionary = _options[i] as Dictionary
@@ -183,6 +195,6 @@ func _update_button_states() -> void:
 			card.disabled = _disabled
 
 			if is_selected:
-				card.text = "[X] %s. %s" % [letter, opt_text]
+				card.text = "◆  %s. %s" % [letter, opt_text]
 			else:
 				card.text = "   %s. %s" % [letter, opt_text]

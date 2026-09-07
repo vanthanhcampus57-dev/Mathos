@@ -78,7 +78,7 @@ func set_dungeon_complete_data(dungeon_title: String, fragment_id: String, playe
 
 	var btn: Button = _get_return_button()
 	if btn != null:
-		btn.text = "Trở Về Trang Chủ"
+		btn.text = "Trở về trang chủ"
 
 func set_rewards(gold: int = 0, xp: int = 0) -> void:
 	set_victory_data(gold, xp)
@@ -145,6 +145,21 @@ func _ensure_ui_built() -> void:
 	_fragment_container.theme_type_variation = &"MathosPanelElevated"
 	_fragment_container.size_flags_horizontal = SIZE_SHRINK_CENTER
 	_fragment_container.visible = false
+
+	var frag_style: StyleBoxFlat = StyleBoxFlat.new()
+	frag_style.bg_color = Color(0.08, 0.10, 0.18, 0.95)
+	frag_style.border_width_left = 2
+	frag_style.border_width_top = 2
+	frag_style.border_width_right = 2
+	frag_style.border_width_bottom = 2
+	frag_style.border_color = Color(1.0, 0.84, 0.25, 0.85)
+	frag_style.corner_radius_top_left = 12
+	frag_style.corner_radius_top_right = 12
+	frag_style.corner_radius_bottom_right = 12
+	frag_style.corner_radius_bottom_left = 12
+	frag_style.shadow_color = Color(1.0, 0.84, 0.25, 0.25)
+	frag_style.shadow_size = 6
+	_fragment_container.add_theme_stylebox_override("panel", frag_style)
 
 	var frag_margin: MarginContainer = MarginContainer.new()
 	frag_margin.name = "FragmentMargin"

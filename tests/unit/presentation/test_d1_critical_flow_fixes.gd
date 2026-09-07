@@ -108,16 +108,27 @@ static func test_002_story_phase_mount_and_advance() -> bool:
 		_cleanup_node(app)
 		return false
 
+	var story_panel: Control = shell.get_story_panel() if shell.has_method("get_story_panel") else null
 	var lesson_panel: LessonPanel = shell.get_lesson_panel()
-	if lesson_panel == null or not lesson_panel.visible:
-		print("[D1-FLOW-002] FAIL: LessonPanel not visible during MODE_STORY")
+	var active_panel: Control = null
+	var btn: Button = null
+
+	if story_panel != null and story_panel.visible:
+		active_panel = story_panel
+		if story_panel.has_method("get_continue_button"):
+			btn = story_panel.get_continue_button()
+	elif lesson_panel != null and lesson_panel.visible:
+		active_panel = lesson_panel
+		btn = lesson_panel._get_continue_button()
+
+	if active_panel == null:
+		print("[D1-FLOW-002] FAIL: No story panel visible during MODE_STORY")
 		_cleanup_node(app)
 		return false
 
 	# Check button text on story step
-	var btn: Button = lesson_panel._get_continue_button()
-	if btn == null or btn.text != "Vào bài học":
-		print("[D1-FLOW-002] FAIL: Expected story button text 'Vào bài học', got '%s'" % (btn.text if btn else "null"))
+	if btn == null or (btn.text != "Vào bài học" and btn.text != "VÀO BÀI HỌC"):
+		print("[D1-FLOW-002] FAIL: Expected story button text 'Vào bài học' or 'VÀO BÀI HỌC', got '%s'" % (btn.text if btn else "null"))
 		_cleanup_node(app)
 		return false
 

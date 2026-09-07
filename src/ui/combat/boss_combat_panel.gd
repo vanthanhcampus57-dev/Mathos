@@ -84,7 +84,7 @@ func _ensure_ui() -> void:
 	if _boss_name_label != null:
 		return
 
-	custom_minimum_size = Vector2(280, 0)
+	custom_minimum_size = Vector2(320, 0)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 
@@ -190,6 +190,18 @@ func _ensure_ui() -> void:
 	_boss_hp_bar.max_value = 100
 	_boss_hp_bar.value = 100
 	_boss_hp_bar.show_percentage = false
+	var hp_bg: StyleBoxFlat = StyleBoxFlat.new()
+	hp_bg.bg_color = Color(0.06, 0.05, 0.10, 0.9)
+	hp_bg.border_width_left = 1
+	hp_bg.border_width_top = 1
+	hp_bg.border_width_right = 1
+	hp_bg.border_width_bottom = 1
+	hp_bg.border_color = Color(0.25, 0.2, 0.35, 0.6)
+	hp_bg.corner_radius_top_left = 4
+	hp_bg.corner_radius_top_right = 4
+	hp_bg.corner_radius_bottom_right = 4
+	hp_bg.corner_radius_bottom_left = 4
+	_boss_hp_bar.add_theme_stylebox_override("background", hp_bg)
 	var hp_fill: StyleBoxFlat = StyleBoxFlat.new()
 	hp_fill.bg_color = Color(0.85, 0.15, 0.4, 0.9)
 	hp_fill.corner_radius_top_left = 4
@@ -204,12 +216,31 @@ func _ensure_ui() -> void:
 	_boss_hp_label.add_theme_font_size_override("font_size", 12)
 	hp_box.add_child(_boss_hp_label)
 
-	# Boss Intent
+	# Boss Intent Pill Box
+	var intent_panel: PanelContainer = PanelContainer.new()
+	var intent_style: StyleBoxFlat = StyleBoxFlat.new()
+	intent_style.bg_color = Color(0.18, 0.14, 0.06, 0.75)
+	intent_style.border_width_left = 1
+	intent_style.border_width_top = 1
+	intent_style.border_width_right = 1
+	intent_style.border_width_bottom = 1
+	intent_style.border_color = Color(0.9, 0.75, 0.25, 0.6)
+	intent_style.corner_radius_top_left = 4
+	intent_style.corner_radius_top_right = 4
+	intent_style.corner_radius_bottom_right = 4
+	intent_style.corner_radius_bottom_left = 4
+	intent_style.content_margin_left = 8
+	intent_style.content_margin_top = 4
+	intent_style.content_margin_right = 8
+	intent_style.content_margin_bottom = 4
+	intent_panel.add_theme_stylebox_override("panel", intent_style)
+	boss_section.add_child(intent_panel)
+
 	_boss_intent_label = Label.new()
 	_boss_intent_label.text = "⚡ Ý định: Ma Thuật Ngẫu Nhiên (10 ST)"
 	_boss_intent_label.add_theme_font_size_override("font_size", 12)
-	_boss_intent_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.3, 1.0))
-	boss_section.add_child(_boss_intent_label)
+	_boss_intent_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35, 1.0))
+	intent_panel.add_child(_boss_intent_label)
 
 	var sep1: HSeparator = HSeparator.new()
 	vbox.add_child(sep1)
@@ -243,6 +274,18 @@ func _ensure_ui() -> void:
 	_player_hp_bar.max_value = 100
 	_player_hp_bar.value = 100
 	_player_hp_bar.show_percentage = false
+	var php_bg: StyleBoxFlat = StyleBoxFlat.new()
+	php_bg.bg_color = Color(0.06, 0.05, 0.10, 0.9)
+	php_bg.border_width_left = 1
+	php_bg.border_width_top = 1
+	php_bg.border_width_right = 1
+	php_bg.border_width_bottom = 1
+	php_bg.border_color = Color(0.18, 0.3, 0.25, 0.6)
+	php_bg.corner_radius_top_left = 4
+	php_bg.corner_radius_top_right = 4
+	php_bg.corner_radius_bottom_right = 4
+	php_bg.corner_radius_bottom_left = 4
+	_player_hp_bar.add_theme_stylebox_override("background", php_bg)
 	var php_fill: StyleBoxFlat = StyleBoxFlat.new()
 	php_fill.bg_color = Color(0.2, 0.75, 0.3, 0.9)
 	php_fill.corner_radius_top_left = 4
@@ -272,12 +315,31 @@ func _ensure_ui() -> void:
 	vbox.add_child(_cards_container)
 
 	# 4. COMBAT ACTION LOG
+	var log_panel: PanelContainer = PanelContainer.new()
+	var log_style: StyleBoxFlat = StyleBoxFlat.new()
+	log_style.bg_color = Color(0.06, 0.08, 0.14, 0.8)
+	log_style.border_width_left = 1
+	log_style.border_width_top = 1
+	log_style.border_width_right = 1
+	log_style.border_width_bottom = 1
+	log_style.border_color = Color(0.25, 0.35, 0.5, 0.4)
+	log_style.corner_radius_top_left = 6
+	log_style.corner_radius_top_right = 6
+	log_style.corner_radius_bottom_right = 6
+	log_style.corner_radius_bottom_left = 6
+	log_style.content_margin_left = 10
+	log_style.content_margin_top = 6
+	log_style.content_margin_right = 10
+	log_style.content_margin_bottom = 6
+	log_panel.add_theme_stylebox_override("panel", log_style)
+	vbox.add_child(log_panel)
+
 	_combat_log_label = Label.new()
 	_combat_log_label.text = "⚔️ Chọn thẻ bài và trả lời chính xác để tấn công Boss!"
 	_combat_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_combat_log_label.add_theme_font_size_override("font_size", 12)
 	_combat_log_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 0.9))
-	vbox.add_child(_combat_log_label)
+	log_panel.add_child(_combat_log_label)
 
 	# 5. DEFEAT OVERLAY (Hidden by default)
 	_defeat_overlay = PanelContainer.new()
@@ -412,21 +474,56 @@ func _render_cards() -> void:
 		btn.custom_minimum_size = Vector2(0, 48)
 		btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
 
+		var norm_style: StyleBoxFlat = StyleBoxFlat.new()
+		norm_style.bg_color = Color(0.11, 0.13, 0.20, 0.95)
+		norm_style.border_width_left = 1
+		norm_style.border_width_top = 1
+		norm_style.border_width_right = 1
+		norm_style.border_width_bottom = 1
+		norm_style.border_color = Color(0.32, 0.40, 0.58, 0.6)
+		norm_style.corner_radius_top_left = 6
+		norm_style.corner_radius_top_right = 6
+		norm_style.corner_radius_bottom_right = 6
+		norm_style.corner_radius_bottom_left = 6
+
+		var hover_style: StyleBoxFlat = StyleBoxFlat.new()
+		hover_style.bg_color = Color(0.16, 0.20, 0.32, 0.98)
+		hover_style.border_width_left = 1
+		hover_style.border_width_top = 1
+		hover_style.border_width_right = 1
+		hover_style.border_width_bottom = 1
+		hover_style.border_color = Color(0.55, 0.68, 0.90, 0.8)
+		hover_style.corner_radius_top_left = 6
+		hover_style.corner_radius_top_right = 6
+		hover_style.corner_radius_bottom_right = 6
+		hover_style.corner_radius_bottom_left = 6
+
 		var is_selected: bool = (active_card != null and active_card.card_id == card.card_id)
 		if is_selected:
 			var sel_style: StyleBoxFlat = StyleBoxFlat.new()
-			sel_style.bg_color = Color(0.2, 0.4, 0.8, 0.9)
+			sel_style.bg_color = Color(0.14, 0.22, 0.44, 0.98)
 			sel_style.border_width_left = 2
 			sel_style.border_width_top = 2
 			sel_style.border_width_right = 2
 			sel_style.border_width_bottom = 2
-			sel_style.border_color = Color(1.0, 0.9, 0.3, 1.0)
+			sel_style.border_color = Color(1.0, 0.85, 0.25, 1.0)
 			sel_style.corner_radius_top_left = 6
 			sel_style.corner_radius_top_right = 6
 			sel_style.corner_radius_bottom_right = 6
 			sel_style.corner_radius_bottom_left = 6
+			sel_style.shadow_color = Color(1.0, 0.85, 0.25, 0.25)
+			sel_style.shadow_size = 3
 			btn.add_theme_stylebox_override("normal", sel_style)
 			btn.add_theme_stylebox_override("hover", sel_style)
+			btn.add_theme_stylebox_override("pressed", sel_style)
+			btn.add_theme_stylebox_override("focus", sel_style)
+			btn.add_theme_color_override("font_color", Color(1.0, 0.95, 0.65, 1.0))
+		else:
+			btn.add_theme_stylebox_override("normal", norm_style)
+			btn.add_theme_stylebox_override("hover", hover_style)
+			btn.add_theme_stylebox_override("pressed", norm_style)
+			btn.add_theme_stylebox_override("focus", hover_style)
+			btn.add_theme_color_override("font_color", Color(0.85, 0.88, 0.95, 0.95))
 
 		var c_id: String = card.card_id
 		btn.pressed.connect(func(): _on_card_button_pressed(c_id))
