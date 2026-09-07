@@ -70,6 +70,8 @@ func _initialize() -> void:
 		{"name": "D1 World Map Layout QA", "func": Callable(preload("res://tests/unit/presentation/test_d1_world_map_layout.gd"), "run_all_tests")},
 		{"name": "D1 Story Visual QA", "func": Callable(preload("res://tests/unit/presentation/test_d1_story_visual.gd"), "run_all_tests")},
 		{"name": "Prologue Production Integration QA", "func": Callable(preload("res://tests/unit/presentation/test_prologue_production_integration.gd"), "run_all_tests")},
+		{"name": "Prologue Beat 3 Production", "func": Callable(preload("res://tests/unit/presentation/test_prologue_beat03_production.gd"), "run_all_tests")},
+		{"name": "Prologue Beat 4 Production", "func": Callable(preload("res://tests/unit/presentation/test_prologue_beat04_production.gd"), "run_all_tests")},
 		{"name": "Question State Machine Regressions", "func": Callable(preload("res://tests/unit/presentation/test_question_state_machine_regressions.gd"), "run_all_tests")},
 		{"name": "Stage Boss Lifecycle 080", "func": Callable(preload("res://tests/unit/combat/test_stage_boss_lifecycle_080.gd"), "run_all_tests").bind(self)},
 		{"name": "Save Progression Consistency QA", "func": Callable(preload("res://tests/unit/presentation/test_save_progression_consistency.gd"), "run_all_tests")},
@@ -187,6 +189,8 @@ func _count_suite_tests(name: String) -> int:
 		"D1 World Map Layout QA": return 30
 		"D1 Story Visual QA": return 15
 		"Prologue Production Integration QA": return 23
+		"Prologue Beat 3 Production": return 10
+		"Prologue Beat 4 Production": return 13
 		"Question State Machine Regressions": return 10
 		"Stage Boss Lifecycle 080": return 8
 		"Save Progression Consistency QA": return 8
