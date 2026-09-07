@@ -20,6 +20,7 @@ const CANVAS_HEIGHT: float = 720.0
 const BEAT1_DURATION: float = 9.0
 const BEAT2_DURATION: float = 9.5
 const BEAT3_DURATION: float = 7.0
+const BEAT4_DURATION: float = 8.0
 const CROSSFADE_DURATION: float = 0.6
 
 # Authoritative Production Layout Paths (Inside project res://)
@@ -28,7 +29,7 @@ const BEAT02_LAYOUT_RES_PATH: String = "res://assets/prologue/beat_02/layout/pro
 const BEAT03_LAYOUT_RES_PATH: String = "res://assets/prologue/beat_03/layout/prologue_beat03_layout.json"
 
 # State
-var _current_beat: int = 0 # 1, 2, or 3 (0 = stopped)
+var _current_beat: int = 0 # 1, 2, 3, or 4 (0 = stopped)
 var _playback_time: float = 0.0
 var _is_transitioning: bool = false
 var _is_completed: bool = false
@@ -39,6 +40,7 @@ var _canvas_container: Control = null
 var _beat01_root: Control = null
 var _beat02_root: Control = null
 var _beat03_root: Control = null
+var _beat04_root: Control = null
 
 # Controls (Exactly 3)
 var _controls_node: Control = null
@@ -95,10 +97,11 @@ func _ensure_built() -> void:
 	_canvas_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_canvas_container)
 
-	# 2. Build Beat 1, Beat 2, & Beat 3 Subtrees
+	# 2. Build Beat 1, Beat 2, Beat 3, & Beat 4 Subtrees
 	_build_beat01_structure()
 	_build_beat02_structure()
 	_build_beat03_structure()
+	_build_beat04_structure()
 
 	# 3. Build Player Controls (Exactly 3 controls, top level overlay)
 	_build_controls_structure()
@@ -531,6 +534,21 @@ func _build_beat03_structure() -> void:
 	b3_vbox.add_child(_b3_phrase2_lbl)
 
 # =========================================================================
+# BEAT 4 STRUCTURE BUILDER (NON-VISUAL HANDOFF STUB)
+# =========================================================================
+
+func _build_beat04_structure() -> void:
+	_beat04_root = Control.new()
+	_beat04_root.name = "Beat04Root"
+	_beat04_root.custom_minimum_size = Vector2(CANVAS_WIDTH, CANVAS_HEIGHT)
+	_beat04_root.size = Vector2(CANVAS_WIDTH, CANVAS_HEIGHT)
+	_beat04_root.clip_contents = false
+	_beat04_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_beat04_root.modulate.a = 0.0
+	_beat04_root.visible = false
+	_canvas_container.add_child(_beat04_root)
+
+# =========================================================================
 # LAYOUT RESTORE (HUMAN-ACCEPTED FILES)
 # =========================================================================
 
@@ -664,7 +682,7 @@ func start_prologue() -> void:
 	_playback_time = 0.0
 	_is_transitioning = false
 
-	# Show Beat 1, Hide Beat 2 & Beat 3
+	# Show Beat 1, Hide Beat 2, Beat 3 & Beat 4
 	_beat01_root.visible = true
 	_beat01_root.modulate.a = 1.0
 	_beat02_root.visible = false
@@ -673,11 +691,14 @@ func start_prologue() -> void:
 		_beat03_root.visible = false
 		_beat03_root.modulate.a = 0.0
 		apply_beat03_layout()
+	if _beat04_root != null:
+		_beat04_root.visible = false
+		_beat04_root.modulate.a = 0.0
 
 	visible = true
 
 func advance_to_beat2() -> void:
-	if _current_beat == 2 or _current_beat == 3 or _is_transitioning:
+	if _current_beat == 2 or _current_beat == 3 or _current_beat == 4 or _is_transitioning:
 		return
 	_is_transitioning = true
 
@@ -704,7 +725,7 @@ func advance_to_beat2() -> void:
 		_is_transitioning = false
 
 func advance_to_beat3() -> void:
-	if _current_beat == 3 or _is_transitioning:
+	if _current_beat == 3 or _current_beat == 4 or _is_transitioning:
 		return
 	_is_transitioning = true
 
@@ -731,6 +752,40 @@ func advance_to_beat3() -> void:
 		_beat03_root.modulate.a = 1.0
 		_is_transitioning = false
 
+func advance_to_beat4() -> void:
+	if _current_beat == 4 or _is_transitioning:
+		return
+	_is_transitioning = true
+
+	beat_transitioned.emit(3, 4)
+	_current_beat = 4
+	_playback_time = 0.0
+
+	if _beat04_root != null:
+		_beat04_root.visible = true
+		_beat04_root.modulate.a = 0.0
+
+	if is_inside_tree() and _speed_scale > 0.0:
+		var tween: Tween = create_tween().set_parallel(true)
+		var duration: float = CROSSFADE_DURATION / _speed_scale
+		if _beat03_root != null:
+			tween.tween_property(_beat03_root, "modulate:a", 0.0, duration)
+		if _beat04_root != null:
+			tween.tween_property(_beat04_root, "modulate:a", 1.0, duration)
+		tween.finished.connect(func():
+			if _beat03_root != null:
+				_beat03_root.visible = false
+			_is_transitioning = false
+		)
+	else:
+		if _beat03_root != null:
+			_beat03_root.visible = false
+			_beat03_root.modulate.a = 0.0
+		if _beat04_root != null:
+			_beat04_root.visible = true
+			_beat04_root.modulate.a = 1.0
+		_is_transitioning = false
+
 func complete_prologue() -> void:
 	if _is_completed:
 		return
@@ -738,7 +793,9 @@ func complete_prologue() -> void:
 	_current_beat = 0
 
 	var active_root: Control = null
-	if _beat03_root != null and _beat03_root.visible:
+	if _beat04_root != null and _beat04_root.visible:
+		active_root = _beat04_root
+	elif _beat03_root != null and _beat03_root.visible:
 		active_root = _beat03_root
 	elif _beat02_root != null and _beat02_root.visible:
 		active_root = _beat02_root
@@ -792,7 +849,14 @@ func _process(delta: float) -> void:
 	elif _current_beat == 3:
 		_process_beat03(scaled_delta)
 		if _playback_time >= (BEAT3_DURATION / _speed_scale) and not _is_transitioning:
+			advance_to_beat4()
+	elif _current_beat == 4:
+		_process_beat04(scaled_delta)
+		if _playback_time >= (BEAT4_DURATION / _speed_scale) and not _is_transitioning:
 			complete_prologue()
+
+func _process_beat04(_delta: float) -> void:
+	pass
 
 func _process_beat01_ambient(_delta: float) -> void:
 	var bg: Control = _b1_layers.get("Background", null) as Control
