@@ -1,0 +1,126 @@
+{
+    "layers": {
+        "Background": {
+            "opacity": 0.85,
+            "rotation": 0.0,
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "visible": true,
+            "x": -196.0,
+            "y": -110.0,
+            "z_index": 0
+        },
+        "Vignette": {
+            "opacity": 0.45,
+            "rotation": 0.0,
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "visible": true,
+            "x": 0.0,
+            "y": 0.0,
+            "z_index": 1
+        },
+        "OrderStoneIntact": {
+            "opacity": 1.0,
+            "rotation": 0.0,
+            "scale_x": 0.52,
+            "scale_y": 0.52,
+            "visible": true,
+            "x": 13.0,
+            "y": -267.0,
+            "z_index": 2
+        },
+        "OrderStoneCorruption": {
+            "opacity": 0.0,
+            "rotation": 0.0,
+            "scale_x": 0.52,
+            "scale_y": 0.52,
+            "visible": false,
+            "x": 13.0,
+            "y": -267.0,
+            "z_index": 3
+        },
+        "OrderStoneCracked": {
+            "opacity": 0.0,
+            "rotation": 0.0,
+            "scale_x": 0.52,
+            "scale_y": 0.52,
+            "visible": false,
+            "x": 13.0,
+            "y": -267.0,
+            "z_index": 4
+        },
+        "OrderStoneEnergyBurst": {
+            "opacity": 0.0,
+            "rotation": 0.0,
+            "scale_x": 0.52,
+            "scale_y": 0.52,
+            "visible": false,
+            "x": 13.0,
+            "y": -267.0,
+            "z_index": 5
+        },
+        "OrderStoneDebris": {
+            "opacity": 0.0,
+            "rotation": 0.0,
+            "scale_x": 0.52,
+            "scale_y": 0.52,
+            "visible": false,
+            "x": 13.0,
+            "y": -267.0,
+            "z_index": 6
+        },
+        "Fragment01": {
+            "opacity": 0.0,
+            "rotation": 0.0,
+            "scale_x": 0.52,
+            "scale_y": 0.52,
+            "target_offset_x": -95.0,
+            "target_offset_y": -65.0,
+            "target_rotation": -4.5,
+            "visible": false,
+            "x": 13.0,
+            "y": -267.0,
+            "z_index": 7
+        },
+        "Fragment02": {
+            "opacity": 0.0,
+            "rotation": 0.0,
+            "scale_x": 0.52,
+            "scale_y": 0.52,
+            "target_offset_x": 95.0,
+            "target_offset_y": -65.0,
+            "target_rotation": 4.0,
+            "visible": false,
+            "x": 13.0,
+            "y": -267.0,
+            "z_index": 7
+        },
+        "Fragment03": {
+            "opacity": 0.0,
+            "rotation": 0.0,
+            "scale_x": 0.52,
+            "scale_y": 0.52,
+            "target_offset_x": -80.0,
+            "target_offset_y": 75.0,
+            "target_rotation": -3.0,
+            "visible": false,
+            "x": 13.0,
+            "y": -267.0,
+            "z_index": 7
+        },
+        "Fragment04": {
+            "opacity": 0.0,
+            "rotation": 0.0,
+            "scale_x": 0.52,
+            "scale_y": 0.52,
+            "target_offset_x": 85.0,
+            "target_offset_y": 75.0,
+            "target_rotation": 3.5,
+            "visible": false,
+            "x": 13.0,
+            "y": -267.0,
+            "z_index": 7
+        }
+    }
+}

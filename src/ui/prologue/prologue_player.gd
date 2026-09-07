@@ -19,14 +19,16 @@ const CANVAS_WIDTH: float = 1280.0
 const CANVAS_HEIGHT: float = 720.0
 const BEAT1_DURATION: float = 9.0
 const BEAT2_DURATION: float = 9.5
+const BEAT3_DURATION: float = 7.0
 const CROSSFADE_DURATION: float = 0.6
 
 # Authoritative Production Layout Paths (Inside project res://)
 const BEAT01_LAYOUT_RES_PATH: String = "res://assets/prologue/beat_01/layout/prologue_lab_beat01_layout_human_accepted.json"
 const BEAT02_LAYOUT_RES_PATH: String = "res://assets/prologue/beat_02/layout/prologue_lab_beat02_layout_human_tuned.json"
+const BEAT03_LAYOUT_RES_PATH: String = "res://assets/prologue/beat_03/layout/prologue_beat03_layout.json"
 
 # State
-var _current_beat: int = 0 # 1 or 2 (0 = stopped)
+var _current_beat: int = 0 # 1, 2, or 3 (0 = stopped)
 var _playback_time: float = 0.0
 var _is_transitioning: bool = false
 var _is_completed: bool = false
@@ -36,6 +38,7 @@ var _speed_scale: float = 1.0 # For fast testing
 var _canvas_container: Control = null
 var _beat01_root: Control = null
 var _beat02_root: Control = null
+var _beat03_root: Control = null
 
 # Controls (Exactly 3)
 var _controls_node: Control = null
@@ -52,6 +55,14 @@ var _b2_layers: Dictionary = {} # name -> Control/TextureRect
 var _b2_visual_nodes: Dictionary = {} # name -> TextureRect
 var _b2_layout_data: Dictionary = {}
 var _b2_projectile_state: Dictionary = {} # name -> {current_dist: float, travel_dist: float, speed: float, loop: bool, fade: bool, start_offset: float}
+
+# Beat 3 Layers & Runtime Data
+var _b3_layers: Dictionary = {} # name -> Control/TextureRect
+var _b3_layout_data: Dictionary = {}
+var _b3_narration: Control = null
+var _b3_phrase1_lbl: Label = null
+var _b3_phrase2_lbl: RichTextLabel = null
+var _b3_flash_rect: ColorRect = null
 
 # Narration Nodes
 var _b1_narration: Control = null
@@ -84,9 +95,10 @@ func _ensure_built() -> void:
 	_canvas_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_canvas_container)
 
-	# 2. Build Beat 1 & Beat 2 Subtrees
+	# 2. Build Beat 1, Beat 2, & Beat 3 Subtrees
 	_build_beat01_structure()
 	_build_beat02_structure()
+	_build_beat03_structure()
 
 	# 3. Build Player Controls (Exactly 3 controls, top level overlay)
 	_build_controls_structure()
@@ -94,6 +106,7 @@ func _ensure_built() -> void:
 	# 4. Load Authoritative Layouts
 	load_beat01_layout()
 	load_beat02_layout()
+	load_beat03_layout()
 
 	_update_responsive_layout()
 
@@ -396,6 +409,128 @@ func _build_beat02_structure() -> void:
 	b2_vbox.add_child(_b2_phrase2_lbl)
 
 # =========================================================================
+# BEAT 3 STRUCTURE BUILDER (ORDER STONE SHATTER & 4 FRAGMENTS)
+# =========================================================================
+
+func _build_beat03_structure() -> void:
+	_beat03_root = Control.new()
+	_beat03_root.name = "Beat03Root"
+	_beat03_root.custom_minimum_size = Vector2(CANVAS_WIDTH, CANVAS_HEIGHT)
+	_beat03_root.size = Vector2(CANVAS_WIDTH, CANVAS_HEIGHT)
+	_beat03_root.clip_contents = false
+	_beat03_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_beat03_root.modulate.a = 0.0
+	_beat03_root.visible = false
+	_canvas_container.add_child(_beat03_root)
+
+	# 1. Background layer (dark calamity ambient continuation)
+	var bg: TextureRect = TextureRect.new()
+	bg.name = "Background"
+	bg.size = Vector2(1672, 941)
+	bg.position = Vector2(-196.0, -110.0)
+	bg.pivot_offset = bg.size * 0.5
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bg.clip_contents = false
+	bg.texture = _load_texture_safely("res://assets/prologue/beat_02/prologue_bg_02_calamity.png")
+	bg.modulate = Color(0.20, 0.16, 0.28, 0.85)
+	_beat03_root.add_child(bg)
+	_b3_layers["Background"] = bg
+
+	# 2. Vignette layer
+	var vignette: ColorRect = ColorRect.new()
+	vignette.name = "Vignette"
+	vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vignette.color = Color(0.01, 0.01, 0.03, 0.45)
+	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_beat03_root.add_child(vignette)
+	_b3_layers["Vignette"] = vignette
+
+	# 3. Order Stone & Fragment TextureRect specs (All 1254x1254 registration canvas)
+	var b3_specs: Array[Dictionary] = [
+		{"name": "OrderStoneIntact", "path": "res://assets/prologue/beat_03/order_stone_intact.png"},
+		{"name": "OrderStoneCorruption", "path": "res://assets/prologue/beat_03/order_stone_corruption_fx.png"},
+		{"name": "OrderStoneCracked", "path": "res://assets/prologue/beat_03/order_stone_cracked.png"},
+		{"name": "OrderStoneEnergyBurst", "path": "res://assets/prologue/beat_03/order_stone_energy_burst.png"},
+		{"name": "OrderStoneDebris", "path": "res://assets/prologue/beat_03/order_stone_debris.png"},
+		{"name": "Fragment01", "path": "res://assets/prologue/beat_03/order_fragment_01.png"},
+		{"name": "Fragment02", "path": "res://assets/prologue/beat_03/order_fragment_02.png"},
+		{"name": "Fragment03", "path": "res://assets/prologue/beat_03/order_fragment_03.png"},
+		{"name": "Fragment04", "path": "res://assets/prologue/beat_03/order_fragment_04.png"}
+	]
+
+	var stone_sz: Vector2 = Vector2(1254, 1254)
+	for spec in b3_specs:
+		var l_name: String = spec["name"]
+		var tex_rect: TextureRect = TextureRect.new()
+		tex_rect.name = l_name
+		tex_rect.size = stone_sz
+		tex_rect.pivot_offset = stone_sz * 0.5
+		tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tex_rect.clip_contents = false
+		tex_rect.position = Vector2(13.0, -267.0)
+		tex_rect.scale = Vector2(0.52, 0.52)
+		tex_rect.texture = _load_texture_safely(spec["path"])
+		tex_rect.visible = false
+		tex_rect.modulate.a = 0.0
+		_beat03_root.add_child(tex_rect)
+		_b3_layers[l_name] = tex_rect
+
+	# 4. White / Cyan flash overlay for burst peak
+	_b3_flash_rect = ColorRect.new()
+	_b3_flash_rect.name = "FlashOverlay"
+	_b3_flash_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_b3_flash_rect.color = Color(0.85, 0.95, 1.0, 0.0)
+	_b3_flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_beat03_root.add_child(_b3_flash_rect)
+
+	# 5. Bottom cinematic dark gradient for text readability
+	var b3_gradient: ColorRect = ColorRect.new()
+	b3_gradient.name = "CinematicGradient"
+	b3_gradient.set_anchors_preset(Control.PRESET_FULL_RECT)
+	b3_gradient.color = Color(0.02, 0.0, 0.04, 0.50)
+	b3_gradient.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_beat03_root.add_child(b3_gradient)
+
+	# 6. Beat 3 Narration UI
+	_b3_narration = Control.new()
+	_b3_narration.name = "NarrationContainer"
+	_b3_narration.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_b3_narration.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_beat03_root.add_child(_b3_narration)
+
+	var b3_vbox: VBoxContainer = VBoxContainer.new()
+	b3_vbox.name = "NarrationVBox"
+	b3_vbox.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	b3_vbox.offset_top = -170.0
+	b3_vbox.offset_bottom = -30.0
+	b3_vbox.offset_left = 60.0
+	b3_vbox.offset_right = -60.0
+	b3_vbox.add_theme_constant_override("separation", 10)
+	b3_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	_b3_narration.add_child(b3_vbox)
+
+	_b3_phrase1_lbl = Label.new()
+	_b3_phrase1_lbl.name = "Phrase1Label"
+	_b3_phrase1_lbl.text = "Viên Đá Trật Tự sụp đổ..."
+	_b3_phrase1_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_b3_phrase1_lbl.add_theme_color_override("font_color", Color(0.95, 0.40, 0.30, 1.0)) # Fiery Crimson
+	_b3_phrase1_lbl.add_theme_font_size_override("font_size", 24)
+	b3_vbox.add_child(_b3_phrase1_lbl)
+
+	_b3_phrase2_lbl = RichTextLabel.new()
+	_b3_phrase2_lbl.name = "Phrase2Label"
+	_b3_phrase2_lbl.bbcode_enabled = true
+	_b3_phrase2_lbl.text = "[center]Nguồn sức mạnh vỡ vụn thành 4 mảnh phân tán khắp thế giới,\nchờ đợi người làm chủ tri thức để khôi phục lại trật tự.[/center]"
+	_b3_phrase2_lbl.fit_content = true
+	_b3_phrase2_lbl.add_theme_color_override("default_color", Color(0.92, 0.94, 0.98, 0.95))
+	_b3_phrase2_lbl.add_theme_font_size_override("normal_font_size", 18)
+	b3_vbox.add_child(_b3_phrase2_lbl)
+
+# =========================================================================
 # LAYOUT RESTORE (HUMAN-ACCEPTED FILES)
 # =========================================================================
 
@@ -468,6 +603,28 @@ func apply_beat02_layout() -> void:
 				node.modulate.a = float(l_dict.get("opacity", 1.0))
 				node.rotation_degrees = float(l_dict.get("rotation", 0.0))
 
+func load_beat03_layout() -> bool:
+	var dict: Dictionary = _load_json_file(BEAT03_LAYOUT_RES_PATH)
+	if dict.is_empty() or not dict.has("layers"):
+		return false
+	_b3_layout_data = dict["layers"] as Dictionary
+	apply_beat03_layout()
+	return true
+
+func apply_beat03_layout() -> void:
+	for layer_name in _b3_layout_data.keys():
+		var k_str: String = String(layer_name)
+		if _b3_layers.has(k_str):
+			var node: Control = _b3_layers[k_str] as Control
+			var l_dict: Dictionary = _b3_layout_data[layer_name] as Dictionary
+			node.position = Vector2(float(l_dict.get("x", node.position.x)), float(l_dict.get("y", node.position.y)))
+			node.scale = Vector2(float(l_dict.get("scale_x", 1.0)), float(l_dict.get("scale_y", 1.0)))
+			node.modulate.a = float(l_dict.get("opacity", 1.0))
+			node.visible = bool(l_dict.get("visible", true))
+			node.rotation_degrees = float(l_dict.get("rotation", 0.0))
+			if l_dict.has("z_index"):
+				node.z_index = int(l_dict["z_index"])
+
 func get_projectile_root_node(layer_name: String) -> Control:
 	return _b2_layers.get(layer_name, null) as Control
 
@@ -479,7 +636,19 @@ func get_layer_node(beat_num: int, layer_name: String) -> Control:
 		return _b1_layers.get(layer_name, null) as Control
 	elif beat_num == 2:
 		return _b2_layers.get(layer_name, null) as Control
+	elif beat_num == 3:
+		return _b3_layers.get(layer_name, null) as Control
 	return null
+
+func get_fragment_node(fragment_id: String) -> Control:
+	return _b3_layers.get(fragment_id, null) as Control
+
+func get_fragment_nodes() -> Array[Control]:
+	var arr: Array[Control] = []
+	for fid in ["Fragment01", "Fragment02", "Fragment03", "Fragment04"]:
+		if _b3_layers.has(fid):
+			arr.append(_b3_layers[fid] as Control)
+	return arr
 
 func get_current_beat() -> int:
 	return _current_beat
@@ -495,16 +664,20 @@ func start_prologue() -> void:
 	_playback_time = 0.0
 	_is_transitioning = false
 
-	# Show Beat 1, Hide Beat 2
+	# Show Beat 1, Hide Beat 2 & Beat 3
 	_beat01_root.visible = true
 	_beat01_root.modulate.a = 1.0
 	_beat02_root.visible = false
 	_beat02_root.modulate.a = 0.0
+	if _beat03_root != null:
+		_beat03_root.visible = false
+		_beat03_root.modulate.a = 0.0
+		apply_beat03_layout()
 
 	visible = true
 
 func advance_to_beat2() -> void:
-	if _current_beat == 2 or _is_transitioning:
+	if _current_beat == 2 or _current_beat == 3 or _is_transitioning:
 		return
 	_is_transitioning = true
 
@@ -530,16 +703,52 @@ func advance_to_beat2() -> void:
 		_beat02_root.modulate.a = 1.0
 		_is_transitioning = false
 
+func advance_to_beat3() -> void:
+	if _current_beat == 3 or _is_transitioning:
+		return
+	_is_transitioning = true
+
+	beat_transitioned.emit(2, 3)
+	_current_beat = 3
+	_playback_time = 0.0
+
+	_beat03_root.visible = true
+	_beat03_root.modulate.a = 0.0
+	apply_beat03_layout()
+
+	if is_inside_tree() and _speed_scale > 0.0:
+		var tween: Tween = create_tween().set_parallel(true)
+		var duration: float = CROSSFADE_DURATION / _speed_scale
+		tween.tween_property(_beat02_root, "modulate:a", 0.0, duration)
+		tween.tween_property(_beat03_root, "modulate:a", 1.0, duration)
+		tween.finished.connect(func():
+			_beat02_root.visible = false
+			_is_transitioning = false
+		)
+	else:
+		_beat02_root.visible = false
+		_beat02_root.modulate.a = 0.0
+		_beat03_root.modulate.a = 1.0
+		_is_transitioning = false
+
 func complete_prologue() -> void:
 	if _is_completed:
 		return
 	_is_completed = true
 	_current_beat = 0
 
-	if is_inside_tree() and _speed_scale > 0.0:
+	var active_root: Control = null
+	if _beat03_root != null and _beat03_root.visible:
+		active_root = _beat03_root
+	elif _beat02_root != null and _beat02_root.visible:
+		active_root = _beat02_root
+	elif _beat01_root != null and _beat01_root.visible:
+		active_root = _beat01_root
+
+	if is_inside_tree() and _speed_scale > 0.0 and active_root != null:
 		var tween: Tween = create_tween()
 		var duration: float = CROSSFADE_DURATION / _speed_scale
-		tween.tween_property(_beat02_root, "modulate:a", 0.0, duration)
+		tween.tween_property(active_root, "modulate:a", 0.0, duration)
 		tween.finished.connect(func():
 			visible = false
 			prologue_completed.emit()
@@ -579,6 +788,10 @@ func _process(delta: float) -> void:
 		_process_beat02_ambient(scaled_delta)
 		_process_beat02_projectiles(scaled_delta)
 		if _playback_time >= (BEAT2_DURATION / _speed_scale) and not _is_transitioning:
+			advance_to_beat3()
+	elif _current_beat == 3:
+		_process_beat03(scaled_delta)
+		if _playback_time >= (BEAT3_DURATION / _speed_scale) and not _is_transitioning:
 			complete_prologue()
 
 func _process_beat01_ambient(_delta: float) -> void:
@@ -669,6 +882,223 @@ func _process_beat02_projectiles(delta: float) -> void:
 				vis.modulate.a = base_op
 		else:
 			vis.modulate.a = base_op
+
+func _process_beat03(_delta: float) -> void:
+	var total_dur: float = BEAT3_DURATION / _speed_scale
+	var prog: float = clampf(_playback_time / total_dur, 0.0, 1.0) if total_dur > 0.0 else 1.0
+	var t: float = prog * BEAT3_DURATION
+	var base_pos: Vector2 = Vector2(13.0, -267.0)
+	var base_scale: Vector2 = Vector2(0.52, 0.52)
+
+	var intact: TextureRect = _b3_layers.get("OrderStoneIntact", null) as TextureRect
+	var corrupt: TextureRect = _b3_layers.get("OrderStoneCorruption", null) as TextureRect
+	var cracked: TextureRect = _b3_layers.get("OrderStoneCracked", null) as TextureRect
+	var burst: TextureRect = _b3_layers.get("OrderStoneEnergyBurst", null) as TextureRect
+	var debris: TextureRect = _b3_layers.get("OrderStoneDebris", null) as TextureRect
+
+	var frag1: TextureRect = _b3_layers.get("Fragment01", null) as TextureRect
+	var frag2: TextureRect = _b3_layers.get("Fragment02", null) as TextureRect
+	var frag3: TextureRect = _b3_layers.get("Fragment03", null) as TextureRect
+	var frag4: TextureRect = _b3_layers.get("Fragment04", null) as TextureRect
+
+	# Subtle background scale drift
+	var bg: Control = _b3_layers.get("Background", null) as Control
+	if bg != null:
+		bg.scale = Vector2.ONE * lerpf(1.0, 1.05, prog)
+
+	# Phase 1: INTACT (0.0 <= t < 1.5)
+	if t < 1.5:
+		if intact != null:
+			intact.visible = true
+			intact.modulate = Color(1.0, 1.0, 1.0, 1.0)
+			var breathe: float = sin(t * 2.5) * 0.012
+			intact.scale = base_scale * (1.0 + breathe)
+			intact.position = base_pos
+			intact.rotation_degrees = 0.0
+		if corrupt != null: corrupt.visible = false
+		if cracked != null: cracked.visible = false
+		if burst != null: burst.visible = false
+		if debris != null: debris.visible = false
+		if frag1 != null: frag1.visible = false
+		if frag2 != null: frag2.visible = false
+		if frag3 != null: frag3.visible = false
+		if frag4 != null: frag4.visible = false
+		if _b3_flash_rect != null: _b3_flash_rect.color.a = 0.0
+
+		if _b3_phrase1_lbl != null:
+			_b3_phrase1_lbl.modulate.a = clampf(t / 0.8, 0.0, 1.0)
+		if _b3_phrase2_lbl != null:
+			_b3_phrase2_lbl.modulate.a = 0.0
+
+	# Phase 2: CORRUPTION (1.5 <= t < 3.2)
+	elif t < 3.2:
+		var p_corrupt: float = clampf((t - 1.5) / 1.7, 0.0, 1.0)
+		var pulse: float = sin(t * 7.0) * 0.08
+		var corrupt_a: float = clampf(lerpf(0.1, 1.0, p_corrupt) + pulse, 0.0, 1.0)
+
+		var shake_p2: Vector2 = Vector2.ZERO
+		if t > 2.6:
+			var shk: float = (t - 2.6) / 0.6 * 2.0
+			shake_p2 = Vector2(sin(t * 45.0) * shk, cos(t * 40.0) * shk)
+
+		if intact != null:
+			intact.visible = true
+			var dark: float = lerpf(1.0, 0.7, p_corrupt)
+			intact.modulate = Color(dark, dark, dark * 1.1, 1.0)
+			intact.position = base_pos + shake_p2
+			intact.scale = base_scale
+
+		if corrupt != null:
+			corrupt.visible = true
+			corrupt.modulate.a = corrupt_a
+			corrupt.position = base_pos + shake_p2
+			corrupt.scale = base_scale
+
+		if cracked != null: cracked.visible = false
+		if burst != null: burst.visible = false
+		if debris != null: debris.visible = false
+		if frag1 != null: frag1.visible = false
+		if frag2 != null: frag2.visible = false
+		if frag3 != null: frag3.visible = false
+		if frag4 != null: frag4.visible = false
+		if _b3_flash_rect != null: _b3_flash_rect.color.a = 0.0
+
+		if _b3_phrase1_lbl != null: _b3_phrase1_lbl.modulate.a = 1.0
+		if _b3_phrase2_lbl != null:
+			_b3_phrase2_lbl.modulate.a = clampf((t - 2.2) / 0.8, 0.0, 1.0)
+
+	# Phase 3: CRACK (3.2 <= t < 4.5)
+	elif t < 4.5:
+		var p_crack: float = clampf((t - 3.2) / 1.3, 0.0, 1.0)
+		var shake_amp: float = lerpf(2.5, 7.5, p_crack)
+		var jitter: Vector2 = Vector2(sin(t * 55.0) * shake_amp, cos(t * 48.0) * shake_amp)
+		var push_scale: Vector2 = base_scale * lerpf(1.0, 1.06, p_crack)
+
+		if cracked != null:
+			cracked.visible = true
+			cracked.modulate.a = 1.0
+			cracked.position = base_pos + jitter
+			cracked.scale = push_scale
+
+		if intact != null:
+			intact.visible = p_crack < 0.3
+			intact.modulate.a = clampf(1.0 - (p_crack / 0.3), 0.0, 1.0)
+			intact.position = base_pos + jitter
+			intact.scale = push_scale
+
+		if corrupt != null:
+			corrupt.visible = true
+			corrupt.modulate.a = clampf(1.0 + sin(t * 12.0) * 0.15, 0.7, 1.0)
+			corrupt.position = base_pos + jitter
+			corrupt.scale = push_scale
+
+		if burst != null: burst.visible = false
+		if debris != null: debris.visible = false
+		if frag1 != null: frag1.visible = false
+		if frag2 != null: frag2.visible = false
+		if frag3 != null: frag3.visible = false
+		if frag4 != null: frag4.visible = false
+		if _b3_flash_rect != null: _b3_flash_rect.color.a = 0.0
+
+		if _b3_phrase1_lbl != null: _b3_phrase1_lbl.modulate.a = 1.0
+		if _b3_phrase2_lbl != null: _b3_phrase2_lbl.modulate.a = 1.0
+
+	# Phase 4 & 5: BURST (4.5 <= t < 5.2) & FOUR FRAGMENTS (4.8 <= t <= 7.0)
+	else:
+		var p_burst: float = clampf((t - 4.5) / 0.7, 0.0, 1.0)
+
+		# Core stones shattered
+		if intact != null: intact.visible = false
+		if corrupt != null:
+			corrupt.visible = p_burst < 0.5
+			corrupt.modulate.a = clampf(1.0 - (p_burst / 0.5), 0.0, 1.0)
+		if cracked != null:
+			cracked.visible = p_burst < 0.4
+			cracked.modulate.a = clampf(1.0 - (p_burst / 0.4), 0.0, 1.0)
+
+		# Flash pulse
+		if _b3_flash_rect != null:
+			var flash_a: float = 0.0
+			if t < 4.8:
+				flash_a = (1.0 - ((t - 4.5) / 0.3)) * 0.65
+			_b3_flash_rect.color.a = clampf(flash_a, 0.0, 1.0)
+
+		# Radial energy burst expansion
+		if burst != null:
+			if t < 5.4:
+				burst.visible = true
+				var b_frac: float = (t - 4.5) / 0.9
+				burst.modulate.a = clampf(1.0 - b_frac, 0.0, 1.0)
+				burst.scale = base_scale * lerpf(0.6, 1.8, b_frac)
+				burst.rotation_degrees = b_frac * 60.0
+				burst.position = base_pos
+			else:
+				burst.visible = false
+
+		# Spinning debris
+		if debris != null:
+			if t < 6.0:
+				debris.visible = true
+				var d_frac: float = (t - 4.5) / 1.5
+				debris.modulate.a = clampf(1.0 - (d_frac * 0.8), 0.0, 1.0)
+				debris.scale = base_scale * lerpf(0.7, 1.4, d_frac)
+				debris.rotation_degrees = -d_frac * 120.0
+				debris.position = base_pos
+			else:
+				debris.visible = false
+
+		# Phase 5: Smooth emergence and separation of 4 fragments
+		if t >= 4.8:
+			var p_frag: float = clampf((t - 4.8) / 2.2, 0.0, 1.0)
+			var ease_sep: float = 1.0 - pow(1.0 - clampf(p_frag / 0.65, 0.0, 1.0), 3.0)
+			var frag_alpha: float = clampf((t - 4.8) / 0.4, 0.0, 1.0)
+
+			var hover_time: float = t - 4.8
+			var bob1: float = sin(hover_time * 2.6 + 0.0) * 3.5
+			var bob2: float = sin(hover_time * 2.6 + 1.3) * 3.5
+			var bob3: float = sin(hover_time * 2.6 + 2.6) * 3.5
+			var bob4: float = sin(hover_time * 2.6 + 3.9) * 3.5
+
+			# Target quadrants:
+			# Fragment01: NW (-95, -65), rot -4.5
+			if frag1 != null:
+				frag1.visible = true
+				frag1.modulate.a = frag_alpha
+				frag1.scale = base_scale
+				frag1.position = base_pos + Vector2(-95.0, -65.0) * ease_sep + Vector2(0.0, bob1)
+				frag1.rotation_degrees = lerpf(0.0, -4.5, ease_sep)
+
+			# Fragment02: NE (+95, -65), rot +4.0
+			if frag2 != null:
+				frag2.visible = true
+				frag2.modulate.a = frag_alpha
+				frag2.scale = base_scale
+				frag2.position = base_pos + Vector2(95.0, -65.0) * ease_sep + Vector2(0.0, bob2)
+				frag2.rotation_degrees = lerpf(0.0, 4.0, ease_sep)
+
+			# Fragment03: SW (-80, +75), rot -3.0
+			if frag3 != null:
+				frag3.visible = true
+				frag3.modulate.a = frag_alpha
+				frag3.scale = base_scale
+				frag3.position = base_pos + Vector2(-80.0, 75.0) * ease_sep + Vector2(0.0, bob3)
+				frag3.rotation_degrees = lerpf(0.0, -3.0, ease_sep)
+
+			# Fragment04: SE (+85, +75), rot +3.5
+			if frag4 != null:
+				frag4.visible = true
+				frag4.modulate.a = frag_alpha
+				frag4.scale = base_scale
+				frag4.position = base_pos + Vector2(85.0, 75.0) * ease_sep + Vector2(0.0, bob4)
+				frag4.rotation_degrees = lerpf(0.0, 3.5, ease_sep)
+		else:
+			if frag1 != null: frag1.visible = false
+			if frag2 != null: frag2.visible = false
+			if frag3 != null: frag3.visible = false
+			if frag4 != null: frag4.visible = false
+
+		if _b3_phrase1_lbl != null: _b3_phrase1_lbl.modulate.a = 1.0
+		if _b3_phrase2_lbl != null: _b3_phrase2_lbl.modulate.a = 1.0
 
 # =========================================================================
 # HELPER LOADER
