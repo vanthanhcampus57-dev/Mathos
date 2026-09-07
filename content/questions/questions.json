@@ -39,7 +39,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "Ph?p th? ng?u nhi?n l? h?nh ??ng m? k?t qu? kh?ng th? ?o?n tr??c ch?nh x?c nh?ng bi?t tr??c t?p h?p t?t c? c?c kh? n?ng c? th? x?y ra."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_01"
@@ -114,7 +116,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "??m t?t c? c?c m?t ho?c kh? n?ng x?y ra c?a t?ng v?t (??ng xu c? 2 m?t, x?c x?c c? 6 m?t, b? b?i t?y c? 52 l?)."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_01"
@@ -193,7 +197,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "Th? nghi?m ng?u nhi?n c? k?t qu? kh?ng c? ??nh, c?n ph?p t?nh ho?c hi?n t??ng t? nhi?n c? ??nh l? k?t qu? t?t nhi?n."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_01"
@@ -231,7 +237,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "Li?t k? c?c ch?m xu?t hi?n tr?n c?c m?t c?a x?c x?c: 1, 2, 3, 4, 5, 6."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_01"
@@ -284,7 +292,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "T?m h?nh ??ng m? b?n kh?ng th? bi?t ch?c k?t qu? tr??c khi th?c hi?n."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_01"
@@ -337,7 +347,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "M?i ??ng xu c? 2 m?t (S, N). Gieo 2 ??ng xu c? 2^2 = 4 k?t qu?: SS, SN, NS, NN."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_02"
@@ -375,7 +387,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "Con x?c x?c c? 6 m?t ??nh s? t? 1 ??n 6, v?y s? ph?n t? n(Omega) = 6."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_02"
@@ -450,7 +464,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "S? d?ng quy t?c ??m: 1 coin = 2, 2 coins = 2^2 = 4, 1 dice = 6, 3 coins = 2^3 = 8."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_02"
@@ -525,7 +541,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "Li?t k? t?p h?p t?t c? c?c kh? n?ng x?y ra c?a t?ng ph?p th?."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_02"
@@ -563,7 +581,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "S? ph?n t? c?a kh?ng gian m?u ch?nh b?ng t?ng s? th? c? trong h?p."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_02"
@@ -616,7 +636,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "C?c m?t ch?n c?a con x?c x?c 6 m?t l? 2, 4, 6. S? k?t qu? thu?n l?i n(A) = 3."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_03"
@@ -654,7 +676,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "C?c s? nguy?n t? t? 1 ??n 6 l? 2, 3, 5 (l?u ? s? 1 kh?ng ph?i s? nguy?n t?)."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_03"
@@ -729,7 +753,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "Li?t k? c?c ph?n t? thu?c t?ng bi?n c? r?i ??m s? l??ng n(A)."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_03"
@@ -796,7 +822,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "Bi?n c? l? m?t t?p con ch?a c?c k?t qu? th?a m?n ?i?u ki?n ?? b?i."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_03"
@@ -834,7 +862,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "T?m c?c s? chia h?t cho 5 trong kho?ng t? 1 ??n N."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_03"
@@ -887,7 +917,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "X?c x?c ch? c? c?c m?t t? 1 ??n 6 ch?m, n?n m?t 7 ch?m l? bi?n c? Kh?ng Th?."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_04"
@@ -925,7 +957,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "Bi?n c? kh?ng th? kh?ng bao gi? x?y ra, do ?? s? k?t qu? thu?n l?i b?ng 0."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_04"
@@ -1000,7 +1034,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "Bi?n c? ch?c ch?n lu?n x?y ra (n(A)=n(Omega)), bi?n c? kh?ng th? n(A)=0, bi?n c? ng?u nhi?n 0 < n(A) < n(Omega)."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_04"
@@ -1075,7 +1111,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "Ki?m tra t?nh kh? thi c?a ?i?u ki?n: kh?ng bao gi? x?y ra -> Kh?ng th?; lu?n x?y ra -> Ch?c ch?n."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_04"
@@ -1113,7 +1151,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "Bi?n c? ch?c ch?n ch?a to?n b? k?t qu? c?a kh?ng gian m?u, n?n n(A) = n(Omega)."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_04"
@@ -1166,7 +1206,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "Li?t k? c?c c?p (x, y) c? t?ng x + y = 5: (1,4), (2,3), (3,2), (4,1). C? 4 c?p."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_05"
@@ -1204,7 +1246,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "C?c k?t qu? c? ??ng 2 m?t S?p khi gieo 3 ??ng xu l? SSN, SNS, NSS (c? 3 k?t qu?)."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_05"
@@ -1263,7 +1307,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "Li?t k? tr?c ti?p t?ng c?p k?t qu? th?a m?n ?i?u ki?n ?? b?i."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_05"
@@ -1338,7 +1384,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "Li?t k? h? th?ng v? ??m ch?nh x?c t?ng tr??ng h?p."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_05"
@@ -1376,7 +1424,9 @@
       "practice",
       "combat"
     ],
-    "hints": [],
+    "hints": [
+      "Li?t k? c?c c?p bi c?ng m?u ?? v? c?ng m?u xanh r?i c?ng t?ng s? c?ch ch?n."
+    ],
     "tags": [
       "dungeon_01",
       "stage_01_05"

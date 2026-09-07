@@ -26,7 +26,15 @@
     },
     "forbidden_concepts": [],
     "prerequisite_concepts": [],
-    "id": "mkp_d1_random_trial"
+    "id": "mkp_d1_random_trial",
+    "core_concepts": [
+      "Ph?p th? ng?u nhi?n l? h?nh ??ng/th? nghi?m m? k?t qu? kh?ng th? ?o?n tr??c ch?nh x?c, nh?ng bi?t tr??c t?p h?p t?t c? c?c k?t qu? c? th? x?y ra.",
+      "H?nh ??ng t?t nhi?n l? th? nghi?m to?n h?c ho?c v?t l? lu?n cho c?ng m?t k?t qu? c? ??nh bi?t tr??c."
+    ],
+    "common_misconceptions": [
+      "MISC_RT_01: Nh?m l?n gi?a h?nh ??ng ng?u nhi?n v? h?nh ??ng c? k?t qu? t?t nhi?n (cho r?ng th? ?? r?i l? ng?u nhi?n).",
+      "MISC_RT_02: Cho r?ng ng?u nhi?n ngh?a l? kh?ng th? bi?t b?t k? kh? n?ng n?o c? th? x?y ra."
+    ]
   },
   {
     "schema_version": 1,
@@ -55,7 +63,15 @@
     },
     "forbidden_concepts": [],
     "prerequisite_concepts": [],
-    "id": "mkp_d1_sample_space"
+    "id": "mkp_d1_sample_space",
+    "core_concepts": [
+      "Kh?ng gian m?u (Omega) l? t?p h?p t?t c? c?c k?t qu? c? th? x?y ra c?a ph?p th? ng?u nhi?n.",
+      "S? ph?n t? c?a kh?ng gian m?u k? hi?u l? n(Omega). (V? d?: 1 ??ng xu c? n(Omega) = 2, 2 ??ng xu c? n(Omega) = 4, 1 con x?c x?c c? n(Omega) = 6)."
+    ],
+    "common_misconceptions": [
+      "MISC_SS_01: T?nh n(Omega) cho k ??ng xu b?ng 2*k thay v? 2^k.",
+      "MISC_SS_02: B? s?t th? t? c?p k?t qu? khi gieo 2 con x?c x?c (cho r?ng (1,2) v? (2,1) l? c?ng 1 k?t qu?)."
+    ]
   },
   {
     "schema_version": 1,
@@ -84,7 +100,15 @@
     },
     "forbidden_concepts": [],
     "prerequisite_concepts": [],
-    "id": "mkp_d1_event_subset"
+    "id": "mkp_d1_event_subset",
+    "core_concepts": [
+      "Bi?n c? A l? m?t t?p con c?a kh?ng gian m?u Omega (A subseteq Omega).",
+      "S? k?t qu? thu?n l?i cho bi?n c? A k? hi?u l? n(A)."
+    ],
+    "common_misconceptions": [
+      "MISC_ES_01: Coi s? 1 l? s? nguy?n t? khi li?t k? k?t qu? thu?n l?i.",
+      "MISC_ES_02: ??m thi?u ho?c ??m tr?ng ph?n t? th?a m?n ?i?u ki?n bi?n c?."
+    ]
   },
   {
     "schema_version": 1,
@@ -113,7 +137,16 @@
     },
     "forbidden_concepts": [],
     "prerequisite_concepts": [],
-    "id": "mkp_d1_event_classification"
+    "id": "mkp_d1_event_classification",
+    "core_concepts": [
+      "Bi?n c? kh?ng th? (T?p r?ng) l? bi?n c? kh?ng bao gi? x?y ra, n(EmptySet) = 0.",
+      "Bi?n c? ch?c ch?n (Omega) l? bi?n c? lu?n lu?n x?y ra trong m?i l??t th?, n(Omega) = |Omega|.",
+      "Bi?n c? ng?u nhi?n l? bi?n c? c? th? x?y ra ho?c kh?ng x?y ra t?y thu?c k?t qu? ph?p th?."
+    ],
+    "common_misconceptions": [
+      "MISC_EC_01: Nh?m bi?n c? ch?c ch?n v?i bi?n c? ng?u nhi?n c? kh? n?ng cao.",
+      "MISC_EC_02: Nh?m bi?n c? kh?ng th? v?i bi?n c? ng?u nhi?n c? kh? n?ng th?p."
+    ]
   },
   {
     "schema_version": 1,
@@ -142,6 +175,14 @@
     },
     "forbidden_concepts": [],
     "prerequisite_concepts": [],
-    "id": "mkp_d1_counting_outcomes"
+    "id": "mkp_d1_counting_outcomes",
+    "core_concepts": [
+      "??m s? k?t qu? thu?n l?i n(A) qua li?t k? tr?c ti?p h? th?ng c?c c?p ho?c d?y k?t qu? th?a m?n ?i?u ki?n ?? b?i.",
+      "R?t bi ng?u nhi?n kh?ng ho?n l?i v? kh?ng quan tr?ng th? t? c?p bi."
+    ],
+    "common_misconceptions": [
+      "MISC_CO_01: Qu?n t?nh ho?n v? c?p (x, y) khi x != y.",
+      "MISC_CO_02: Nh?m l?n gi?a ph?p th? gieo k ??ng xu v?i gieo k con x?c x?c."
+    ]
   }
 ]
