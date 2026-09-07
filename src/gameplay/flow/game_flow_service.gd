@@ -39,6 +39,13 @@ func start_new_game() -> Dictionary:
 	var config: Dictionary = _catalog.get_config()
 	var initial_stage_id: String = String(config.get("initial_stage_id", "stage_01_01"))
 
+	# Reset player progression and balances intentionally on New Game
+	if _progress_service != null and _progress_service.has_method("reset_to_fresh"):
+		_progress_service.reset_to_fresh()
+	if _player_persistent != null:
+		_player_persistent.coin_balance = 0
+		_player_persistent.exp_total = 0
+
 	var init_res: Dictionary = start_stage(initial_stage_id)
 	if not bool(init_res.get("success", false)):
 		_flow_state = "IDLE"

@@ -158,7 +158,48 @@ func load() -> Dictionary:
 	if not bool(val_res.get("success", false)):
 		return val_res
 
-	return {"success": true, "snapshot": snapshot.duplicate(true)}
+	var clean_snapshot: Dictionary = _sanitize_snapshot_for_playable_content(snapshot)
+	return {"success": true, "snapshot": clean_snapshot.duplicate(true)}
+
+func _sanitize_snapshot_for_playable_content(snapshot: Dictionary) -> Dictionary:
+	if _catalog == null or not _catalog.has_method("is_dungeon_playable"):
+		return snapshot
+
+	var config: Dictionary = _catalog.get_config()
+	if not config.has("playable_dungeon_ids"):
+		return snapshot
+
+	var clean: Dictionary = snapshot.duplicate(true)
+	var progress: Dictionary = clean.get("progress", {}) as Dictionary
+	if progress.is_empty():
+		return clean
+
+	var raw_unlocked_dungeons: Array = progress.get("unlocked_dungeon_ids", []) as Array
+	var raw_unlocked_stages: Array = progress.get("unlocked_stage_ids", []) as Array
+
+	var clean_dungeons: Array[String] = []
+	for d in raw_unlocked_dungeons:
+		var d_id: String = String(d)
+		if _catalog.is_dungeon_playable(d_id):
+			clean_dungeons.append(d_id)
+
+	var clean_stages: Array[String] = []
+	for s in raw_unlocked_stages:
+		var s_id: String = String(s)
+		var stage_info: Dictionary = _catalog.get_stage(s_id)
+		var d_id: String = String(stage_info.get("dungeon_id", ""))
+		if _catalog.is_dungeon_playable(d_id):
+			clean_stages.append(s_id)
+
+	if clean_dungeons.is_empty() and raw_unlocked_dungeons.has("dungeon_01"):
+		clean_dungeons.append("dungeon_01")
+	if clean_stages.is_empty() and raw_unlocked_stages.has("stage_01_01"):
+		clean_stages.append("stage_01_01")
+
+	progress["unlocked_dungeon_ids"] = clean_dungeons
+	progress["unlocked_stage_ids"] = clean_stages
+	clean["progress"] = progress
+	return clean
 
 ## Preservation handler for corrupt save file (M1 Authorized).
 ## Copies RAW main bytes to user://save_v1_corrupt_diagnostic.json iff main is invalid.

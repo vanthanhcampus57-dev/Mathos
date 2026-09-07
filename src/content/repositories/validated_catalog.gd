@@ -60,6 +60,32 @@ func _init(
 func get_config() -> Dictionary:
 	return _config.duplicate(true)
 
+## Returns true if the specified dungeon is configured as playable in the current content release.
+## Driven by GameConfig "playable_dungeon_ids", defaulting safely to true (all dungeons) if unconfigured.
+func is_dungeon_playable(dungeon_id: String) -> bool:
+	if dungeon_id.is_empty():
+		return false
+	if _config.has("playable_dungeon_ids"):
+		var raw_playable: Variant = _config["playable_dungeon_ids"]
+		if raw_playable is Array:
+			for item in (raw_playable as Array):
+				if String(item) == dungeon_id:
+					return true
+			return false
+	return true
+
+func get_playable_dungeon_ids() -> Array[String]:
+	var result: Array[String] = []
+	if _config.has("playable_dungeon_ids"):
+		var raw_playable: Variant = _config["playable_dungeon_ids"]
+		if raw_playable is Array:
+			for item in (raw_playable as Array):
+				result.append(String(item))
+			return result
+	for d_id in _dungeons:
+		result.append(d_id)
+	return result
+
 func get_dungeon(id: String) -> Dictionary:
 	if _dungeons.has(id):
 		return (_dungeons[id] as Dictionary).duplicate(true)

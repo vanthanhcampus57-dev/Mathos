@@ -27,6 +27,7 @@ var _player_hp_bar: ProgressBar = null
 var _player_hp_label: Label = null
 var _player_shield_label: Label = null
 
+var _cards_header_label: Label = null
 var _cards_container: HBoxContainer = null
 var _card_buttons: Array[Button] = []
 
@@ -38,12 +39,18 @@ var _victory_overlay: PanelContainer = null
 func _ready() -> void:
 	_ensure_ui()
 
+func get_controller() -> CardCombatController:
+	return _combat_controller
+
 func set_controller(controller: CardCombatController) -> void:
+	if _combat_controller == controller:
+		return
 	if _combat_controller != null:
 		_disconnect_controller()
 	_combat_controller = controller
-	_connect_controller()
-	_update_full_display()
+	if _combat_controller != null:
+		_connect_controller()
+		_update_full_display()
 
 func _disconnect_controller() -> void:
 	if _combat_controller == null:
@@ -254,11 +261,11 @@ func _ensure_ui() -> void:
 	vbox.add_child(sep2)
 
 	# 3. ACTION CARDS BAR
-	var cards_header: Label = Label.new()
-	cards_header.text = "THẺ BÀI CHIẾN THUẬT (Chọn 1 thẻ trước khi giải đố):"
-	cards_header.add_theme_font_size_override("font_size", 11)
-	cards_header.add_theme_color_override("font_color", Color(0.9, 0.85, 0.6, 0.9))
-	vbox.add_child(cards_header)
+	_cards_header_label = Label.new()
+	_cards_header_label.text = "THẺ BÀI CHIẾN THUẬT (Chọn 1 thẻ trước khi giải đố):"
+	_cards_header_label.add_theme_font_size_override("font_size", 11)
+	_cards_header_label.add_theme_color_override("font_color", Color(0.9, 0.85, 0.6, 0.9))
+	vbox.add_child(_cards_header_label)
 
 	_cards_container = HBoxContainer.new()
 	_cards_container.add_theme_constant_override("separation", 6)
@@ -378,7 +385,15 @@ func _update_full_display() -> void:
 	_render_cards()
 
 func _render_cards() -> void:
-	if _combat_controller == null or _cards_container == null:
+	if _cards_container == null:
+		return
+
+	var in_active_combat: bool = (_combat_controller != null and _combat_controller.is_in_combat and _combat_controller.boss_entity != null and not _combat_controller.boss_entity.is_defeated and _combat_controller.player_runtime != null and not _combat_controller.player_runtime.is_defeated)
+	_cards_container.visible = in_active_combat
+	if _cards_header_label != null:
+		_cards_header_label.visible = in_active_combat
+
+	if not in_active_combat or _combat_controller == null:
 		return
 
 	# Rebuild card buttons if needed
@@ -443,12 +458,14 @@ func _on_boss_defeated() -> void:
 	_ensure_ui()
 	if _victory_overlay != null:
 		_victory_overlay.visible = true
+	_render_cards()
 	victory_acknowledged.emit()
 
 func _on_player_defeated() -> void:
 	_ensure_ui()
 	if _defeat_overlay != null:
 		_defeat_overlay.visible = true
+	_render_cards()
 
 func _on_combat_reset() -> void:
 	_ensure_ui()

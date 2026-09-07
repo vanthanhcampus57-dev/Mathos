@@ -4,6 +4,9 @@
   "content_version": 1,
   "initial_dungeon_id": "dungeon_01",
   "initial_stage_id": "stage_01_01",
+  "playable_dungeon_ids": [
+    "dungeon_01"
+  ],
   "difficulty_min": 1,
   "difficulty_max": 5,
   "minimum_valid_candidates_per_required_scope": 3,

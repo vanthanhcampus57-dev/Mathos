@@ -670,6 +670,12 @@ func set_stage_context(data: Variant) -> void:
 	if advisor_label != null and _context_info != null and not _context_info.stage_advisor_text.is_empty():
 		advisor_label.text = _context_info.stage_advisor_text
 
+	var is_boss: bool = is_boss_stage()
+	var existing_boss: BossCombatPanel = get_existing_boss_combat_panel()
+	if not is_boss and existing_boss != null:
+		existing_boss.visible = false
+		existing_boss.set_controller(null)
+
 func is_restored_context_displayed() -> bool:
 	return _context_info != null and _context_info.is_restored_context
 
@@ -688,6 +694,7 @@ func _update_header() -> void:
 
 	var badge_label: Label = header_bar.get_node_or_null("RestoredBadgeLabel") as Label
 	if badge_label != null:
+		badge_label.text = ""
 		badge_label.visible = (_context_info != null and _context_info.is_restored_context)
 
 	if _current_mode == ViewMode.MODE_ENTRY or _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_VICTORY or _current_mode == ViewMode.MODE_DUNGEON_COMPLETE or _current_mode == ViewMode.MODE_STORY or _current_mode == ViewMode.MODE_PROLOGUE:
@@ -708,6 +715,11 @@ func set_view_mode(mode: ViewMode) -> void:
 	_current_mode = mode
 	_update_header()
 	_update_background_texture()
+
+	if _previous_mode == ViewMode.MODE_QUESTION_HOST and _current_mode != ViewMode.MODE_QUESTION_HOST:
+		var q_panel: QuestionPanel = get_question_panel()
+		if q_panel != null:
+			q_panel.clear_question()
 
 	var main_content: Control = _get_main_content_vbox()
 	if main_content == null:
@@ -759,19 +771,27 @@ func set_view_mode(mode: ViewMode) -> void:
 		var gameplay_hbox: Control = q_host.get_node_or_null("GameplayHBox") as Control
 		if gameplay_hbox != null:
 			var advisor: Control = gameplay_hbox.get_node_or_null("AdvisorPanel") as Control
-			var is_combat: bool = (_context_info != null and _context_info.encounter_mode == "card_combat")
-			if is_combat:
-				var boss_panel: BossCombatPanel = get_boss_combat_panel()
-				if boss_panel != null:
-					boss_panel.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
-				if advisor != null:
-					advisor.visible = false
+			var is_boss: bool = is_boss_stage()
+			if is_boss:
+				if _current_mode == ViewMode.MODE_QUESTION_HOST:
+					var boss_panel: BossCombatPanel = get_boss_combat_panel()
+					if boss_panel != null:
+						boss_panel.visible = true
+					if advisor != null:
+						advisor.visible = false
+				else:
+					var existing_boss: BossCombatPanel = get_existing_boss_combat_panel()
+					if existing_boss != null:
+						existing_boss.visible = false
+					if advisor != null:
+						advisor.visible = false
 			else:
-				var existing_boss: Control = gameplay_hbox.get_node_or_null("BossCombatPanel") as Control
+				var existing_boss: BossCombatPanel = get_existing_boss_combat_panel()
 				if existing_boss != null:
 					existing_boss.visible = false
+					existing_boss.set_controller(null)
 				if advisor != null:
-					advisor.visible = true
+					advisor.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
 
 	if f_host != null: f_host.visible = (_current_mode == ViewMode.MODE_FEEDBACK_HOST)
 	if complete_panel != null: complete_panel.visible = (_current_mode == ViewMode.MODE_STAGE_COMPLETE)
@@ -983,6 +1003,18 @@ func get_question_panel() -> QuestionPanel:
 		return panel
 	return null
 
+func is_boss_stage() -> bool:
+	return _context_info != null and _context_info.encounter_mode == "card_combat" and not _context_info.enemy_id.is_empty()
+
+func get_existing_boss_combat_panel() -> BossCombatPanel:
+	var q_host: MarginContainer = get_question_host_container()
+	if q_host == null:
+		return null
+	var gameplay_hbox: Control = q_host.get_node_or_null("GameplayHBox") as Control
+	if gameplay_hbox == null:
+		return null
+	return gameplay_hbox.get_node_or_null("BossCombatPanel") as BossCombatPanel
+
 func get_boss_combat_panel() -> BossCombatPanel:
 	var q_host: MarginContainer = get_question_host_container()
 	if q_host == null:
@@ -1001,6 +1033,7 @@ func get_boss_combat_panel() -> BossCombatPanel:
 				b_panel = (script_res as GDScript).new() as BossCombatPanel
 		if b_panel != null:
 			b_panel.name = "BossCombatPanel"
+			b_panel.visible = false
 			gameplay_hbox.add_child(b_panel)
 	return b_panel
 

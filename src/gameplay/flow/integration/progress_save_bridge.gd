@@ -36,6 +36,43 @@ func _init(
 	else:
 		_adaptive_profile_dict = adaptive_profile_dict.duplicate(true)
 
+	if _save_service.has_save():
+		var store: SaveFileStore = _save_service.get_file_store()
+		if store != null and not store.get_base_dir().begins_with("user://test_flow"):
+			hydrate_initial_state()
+
+## Automatically hydrates player balances and progress state in-place from disk save if available.
+## Ensures fresh boot/restart immediately reflects committed progress in Map and services.
+func hydrate_initial_state() -> bool:
+	if _save_service == null or not _save_service.has_save():
+		return false
+
+	var load_res: Dictionary = _save_service.load()
+	if not bool(load_res.get("success", false)):
+		return false
+
+	var snapshot: Dictionary = load_res.get("snapshot", {}) as Dictionary
+	if snapshot.is_empty():
+		return false
+
+	var player_dict: Dictionary = snapshot.get("player_persistent", {}) as Dictionary
+	if not player_dict.is_empty() and _player_persistent != null:
+		_player_persistent.coin_balance = int(player_dict.get("coin_balance", 0))
+		_player_persistent.exp_total = int(player_dict.get("exp_total", 0))
+
+	var progress_dict: Dictionary = snapshot.get("progress", {}) as Dictionary
+	if not progress_dict.is_empty():
+		var restored_progress: ProgressState = _parse_progress_state(progress_dict)
+		if _progress_service != null:
+			_progress_service.apply_restored_state(restored_progress)
+
+	if snapshot.has("adaptive_profile"):
+		var adp: Dictionary = snapshot.get("adaptive_profile", {}) as Dictionary
+		if not adp.is_empty():
+			_adaptive_profile_dict = adp.duplicate(true)
+
+	return true
+
 func get_progress_service() -> ProgressService:
 	return _progress_service
 
@@ -116,11 +153,15 @@ func restore_from_save() -> Dictionary:
 
 	# Restore PlayerPersistentState
 	var player_dict: Dictionary = snapshot["player_persistent"] as Dictionary
-	_player_persistent = PlayerPersistentState.new(
-		String(player_dict["player_id"]),
-		int(player_dict["coin_balance"]),
-		int(player_dict["exp_total"])
-	)
+	if _player_persistent != null:
+		_player_persistent.coin_balance = int(player_dict.get("coin_balance", 0))
+		_player_persistent.exp_total = int(player_dict.get("exp_total", 0))
+	else:
+		_player_persistent = PlayerPersistentState.new(
+			String(player_dict.get("player_id", PlayerPersistentState.CANONICAL_PLAYER_ID)),
+			int(player_dict.get("coin_balance", 0)),
+			int(player_dict.get("exp_total", 0))
+		)
 
 	# Restore ProgressState
 	var progress_dict: Dictionary = snapshot["progress"] as Dictionary
@@ -130,8 +171,11 @@ func restore_from_save() -> Dictionary:
 	if snapshot.has("adaptive_profile"):
 		_adaptive_profile_dict = (snapshot["adaptive_profile"] as Dictionary).duplicate(true)
 
-	# Reconstruct ProgressService with restored committed state
-	_progress_service = ProgressService.new(_catalog, _player_persistent, restored_progress)
+	# Update ProgressService in-place (or reconstruct if null)
+	if _progress_service != null:
+		_progress_service.apply_restored_state(restored_progress)
+	else:
+		_progress_service = ProgressService.new(_catalog, _player_persistent, restored_progress)
 
 	var entry_stage_id: String = get_legal_entry_stage_id(restored_progress)
 
@@ -146,21 +190,39 @@ func restore_from_save() -> Dictionary:
 
 ## FLOW-006: Computes the next legal entry stage from ProgressService / ProgressState.
 ## Progression logic remains 100% owned by ProgressService.
+## Only returns stages belonging to playable dungeons.
 func get_legal_entry_stage_id(state: ProgressState = null) -> String:
 	var prg_state: ProgressState = state
 	if prg_state == null:
 		prg_state = _progress_service.create_snapshot_view()
 
-	# 1. Find the first unlocked stage that has NOT been cleared yet
+	# Filter unlocked stages to playable dungeons
+	var playable_unlocked: Array[String] = []
 	for stage_id in prg_state.unlocked_stage_ids:
+		if _is_stage_playable(stage_id):
+			playable_unlocked.append(stage_id)
+
+	# 1. Find the first playable unlocked stage that has NOT been cleared yet
+	for stage_id in playable_unlocked:
 		if not prg_state.cleared_stage_ids.has(stage_id):
 			return stage_id
 
-	# 2. If all unlocked stages are cleared, return the latest unlocked stage
-	if not prg_state.unlocked_stage_ids.is_empty():
-		return prg_state.unlocked_stage_ids[prg_state.unlocked_stage_ids.size() - 1]
+	# 2. If all playable unlocked stages are cleared, return the latest playable unlocked stage
+	if not playable_unlocked.is_empty():
+		return playable_unlocked[playable_unlocked.size() - 1]
 
 	return "stage_01_01"
+
+func _is_stage_playable(stage_id: String) -> bool:
+	if _catalog == null:
+		return true
+	var stage: Dictionary = _catalog.get_stage(stage_id)
+	if stage.is_empty():
+		return false
+	var dungeon_id: String = String(stage.get("dungeon_id", ""))
+	if _catalog.has_method("is_dungeon_playable"):
+		return _catalog.is_dungeon_playable(dungeon_id)
+	return true
 
 ## Helper to compose a fully valid SaveSnapshot dictionary conforming to SaveSchema V1.
 static func compose_save_snapshot(

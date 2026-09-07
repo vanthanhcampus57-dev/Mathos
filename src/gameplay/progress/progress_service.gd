@@ -23,11 +23,32 @@ func _init(
 	else:
 		_state = _create_fresh_progress_state()
 
+func is_dungeon_playable(dungeon_id: String) -> bool:
+	if _catalog != null and _catalog.has_method("is_dungeon_playable"):
+		return _catalog.is_dungeon_playable(dungeon_id)
+	return dungeon_id == "dungeon_01"
+
+func is_stage_playable(stage_id: String) -> bool:
+	if _catalog == null:
+		return stage_id.begins_with("stage_01_")
+	var stage: Dictionary = _catalog.get_stage(stage_id)
+	if stage.is_empty():
+		return false
+	var dungeon_id: String = String(stage.get("dungeon_id", ""))
+	return is_dungeon_playable(dungeon_id)
+
 func can_enter(stage_id: String) -> bool:
 	if _catalog.get_stage(stage_id).is_empty():
 		push_error("ProgressService.can_enter: unknown stage_id '" + stage_id + "'")
 		return false
 	return _state.unlocked_stage_ids.has(stage_id)
+
+func apply_restored_state(restored_state: ProgressState) -> void:
+	assert(restored_state != null, "restored_state cannot be null")
+	_state = restored_state._copy()
+
+func reset_to_fresh() -> void:
+	_state = _create_fresh_progress_state()
 
 func commit_stage_clear(stage_id: String, reward: RewardGrant) -> StageCompletionResult:
 	var stage: Dictionary = _catalog.get_stage(stage_id)

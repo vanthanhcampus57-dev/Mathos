@@ -392,6 +392,11 @@ func _setup_combat_if_needed(stage_id: String) -> void:
 	else:
 		_active_combat_controller = null
 		_active_enemy_entity = null
+		if _presentation_shell != null and _presentation_shell.has_method("get_existing_boss_combat_panel"):
+			var boss_panel: BossCombatPanel = _presentation_shell.call("get_existing_boss_combat_panel") as BossCombatPanel
+			if boss_panel != null:
+				boss_panel.set_controller(null)
+				boss_panel.visible = false
 
 func _on_combat_retry_pressed() -> void:
 	if _active_combat_controller == null or _player_stats == null:
@@ -837,6 +842,10 @@ func _on_question_continue_requested() -> void:
 			_finish_stage_practice()
 			return
 
+	var panel: QuestionPanel = get_question_panel()
+	if panel != null:
+		panel.clear_question()
+
 	_active_question_res = {}
 	var next_res: Dictionary = _start_next_question_in_stage()
 	if not bool(next_res.get("success", false)):
@@ -873,6 +882,10 @@ func _on_question_retry_requested() -> void:
 	_start_current_question()
 
 func _finish_stage_practice() -> void:
+	var q_panel: QuestionPanel = get_question_panel()
+	if q_panel != null:
+		q_panel.clear_question()
+
 	var granted_coins: int = 0
 	var granted_exp: int = 0
 	var granted_frag: String = ""
