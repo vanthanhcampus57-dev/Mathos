@@ -181,17 +181,13 @@ func continue_game() -> Dictionary:
 
 	var entry_stage_id: String = String(restore_res.get("entry_stage_id", ""))
 
-	# D1 Completion check: If D1 is fully completed and entry points to D2, freeze D2 auto-entry
-	if _is_dungeon_1_complete() and entry_stage_id.begins_with("stage_02_"):
-		if _presentation_shell != null and _presentation_shell.has_method("show_dungeon_1_complete"):
-			var gold_val: int = _player_persistent.coin_balance if _player_persistent != null else 0
-			var xp_val: int = _player_persistent.exp_total if _player_persistent != null else 0
-			_presentation_shell.call("show_dungeon_1_complete", gold_val, xp_val, "Mảnh Vỡ Ma Thuật 01")
-		if _bootstrap_ui != null:
-			_bootstrap_ui.visible = false
+	# D1 Completion check: If D1 is fully completed, redirect to Map instead of re-entering D1 stage_01_05
+	if _is_dungeon_1_complete():
+		show_stage_map()
 		return {
 			"success": true,
 			"dungeon_1_complete": true,
+			"redirected_to_map": true,
 			"entry_stage_id": entry_stage_id,
 			"restore_result": restore_res
 		}
@@ -274,7 +270,7 @@ func select_stage(stage_id: String) -> Dictionary:
 			_presentation_shell.call("set_view_mode", 9) # MODE_PROLOGUE
 		else:
 			var story_steps: Array = context.get("story_steps", []) as Array
-			if not story_steps.is_empty() and not is_cleared and _presentation_shell.has_method("set_view_mode"):
+			if not story_steps.is_empty() and _presentation_shell.has_method("set_view_mode"):
 				_presentation_shell.call("set_view_mode", 7) # MODE_STORY
 			elif _presentation_shell.has_method("set_view_mode"):
 				_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
@@ -687,7 +683,9 @@ func refresh_continue_availability() -> void:
 	var summary_data: Dictionary = {}
 	if _save_service != null:
 		has_save = _save_service.has_save()
-		if has_save:
+		if has_save and _is_dungeon_1_complete():
+			has_save = false
+		elif has_save:
 			var load_res: Dictionary = _save_service.load()
 			if bool(load_res.get("success", false)):
 				var snapshot: Dictionary = load_res.get("snapshot", {}) as Dictionary

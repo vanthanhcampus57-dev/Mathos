@@ -775,8 +775,9 @@ func _render_backing_dungeon_container() -> void:
 		_dungeon_container.add_child(dun_panel)
 
 func _on_d1_action_pressed() -> void:
+	var is_d1_completed: bool = ("stage_01_05" in _completed_stages) or ("stage_01_01" in _completed_stages and _completed_stages.size() >= 5)
 	var target_stage: String = "stage_01_01"
-	if _current_stage_id.begins_with("stage_01_") and (_current_stage_id in _unlocked_stages):
+	if not is_d1_completed and _current_stage_id.begins_with("stage_01_") and (_current_stage_id in _unlocked_stages):
 		target_stage = _current_stage_id
 	_on_stage_button_pressed(target_stage)
 
