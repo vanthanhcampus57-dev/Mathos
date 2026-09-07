@@ -120,7 +120,7 @@ func show_feedback(attempt_result: Dictionary) -> void:
 		var card: UiOptionCard = _option_buttons.get(opt_id) as UiOptionCard
 		if card != null:
 			card.disabled = true
-			var raw_label: String = "%s. %s" % [letter, String(opt.get("text", opt_id))]
+			var raw_label: String = "%s. %s" % [letter, MathContentRenderer.render(String(opt.get("text", opt_id)))]
 
 			if opt_id == _selected_option_id:
 				if is_correct:
@@ -148,7 +148,7 @@ func _rebuild_option_buttons() -> void:
 	for i in range(_options.size()):
 		var opt: Dictionary = _options[i] as Dictionary
 		var opt_id: String = String(opt["option_id"])
-		var opt_text: String = String(opt.get("text", opt_id))
+		var opt_text: String = MathContentRenderer.render(String(opt.get("text", opt_id)))
 		var letter: String = get_option_letter(opt_id, i)
 
 		var card: UiOptionCard = UiOptionCard.new()
@@ -173,7 +173,7 @@ func _update_button_states() -> void:
 	for i in range(_options.size()):
 		var opt: Dictionary = _options[i] as Dictionary
 		var opt_id: String = String(opt["option_id"])
-		var opt_text: String = String(opt.get("text", opt_id))
+		var opt_text: String = MathContentRenderer.render(String(opt.get("text", opt_id)))
 		var letter: String = get_option_letter(opt_id, i)
 		var card: UiOptionCard = _option_buttons.get(opt_id) as UiOptionCard
 

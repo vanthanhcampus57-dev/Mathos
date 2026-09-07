@@ -143,7 +143,7 @@ func _rebuild_ui() -> void:
 	for it_var in _items:
 		var it: Dictionary = it_var as Dictionary
 		var item_id: String = String(it["item_id"])
-		var item_text: String = String(it.get("text", item_id))
+		var item_text: String = MathContentRenderer.render(String(it.get("text", item_id)))
 
 		var hbox: HBoxContainer = HBoxContainer.new()
 		hbox.name = "ItemHBox_" + item_id
@@ -181,7 +181,7 @@ func _rebuild_ui() -> void:
 		for tg_var in _targets:
 			var tg: Dictionary = tg_var as Dictionary
 			var tg_id: String = String(tg["target_id"])
-			var tg_text: String = String(tg.get("label", tg.get("text", tg_id)))
+			var tg_text: String = MathContentRenderer.render(String(tg.get("label", tg.get("text", tg_id))))
 			opt_btn.add_item(tg_text, idx)
 			target_ids.append(tg_id)
 			idx += 1

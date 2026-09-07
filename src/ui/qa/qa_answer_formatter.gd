@@ -9,17 +9,20 @@ static func format_answer(interaction_type: String, answer_spec: Dictionary, que
 	if answer_spec.is_empty():
 		return "⚠️ Không tìm thấy answer_spec cho câu hỏi này"
 
+	var raw_res: String = ""
 	match interaction_type:
 		"multiple_choice":
-			return _format_multiple_choice(answer_spec, question_dict)
+			raw_res = _format_multiple_choice(answer_spec, question_dict)
 		"input":
-			return _format_input(answer_spec)
+			raw_res = _format_input(answer_spec)
 		"matching":
-			return _format_matching(answer_spec, question_dict)
+			raw_res = _format_matching(answer_spec, question_dict)
 		"drag_drop", "classification":
-			return _format_drag_drop(answer_spec, question_dict)
+			raw_res = _format_drag_drop(answer_spec, question_dict)
 		_:
 			return "QA answer format unsupported: %s" % interaction_type
+
+	return MathContentRenderer.render(raw_res)
 
 static func _format_multiple_choice(answer_spec: Dictionary, question_dict: Dictionary) -> String:
 	var payload: Dictionary = question_dict.get("interaction_payload", {}) as Dictionary

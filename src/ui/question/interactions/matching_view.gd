@@ -158,7 +158,7 @@ func _rebuild_ui() -> void:
 	for l_var in _left_items:
 		var l: Dictionary = l_var as Dictionary
 		var left_id: String = String(l["item_id"])
-		var left_text: String = String(l.get("text", left_id))
+		var left_text: String = MathContentRenderer.render(String(l.get("text", left_id)))
 
 		var hbox: HBoxContainer = HBoxContainer.new()
 		hbox.name = "LeftItemHBox_" + left_id
@@ -211,7 +211,7 @@ func _rebuild_ui() -> void:
 		for r_var in _right_items:
 			var r: Dictionary = r_var as Dictionary
 			var right_id: String = String(r["item_id"])
-			var right_text: String = String(r.get("text", right_id))
+			var right_text: String = MathContentRenderer.render(String(r.get("text", right_id)))
 			opt_btn.add_item(right_text, idx)
 			right_ids.append(right_id)
 			idx += 1
@@ -251,7 +251,7 @@ func _update_option_selections() -> void:
 		var left_text: String = left_id
 		for l in _left_items:
 			if String(l["item_id"]) == left_id:
-				left_text = String(l.get("text", left_id))
+				left_text = MathContentRenderer.render(String(l.get("text", left_id)))
 				break
 
 		if opt_btn == null:

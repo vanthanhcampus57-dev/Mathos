@@ -21,8 +21,8 @@ class LessonStepData extends RefCounted:
 	static func from_dict(d: Dictionary) -> LessonStepData:
 		return LessonStepData.new(
 			str(d.get("speaker_label", "")),
-			str(d.get("body_text", "")),
-			str(d.get("context_title", "")),
+			MathContentRenderer.render(str(d.get("body_text", ""))),
+			MathContentRenderer.render(str(d.get("context_title", ""))),
 			int(d.get("step_index", 1)),
 			int(d.get("total_steps", 1))
 		)
@@ -68,13 +68,13 @@ class StageContextInfo extends RefCounted:
 
 		var info: StageContextInfo = StageContextInfo.new(
 			str(d.get("stage_id", "")),
-			str(d.get("stage_title", "")),
-			str(d.get("dungeon_title", "")),
+			MathContentRenderer.render(str(d.get("stage_title", ""))),
+			MathContentRenderer.render(str(d.get("dungeon_title", ""))),
 			steps,
 			bool(d.get("is_restored_context", false))
 		)
 		info.story_steps = s_steps
-		info.stage_advisor_text = str(d.get("stage_advisor_text", ""))
+		info.stage_advisor_text = MathContentRenderer.render(str(d.get("stage_advisor_text", "")))
 		info.encounter_mode = str(d.get("encounter_mode", ""))
 		info.enemy_id = str(d.get("enemy_id", ""))
 		info.card_pool_ids = d.get("card_pool_ids", [])
@@ -96,7 +96,7 @@ class FeedbackInfo extends RefCounted:
 	static func from_dict(d: Dictionary) -> FeedbackInfo:
 		return FeedbackInfo.new(
 			bool(d.get("is_correct", false)),
-			str(d.get("title", "")),
-			str(d.get("message", "")),
-			str(d.get("detail_text", ""))
+			MathContentRenderer.render(str(d.get("title", ""))),
+			MathContentRenderer.render(str(d.get("message", ""))),
+			MathContentRenderer.render(str(d.get("detail_text", "")))
 		)

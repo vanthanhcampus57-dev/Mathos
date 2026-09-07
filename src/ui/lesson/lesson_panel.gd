@@ -105,10 +105,10 @@ func _update_display() -> void:
 		speaker_label.visible = true
 
 	if body_label != null:
-		body_label.text = step.body_text
+		body_label.text = MathContentRenderer.render(step.body_text)
 
 	if context_title_label != null:
-		context_title_label.text = step.context_title
+		context_title_label.text = MathContentRenderer.render(step.context_title)
 		context_title_label.visible = not step.context_title.is_empty()
 
 	if page_indicator_label != null:

@@ -382,8 +382,9 @@ func show_feedback(attempt_result: Dictionary) -> bool:
 	if _feedback_label != null:
 		_feedback_label.theme_type_variation = &"MathosSuccess" if _is_correct else &"MathosError"
 		var header_str: String = "Chính xác!" if _is_correct else "Chưa chính xác"
-		var explanation_str: String = String(attempt_result.get("explanation", ""))
-		_feedback_label.text = "[%s] %s\n%s" % [header_str, _feedback_text, explanation_str]
+		var explanation_str: String = MathContentRenderer.render(String(attempt_result.get("explanation", "")))
+		var clean_feedback_text: String = MathContentRenderer.render(_feedback_text)
+		_feedback_label.text = "[%s] %s\n%s" % [header_str, clean_feedback_text, explanation_str]
 		_feedback_label.modulate.a = 0.0
 		_feedback_label.visible = true
 		if _feedback_tween != null and _feedback_tween.is_running():
@@ -406,7 +407,8 @@ static func sanitize_presentation_text(text: String) -> String:
 		return ""
 	var regex := RegEx.new()
 	regex.compile("\\s*q_d\\d+_\\d+_\\d+\\b|\\s*q_[a-zA-Z0-9_]+\\b")
-	return regex.sub(text, "", true).strip_edges()
+	var cleaned: String = regex.sub(text, "", true).strip_edges()
+	return MathContentRenderer.render(cleaned)
 
 func get_prompt_text() -> String:
 	return _prompt_text

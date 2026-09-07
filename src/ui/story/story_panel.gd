@@ -571,7 +571,7 @@ func _update_header_context() -> void:
 		_dungeon_context_label.text = d_title
 
 	if _stage_title_label != null:
-		_stage_title_label.text = _context_info.stage_title
+		_stage_title_label.text = MathContentRenderer.render(_context_info.stage_title)
 
 func _update_display() -> void:
 	if _steps.is_empty():
@@ -586,7 +586,7 @@ func _update_display() -> void:
 	_apply_speaker_config(cfg)
 
 	if _body_label != null:
-		_body_label.text = step.body_text
+		_body_label.text = MathContentRenderer.render(step.body_text)
 
 	if _page_indicator_label != null:
 		_page_indicator_label.text = "Bước %d / %d" % [_current_index + 1, _steps.size()]

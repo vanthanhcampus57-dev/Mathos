@@ -73,7 +73,8 @@ func _initialize() -> void:
 		{"name": "Question State Machine Regressions", "func": Callable(preload("res://tests/unit/presentation/test_question_state_machine_regressions.gd"), "run_all_tests")},
 		{"name": "Stage Boss Lifecycle 080", "func": Callable(preload("res://tests/unit/combat/test_stage_boss_lifecycle_080.gd"), "run_all_tests").bind(self)},
 		{"name": "Save Progression Consistency QA", "func": Callable(preload("res://tests/unit/presentation/test_save_progression_consistency.gd"), "run_all_tests")},
-		{"name": "P0 Integration Sanity 082", "func": Callable(preload("res://tests/integration/presentation/test_p0_integration_sanity_082.gd"), "run_all_tests").bind(self)}
+		{"name": "P0 Integration Sanity 082", "func": Callable(preload("res://tests/integration/presentation/test_p0_integration_sanity_082.gd"), "run_all_tests").bind(self)},
+		{"name": "Math Content Renderer QA", "func": Callable(preload("res://tests/unit/presentation/test_math_content_renderer.gd"), "run_tests_for_runner")}
 	]
 
 	for s in bool_suites:
@@ -189,4 +190,5 @@ func _count_suite_tests(name: String) -> int:
 		"Stage Boss Lifecycle 080": return 8
 		"Save Progression Consistency QA": return 8
 		"P0 Integration Sanity 082": return 3
+		"Math Content Renderer QA": return 19
 		_: return 1

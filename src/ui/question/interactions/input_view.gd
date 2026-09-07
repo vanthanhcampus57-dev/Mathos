@@ -73,7 +73,7 @@ func setup(interaction_payload: Dictionary) -> bool:
 	if _line_edit != null:
 		var custom_placeholder: String = String(interaction_payload.get("placeholder_text", ""))
 		if not custom_placeholder.is_empty():
-			_line_edit.placeholder_text = custom_placeholder
+			_line_edit.placeholder_text = MathContentRenderer.render(custom_placeholder)
 		else:
 			_line_edit.placeholder_text = "Nhập câu trả lời..."
 		_line_edit.text = _current_raw_value

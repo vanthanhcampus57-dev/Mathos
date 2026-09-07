@@ -31,11 +31,12 @@ func set_rewards_data(coins: int, exp_pts: int, fragment_id: String = "") -> voi
 func set_summary_data(stage_title: String, message: String = "") -> void:
 	var stage_name_label: Label = get_node_or_null("MarginContainer/VBoxContainer/StageNameLabel") as Label
 	if stage_name_label != null:
-		stage_name_label.text = stage_title if not stage_title.is_empty() else "Khởi Đầu Rừng Mù Sương"
+		var title_to_show: String = stage_title if not stage_title.is_empty() else "Khởi Đầu Rừng Mù Sương"
+		stage_name_label.text = MathContentRenderer.render(title_to_show)
 
 	var summary_label: Label = _get_summary_label()
 	if summary_label != null and not message.is_empty():
-		summary_label.text = message
+		summary_label.text = MathContentRenderer.render(message)
 		summary_label.visible = true
 
 func set_stage_complete_stats(question_count: int, accuracy_pct: float, learned_summary: String = "") -> void:
@@ -44,7 +45,7 @@ func set_stage_complete_stats(question_count: int, accuracy_pct: float, learned_
 	var learned_body: Label = get_node_or_null("MarginContainer/VBoxContainer/LearnedPanel/LearnedVBox/Body") as Label
 
 	if learned_body != null and not learned_summary.is_empty():
-		learned_body.text = learned_summary
+		learned_body.text = MathContentRenderer.render(learned_summary)
 
 	if not is_inside_tree():
 		if q_val != null:
