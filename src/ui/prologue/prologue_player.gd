@@ -599,25 +599,25 @@ func _build_beat04_structure() -> void:
 		{
 			"id": "Destination01",
 			"name": "Dungeon I — KHU RỪNG SƯƠNG MÙ",
-			"pos": Vector2(240.0, 180.0),
+			"pos": Vector2(299.0, 90.1),
 			"color": Color(0.2, 0.95, 0.7, 1.0)
 		},
 		{
 			"id": "Destination02",
 			"name": "Dungeon II — ĐẦM LẦY TỶ LỆ",
-			"pos": Vector2(1040.0, 190.0),
+			"pos": Vector2(956.4, 90.5),
 			"color": Color(0.95, 0.65, 0.2, 1.0)
 		},
 		{
 			"id": "Destination03",
 			"name": "Dungeon III — CUNG ĐIỆN HỢP NHẤT",
-			"pos": Vector2(260.0, 540.0),
+			"pos": Vector2(1049.4, 603.9),
 			"color": Color(0.45, 0.55, 1.0, 1.0)
 		},
 		{
 			"id": "Destination04",
 			"name": "Dungeon IV — ĐỈNH THÁP ĐỘC LẬP",
-			"pos": Vector2(1020.0, 530.0),
+			"pos": Vector2(354.2, 551.1),
 			"color": Color(1.0, 0.85, 0.3, 1.0)
 		}
 	]
@@ -1110,11 +1110,11 @@ func _process_beat04(_delta: float) -> void:
 	var f3_start: Vector2 = Vector2(-67.0, -192.0)
 	var f4_start: Vector2 = Vector2(98.0, -192.0)
 
-	# Destination targets in world content space (matches layout JSON)
-	var f1_target: Vector2 = Vector2(-387.0, -447.0)
-	var f2_target: Vector2 = Vector2(413.0, -437.0)
-	var f3_target: Vector2 = Vector2(-367.0, -87.0)
-	var f4_target: Vector2 = Vector2(393.0, -97.0)
+	# Destination targets in world content space (matches HUMAN-accepted layout JSON)
+	var f1_target: Vector2 = Vector2(-328.0, -536.9)
+	var f2_target: Vector2 = Vector2(329.4, -536.5)
+	var f3_target: Vector2 = Vector2(422.4, -23.1)
+	var f4_target: Vector2 = Vector2(-272.8, -75.9)
 
 	var frag1: TextureRect = _b4_layers.get("Fragment01", null) as TextureRect
 	var frag2: TextureRect = _b4_layers.get("Fragment02", null) as TextureRect

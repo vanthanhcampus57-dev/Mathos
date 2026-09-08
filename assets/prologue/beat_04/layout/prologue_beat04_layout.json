@@ -13,11 +13,11 @@
         "Destination01": {
             "name": "Dungeon I — KHU RỪNG SƯƠNG MÙ",
             "region": "North-West",
-            "x": -387.0,
-            "y": -447.0,
+            "x": -328.0,
+            "y": -536.9,
             "target_pos": [
-                -387.0,
-                -447.0
+                -328.0,
+                -536.9
             ],
             "color": [
                 0.2,
@@ -29,11 +29,11 @@
         "Destination02": {
             "name": "Dungeon II — ĐẦM LẦY TỶ LỆ",
             "region": "North-East",
-            "x": 413.0,
-            "y": -437.0,
+            "x": 329.4,
+            "y": -536.5,
             "target_pos": [
-                413.0,
-                -437.0
+                329.4,
+                -536.5
             ],
             "color": [
                 0.95,
@@ -45,11 +45,11 @@
         "Destination03": {
             "name": "Dungeon III — CUNG ĐIỆN HỢP NHẤT",
             "region": "South-West",
-            "x": -367.0,
-            "y": -87.0,
+            "x": 422.4,
+            "y": -23.1,
             "target_pos": [
-                -367.0,
-                -87.0
+                422.4,
+                -23.1
             ],
             "color": [
                 0.45,
@@ -61,11 +61,11 @@
         "Destination04": {
             "name": "Dungeon IV — ĐỈNH THÁP ĐỘC LẬP",
             "region": "South-East",
-            "x": 393.0,
-            "y": -97.0,
+            "x": -272.8,
+            "y": -75.9,
             "target_pos": [
-                393.0,
-                -97.0
+                -272.8,
+                -75.9
             ],
             "color": [
                 1.0,
@@ -97,8 +97,8 @@
         "Fragment01": {
             "start_x": -82.0,
             "start_y": -332.0,
-            "target_x": -387.0,
-            "target_y": -447.0,
+            "target_x": -328.0,
+            "target_y": -536.9,
             "start_rot": -4.5,
             "target_rot": -25.0,
             "scale_x": 0.52,
@@ -110,8 +110,8 @@
         "Fragment02": {
             "start_x": 108.0,
             "start_y": -332.0,
-            "target_x": 413.0,
-            "target_y": -437.0,
+            "target_x": 329.4,
+            "target_y": -536.5,
             "start_rot": 4.0,
             "target_rot": 35.0,
             "scale_x": 0.52,
@@ -123,8 +123,8 @@
         "Fragment03": {
             "start_x": -67.0,
             "start_y": -192.0,
-            "target_x": -367.0,
-            "target_y": -87.0,
+            "target_x": 422.4,
+            "target_y": -23.1,
             "start_rot": -3.0,
             "target_rot": -18.0,
             "scale_x": 0.52,
@@ -136,8 +136,8 @@
         "Fragment04": {
             "start_x": 98.0,
             "start_y": -192.0,
-            "target_x": 393.0,
-            "target_y": -97.0,
+            "target_x": -272.8,
+            "target_y": -75.9,
             "start_rot": 3.5,
             "target_rot": 45.0,
             "scale_x": 0.52,
