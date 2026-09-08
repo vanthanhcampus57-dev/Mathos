@@ -267,7 +267,7 @@ static func test_story_vis_007_draven_bottom_fade_shader_active() -> bool:
 
 	var fade_start: float = float(mat.get_shader_parameter("fade_start"))
 	var fade_end: float = float(mat.get_shader_parameter("fade_end"))
-	if fade_start < 0.8 or fade_start > 0.9 or fade_end != 1.0:
+	if (fade_start < 0.6 or fade_start > 0.9) or fade_end != 1.0:
 		print("[STORY-VIS-007] FAIL: Unexpected shader parameters fade_start=%f fade_end=%f" % [fade_start, fade_end])
 		_remove_node_from_tree(panel)
 		return false

@@ -83,7 +83,8 @@ func _initialize() -> void:
 		{"name": "P0 Integration Sanity 082", "func": Callable(preload("res://tests/integration/presentation/test_p0_integration_sanity_082.gd"), "run_all_tests").bind(self)},
 		{"name": "Math Content Renderer QA", "func": Callable(preload("res://tests/unit/presentation/test_math_content_renderer.gd"), "run_tests_for_runner")},
 		{"name": "Replay & Continue Semantics 090", "func": Callable(preload("res://tests/unit/presentation/test_replay_continue_semantics_090.gd"), "run_all_tests")},
-		{"name": "Prologue Gate Persistence Bug 141", "func": Callable(preload("res://tests/unit/presentation/test_prologue_gate_persistence_bug_141.gd"), "run_all_tests")}
+		{"name": "Prologue Gate Persistence Bug 141", "func": Callable(preload("res://tests/unit/presentation/test_prologue_gate_persistence_bug_141.gd"), "run_all_tests")},
+		{"name": "Sanctum Nexus Hub QA", "func": Callable(preload("res://tests/unit/presentation/test_sanctum_nexus_hub.gd"), "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -204,4 +205,5 @@ func _count_suite_tests(name: String) -> int:
 		"Math Content Renderer QA": return 19
 		"Replay & Continue Semantics 090": return 6
 		"Prologue Gate Persistence Bug 141": return 7
+		"Sanctum Nexus Hub QA": return 10
 		_: return 1
