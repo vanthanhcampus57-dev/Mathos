@@ -357,6 +357,27 @@ func _build_draven_slot(parent: Control) -> void:
 	portrait_container.mouse_filter = MOUSE_FILTER_IGNORE
 	draven_vbox.add_child(portrait_container)
 
+	# 1. Subtle Cyan Rim & Backplate Glow (behind character)
+	var rim_rect: TextureRect = TextureRect.new()
+	rim_rect.name = "DravenRimBackplate"
+	rim_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	rim_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rim_rect.stretch_mode = TextureRect.STRETCH_SCALE
+	rim_rect.mouse_filter = MOUSE_FILTER_IGNORE
+	
+	var rim_grad: Gradient = Gradient.new()
+	rim_grad.set_color(0, Color(0.02, 0.71, 0.83, 0.22)) # Soft cyan center
+	rim_grad.set_color(1, Color(0.0, 0.0, 0.0, 0.0))    # Transparent edge
+	
+	var rim_tex: GradientTexture2D = GradientTexture2D.new()
+	rim_tex.gradient = rim_grad
+	rim_tex.fill = GradientTexture2D.FILL_RADIAL
+	rim_tex.fill_from = Vector2(0.5, 0.4)
+	rim_tex.fill_to = Vector2(1.0, 0.9)
+	rim_rect.texture = rim_tex
+	portrait_container.add_child(rim_rect)
+
+	# 2. Main Character TextureRect
 	_draven_rect = TextureRect.new()
 	_draven_rect.name = "DravenTextureRect"
 	_draven_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -367,6 +388,30 @@ func _build_draven_slot(parent: Control) -> void:
 
 	# Non-destructive native bottom alpha fade shader
 	_apply_bottom_alpha_shader(_draven_rect)
+
+	# 3. Soft Lower Dark/Cyan Environmental Gradient Overlay (in front of character bottom)
+	var lower_grad_rect: TextureRect = TextureRect.new()
+	lower_grad_rect.name = "DravenLowerGradient"
+	lower_grad_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	lower_grad_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	lower_grad_rect.stretch_mode = TextureRect.STRETCH_SCALE
+	lower_grad_rect.mouse_filter = MOUSE_FILTER_IGNORE
+
+	var lower_grad: Gradient = Gradient.new()
+	lower_grad.add_point(0.0, Color(0.0, 0.0, 0.0, 0.0))      # Top clear
+	lower_grad.add_point(0.5, Color(0.02, 0.08, 0.16, 0.0))    # Mid transition
+	lower_grad.add_point(1.0, Color(0.03, 0.10, 0.18, 0.78))   # Bottom atmospheric dark cyan fade
+	
+	var lower_tex: GradientTexture2D = GradientTexture2D.new()
+	lower_tex.gradient = lower_grad
+	lower_tex.fill = GradientTexture2D.FILL_LINEAR
+	lower_tex.fill_from = Vector2(0.5, 0.0)
+	lower_tex.fill_to = Vector2(0.5, 1.0)
+	lower_grad_rect.texture = lower_tex
+	portrait_container.add_child(lower_grad_rect)
+
+	# 4. Breathing Tween setup
+	_start_rim_breathing(rim_rect)
 
 	# Nameplate (~147px wide, dark navy, cyan border, gold diamond accents)
 	var nameplate_center: CenterContainer = CenterContainer.new()
@@ -540,24 +585,35 @@ func _add_gold_corner_accents(panel: Control) -> void:
 		lbl.add_theme_color_override("font_color", Color(0.96, 0.77, 0.26, 0.65))
 		panel.add_child(lbl)
 
+func _start_rim_breathing(target: Control) -> void:
+	if target == null:
+		return
+	if not target.is_node_ready():
+		await target.ready
+	var tween: Tween = target.create_tween().set_loops()
+	tween.tween_property(target, "modulate:a", 1.25, 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(target, "modulate:a", 0.75, 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
 func _apply_bottom_alpha_shader(target: CanvasItem) -> void:
 	var shader_code: String = """
 shader_type canvas_item;
 
-uniform float fade_start : hint_range(0.0, 1.0) = 0.85;
+uniform float fade_start : hint_range(0.0, 1.0) = 0.62;
 uniform float fade_end : hint_range(0.0, 1.0) = 1.0;
+uniform vec3 ambient_tint = vec3(0.04, 0.12, 0.22);
 
 void fragment() {
 	vec4 col = texture(TEXTURE, UV);
 	float alpha_mult = 1.0 - smoothstep(fade_start, fade_end, UV.y);
-	COLOR = vec4(col.rgb, col.a * alpha_mult);
+	vec3 blended_rgb = mix(col.rgb, ambient_tint, (1.0 - alpha_mult) * 0.45);
+	COLOR = vec4(blended_rgb, col.a * alpha_mult);
 }
 """
 	var shader: Shader = Shader.new()
 	shader.code = shader_code
 	_draven_shader_material = ShaderMaterial.new()
 	_draven_shader_material.shader = shader
-	_draven_shader_material.set_shader_parameter("fade_start", 0.85)
+	_draven_shader_material.set_shader_parameter("fade_start", 0.62)
 	_draven_shader_material.set_shader_parameter("fade_end", 1.0)
 	target.material = _draven_shader_material
 
