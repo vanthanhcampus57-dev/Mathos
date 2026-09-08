@@ -47,6 +47,12 @@ var _auth_client: RefCounted = null
 var _is_guest: bool = false
 var _launch_reset_token: String = ""
 
+# Guest profile isolation namespace
+const GUEST_SAVE_DIR: String = "user://guest/"
+const GUEST_PROLOGUE_GATE_PATH: String = "user://guest/prologue_gate.json"
+const AUTH_SAVE_DIR: String = "user://"
+const AUTH_PROLOGUE_GATE_PATH: String = "user://prologue_gate.json"
+
 func _ready() -> void:
 	_bootstrap_ui = get_node_or_null("BootstrapUI") as Control
 	bootstrap_runtime()
@@ -86,6 +92,21 @@ func bootstrap_runtime(custom_content_root: String = "") -> bool:
 	refresh_continue_availability()
 	print("[AppRoot] Runtime services and composition root initialized cleanly.")
 	return true
+
+## Reinitializes save/progress/bridge/game-flow services for an isolated profile directory.
+## This allows Guest and Authenticated users to have completely separate save namespaces.
+## The content catalog and question service remain shared (they are stateless/content-only).
+## @param base_dir: The base directory for save files (e.g., "user://" or "user://guest/")
+## @param gate_path: The file path for the prologue gate (e.g., "user://prologue_gate.json" or "user://guest/prologue_gate.json")
+func _reinitialize_services_for_profile(base_dir: String, gate_path: String) -> void:
+	_player_persistent = PlayerPersistentState.new(PlayerPersistentState.CANONICAL_PLAYER_ID, 0, 0)
+	_save_file_store = SaveFileStore.new(base_dir)
+	_save_service = SaveService.new(_catalog, _save_file_store)
+	_progress_service = ProgressService.new(_catalog, _player_persistent)
+	_bridge = ProgressSaveBridge.new(_catalog, _player_persistent, _progress_service, _save_service)
+	_game_flow_service = GameFlowService.new(_catalog, _question_service, _progress_service, _save_service, _player_persistent)
+	_prologue_gate = PrologueGateService.new(gate_path)
+	print("[AppRoot] Services reinitialized for profile dir: %s" % base_dir)
 
 func _ensure_qa_overlay() -> void:
 	if _qa_overlay == null:
@@ -557,6 +578,8 @@ func _on_boot_sequence_completed() -> void:
 func _on_auth_completed(_result: RefCounted) -> void:
 	_is_guest = false
 	clear_launch_reset_token()
+	# Restore authenticated profile save namespace
+	_reinitialize_services_for_profile(AUTH_SAVE_DIR, AUTH_PROLOGUE_GATE_PATH)
 	if _presentation_shell != null and _presentation_shell.has_method("set_guest_mode"):
 		_presentation_shell.call("set_guest_mode", false)
 	if _auth_shell_instance != null:
@@ -570,6 +593,8 @@ func _on_auth_completed(_result: RefCounted) -> void:
 func _on_guest_entered() -> void:
 	_is_guest = true
 	clear_launch_reset_token()
+	# Isolate Guest profile: use separate save directory so Guest never reads/writes authenticated saves
+	_reinitialize_services_for_profile(GUEST_SAVE_DIR, GUEST_PROLOGUE_GATE_PATH)
 	if _presentation_shell != null and _presentation_shell.has_method("set_guest_mode"):
 		_presentation_shell.call("set_guest_mode", true)
 	if _auth_shell_instance != null:
@@ -590,6 +615,8 @@ func logout() -> void:
 			if ac != null and ac.has_method("logout"):
 				ac.logout()
 	_is_guest = false
+	# Restore auth namespace so the next login (auth or guest) starts with correct baseline
+	_reinitialize_services_for_profile(AUTH_SAVE_DIR, AUTH_PROLOGUE_GATE_PATH)
 
 	if _presentation_shell != null:
 		_presentation_shell.visible = false
