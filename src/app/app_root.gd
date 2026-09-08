@@ -703,6 +703,74 @@ func refresh_continue_availability() -> void:
 	if _presentation_shell != null and _presentation_shell.has_method("set_continue_available"):
 		_presentation_shell.call("set_continue_available", has_save, summary_data)
 
+	var player_name: String = "Học Giả Mathos"
+	var player_lvl: int = 1
+	if _player_persistent != null:
+		if _player_persistent.player_id == "char_karl":
+			player_name = "Karl - Học Giả Mathos"
+		player_lvl = maxi(1, 1 + int(_player_persistent.exp_total / 100))
+
+	var d1_complete: bool = _is_dungeon_1_complete()
+	var prog_state: int = 0 # NEW_PLAYER
+	if d1_complete:
+		prog_state = 2 # D1_COMPLETE
+	elif has_save:
+		prog_state = 1 # D1_ACTIVE
+
+	var active_stage_title: String = "Stage 1.1: Khởi Đầu Rừng Mù Sương"
+	var active_stage_id: String = "stage_01_01"
+	if d1_complete:
+		active_stage_title = "Khu Rừng Mù Sương (Hoàn Thành)"
+		active_stage_id = "stage_01_05"
+	elif has_save and not summary_data.is_empty():
+		active_stage_title = String(summary_data.get("stage_title", active_stage_title))
+		active_stage_id = String(summary_data.get("stage_id", active_stage_id))
+
+	var current_mission_str: String = "Học Giả Khởi Đầu"
+	if d1_complete:
+		current_mission_str = "Đã Thu Thập Mảnh Tri Thức (1/4)"
+	elif has_save:
+		current_mission_str = "Thám Hiểm Rừng Mù Sương: %s" % active_stage_title
+
+	var fragments_list: Array = []
+	var snapshot_frags: Array = []
+	if _progress_service != null:
+		var snap: ProgressState = _progress_service.create_snapshot_view()
+		if snap != null:
+			snapshot_frags = snap.fragment_ids
+	elif _save_service != null and _save_service.has_save():
+		var load_res2: Dictionary = _save_service.load()
+		if bool(load_res2.get("success", false)):
+			var snap2: Dictionary = load_res2.get("snapshot", {}) as Dictionary
+			var prog2: Dictionary = snap2.get("progress", {}) as Dictionary
+			snapshot_frags = prog2.get("fragment_ids", []) as Array
+
+	var frag_names: Array = ["Mảnh Tri Thức", "Mảnh Ánh Sáng", "Mảnh Trật Tự", "Mảnh Thời Không"]
+	for f_idx in range(1, 5):
+		var f_key: String = "fragment_%02d" % f_idx
+		var is_active: bool = snapshot_frags.has(f_key)
+		fragments_list.append({
+			"id": "Fragment %02d" % f_idx,
+			"name": frag_names[f_idx - 1],
+			"active": is_active
+		})
+
+	var hub_data: Dictionary = {
+		"player_name": player_name,
+		"player_level": player_lvl,
+		"progression_state": prog_state,
+		"active_dungeon": "Khu Rừng Mù Sương",
+		"current_stage": active_stage_title,
+		"current_mission": current_mission_str,
+		"fragments": fragments_list,
+		"has_save": has_save,
+		"stage_title": summary_data.get("stage_title", ""),
+		"stage_id": summary_data.get("stage_id", "")
+	}
+
+	if _presentation_shell != null and _presentation_shell.has_method("update_hub_state"):
+		_presentation_shell.call("update_hub_state", hub_data)
+
 func _reset_practice_metrics(stage_id: String) -> void:
 	_active_practice_stage_id = stage_id
 	_finalized_question_ids.clear()

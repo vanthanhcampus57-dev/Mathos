@@ -46,6 +46,7 @@ var _stage_map_panel: DungeonStageMapPanel = null
 var _pause_overlay: PauseMenuOverlay = null
 var _story_panel: Control = null
 var _prologue_player: Control = null
+var _hub_panel: Control = null
 
 # Buttons in Main Menu
 var _journey_map_button: Button = null
@@ -259,6 +260,37 @@ func _ensure_sub_components() -> void:
 		if not _pause_overlay.logout_requested.is_connected(_on_pause_logout):
 			_pause_overlay.logout_requested.connect(_on_pause_logout)
 
+	# Sanctum Nexus Hub Panel
+	if _hub_panel == null:
+		var hub_scene: Resource = load("res://src/ui/hub/sanctum_nexus_hub.tscn")
+		if hub_scene is PackedScene:
+			_hub_panel = (hub_scene as PackedScene).instantiate() as Control
+		else:
+			var hub_script: Resource = load("res://src/ui/hub/sanctum_nexus_hub.gd")
+			if hub_script is GDScript:
+				_hub_panel = (hub_script as GDScript).new() as Control
+		if _hub_panel != null:
+			_hub_panel.name = "SanctumNexusHub"
+			_hub_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			_hub_panel.custom_minimum_size = Vector2(1280, 720)
+			_hub_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			_hub_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			_hub_panel.visible = (_current_mode == ViewMode.MODE_ENTRY)
+			add_child(_hub_panel)
+			if _pause_overlay != null:
+				move_child(_hub_panel, _pause_overlay.get_index())
+
+			if _hub_panel.has_signal("continue_requested") and not _hub_panel.continue_requested.is_connected(_on_continue_game_pressed):
+				_hub_panel.continue_requested.connect(_on_continue_game_pressed)
+			if _hub_panel.has_signal("new_game_requested") and not _hub_panel.new_game_requested.is_connected(_on_new_game_pressed):
+				_hub_panel.new_game_requested.connect(_on_new_game_pressed)
+			if _hub_panel.has_signal("map_requested") and not _hub_panel.map_requested.is_connected(_on_journey_map_pressed):
+				_hub_panel.map_requested.connect(_on_journey_map_pressed)
+			if _hub_panel.has_signal("replay_requested") and not _hub_panel.replay_requested.is_connected(_on_hub_replay_requested):
+				_hub_panel.replay_requested.connect(_on_hub_replay_requested)
+			if _hub_panel.has_signal("pause_requested") and not _hub_panel.pause_requested.is_connected(toggle_pause):
+				_hub_panel.pause_requested.connect(toggle_pause)
+
 	# Journey Map Button in Start Container
 	if _journey_map_button == null:
 		var start_vbox: VBoxContainer = get_node_or_null("VBoxContainer/MainBody/ContentHBox/MainContentVBox/StartGameContainer/VBoxContainer") as VBoxContainer
@@ -313,6 +345,10 @@ func _notification(what: int) -> void:
 				_prologue_player.size = size
 				if _prologue_player.has_method("_update_responsive_layout"):
 					_prologue_player.call("_update_responsive_layout")
+		if _hub_panel != null and _hub_panel.visible:
+			if size.x > 0 and size.y > 0:
+				if _hub_panel.has_method("update_responsive_layout"):
+					_hub_panel.call("update_responsive_layout", size)
 
 func _process(delta: float) -> void:
 	_update_fog_animation(delta)
@@ -764,6 +800,22 @@ func set_view_mode(mode: ViewMode) -> void:
 			if _prologue_player.has_method("start_prologue"):
 				_prologue_player.call("start_prologue")
 
+	if _hub_panel != null:
+		_hub_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_hub_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_hub_panel.visible = (_current_mode == ViewMode.MODE_ENTRY)
+		_hub_panel.mouse_filter = Control.MOUSE_FILTER_STOP if (_current_mode == ViewMode.MODE_ENTRY) else Control.MOUSE_FILTER_IGNORE
+		if _current_mode == ViewMode.MODE_ENTRY:
+			var target_size_hub: Vector2 = size
+			if target_size_hub.x <= 0 or target_size_hub.y <= 0:
+				var root_win_hub: Window = get_tree().root if is_inside_tree() else null
+				if root_win_hub != null and root_win_hub.size.x > 0 and root_win_hub.size.y > 0:
+					target_size_hub = Vector2(root_win_hub.size)
+				else:
+					target_size_hub = Vector2(1280, 720)
+			if _hub_panel.has_method("update_responsive_layout"):
+				_hub_panel.call("update_responsive_layout", target_size_hub)
+
 	if start_container != null: start_container.visible = (_current_mode == ViewMode.MODE_ENTRY)
 	if lesson_panel != null: lesson_panel.visible = (_current_mode == ViewMode.MODE_LESSON)
 	if q_host != null:
@@ -943,6 +995,9 @@ func _on_victory_return_pressed() -> void:
 
 func _on_map_stage_selected(stage_id: String) -> void:
 	stage_selected.emit(stage_id)
+
+func _on_hub_replay_requested() -> void:
+	stage_selected.emit("stage_01_01")
 
 func _on_map_return_pressed() -> void:
 	if _previous_mode == ViewMode.MODE_ENTRY:
@@ -1133,6 +1188,10 @@ func _get_continue_game_button() -> Button:
 	return btn
 
 func set_continue_available(available: bool, summary_data: Dictionary = {}) -> void:
+	_ensure_sub_components()
+	if _hub_panel != null and _hub_panel.has_method("set_continue_available"):
+		_hub_panel.call("set_continue_available", available, summary_data)
+
 	var continue_btn: Button = _get_continue_game_button()
 	if continue_btn != null:
 		continue_btn.visible = available
@@ -1155,6 +1214,15 @@ func set_continue_available(available: bool, summary_data: Dictionary = {}) -> v
 			_save_summary_label.visible = true
 		else:
 			_save_summary_label.visible = false
+
+func update_hub_state(hub_data: Dictionary) -> void:
+	_ensure_sub_components()
+	if _hub_panel != null and _hub_panel.has_method("set_hub_data"):
+		_hub_panel.call("set_hub_data", hub_data)
+
+func get_hub_panel() -> Control:
+	_ensure_sub_components()
+	return _hub_panel
 
 func show_prologue_phase() -> void:
 	set_view_mode(ViewMode.MODE_PROLOGUE)
