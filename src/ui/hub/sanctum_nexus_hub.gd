@@ -62,7 +62,8 @@ const DRAVEN_PORTRAIT_PATH: String = "res://assets/characters/story/draven/drave
 
 const ORDER_STONE_INTACT_PATH: String = "res://assets/prologue/beat_03/order_stone_intact.png"
 const ORDER_STONE_CRACKED_PATH: String = "res://assets/prologue/beat_03/order_stone_cracked.png"
-const ORDER_FRAGMENT_01_PATH: String = "res://assets/prologue/beat_03/order_fragment_01.png"
+const CANONICAL_FRAGMENT_01_PATH: String = "res://assets/items/fragments/fragment_01.png"
+const ORDER_FRAGMENT_01_PATH: String = "res://assets/items/fragments/fragment_01.png"
 const ORDER_FRAGMENT_02_PATH: String = "res://assets/prologue/beat_03/order_fragment_02.png"
 const ORDER_FRAGMENT_03_PATH: String = "res://assets/prologue/beat_03/order_fragment_03.png"
 const ORDER_FRAGMENT_04_PATH: String = "res://assets/prologue/beat_03/order_fragment_04.png"

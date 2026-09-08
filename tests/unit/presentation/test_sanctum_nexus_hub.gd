@@ -227,7 +227,7 @@ static func test_hub_004_progression_state_machine() -> bool:
 
 # HUB-005: Fragment HUD Visual Contracts
 static func test_hub_005_fragment_hud_visual_contracts() -> bool:
-	print("[HUB-005] Verifying 4-fragment HUD visual states (active vs locked modulate)...")
+	print("[HUB-005] Verifying 4-fragment HUD visual states & canonical Fragment I asset...")
 	var hub: SanctumNexusHub = _create_hub()
 	var tree: SceneTree = Engine.get_main_loop() as SceneTree
 	if tree != null and tree.root != null:
@@ -238,6 +238,12 @@ static func test_hub_005_fragment_hud_visual_contracts() -> bool:
 
 	if frag1 == null or frag2 == null:
 		print("[HUB-005] FAIL: FragmentSlot1 or FragmentSlot2 is null")
+		hub.queue_free()
+		return false
+
+	# Verify canonical Fragment 1 asset path
+	if frag1.texture == null or frag1.texture.resource_path != "res://assets/items/fragments/fragment_01.png":
+		print("[HUB-005] FAIL: FragmentSlot1 texture does not match canonical res://assets/items/fragments/fragment_01.png (got %s)" % (frag1.texture.resource_path if frag1.texture != null else "null"))
 		hub.queue_free()
 		return false
 
@@ -260,8 +266,21 @@ static func test_hub_005_fragment_hud_visual_contracts() -> bool:
 		hub.queue_free()
 		return false
 
+	# Test runtime data binding override
+	hub.set_hub_data({"fragment_states": [false, false, false, false]})
+	if frag1.modulate.a > 0.6:
+		print("[HUB-005] FAIL: Runtime override [false] failed to set Fragment 1 to locked state")
+		hub.queue_free()
+		return false
+
+	hub.set_hub_data({"fragment_states": [true, false, false, false]})
+	if absf(frag1.modulate.a - 1.0) > 0.05:
+		print("[HUB-005] FAIL: Runtime override [true] failed to set Fragment 1 to active state")
+		hub.queue_free()
+		return false
+
 	hub.queue_free()
-	print("[HUB-005] PASS: Fragment HUD visual states verified!")
+	print("[HUB-005] PASS: Fragment HUD canonical asset & dynamic visual states verified!")
 	return true
 
 # HUB-006: Primary & Secondary CTAs

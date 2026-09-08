@@ -398,9 +398,12 @@ func _build_draven_slot(parent: Control) -> void:
 	lower_grad_rect.mouse_filter = MOUSE_FILTER_IGNORE
 
 	var lower_grad: Gradient = Gradient.new()
-	lower_grad.add_point(0.0, Color(0.0, 0.0, 0.0, 0.0))      # Top clear
-	lower_grad.add_point(0.5, Color(0.02, 0.08, 0.16, 0.0))    # Mid transition
-	lower_grad.add_point(1.0, Color(0.03, 0.10, 0.18, 0.78))   # Bottom atmospheric dark cyan fade
+	lower_grad.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
+	lower_grad.colors = PackedColorArray([
+		Color(0.0, 0.0, 0.0, 0.0),       # Top clear
+		Color(0.02, 0.08, 0.16, 0.0),     # Mid transition
+		Color(0.03, 0.10, 0.18, 0.78)    # Bottom atmospheric dark cyan fade
+	])
 	
 	var lower_tex: GradientTexture2D = GradientTexture2D.new()
 	lower_tex.gradient = lower_grad

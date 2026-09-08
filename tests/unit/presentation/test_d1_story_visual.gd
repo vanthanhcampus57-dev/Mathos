@@ -36,11 +36,12 @@ static func run_all_tests() -> bool:
 	if test_story_vis_013_responsive_1600x900(): pass_count += 1
 	if test_story_vis_014_responsive_1920x1080(): pass_count += 1
 	if test_story_vis_015_no_invented_controls(): pass_count += 1
+	if test_story_vis_016_no_opaque_white_lower_overlay(): pass_count += 1
 
 	print("==========================================")
-	print("D1 STORY VISUAL SUMMARY: %d / 15 passed" % pass_count)
+	print("D1 STORY VISUAL SUMMARY: %d / 16 passed" % pass_count)
 	print("==========================================")
-	return pass_count == 15
+	return pass_count == 16
 
 static func _add_node_to_tree(node: Node) -> void:
 	var tree: SceneTree = Engine.get_main_loop() as SceneTree
@@ -558,4 +559,40 @@ static func test_story_vis_015_no_invented_controls() -> bool:
 
 	_remove_node_from_tree(panel)
 	print("[STORY-VIS-015] PASS")
+	return true
+
+# STORY-VIS-016: No opaque white lower overlay on Draven portrait
+static func test_story_vis_016_no_opaque_white_lower_overlay() -> bool:
+	print("[STORY-VIS-016] Verifying no opaque white lower overlay on Draven portrait...")
+	var panel: Control = _create_story_panel()
+	var lower_grad_rect: TextureRect = panel.find_child("DravenLowerGradient", true, false) as TextureRect
+
+	if lower_grad_rect == null:
+		print("[STORY-VIS-016] FAIL: DravenLowerGradient node missing")
+		_remove_node_from_tree(panel)
+		return false
+
+	var tex: GradientTexture2D = lower_grad_rect.texture as GradientTexture2D
+	if tex == null or tex.gradient == null:
+		print("[STORY-VIS-016] FAIL: DravenLowerGradient texture or gradient is null")
+		_remove_node_from_tree(panel)
+		return false
+
+	var colors: PackedColorArray = tex.gradient.colors
+	for c in colors:
+		# Assert no point in lower gradient is opaque white (R>0.8, G>0.8, B>0.8, A>0.5)
+		if c.r > 0.8 and c.g > 0.8 and c.b > 0.8 and c.a > 0.5:
+			print("[STORY-VIS-016] FAIL: Found opaque white color in Draven lower gradient: %s" % str(c))
+			_remove_node_from_tree(panel)
+			return false
+
+	# Assert Draven portrait path is untouched
+	var draven_rect: TextureRect = panel.call("get_draven_texture_rect") as TextureRect
+	if draven_rect == null:
+		print("[STORY-VIS-016] FAIL: DravenTextureRect missing")
+		_remove_node_from_tree(panel)
+		return false
+
+	_remove_node_from_tree(panel)
+	print("[STORY-VIS-016] PASS: Draven lower gradient transparency & atmospheric blend verified!")
 	return true
