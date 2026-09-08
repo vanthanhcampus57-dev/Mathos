@@ -6,11 +6,16 @@ extends SceneTree
 ## Implements truthful tri-state test accounting (PASS, FAIL, WAITING).
 
 const TestProceduralQGenFoundation = preload("res://tests/unit/question/test_procedural_qgen_foundation.gd")
+const PrologueGateService = preload("res://src/gameplay/prologue/prologue_gate_service.gd")
 
 func _initialize() -> void:
 	print("==========================================")
 	print("MATHOS HEADLESS TEST HARNESS STARTING")
 	print("==========================================")
+
+	# Ensure default user prologue gate is completed for legacy flow suites.
+	# Suites testing prologue isolation use explicit isolated custom gate paths.
+	PrologueGateService.new().mark_prologue_completed()
 
 	var pass_total: int = 0
 	var fail_total: int = 0
@@ -77,7 +82,8 @@ func _initialize() -> void:
 		{"name": "Save Progression Consistency QA", "func": Callable(preload("res://tests/unit/presentation/test_save_progression_consistency.gd"), "run_all_tests")},
 		{"name": "P0 Integration Sanity 082", "func": Callable(preload("res://tests/integration/presentation/test_p0_integration_sanity_082.gd"), "run_all_tests").bind(self)},
 		{"name": "Math Content Renderer QA", "func": Callable(preload("res://tests/unit/presentation/test_math_content_renderer.gd"), "run_tests_for_runner")},
-		{"name": "Replay & Continue Semantics 090", "func": Callable(preload("res://tests/unit/presentation/test_replay_continue_semantics_090.gd"), "run_all_tests")}
+		{"name": "Replay & Continue Semantics 090", "func": Callable(preload("res://tests/unit/presentation/test_replay_continue_semantics_090.gd"), "run_all_tests")},
+		{"name": "Prologue Gate Persistence Bug 141", "func": Callable(preload("res://tests/unit/presentation/test_prologue_gate_persistence_bug_141.gd"), "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -197,4 +203,5 @@ func _count_suite_tests(name: String) -> int:
 		"P0 Integration Sanity 082": return 3
 		"Math Content Renderer QA": return 19
 		"Replay & Continue Semantics 090": return 6
+		"Prologue Gate Persistence Bug 141": return 7
 		_: return 1

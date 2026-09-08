@@ -263,7 +263,7 @@ func select_stage(stage_id: String) -> Dictionary:
 	if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
 		var is_first_run: bool = false
 		var prog_snap: ProgressState = _progress_service.create_snapshot_view() if _progress_service != null else null
-		if not is_cleared and get_prologue_gate().is_first_dungeon_entry(stage_id, prog_snap):
+		if get_prologue_gate().is_first_dungeon_entry(stage_id, prog_snap):
 			is_first_run = true
 
 		if is_first_run and _presentation_shell.has_method("set_view_mode"):

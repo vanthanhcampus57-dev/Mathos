@@ -16,24 +16,15 @@ func _init(custom_path: String = "") -> void:
 		_custom_file_path = custom_path
 	load_state()
 
-## Returns true if the target stage is the first-ever entry to Dungeon I and Prologue hasn't been seen.
+## Returns true if the target stage is an entry to Dungeon I and Prologue hasn't been completed.
 func is_first_dungeon_entry(stage_id: String, progress: ProgressState = null) -> bool:
-	# Only stage 1.1 can trigger the first Dungeon I entry prologue
-	if stage_id != INITIAL_STAGE_ID:
-		return false
-
 	# If prologue has already been marked completed, skip
 	if has_completed_prologue():
 		return false
 
-	# Defensive progress check: if any stages are cleared or fragments collected, this is a replay/continuation
-	if progress != null:
-		if not progress.cleared_stage_ids.is_empty():
-			return false
-		if not progress.fragment_ids.is_empty():
-			return false
-		if progress.unlocked_dungeon_ids.size() > 1:
-			return false
+	# Any stage in Dungeon I triggers prologue if prologue has not been completed
+	if not stage_id.begins_with("stage_01_"):
+		return false
 
 	return true
 

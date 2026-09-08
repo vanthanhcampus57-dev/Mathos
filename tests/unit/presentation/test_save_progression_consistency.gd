@@ -267,10 +267,16 @@ static func test_prog_004_prologue_gate_isolation() -> bool:
 		print("[SAVE-PROG-004] FAIL: Player progression altered by prologue gate deletion!")
 		return false
 
-	# B. is_first_dungeon_entry evaluates to false because cleared_stage_ids is not empty
+	# B. is_first_dungeon_entry evaluates to true because gate was reset, allowing prologue replay
 	var is_first: bool = gate_reboot.is_first_dungeon_entry("stage_01_01", snap_reboot)
-	if is_first:
-		print("[SAVE-PROG-004] FAIL: Deleting prologue gate caused completed player to be treated as first entry")
+	if not is_first:
+		print("[SAVE-PROG-004] FAIL: Deleting prologue gate did not cause Dungeon I entry to replay prologue")
+		return false
+
+	# Marking prologue completed restores suppression
+	gate_reboot.mark_prologue_completed()
+	if gate_reboot.is_first_dungeon_entry("stage_01_01", snap_reboot):
+		print("[SAVE-PROG-004] FAIL: Marking prologue completed did not suppress prologue replay")
 		return false
 
 	print("[SAVE-PROG-004] PASS: Prologue gate isolation verified (zero impact on save progression)")
