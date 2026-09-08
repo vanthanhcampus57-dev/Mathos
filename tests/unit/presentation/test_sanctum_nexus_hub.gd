@@ -6,7 +6,7 @@ extends SceneTree
 ## progression state transitions, 4-fragment HUD, responsive multi-resolution layout,
 ## CTA focusability, and Task 090 Replay/Continue contracts.
 
-const SanctumNexusHubClass = preload("res://src/ui/hub/sanctum_nexus_hub.gd")
+const SanctumNexusHub = preload("res://src/ui/hub/sanctum_nexus_hub.gd")
 
 func _initialize() -> void:
 	var passed: bool = run_all_tests()
@@ -39,7 +39,7 @@ static func _create_hub(p_size: Vector2 = Vector2(1280, 720)) -> SanctumNexusHub
 	if scene is PackedScene:
 		hub = (scene as PackedScene).instantiate() as SanctumNexusHub
 	else:
-		hub = SanctumNexusHubClass.new()
+		hub = SanctumNexusHub.new()
 	hub.size = p_size
 	hub._ready()
 	return hub
@@ -338,9 +338,9 @@ static func test_hub_007_d1_complete_task_090_contract() -> bool:
 	print("[HUB-007] PASS: Task 090 contract enforcement verified!")
 	return true
 
-# HUB-008: Multi-Resolution Responsive Layout
+# HUB-008: Multi-Resolution Responsive Layout & Bounding Rect Verification
 static func test_hub_008_multi_resolution_responsive() -> bool:
-	print("[HUB-008] Verifying multi-resolution responsive layout (1280x720, 1366x768, 1600x900, 1920x1080)...")
+	print("[HUB-008] Verifying multi-resolution responsive layout & non-overlap (1280x720, 1366x768, 1600x900, 1920x1080, windowed 1280x680)...")
 	var hub: SanctumNexusHub = _create_hub()
 	var tree: SceneTree = Engine.get_main_loop() as SceneTree
 	if tree != null and tree.root != null:
@@ -350,60 +350,132 @@ static func test_hub_008_multi_resolution_responsive() -> bool:
 		Vector2(1280, 720),
 		Vector2(1366, 768),
 		Vector2(1600, 900),
-		Vector2(1920, 1080)
+		Vector2(1920, 1080),
+		Vector2(1280, 680)
 	]
 
 	var badge: PanelContainer = hub.get_player_badge_panel()
 	var hud: PanelContainer = hub.get_order_hud_panel()
 	var identity: PanelContainer = hub.get_identity_panel()
 	var journey: PanelContainer = hub.get_journey_panel()
+	var utils: Control = hub.find_child("UtilitiesHBox", true, false) as Control
+	var map_btn: Button = hub.get_journey_map_button()
 
-	for res in test_resolutions:
-		hub.size = res
-		hub.update_responsive_layout()
+	if utils == null or map_btn == null:
+		print("[HUB-008] FAIL: Utilities or World Map button is null")
+		hub.queue_free()
+		return false
 
-		# Check badge bounds
-		if badge.position.x < 0 or badge.position.y < 0:
-			print("[HUB-008] FAIL at %s: Player badge out of screen" % str(res))
-			hub.queue_free()
-			return false
+	var test_states: Array[SanctumNexusHub.HubProgressionState] = [
+		SanctumNexusHub.HubProgressionState.NEW_PLAYER,
+		SanctumNexusHub.HubProgressionState.D1_ACTIVE,
+		SanctumNexusHub.HubProgressionState.D1_COMPLETE
+	]
 
-		# Check hud bounds
-		if hud.position.x + hud.size.x > res.x + 1.0 or hud.position.y < 0:
-			print("[HUB-008] FAIL at %s: Order HUD overflows right boundary" % str(res))
-			hub.queue_free()
-			return false
+	for state in test_states:
+		hub.set_progression_state(state)
+		hub.set_hub_data({"has_save": (state != SanctumNexusHub.HubProgressionState.NEW_PLAYER)})
 
-		# Check identity bounds
-		if identity.position.x < 0 or identity.position.y + identity.size.y > res.y + 1.0:
-			print("[HUB-008] FAIL at %s: Identity panel overflows bottom boundary" % str(res))
-			hub.queue_free()
-			return false
+		for res in test_resolutions:
+			hub.size = res
+			hub.update_responsive_layout(res)
 
-		# Check journey bounds
-		if journey.position.x + journey.size.x > res.x + 1.0 or journey.position.y + journey.size.y > res.y + 1.0:
-			print("[HUB-008] FAIL at %s: Journey panel overflows bottom-right boundary" % str(res))
-			hub.queue_free()
-			return false
+			var vp_rect: Rect2 = Rect2(Vector2.ZERO, res)
 
-		# Ensure no overlapping between panels
-		var badge_rect: Rect2 = Rect2(badge.position, badge.size)
-		var hud_rect: Rect2 = Rect2(hud.position, hud.size)
-		var identity_rect: Rect2 = Rect2(identity.position, identity.size)
-		var journey_rect: Rect2 = Rect2(journey.position, journey.size)
+			var badge_w: float = maxf(badge.size.x, badge.get_combined_minimum_size().x)
+			var badge_h: float = maxf(badge.size.y, badge.get_combined_minimum_size().y)
+			var badge_rect: Rect2 = Rect2(badge.position, Vector2(badge_w, badge_h))
 
-		if badge_rect.intersects(hud_rect) or badge_rect.intersects(identity_rect) or badge_rect.intersects(journey_rect):
-			print("[HUB-008] FAIL at %s: Badge intersects another panel" % str(res))
-			hub.queue_free()
-			return false
+			var hud_w: float = maxf(hud.size.x, hud.get_combined_minimum_size().x)
+			var hud_h: float = maxf(hud.size.y, hud.get_combined_minimum_size().y)
+			var hud_rect: Rect2 = Rect2(hud.position, Vector2(hud_w, hud_h))
 
-		if identity_rect.intersects(journey_rect) or hud_rect.intersects(journey_rect):
-			print("[HUB-008] FAIL at %s: Bottom panels or right panels intersect" % str(res))
-			hub.queue_free()
-			return false
+			var utils_w: float = maxf(utils.size.x, utils.get_combined_minimum_size().x)
+			var utils_h: float = maxf(utils.size.y, utils.get_combined_minimum_size().y)
+			var utils_rect: Rect2 = Rect2(utils.position, Vector2(utils_w, utils_h))
+
+			var id_w: float = maxf(identity.size.x, identity.get_combined_minimum_size().x)
+			var id_h: float = maxf(identity.size.y, identity.get_combined_minimum_size().y)
+			var identity_rect: Rect2 = Rect2(identity.position, Vector2(id_w, id_h))
+
+			var j_w: float = maxf(journey.size.x, journey.get_combined_minimum_size().x)
+			var j_h: float = maxf(journey.size.y, journey.get_combined_minimum_size().y)
+			var journey_rect: Rect2 = Rect2(journey.position, Vector2(j_w, j_h))
+
+			var mb_w: float = maxf(map_btn.size.x, map_btn.get_combined_minimum_size().x)
+			var mb_h: float = maxf(map_btn.size.y, map_btn.get_combined_minimum_size().y)
+			var map_btn_rect: Rect2 = Rect2(journey.position + map_btn.position, Vector2(mb_w, mb_h))
+
+			# 1. Viewport containment checks
+			if not vp_rect.encloses(badge_rect):
+				print("[HUB-008] FAIL at %s (state %d): Badge %s outside viewport %s" % [str(res), state, str(badge_rect), str(vp_rect)])
+				hub.queue_free()
+				return false
+
+			if not vp_rect.encloses(hud_rect):
+				print("[HUB-008] FAIL at %s (state %d): Order HUD %s outside viewport %s" % [str(res), state, str(hud_rect), str(vp_rect)])
+				hub.queue_free()
+				return false
+
+			if not vp_rect.encloses(utils_rect):
+				print("[HUB-008] FAIL at %s (state %d): Utilities %s outside viewport %s" % [str(res), state, str(utils_rect), str(vp_rect)])
+				hub.queue_free()
+				return false
+
+			if not vp_rect.encloses(identity_rect):
+				print("[HUB-008] FAIL at %s (state %d): Identity panel %s outside viewport %s" % [str(res), state, str(identity_rect), str(vp_rect)])
+				hub.queue_free()
+				return false
+
+			if not vp_rect.encloses(journey_rect):
+				print("[HUB-008] FAIL at %s (state %d): Journey panel %s outside viewport %s" % [str(res), state, str(journey_rect), str(vp_rect)])
+				hub.queue_free()
+				return false
+
+			if not vp_rect.encloses(map_btn_rect):
+				print("[HUB-008] FAIL at %s (state %d): World Map button %s outside viewport %s" % [str(res), state, str(map_btn_rect), str(vp_rect)])
+				hub.queue_free()
+				return false
+
+			# 2. Strict Non-Overlap checks
+			if hud_rect.intersects(utils_rect):
+				print("[HUB-008] FAIL at %s (state %d): Utilities collides with Fragment HUD!" % [str(res), state])
+				hub.queue_free()
+				return false
+
+			if utils_rect.intersects(journey_rect):
+				print("[HUB-008] FAIL at %s (state %d): Utilities collides with Journey panel!" % [str(res), state])
+				hub.queue_free()
+				return false
+
+			if badge_rect.intersects(hud_rect) or badge_rect.intersects(utils_rect) or badge_rect.intersects(identity_rect):
+				print("[HUB-008] FAIL at %s (state %d): Badge intersects another control!" % [str(res), state])
+				hub.queue_free()
+				return false
+
+			if identity_rect.intersects(journey_rect):
+				print("[HUB-008] FAIL at %s (state %d): Identity intersects Journey panel!" % [str(res), state])
+				hub.queue_free()
+				return false
+
+			# 3. Interactive World Map button checks
+			if not map_btn.visible:
+				print("[HUB-008] FAIL at %s (state %d): World Map button is not visible" % [str(res), state])
+				hub.queue_free()
+				return false
+
+			if map_btn.disabled:
+				print("[HUB-008] FAIL at %s (state %d): World Map button is disabled" % [str(res), state])
+				hub.queue_free()
+				return false
+
+			if map_btn.mouse_filter == Control.MOUSE_FILTER_IGNORE:
+				print("[HUB-008] FAIL at %s (state %d): World Map button ignores mouse filter" % [str(res), state])
+				hub.queue_free()
+				return false
 
 	hub.queue_free()
-	print("[HUB-008] PASS: Multi-resolution responsive scaling verified across all target viewports!")
+	print("[HUB-008] PASS: Multi-resolution responsive scaling, containment & non-overlap verified across all target viewports!")
 	return true
 
 # HUB-009: Navigation & Utility Signals
@@ -419,7 +491,11 @@ static func test_hub_009_navigation_and_utility_signals() -> bool:
 		"continue": false,
 		"map": false,
 		"settings": false,
-		"logout": false
+		"logout": false,
+		"continue_alias": false,
+		"map_alias": false,
+		"pause_alias": false,
+		"replay_alias": false
 	}
 
 	hub.new_game_requested.connect(func(): signal_received["new_game"] = true)
@@ -427,6 +503,10 @@ static func test_hub_009_navigation_and_utility_signals() -> bool:
 	hub.show_map_requested.connect(func(): signal_received["map"] = true)
 	hub.settings_requested.connect(func(): signal_received["settings"] = true)
 	hub.logout_requested.connect(func(): signal_received["logout"] = true)
+	hub.continue_requested.connect(func(): signal_received["continue_alias"] = true)
+	hub.map_requested.connect(func(): signal_received["map_alias"] = true)
+	hub.pause_requested.connect(func(): signal_received["pause_alias"] = true)
+	hub.replay_requested.connect(func(): signal_received["replay_alias"] = true)
 
 	hub.get_new_game_button().emit_signal("pressed")
 	hub.get_continue_button().emit_signal("pressed")
@@ -437,6 +517,10 @@ static func test_hub_009_navigation_and_utility_signals() -> bool:
 
 	var logout_btn: Button = hub.find_child("LogoutButton", true, false) as Button
 	if logout_btn != null: logout_btn.emit_signal("pressed")
+
+	# Test replay_requested emission when D1_COMPLETE is active
+	hub.set_progression_state(SanctumNexusHub.HubProgressionState.D1_COMPLETE)
+	hub.get_new_game_button().emit_signal("pressed")
 
 	for k in signal_received:
 		if not signal_received[k]:

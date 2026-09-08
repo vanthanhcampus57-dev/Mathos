@@ -18,6 +18,11 @@ signal show_map_requested()
 signal settings_requested()
 signal logout_requested()
 signal stage_selected(stage_id: String)
+# Task 164 compatibility aliases for StagePresentationShell
+signal continue_requested()
+signal map_requested()
+signal replay_requested()
+signal pause_requested()
 
 enum HubProgressionState {
 	NEW_PLAYER = 0,
@@ -36,15 +41,15 @@ enum HubProgressionState {
 const REF_WIDTH: float = 1280.0
 const REF_HEIGHT: float = 720.0
 
-const REF_MARGIN_LEFT: float = 40.0
-const REF_MARGIN_TOP: float = 28.0
-const REF_MARGIN_RIGHT: float = 40.0
-const REF_MARGIN_BOTTOM: float = 32.0
+const REF_MARGIN_LEFT: float = 36.0
+const REF_MARGIN_TOP: float = 24.0
+const REF_MARGIN_RIGHT: float = 36.0
+const REF_MARGIN_BOTTOM: float = 24.0
 
-const REF_BADGE_SIZE: Vector2 = Vector2(280.0, 68.0)
-const REF_HUD_SIZE: Vector2 = Vector2(360.0, 64.0)
-const REF_IDENTITY_SIZE: Vector2 = Vector2(340.0, 180.0)
-const REF_JOURNEY_SIZE: Vector2 = Vector2(400.0, 260.0)
+const REF_BADGE_SIZE: Vector2 = Vector2(280.0, 64.0)
+const REF_HUD_SIZE: Vector2 = Vector2(302.0, 52.0)
+const REF_IDENTITY_SIZE: Vector2 = Vector2(320.0, 150.0)
+const REF_JOURNEY_SIZE: Vector2 = Vector2(360.0, 246.0)
 
 # Canonical Assets
 const SANCTUM_BG_PATH: String = "res://assets/prologue/beat_01/prologue_bg_01_mathos_world.png"
@@ -451,13 +456,13 @@ func _build_order_stone_hud() -> void:
 func _build_utilities_row() -> void:
 	_utilities_container = HBoxContainer.new()
 	_utilities_container.name = "UtilitiesHBox"
-	_utilities_container.add_theme_constant_override("separation", 8)
+	_utilities_container.add_theme_constant_override("separation", 6)
 
 	_sound_button = Button.new()
 	_sound_button.name = "SoundButton"
 	_sound_button.text = "🔊"
 	_sound_button.tooltip_text = "Âm lượng"
-	_sound_button.custom_minimum_size = Vector2(36, 36)
+	_sound_button.custom_minimum_size = Vector2(30, 30)
 	_sound_button.theme_type_variation = &"MathosSecondaryButton"
 	_sound_button.pressed.connect(func():
 		_is_muted = not _is_muted
@@ -469,10 +474,11 @@ func _build_utilities_row() -> void:
 	_settings_button.name = "SettingsButton"
 	_settings_button.text = "⚙️"
 	_settings_button.tooltip_text = "Cài đặt"
-	_settings_button.custom_minimum_size = Vector2(36, 36)
+	_settings_button.custom_minimum_size = Vector2(30, 30)
 	_settings_button.theme_type_variation = &"MathosSecondaryButton"
 	_settings_button.pressed.connect(func():
 		settings_requested.emit()
+		pause_requested.emit()
 	)
 	_utilities_container.add_child(_settings_button)
 
@@ -480,7 +486,8 @@ func _build_utilities_row() -> void:
 	_logout_button.name = "LogoutButton"
 	_logout_button.text = "Đăng xuất" if not _is_guest else "Tài khoản"
 	_logout_button.tooltip_text = "Trở về đăng nhập"
-	_logout_button.custom_minimum_size = Vector2(80, 36)
+	_logout_button.custom_minimum_size = Vector2(68, 28)
+	_logout_button.add_theme_font_size_override("font_size", 11)
 	_logout_button.theme_type_variation = &"MathosSecondaryButton"
 	_logout_button.pressed.connect(func():
 		logout_requested.emit()
@@ -587,20 +594,20 @@ func _build_contextual_journey_panel() -> void:
 	style.border_width_top = 1
 	style.border_width_bottom = 1
 	style.border_color = Color(0.25, 0.85, 1.0, 0.35)
-	style.corner_radius_top_left = 16
-	style.corner_radius_top_right = 16
-	style.corner_radius_bottom_left = 16
-	style.corner_radius_bottom_right = 16
+	style.corner_radius_top_left = 14
+	style.corner_radius_top_right = 14
+	style.corner_radius_bottom_left = 14
+	style.corner_radius_bottom_right = 14
 	style.shadow_color = Color(0, 0, 0, 0.55)
-	style.shadow_size = 12
-	style.content_margin_left = 22
-	style.content_margin_right = 22
-	style.content_margin_top = 18
-	style.content_margin_bottom = 18
+	style.shadow_size = 10
+	style.content_margin_left = 18
+	style.content_margin_right = 18
+	style.content_margin_top = 12
+	style.content_margin_bottom = 12
 	_journey_panel.add_theme_stylebox_override("panel", style)
 
 	var vbox: VBoxContainer = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 8)
+	vbox.add_theme_constant_override("separation", 5)
 	_journey_panel.add_child(vbox)
 
 	var top_row: HBoxContainer = HBoxContainer.new()
@@ -627,7 +634,7 @@ func _build_contextual_journey_panel() -> void:
 	_active_dungeon_label.name = "ActiveDungeonLabel"
 	_active_dungeon_label.text = _active_dungeon
 	_active_dungeon_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
-	_active_dungeon_label.add_theme_font_size_override("font_size", 17)
+	_active_dungeon_label.add_theme_font_size_override("font_size", 15)
 	vbox.add_child(_active_dungeon_label)
 
 	_current_stage_label = Label.new()
@@ -641,35 +648,38 @@ func _build_contextual_journey_panel() -> void:
 	_current_mission_label.name = "CurrentMissionLabel"
 	_current_mission_label.text = _current_mission
 	_current_mission_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_current_mission_label.custom_minimum_size = Vector2(340, 0)
+	_current_mission_label.custom_minimum_size = Vector2(320, 0)
 	_current_mission_label.add_theme_color_override("font_color", Color(0.72, 0.78, 0.86))
 	_current_mission_label.add_theme_font_size_override("font_size", 11)
 	vbox.add_child(_current_mission_label)
 
 	_action_vbox = VBoxContainer.new()
 	_action_vbox.name = "ActionVBox"
-	_action_vbox.add_theme_constant_override("separation", 8)
+	_action_vbox.add_theme_constant_override("separation", 6)
 
 	_continue_button = Button.new()
 	_continue_button.name = "ContinueButton"
 	_continue_button.text = "TIẾP TỤC HÀNH TRÌNH"
-	_continue_button.custom_minimum_size = Vector2(340, 42)
+	_continue_button.custom_minimum_size = Vector2(320, 38)
 	_continue_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_continue_button.focus_mode = Control.FOCUS_ALL
 	_continue_button.theme_type_variation = &"MathosPrimaryButton"
 	_continue_button.pressed.connect(func():
 		continue_game_requested.emit()
+		continue_requested.emit()
 	)
 	_action_vbox.add_child(_continue_button)
 
 	_new_game_button = Button.new()
 	_new_game_button.name = "NewGameButton"
 	_new_game_button.text = "BẮT ĐẦU MỚI"
-	_new_game_button.custom_minimum_size = Vector2(340, 36)
+	_new_game_button.custom_minimum_size = Vector2(320, 32)
 	_new_game_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_new_game_button.focus_mode = Control.FOCUS_ALL
 	_new_game_button.theme_type_variation = &"MathosSecondaryButton"
 	_new_game_button.pressed.connect(func():
+		if _progression_state == HubProgressionState.D1_COMPLETE:
+			replay_requested.emit()
 		new_game_requested.emit()
 	)
 	_action_vbox.add_child(_new_game_button)
@@ -677,12 +687,13 @@ func _build_contextual_journey_panel() -> void:
 	_journey_map_button = Button.new()
 	_journey_map_button.name = "JourneyMapButton"
 	_journey_map_button.text = "BẢN ĐỒ THẾ GIỚI MATHOS"
-	_journey_map_button.custom_minimum_size = Vector2(340, 36)
+	_journey_map_button.custom_minimum_size = Vector2(320, 32)
 	_journey_map_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_journey_map_button.focus_mode = Control.FOCUS_ALL
 	_journey_map_button.theme_type_variation = &"MathosSecondaryButton"
 	_journey_map_button.pressed.connect(func():
 		show_map_requested.emit()
+		map_requested.emit()
 	)
 	_action_vbox.add_child(_journey_map_button)
 
@@ -702,22 +713,63 @@ func update_responsive_layout(new_size: Vector2 = Vector2.ZERO) -> void:
 	if vp_size.x <= 0 or vp_size.y <= 0:
 		vp_size = Vector2(REF_WIDTH, REF_HEIGHT)
 
+	var margin_left: float = REF_MARGIN_LEFT if vp_size.x >= 1280.0 else 24.0
+	var margin_right: float = REF_MARGIN_RIGHT if vp_size.x >= 1280.0 else 24.0
+	var margin_top: float = REF_MARGIN_TOP if vp_size.y >= 720.0 else 16.0
+	var margin_bottom: float = REF_MARGIN_BOTTOM if vp_size.y >= 720.0 else 16.0
+
+	# 1. Top-Left Player Badge
 	if _player_badge_panel != null:
-		_player_badge_panel.position = Vector2(REF_MARGIN_LEFT, REF_MARGIN_TOP)
+		_player_badge_panel.position = Vector2(margin_left, margin_top)
 
+	# 2. Top-Right Order HUD Panel
+	var hud_w: float = REF_HUD_SIZE.x
+	var hud_h: float = REF_HUD_SIZE.y
 	if _order_hud_panel != null:
-		var hud_x: float = vp_size.x - REF_MARGIN_RIGHT - REF_HUD_SIZE.x
-		_order_hud_panel.position = Vector2(hud_x, REF_MARGIN_TOP)
+		hud_w = maxf(_order_hud_panel.size.x, _order_hud_panel.get_combined_minimum_size().x)
+		hud_h = maxf(_order_hud_panel.size.y, _order_hud_panel.get_combined_minimum_size().y)
+		if hud_w <= 0:
+			hud_w = REF_HUD_SIZE.x
+		if hud_h <= 0:
+			hud_h = REF_HUD_SIZE.y
+		var hud_x: float = vp_size.x - margin_right - hud_w
+		_order_hud_panel.position = Vector2(hud_x, margin_top)
 
+	# 3. Top-Right Utilities Container (placed underneath Fragment HUD, right-aligned)
 	if _utilities_container != null:
-		var utils_x: float = vp_size.x - REF_MARGIN_RIGHT - REF_HUD_SIZE.x - 170.0
-		_utilities_container.position = Vector2(utils_x, REF_MARGIN_TOP + 12.0)
+		var utils_w: float = maxf(_utilities_container.size.x, _utilities_container.get_combined_minimum_size().x)
+		if utils_w <= 0:
+			utils_w = 140.0
+		var utils_x: float = vp_size.x - margin_right - utils_w
+		var utils_y: float = margin_top + hud_h + 6.0
+		_utilities_container.position = Vector2(utils_x, utils_y)
 
+	# 4. Bottom-Left Mathos Identity Panel
 	if _identity_panel != null:
-		_identity_panel.position = Vector2(REF_MARGIN_LEFT, vp_size.y - REF_MARGIN_BOTTOM - REF_IDENTITY_SIZE.y)
+		var id_h: float = maxf(_identity_panel.size.y, _identity_panel.get_combined_minimum_size().y)
+		if id_h <= 0:
+			id_h = REF_IDENTITY_SIZE.y
+		var id_y: float = vp_size.y - margin_bottom - id_h
+		if id_y + id_h > vp_size.y - 8.0:
+			id_y = vp_size.y - 8.0 - id_h
+		_identity_panel.position = Vector2(margin_left, id_y)
 
+	# 5. Bottom-Right Contextual Journey Panel
 	if _journey_panel != null:
-		_journey_panel.position = Vector2(vp_size.x - REF_MARGIN_RIGHT - REF_JOURNEY_SIZE.x, vp_size.y - REF_MARGIN_BOTTOM - REF_JOURNEY_SIZE.y)
+		var journey_w: float = maxf(_journey_panel.size.x, _journey_panel.get_combined_minimum_size().x)
+		var journey_h: float = maxf(_journey_panel.size.y, _journey_panel.get_combined_minimum_size().y)
+		if journey_w <= 0:
+			journey_w = REF_JOURNEY_SIZE.x
+		if journey_h <= 0:
+			journey_h = REF_JOURNEY_SIZE.y
+		var journey_x: float = vp_size.x - margin_right - journey_w
+		var journey_y: float = vp_size.y - margin_bottom - journey_h
+		# Safety guard: clamp to ensure full viewport visibility
+		if journey_y + journey_h > vp_size.y - 8.0:
+			journey_y = vp_size.y - 8.0 - journey_h
+		if journey_y < 120.0:
+			journey_y = 120.0
+		_journey_panel.position = Vector2(journey_x, journey_y)
 
 func set_progression_state(state: HubProgressionState) -> void:
 	_progression_state = state
@@ -787,6 +839,7 @@ func _apply_progression_visuals() -> void:
 
 	_update_labels()
 	_update_fragments_ui()
+	update_responsive_layout()
 
 func _update_labels() -> void:
 	if _player_name_label != null:
