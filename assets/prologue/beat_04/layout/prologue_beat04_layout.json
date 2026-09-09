@@ -103,6 +103,8 @@
             "target_rot": -25.0,
             "scale_x": 0.52,
             "scale_y": 0.52,
+            "target_scale_x": 0.15,
+            "target_scale_y": 0.15,
             "opacity": 1.0,
             "visible": true,
             "z_index": 5
@@ -116,6 +118,8 @@
             "target_rot": 35.0,
             "scale_x": 0.52,
             "scale_y": 0.52,
+            "target_scale_x": 0.15,
+            "target_scale_y": 0.15,
             "opacity": 1.0,
             "visible": true,
             "z_index": 5
@@ -129,6 +133,8 @@
             "target_rot": -18.0,
             "scale_x": 0.52,
             "scale_y": 0.52,
+            "target_scale_x": 0.15,
+            "target_scale_y": 0.15,
             "opacity": 1.0,
             "visible": true,
             "z_index": 5
@@ -142,6 +148,8 @@
             "target_rot": 45.0,
             "scale_x": 0.52,
             "scale_y": 0.52,
+            "target_scale_x": 0.15,
+            "target_scale_y": 0.15,
             "opacity": 1.0,
             "visible": true,
             "z_index": 5

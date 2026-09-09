@@ -22,6 +22,8 @@ const BEAT2_DURATION: float = 9.5
 const BEAT3_DURATION: float = 7.0
 const BEAT4_DURATION: float = 14.8
 const CROSSFADE_DURATION: float = 0.6
+const FRAGMENT_START_SCALE: Vector2 = Vector2(0.52, 0.52)
+const FRAGMENT_TARGET_SCALE: Vector2 = Vector2(0.15, 0.15)
 
 # Authoritative Production Layout Paths (Inside project res://)
 const BEAT01_LAYOUT_RES_PATH: String = "res://assets/prologue/beat_01/layout/prologue_lab_beat01_layout_human_accepted.json"
@@ -692,6 +694,7 @@ func _build_beat04_structure() -> void:
 	b4_gradient.set_anchors_preset(Control.PRESET_FULL_RECT)
 	b4_gradient.color = Color(0.02, 0.0, 0.04, 0.55)
 	b4_gradient.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b4_gradient.z_index = 10
 	_beat04_root.add_child(b4_gradient)
 
 	# 7. Beat 4 Narration UI (Canonical narration phrases)
@@ -699,6 +702,7 @@ func _build_beat04_structure() -> void:
 	_b4_narration.name = "NarrationContainer"
 	_b4_narration.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_b4_narration.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_b4_narration.z_index = 11
 	_beat04_root.add_child(_b4_narration)
 
 	var b4_vbox: VBoxContainer = VBoxContainer.new()
@@ -737,6 +741,7 @@ func _build_beat04_structure() -> void:
 	_b4_fade_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_b4_fade_overlay.color = Color(0.0, 0.0, 0.0, 0.0)
 	_b4_fade_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_b4_fade_overlay.z_index = 20
 	_beat04_root.add_child(_b4_fade_overlay)
 
 # =========================================================================
@@ -909,6 +914,50 @@ func get_destination_nodes() -> Array[Control]:
 		if _b4_destinations.has(did):
 			arr.append(_b4_destinations[did] as Control)
 	return arr
+
+func get_fragment_target_scale(fid: String = "Fragment01") -> Vector2:
+	if _b4_layout_data.has("layers"):
+		var layers: Dictionary = _b4_layout_data["layers"] as Dictionary
+		if layers.has(fid):
+			var f_dict: Dictionary = layers[fid] as Dictionary
+			if f_dict.has("target_scale_x") and f_dict.has("target_scale_y"):
+				return Vector2(float(f_dict["target_scale_x"]), float(f_dict["target_scale_y"]))
+	return FRAGMENT_TARGET_SCALE
+
+func get_fragment_start_scale(fid: String = "Fragment01") -> Vector2:
+	if _b4_layout_data.has("layers"):
+		var layers: Dictionary = _b4_layout_data["layers"] as Dictionary
+		if layers.has(fid):
+			var f_dict: Dictionary = layers[fid] as Dictionary
+			if f_dict.has("scale_x") and f_dict.has("scale_y"):
+				return Vector2(float(f_dict["scale_x"]), float(f_dict["scale_y"]))
+	return FRAGMENT_START_SCALE
+
+func get_b4_narration_safe_rect() -> Rect2:
+	return Rect2(420.0, 570.0, 440.0, 100.0)
+
+func get_b4_fragment_visual_rect(fid: String) -> Rect2:
+	var node: Control = get_fragment_node(fid, 4)
+	if node == null:
+		return Rect2()
+	var sz: Vector2 = node.size * node.scale
+	var center: Vector2 = node.position + node.pivot_offset
+	return Rect2(center - sz * 0.5, sz)
+
+func get_b4_fragment_core_rect(fid: String) -> Rect2:
+	var node: Control = get_fragment_node(fid, 4)
+	if node == null:
+		return Rect2()
+	var core_sizes: Dictionary = {
+		"Fragment01": Vector2(727.0, 1177.0),
+		"Fragment02": Vector2(802.0, 1152.0),
+		"Fragment03": Vector2(863.0, 972.0),
+		"Fragment04": Vector2(856.0, 1067.0)
+	}
+	var base_sz: Vector2 = core_sizes.get(fid, Vector2(856.0, 1067.0))
+	var sz: Vector2 = base_sz * node.scale
+	var center: Vector2 = node.position + node.pivot_offset
+	return Rect2(center - sz * 0.5, sz)
 
 func get_current_beat() -> int:
 	return _current_beat
@@ -1121,6 +1170,15 @@ func _process_beat04(_delta: float) -> void:
 	var frag3: TextureRect = _b4_layers.get("Fragment03", null) as TextureRect
 	var frag4: TextureRect = _b4_layers.get("Fragment04", null) as TextureRect
 
+	var f1_start_scale: Vector2 = get_fragment_start_scale("Fragment01")
+	var f1_target_scale: Vector2 = get_fragment_target_scale("Fragment01")
+	var f2_start_scale: Vector2 = get_fragment_start_scale("Fragment02")
+	var f2_target_scale: Vector2 = get_fragment_target_scale("Fragment02")
+	var f3_start_scale: Vector2 = get_fragment_start_scale("Fragment03")
+	var f3_target_scale: Vector2 = get_fragment_target_scale("Fragment03")
+	var f4_start_scale: Vector2 = get_fragment_start_scale("Fragment04")
+	var f4_target_scale: Vector2 = get_fragment_target_scale("Fragment04")
+
 	# 1. CAMERA-LED SEQUENTIAL GUIDANCE
 	# Guides viewer sequentially through destinations:
 	# 0.0 - 2.0: Continental Overview
@@ -1170,64 +1228,76 @@ func _process_beat04(_delta: float) -> void:
 		if t < 0.6:
 			frag1.position = f1_start
 			frag1.rotation_degrees = -4.5
+			frag1.scale = f1_start_scale
 		elif t < 3.6:
 			var p1: float = clampf((t - 0.6) / 3.0, 0.0, 1.0)
 			var ease1: float = 1.0 - pow(1.0 - p1, 2.5)
 			var arc1: Vector2 = Vector2(sin(p1 * PI) * -40.0, -sin(p1 * PI) * 75.0)
 			frag1.position = f1_start.lerp(f1_target, ease1) + arc1
 			frag1.rotation_degrees = lerpf(-4.5, -25.0, ease1)
+			frag1.scale = f1_start_scale.lerp(f1_target_scale, ease1)
 		else:
 			var bob1: float = sin((t - 3.6) * 2.8) * 2.5
 			frag1.position = f1_target + Vector2(0.0, bob1)
 			frag1.rotation_degrees = -25.0 + sin((t - 3.6) * 1.5) * 1.5
+			frag1.scale = f1_target_scale
 
 	# Fragment 02: Launch 1.0s -> Arrives 5.8s (NE: Dungeon II)
 	if frag2 != null:
 		if t < 1.0:
 			frag2.position = f2_start
 			frag2.rotation_degrees = 4.0
+			frag2.scale = f2_start_scale
 		elif t < 5.8:
 			var p2: float = clampf((t - 1.0) / 4.8, 0.0, 1.0)
 			var ease2: float = _smooth_step(0.0, 1.0, p2)
 			var arc2: Vector2 = Vector2(sin(p2 * PI) * 50.0, -sin(p2 * PI) * 55.0)
 			frag2.position = f2_start.lerp(f2_target, ease2) + arc2
 			frag2.rotation_degrees = lerpf(4.0, 35.0, ease2)
+			frag2.scale = f2_start_scale.lerp(f2_target_scale, ease2)
 		else:
 			var bob2: float = sin((t - 5.8) * 2.6) * 2.5
 			frag2.position = f2_target + Vector2(0.0, bob2)
 			frag2.rotation_degrees = 35.0 + cos((t - 5.8) * 1.4) * 1.5
+			frag2.scale = f2_target_scale
 
 	# Fragment 03: Launch 1.4s -> Arrives 7.8s (SW: Dungeon III)
 	if frag3 != null:
 		if t < 1.4:
 			frag3.position = f3_start
 			frag3.rotation_degrees = -3.0
+			frag3.scale = f3_start_scale
 		elif t < 7.8:
 			var p3: float = clampf((t - 1.4) / 6.4, 0.0, 1.0)
 			var ease3: float = _smooth_step(0.0, 1.0, p3)
 			var arc3: Vector2 = Vector2(sin(p3 * PI) * -50.0, sin(p3 * PI) * 45.0)
 			frag3.position = f3_start.lerp(f3_target, ease3) + arc3
 			frag3.rotation_degrees = lerpf(-3.0, -18.0, ease3)
+			frag3.scale = f3_start_scale.lerp(f3_target_scale, ease3)
 		else:
 			var bob3: float = sin((t - 7.8) * 2.4) * 2.5
 			frag3.position = f3_target + Vector2(0.0, bob3)
 			frag3.rotation_degrees = -18.0 + sin((t - 7.8) * 1.2) * 1.5
+			frag3.scale = f3_target_scale
 
 	# Fragment 04: Launch 1.8s -> Arrives 9.8s (SE: Dungeon IV)
 	if frag4 != null:
 		if t < 1.8:
 			frag4.position = f4_start
 			frag4.rotation_degrees = 3.5
+			frag4.scale = f4_start_scale
 		elif t < 9.8:
 			var p4: float = clampf((t - 1.8) / 8.0, 0.0, 1.0)
 			var ease4: float = _smooth_step(0.0, 1.0, p4)
 			var arc4: Vector2 = Vector2(sin(p4 * PI) * 60.0, sin(p4 * PI) * 55.0)
 			frag4.position = f4_start.lerp(f4_target, ease4) + arc4
 			frag4.rotation_degrees = lerpf(3.5, 45.0, ease4)
+			frag4.scale = f4_start_scale.lerp(f4_target_scale, ease4)
 		else:
 			var bob4: float = sin((t - 9.8) * 2.5) * 2.5
 			frag4.position = f4_target + Vector2(0.0, bob4)
 			frag4.rotation_degrees = 45.0 + cos((t - 9.8) * 1.3) * 1.5
+			frag4.scale = f4_target_scale
 
 	# 3. DESTINATION DISCOVERY & REVEAL STATES
 	var d1: Control = _b4_destinations.get("Destination01", null) as Control
