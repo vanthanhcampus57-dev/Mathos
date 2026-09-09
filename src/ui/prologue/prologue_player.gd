@@ -31,6 +31,13 @@ const BEAT02_LAYOUT_RES_PATH: String = "res://assets/prologue/beat_02/layout/pro
 const BEAT03_LAYOUT_RES_PATH: String = "res://assets/prologue/beat_03/layout/prologue_beat03_layout.json"
 const BEAT04_LAYOUT_RES_PATH: String = "res://assets/prologue/beat_04/layout/prologue_beat04_layout.json"
 
+const WORLD_MAP_BG_PATH: String = "res://assets/backgrounds/map/d1_world_map_bg.jpg"
+const D1_LANDMARK_PATH: String = "res://assets/prologue/beat_04/landmarks/wad2_beat04_d1_forest_landmark.png"
+const D2_LANDMARK_PATH: String = "res://assets/prologue/beat_04/landmarks/wad2_beat04_d2_swamp_landmark.png"
+const D3_LANDMARK_PATH: String = "res://assets/prologue/beat_04/landmarks/wad2_beat04_d3_palace_landmark.png"
+const D4_LANDMARK_PATH: String = "res://assets/prologue/beat_04/landmarks/wad2_beat04_d4_tower_landmark.png"
+const ENERGY_BURST_PATH: String = "res://assets/prologue/beat_03/order_stone_energy_burst.png"
+
 # State
 var _current_beat: int = 0 # 1, 2, 3, or 4 (0 = stopped)
 var _playback_time: float = 0.0
@@ -582,8 +589,8 @@ func _build_beat04_structure() -> void:
 	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bg.clip_contents = false
-	bg.texture = _load_texture_safely("res://assets/prologue/beat_01/prologue_bg_01_mathos_world.png")
-	bg.modulate = Color(0.38, 0.35, 0.48, 0.90)
+	bg.texture = _load_texture_safely(WORLD_MAP_BG_PATH)
+	bg.modulate = Color(0.92, 0.92, 0.96, 0.95)
 	_b4_world_content.add_child(bg)
 	_b4_layers["Background"] = bg
 
@@ -591,36 +598,60 @@ func _build_beat04_structure() -> void:
 	var vignette: ColorRect = ColorRect.new()
 	vignette.name = "Vignette"
 	vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vignette.color = Color(0.01, 0.01, 0.03, 0.40)
+	vignette.color = Color(0.01, 0.01, 0.03, 0.35)
 	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_b4_world_content.add_child(vignette)
 	_b4_layers["Vignette"] = vignette
 
-	# 4. Canonical Destinations (Dungeon I..IV)
+	# 3b. Arcane Trajectory Trails (Line2D)
+	var trail_configs: Array[Dictionary] = [
+		{"name": "Trail01", "color": Color(0.2, 0.92, 0.76, 0.65)},
+		{"name": "Trail02", "color": Color(0.85, 0.6, 0.25, 0.65)},
+		{"name": "Trail03", "color": Color(0.35, 0.7, 1.0, 0.65)},
+		{"name": "Trail04", "color": Color(1.0, 0.85, 0.35, 0.65)}
+	]
+	for tc in trail_configs:
+		var line: Line2D = Line2D.new()
+		line.name = tc["name"]
+		line.width = 2.5
+		line.default_color = tc["color"]
+		line.z_index = 3
+		_b4_world_content.add_child(line)
+		_b4_layers[tc["name"]] = line
+
+	# 4. Canonical Destinations (Dungeon I..IV) with regional landmarks
 	var dest_specs: Array[Dictionary] = [
 		{
 			"id": "Destination01",
+			"region_id": "D1",
 			"name": "Dungeon I — KHU RỪNG SƯƠNG MÙ",
-			"pos": Vector2(299.0, 90.1),
-			"color": Color(0.2, 0.95, 0.7, 1.0)
+			"pos": Vector2(215.0, 465.0),
+			"landmark": D1_LANDMARK_PATH,
+			"color": Color(0.2, 0.92, 0.76, 1.0)
 		},
 		{
 			"id": "Destination02",
+			"region_id": "D2",
 			"name": "Dungeon II — ĐẦM LẦY TỶ LỆ",
-			"pos": Vector2(956.4, 90.5),
-			"color": Color(0.95, 0.65, 0.2, 1.0)
+			"pos": Vector2(645.0, 350.0),
+			"landmark": D2_LANDMARK_PATH,
+			"color": Color(0.85, 0.6, 0.25, 1.0)
 		},
 		{
 			"id": "Destination03",
+			"region_id": "D3",
 			"name": "Dungeon III — CUNG ĐIỆN HỢP NHẤT",
-			"pos": Vector2(1049.4, 603.9),
-			"color": Color(0.45, 0.55, 1.0, 1.0)
+			"pos": Vector2(980.0, 225.0),
+			"landmark": D3_LANDMARK_PATH,
+			"color": Color(0.35, 0.7, 1.0, 1.0)
 		},
 		{
 			"id": "Destination04",
+			"region_id": "D4",
 			"name": "Dungeon IV — ĐỈNH THÁP ĐỘC LẬP",
-			"pos": Vector2(354.2, 551.1),
-			"color": Color(1.0, 0.85, 0.3, 1.0)
+			"pos": Vector2(410.0, 160.0),
+			"landmark": D4_LANDMARK_PATH,
+			"color": Color(1.0, 0.85, 0.35, 1.0)
 		}
 	]
 
@@ -634,26 +665,39 @@ func _build_beat04_structure() -> void:
 		_b4_destinations[d["id"]] = d_root
 		_b4_layers[d["id"]] = d_root
 
+		# Regional Landmark Graphic (116x116 px centered at (0,0), safe from safe areas)
+		var landmark: TextureRect = TextureRect.new()
+		landmark.name = "Landmark"
+		landmark.size = Vector2(116, 116)
+		landmark.position = Vector2(-58, -58)
+		landmark.pivot_offset = Vector2(58, 58)
+		landmark.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		landmark.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		landmark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		landmark.texture = _load_texture_safely(d["landmark"])
+		landmark.modulate = Color(1.0, 1.0, 1.0, 0.95)
+		d_root.add_child(landmark)
+
 		# Outer glow beacon
 		var beacon: TextureRect = TextureRect.new()
 		beacon.name = "Beacon"
-		beacon.size = Vector2(160, 160)
-		beacon.position = Vector2(-80, -80)
-		beacon.pivot_offset = Vector2(80, 80)
+		beacon.size = Vector2(100, 100)
+		beacon.position = Vector2(-50, -50)
+		beacon.pivot_offset = Vector2(50, 50)
 		beacon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		beacon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		beacon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		beacon.texture = _load_texture_safely("res://assets/prologue/beat_03/order_stone_energy_burst.png")
+		beacon.texture = _load_texture_safely(ENERGY_BURST_PATH)
 		beacon.modulate = d["color"]
 		beacon.modulate.a = 0.75
 		d_root.add_child(beacon)
 
-		# Title card label
+		# Title card label (positioned above destination node, zero safe-area intrusion)
 		var lbl: Label = Label.new()
 		lbl.name = "TitleLabel"
 		lbl.text = d["name"]
 		lbl.custom_minimum_size = Vector2(320, 32)
-		lbl.position = Vector2(-160, 45)
+		lbl.position = Vector2(-160, -75)
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lbl.add_theme_color_override("font_color", d["color"])
 		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
@@ -662,7 +706,7 @@ func _build_beat04_structure() -> void:
 		lbl.add_theme_font_size_override("font_size", 16)
 		d_root.add_child(lbl)
 
-	# 5. Four Fragments (using exact canonical Beat 3 textures)
+	# 5. Four Fragments (using exact canonical Beat 3 textures, sized 600x600)
 	var frag_specs: Array[Dictionary] = [
 		{"name": "Fragment01", "path": "res://assets/prologue/beat_03/order_fragment_01.png"},
 		{"name": "Fragment02", "path": "res://assets/prologue/beat_03/order_fragment_02.png"},
@@ -670,7 +714,7 @@ func _build_beat04_structure() -> void:
 		{"name": "Fragment04", "path": "res://assets/prologue/beat_03/order_fragment_04.png"}
 	]
 
-	var stone_sz: Vector2 = Vector2(1254, 1254)
+	var stone_sz: Vector2 = Vector2(600, 600)
 	for f in frag_specs:
 		var f_name: String = f["name"]
 		var tex_rect: TextureRect = TextureRect.new()
@@ -685,10 +729,11 @@ func _build_beat04_structure() -> void:
 		tex_rect.texture = _load_texture_safely(f["path"])
 		tex_rect.visible = true
 		tex_rect.modulate.a = 1.0
+		tex_rect.z_index = 5
 		_b4_world_content.add_child(tex_rect)
 		_b4_layers[f_name] = tex_rect
 
-	# 6. Bottom cinematic gradient for text readability
+	# 6. Bottom cinematic gradient for text readability (z_index = 10)
 	var b4_gradient: ColorRect = ColorRect.new()
 	b4_gradient.name = "CinematicGradient"
 	b4_gradient.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -697,7 +742,7 @@ func _build_beat04_structure() -> void:
 	b4_gradient.z_index = 10
 	_beat04_root.add_child(b4_gradient)
 
-	# 7. Beat 4 Narration UI (Canonical narration phrases)
+	# 7. Beat 4 Narration UI (Canonical narration phrases, z_index = 11)
 	_b4_narration = Control.new()
 	_b4_narration.name = "NarrationContainer"
 	_b4_narration.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -735,7 +780,7 @@ func _build_beat04_structure() -> void:
 	_b4_phrase2_lbl.modulate.a = 0.0
 	b4_vbox.add_child(_b4_phrase2_lbl)
 
-	# 8. Dissolve fade-out overlay
+	# 8. Dissolve fade-out overlay (z_index = 20)
 	_b4_fade_overlay = ColorRect.new()
 	_b4_fade_overlay.name = "FadeOverlay"
 	_b4_fade_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -856,9 +901,12 @@ func apply_beat04_layout() -> void:
 		if _b4_layers.has(k_str):
 			var node: Control = _b4_layers[k_str] as Control
 			var l_dict: Dictionary = layers[layer_name] as Dictionary
-			var init_x: float = float(l_dict.get("start_x", l_dict.get("x", node.position.x)))
-			var init_y: float = float(l_dict.get("start_y", l_dict.get("y", node.position.y)))
-			node.position = Vector2(init_x, init_y)
+			if l_dict.has("start_x") and l_dict.has("start_y"):
+				node.position = Vector2(float(l_dict["start_x"]), float(l_dict["start_y"])) - node.pivot_offset
+			else:
+				var init_x: float = float(l_dict.get("start_x", l_dict.get("x", node.position.x)))
+				var init_y: float = float(l_dict.get("start_y", l_dict.get("y", node.position.y)))
+				node.position = Vector2(init_x, init_y)
 			node.scale = Vector2(float(l_dict.get("scale_x", 1.0)), float(l_dict.get("scale_y", 1.0)))
 			node.modulate.a = float(l_dict.get("opacity", 1.0))
 			node.visible = bool(l_dict.get("visible", true))
@@ -934,7 +982,10 @@ func get_fragment_start_scale(fid: String = "Fragment01") -> Vector2:
 	return FRAGMENT_START_SCALE
 
 func get_b4_narration_safe_rect() -> Rect2:
-	return Rect2(420.0, 570.0, 440.0, 100.0)
+	return Rect2(60.0, 530.0, 1160.0, 160.0)
+
+func get_b4_skip_safe_rect() -> Rect2:
+	return Rect2(1120.0, 20.0, 140.0, 44.0)
 
 func get_b4_fragment_visual_rect(fid: String) -> Rect2:
 	var node: Control = get_fragment_node(fid, 4)
@@ -955,9 +1006,106 @@ func get_b4_fragment_core_rect(fid: String) -> Rect2:
 		"Fragment04": Vector2(856.0, 1067.0)
 	}
 	var base_sz: Vector2 = core_sizes.get(fid, Vector2(856.0, 1067.0))
-	var sz: Vector2 = base_sz * node.scale
+	var scale_factor: float = node.size.x / 1254.0 if node.size.x > 0.0 else 1.0
+	var sz: Vector2 = base_sz * scale_factor * node.scale
 	var center: Vector2 = node.position + node.pivot_offset
 	return Rect2(center - sz * 0.5, sz)
+
+func get_canonical_geography() -> Dictionary:
+	return {
+		"D1": Vector2(215.0, 465.0),
+		"D2": Vector2(645.0, 350.0),
+		"D3": Vector2(980.0, 225.0),
+		"D4": Vector2(410.0, 160.0)
+	}
+
+func get_landmark_paths() -> Dictionary:
+	return {
+		"D1": D1_LANDMARK_PATH,
+		"D2": D2_LANDMARK_PATH,
+		"D3": D3_LANDMARK_PATH,
+		"D4": D4_LANDMARK_PATH
+	}
+
+func get_landmark_node(region_or_dest_id: String) -> TextureRect:
+	var d_node: Control = null
+	if region_or_dest_id == "D1" or region_or_dest_id == "Destination01":
+		d_node = _b4_destinations.get("Destination01", null) as Control
+	elif region_or_dest_id == "D2" or region_or_dest_id == "Destination02":
+		d_node = _b4_destinations.get("Destination02", null) as Control
+	elif region_or_dest_id == "D3" or region_or_dest_id == "Destination03":
+		d_node = _b4_destinations.get("Destination03", null) as Control
+	elif region_or_dest_id == "D4" or region_or_dest_id == "Destination04":
+		d_node = _b4_destinations.get("Destination04", null) as Control
+	if d_node != null:
+		return d_node.get_node_or_null("Landmark") as TextureRect
+	return null
+
+func get_trajectory_spec(fid: String) -> Dictionary:
+	var specs: Dictionary = {
+		"Fragment01": {
+			"start": Vector2(600.0, 300.0),
+			"mid": Vector2(380.0, 360.0),
+			"target": Vector2(215.0, 465.0),
+			"start_time": 8.0,
+			"duration": 2.2,
+			"ease": "OUT_QUAD",
+			"start_rot": -4.5,
+			"target_rot": -25.0
+		},
+		"Fragment02": {
+			"start": Vector2(660.0, 300.0),
+			"mid": Vector2(680.0, 310.0),
+			"target": Vector2(645.0, 350.0),
+			"start_time": 7.4,
+			"duration": 1.8,
+			"ease": "IN_OUT_CUBIC",
+			"start_rot": 4.0,
+			"target_rot": 35.0
+		},
+		"Fragment03": {
+			"start": Vector2(670.0, 340.0),
+			"mid": Vector2(840.0, 250.0),
+			"target": Vector2(980.0, 225.0),
+			"start_time": 6.2,
+			"duration": 2.0,
+			"ease": "OUT_EXPO",
+			"start_rot": -3.0,
+			"target_rot": -18.0
+		},
+		"Fragment04": {
+			"start": Vector2(610.0, 340.0),
+			"mid": Vector2(480.0, 220.0),
+			"target": Vector2(410.0, 160.0),
+			"start_time": 5.6,
+			"duration": 1.6,
+			"ease": "OUT_CIRC",
+			"start_rot": 3.5,
+			"target_rot": 45.0
+		}
+	}
+	return specs.get(fid, {}) as Dictionary
+
+static func _evaluate_quad_bezier(p0: Vector2, p1: Vector2, p2: Vector2, u: float) -> Vector2:
+	var om: float = 1.0 - u
+	return (om * om * p0) + (2.0 * om * u * p1) + (u * u * p2)
+
+static func _apply_easing(ease_name: String, p: float) -> float:
+	var t: float = clampf(p, 0.0, 1.0)
+	match ease_name:
+		"OUT_QUAD":
+			return t * (2.0 - t)
+		"IN_OUT_CUBIC":
+			if t < 0.5:
+				return 4.0 * t * t * t
+			else:
+				return 1.0 - pow(-2.0 * t + 2.0, 3.0) * 0.5
+		"OUT_EXPO":
+			return 1.0 if t >= 1.0 else (1.0 - pow(2.0, -10.0 * t))
+		"OUT_CIRC":
+			return sqrt(maxf(0.0, 1.0 - pow(t - 1.0, 2.0)))
+		_:
+			return t
 
 func get_current_beat() -> int:
 	return _current_beat
@@ -1153,32 +1301,6 @@ func _process_beat04(_delta: float) -> void:
 	var prog: float = clampf(_playback_time / total_dur, 0.0, 1.0) if total_dur > 0.0 else 1.0
 	var t: float = prog * BEAT4_DURATION
 
-	# Fragment start positions (handoff from Beat 3)
-	var f1_start: Vector2 = Vector2(-82.0, -332.0)
-	var f2_start: Vector2 = Vector2(108.0, -332.0)
-	var f3_start: Vector2 = Vector2(-67.0, -192.0)
-	var f4_start: Vector2 = Vector2(98.0, -192.0)
-
-	# Destination targets in world content space (matches HUMAN-accepted layout JSON)
-	var f1_target: Vector2 = Vector2(-328.0, -536.9)
-	var f2_target: Vector2 = Vector2(329.4, -536.5)
-	var f3_target: Vector2 = Vector2(422.4, -23.1)
-	var f4_target: Vector2 = Vector2(-272.8, -75.9)
-
-	var frag1: TextureRect = _b4_layers.get("Fragment01", null) as TextureRect
-	var frag2: TextureRect = _b4_layers.get("Fragment02", null) as TextureRect
-	var frag3: TextureRect = _b4_layers.get("Fragment03", null) as TextureRect
-	var frag4: TextureRect = _b4_layers.get("Fragment04", null) as TextureRect
-
-	var f1_start_scale: Vector2 = get_fragment_start_scale("Fragment01")
-	var f1_target_scale: Vector2 = get_fragment_target_scale("Fragment01")
-	var f2_start_scale: Vector2 = get_fragment_start_scale("Fragment02")
-	var f2_target_scale: Vector2 = get_fragment_target_scale("Fragment02")
-	var f3_start_scale: Vector2 = get_fragment_start_scale("Fragment03")
-	var f3_target_scale: Vector2 = get_fragment_target_scale("Fragment03")
-	var f4_start_scale: Vector2 = get_fragment_start_scale("Fragment04")
-	var f4_target_scale: Vector2 = get_fragment_target_scale("Fragment04")
-
 	# 1. CAMERA-LED SEQUENTIAL GUIDANCE
 	# Guides viewer sequentially through destinations:
 	# 0.0 - 2.0: Continental Overview
@@ -1223,81 +1345,62 @@ func _process_beat04(_delta: float) -> void:
 		_b4_world_content.scale = Vector2(cam_scale, cam_scale)
 
 	# 2. INDIVIDUAL FRAGMENT TRAJECTORIES & TIMING
-	# Fragment 01: Launch 0.6s -> Arrives 3.6s (NW: Dungeon I)
-	if frag1 != null:
-		if t < 0.6:
-			frag1.position = f1_start
-			frag1.rotation_degrees = -4.5
-			frag1.scale = f1_start_scale
-		elif t < 3.6:
-			var p1: float = clampf((t - 0.6) / 3.0, 0.0, 1.0)
-			var ease1: float = 1.0 - pow(1.0 - p1, 2.5)
-			var arc1: Vector2 = Vector2(sin(p1 * PI) * -40.0, -sin(p1 * PI) * 75.0)
-			frag1.position = f1_start.lerp(f1_target, ease1) + arc1
-			frag1.rotation_degrees = lerpf(-4.5, -25.0, ease1)
-			frag1.scale = f1_start_scale.lerp(f1_target_scale, ease1)
-		else:
-			var bob1: float = sin((t - 3.6) * 2.8) * 2.5
-			frag1.position = f1_target + Vector2(0.0, bob1)
-			frag1.rotation_degrees = -25.0 + sin((t - 3.6) * 1.5) * 1.5
-			frag1.scale = f1_target_scale
+	var fids: Array[String] = ["Fragment01", "Fragment02", "Fragment03", "Fragment04"]
+	for i in range(fids.size()):
+		var fid: String = fids[i]
+		var frag: TextureRect = _b4_layers.get(fid, null) as TextureRect
+		if frag == null:
+			continue
+		var spec: Dictionary = get_trajectory_spec(fid)
+		var p0: Vector2 = spec.get("start", Vector2(640.0, 320.0)) as Vector2
+		var p1: Vector2 = spec.get("mid", Vector2(640.0, 320.0)) as Vector2
+		var p2: Vector2 = spec.get("target", Vector2(640.0, 320.0)) as Vector2
+		var t_start: float = float(spec.get("start_time", 5.0))
+		var dur: float = float(spec.get("duration", 2.0))
+		var t_end: float = t_start + dur
+		var ease_type: String = String(spec.get("ease", "OUT_QUAD"))
+		var r_start: float = float(spec.get("start_rot", 0.0))
+		var r_target: float = float(spec.get("target_rot", 0.0))
 
-	# Fragment 02: Launch 1.0s -> Arrives 5.8s (NE: Dungeon II)
-	if frag2 != null:
-		if t < 1.0:
-			frag2.position = f2_start
-			frag2.rotation_degrees = 4.0
-			frag2.scale = f2_start_scale
-		elif t < 5.8:
-			var p2: float = clampf((t - 1.0) / 4.8, 0.0, 1.0)
-			var ease2: float = _smooth_step(0.0, 1.0, p2)
-			var arc2: Vector2 = Vector2(sin(p2 * PI) * 50.0, -sin(p2 * PI) * 55.0)
-			frag2.position = f2_start.lerp(f2_target, ease2) + arc2
-			frag2.rotation_degrees = lerpf(4.0, 35.0, ease2)
-			frag2.scale = f2_start_scale.lerp(f2_target_scale, ease2)
-		else:
-			var bob2: float = sin((t - 5.8) * 2.6) * 2.5
-			frag2.position = f2_target + Vector2(0.0, bob2)
-			frag2.rotation_degrees = 35.0 + cos((t - 5.8) * 1.4) * 1.5
-			frag2.scale = f2_target_scale
+		var cur_pos: Vector2 = p0
+		var cur_scale: Vector2 = FRAGMENT_START_SCALE
+		var cur_rot: float = r_start
 
-	# Fragment 03: Launch 1.4s -> Arrives 7.8s (SW: Dungeon III)
-	if frag3 != null:
-		if t < 1.4:
-			frag3.position = f3_start
-			frag3.rotation_degrees = -3.0
-			frag3.scale = f3_start_scale
-		elif t < 7.8:
-			var p3: float = clampf((t - 1.4) / 6.4, 0.0, 1.0)
-			var ease3: float = _smooth_step(0.0, 1.0, p3)
-			var arc3: Vector2 = Vector2(sin(p3 * PI) * -50.0, sin(p3 * PI) * 45.0)
-			frag3.position = f3_start.lerp(f3_target, ease3) + arc3
-			frag3.rotation_degrees = lerpf(-3.0, -18.0, ease3)
-			frag3.scale = f3_start_scale.lerp(f3_target_scale, ease3)
+		if t < t_start:
+			var idle_drift: float = sin(t * 3.0 + float(i)) * 2.0
+			cur_pos = p0 + Vector2(0.0, idle_drift)
+			cur_scale = FRAGMENT_START_SCALE
+			cur_rot = r_start
+		elif t < t_end:
+			var raw_p: float = clampf((t - t_start) / dur, 0.0, 1.0)
+			var u: float = _apply_easing(ease_type, raw_p)
+			cur_pos = _evaluate_quad_bezier(p0, p1, p2, u)
+			cur_scale = FRAGMENT_START_SCALE.lerp(FRAGMENT_TARGET_SCALE, u)
+			cur_rot = lerpf(r_start, r_target, u)
 		else:
-			var bob3: float = sin((t - 7.8) * 2.4) * 2.5
-			frag3.position = f3_target + Vector2(0.0, bob3)
-			frag3.rotation_degrees = -18.0 + sin((t - 7.8) * 1.2) * 1.5
-			frag3.scale = f3_target_scale
+			var bob: float = sin((t - t_end) * 2.5) * 2.5
+			cur_pos = p2 + Vector2(0.0, bob)
+			cur_scale = FRAGMENT_TARGET_SCALE
+			cur_rot = r_target + sin((t - t_end) * 1.5) * 1.5
 
-	# Fragment 04: Launch 1.8s -> Arrives 9.8s (SE: Dungeon IV)
-	if frag4 != null:
-		if t < 1.8:
-			frag4.position = f4_start
-			frag4.rotation_degrees = 3.5
-			frag4.scale = f4_start_scale
-		elif t < 9.8:
-			var p4: float = clampf((t - 1.8) / 8.0, 0.0, 1.0)
-			var ease4: float = _smooth_step(0.0, 1.0, p4)
-			var arc4: Vector2 = Vector2(sin(p4 * PI) * 60.0, sin(p4 * PI) * 55.0)
-			frag4.position = f4_start.lerp(f4_target, ease4) + arc4
-			frag4.rotation_degrees = lerpf(3.5, 45.0, ease4)
-			frag4.scale = f4_start_scale.lerp(f4_target_scale, ease4)
-		else:
-			var bob4: float = sin((t - 9.8) * 2.5) * 2.5
-			frag4.position = f4_target + Vector2(0.0, bob4)
-			frag4.rotation_degrees = 45.0 + cos((t - 9.8) * 1.3) * 1.5
-			frag4.scale = f4_target_scale
+		frag.position = cur_pos - frag.pivot_offset
+		frag.scale = cur_scale
+		frag.rotation_degrees = cur_rot
+
+		# Arcane Trajectory Trail (Line2D)
+		var trail_name: String = "Trail0" + str(i + 1)
+		var trail_line: Line2D = _b4_layers.get(trail_name, null) as Line2D
+		if trail_line != null:
+			if t < t_start:
+				trail_line.clear_points()
+			else:
+				var pts: PackedVector2Array = PackedVector2Array()
+				var max_u: float = 1.0 if t >= t_end else _apply_easing(ease_type, clampf((t - t_start) / dur, 0.0, 1.0))
+				var seg_count: int = 16
+				for s in range(seg_count + 1):
+					var sample_u: float = (float(s) / float(seg_count)) * max_u
+					pts.append(_evaluate_quad_bezier(p0, p1, p2, sample_u))
+				trail_line.points = pts
 
 	# 3. DESTINATION DISCOVERY & REVEAL STATES
 	var d1: Control = _b4_destinations.get("Destination01", null) as Control
@@ -1316,7 +1419,7 @@ func _process_beat04(_delta: float) -> void:
 
 	# Harmonic pulse during final reveal
 	if t >= 10.4 and t < 14.2:
-		var pulse: float = 1.0 + sin(t * 4.0) * 0.12
+		var pulse: float = 1.0 + sin(t * 4.0) * 0.10
 		for d_node in [d1, d2, d3, d4]:
 			if d_node != null:
 				var beacon: Control = d_node.get_node_or_null("Beacon") as Control

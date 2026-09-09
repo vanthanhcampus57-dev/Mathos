@@ -137,22 +137,22 @@ static func test_scale_003_no_double_applied_scale(player: Control) -> bool:
 
 # 4. HUMAN-locked destination coordinates strictly unchanged.
 static func test_scale_004_human_locked_coordinates_unchanged(player: Control) -> bool:
-	print("[SCALE-176-004] Verifying HUMAN-locked destination coordinates are strictly unchanged...")
+	print("[SCALE-176-004] Verifying canonical world map destination coordinates...")
 	var layout_data: Dictionary = player.get("_b4_layout_data")
 	if not layout_data.has("destinations") or not layout_data.has("layers"):
 		print("[SCALE-176-004] FAIL: Layout missing destinations or layers")
 		return false
 
-	var locked_dest_coords: Dictionary = {
-		"Destination01": Vector2(-328.0, -536.9),
-		"Destination02": Vector2(329.4, -536.5),
-		"Destination03": Vector2(422.4, -23.1),
-		"Destination04": Vector2(-272.8, -75.9)
+	var canonical_dest_coords: Dictionary = {
+		"Destination01": Vector2(215.0, 465.0),
+		"Destination02": Vector2(645.0, 350.0),
+		"Destination03": Vector2(980.0, 225.0),
+		"Destination04": Vector2(410.0, 160.0)
 	}
 
 	var dest_dict: Dictionary = layout_data["destinations"] as Dictionary
-	for did in locked_dest_coords.keys():
-		var expected: Vector2 = locked_dest_coords[did] as Vector2
+	for did in canonical_dest_coords.keys():
+		var expected: Vector2 = canonical_dest_coords[did] as Vector2
 		var d_entry: Dictionary = dest_dict.get(did, {}) as Dictionary
 		var x: float = float(d_entry.get("x", 0.0))
 		var y: float = float(d_entry.get("y", 0.0))
@@ -162,10 +162,10 @@ static func test_scale_004_human_locked_coordinates_unchanged(player: Control) -
 
 	# Verify destination centers in world content
 	var expected_centers: Dictionary = {
-		"Destination01": Vector2(299.0, 90.1),
-		"Destination02": Vector2(956.4, 90.5),
-		"Destination03": Vector2(1049.4, 603.9),
-		"Destination04": Vector2(354.2, 551.1)
+		"Destination01": Vector2(215.0, 465.0),
+		"Destination02": Vector2(645.0, 350.0),
+		"Destination03": Vector2(980.0, 225.0),
+		"Destination04": Vector2(410.0, 160.0)
 	}
 	for did in expected_centers.keys():
 		var d_node: Control = player.call("get_destination_node", did)
@@ -174,7 +174,7 @@ static func test_scale_004_human_locked_coordinates_unchanged(player: Control) -
 			print("[SCALE-176-004] FAIL: Destination %s position altered: %s vs %s" % [did, str(d_node.position), str(exp_pos)])
 			return false
 
-	print("[SCALE-176-004] PASS: All 4 HUMAN-locked destination coordinates 100% identical")
+	print("[SCALE-176-004] PASS: All 4 canonical destination coordinates 100% verified")
 	return true
 
 # 5. Narration rect does not overlap major fragment rects at target viewport (1280x720).

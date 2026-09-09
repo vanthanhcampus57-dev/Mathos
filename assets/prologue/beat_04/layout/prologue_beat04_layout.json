@@ -1,87 +1,110 @@
 {
     "timing": {
         "total_duration": 14.8,
-        "handoff_duration": 2.4,
-        "d1_arrival": 3.6,
-        "d2_arrival": 5.8,
-        "d3_arrival": 7.8,
-        "d4_arrival": 9.8,
-        "reveal_start": 10.5,
+        "handoff_duration": 2.0,
+        "d4_arrival": 7.2,
+        "d3_arrival": 8.2,
+        "d2_arrival": 9.2,
+        "d1_arrival": 10.2,
+        "settled_start": 10.5,
         "dissolve_start": 14.2
+    },
+    "safe_areas": {
+        "narration": {
+            "x": 60.0,
+            "y": 530.0,
+            "width": 1160.0,
+            "height": 160.0
+        },
+        "skip": {
+            "x": 1120.0,
+            "y": 20.0,
+            "width": 140.0,
+            "height": 44.0
+        }
     },
     "destinations": {
         "Destination01": {
-            "name": "Dungeon I — KHU RỪNG SƯƠNG MÙ",
-            "region": "North-West",
-            "x": -328.0,
-            "y": -536.9,
-            "target_pos": [
-                -328.0,
-                -536.9
+            "id": "D1",
+            "name": "Dungeon I \u2014 KHU R\u1eeaNG S\u01af\u01a0NG M\u00d9",
+            "region": "Lower-Left",
+            "landmark_asset": "res://assets/prologue/beat_04/landmarks/wad2_beat04_d1_forest_landmark.png",
+            "center": [
+                215.0,
+                465.0
             ],
+            "x": 215.0,
+            "y": 465.0,
             "color": [
                 0.2,
-                0.9,
-                0.7,
+                0.92,
+                0.76,
                 1.0
             ]
         },
         "Destination02": {
-            "name": "Dungeon II — ĐẦM LẦY TỶ LỆ",
-            "region": "North-East",
-            "x": 329.4,
-            "y": -536.5,
-            "target_pos": [
-                329.4,
-                -536.5
+            "id": "D2",
+            "name": "Dungeon II \u2014 \u0110\u1ea6M L\u1ea6Y T\u1ef6 L\u1ec6",
+            "region": "Center Basin",
+            "landmark_asset": "res://assets/prologue/beat_04/landmarks/wad2_beat04_d2_swamp_landmark.png",
+            "center": [
+                645.0,
+                350.0
             ],
+            "x": 645.0,
+            "y": 350.0,
             "color": [
-                0.95,
-                0.65,
-                0.2,
+                0.85,
+                0.6,
+                0.25,
                 1.0
             ]
         },
         "Destination03": {
-            "name": "Dungeon III — CUNG ĐIỆN HỢP NHẤT",
-            "region": "South-West",
-            "x": 422.4,
-            "y": -23.1,
-            "target_pos": [
-                422.4,
-                -23.1
+            "id": "D3",
+            "name": "Dungeon III \u2014 CUNG \u0110I\u1ec6N H\u1ee2P NH\u1ea4T",
+            "region": "Upper-Right",
+            "landmark_asset": "res://assets/prologue/beat_04/landmarks/wad2_beat04_d3_palace_landmark.png",
+            "center": [
+                980.0,
+                225.0
             ],
+            "x": 980.0,
+            "y": 225.0,
             "color": [
-                0.45,
-                0.55,
+                0.35,
+                0.7,
                 1.0,
                 1.0
             ]
         },
         "Destination04": {
-            "name": "Dungeon IV — ĐỈNH THÁP ĐỘC LẬP",
-            "region": "South-East",
-            "x": -272.8,
-            "y": -75.9,
-            "target_pos": [
-                -272.8,
-                -75.9
+            "id": "D4",
+            "name": "Dungeon IV \u2014 \u0110\u1ec8NH TH\u00c1P \u0110\u1ed8C L\u1eacP",
+            "region": "Upper-Left",
+            "landmark_asset": "res://assets/prologue/beat_04/landmarks/wad2_beat04_d4_tower_landmark.png",
+            "center": [
+                410.0,
+                160.0
             ],
+            "x": 410.0,
+            "y": 160.0,
             "color": [
                 1.0,
                 0.85,
-                0.3,
+                0.35,
                 1.0
             ]
         }
     },
     "layers": {
         "Background": {
-            "x": -196.0,
-            "y": -110.0,
+            "texture": "res://assets/backgrounds/map/d1_world_map_bg.jpg",
+            "x": 0.0,
+            "y": 0.0,
             "scale_x": 1.0,
             "scale_y": 1.0,
-            "opacity": 0.9,
+            "opacity": 0.95,
             "visible": true,
             "z_index": 0
         },
@@ -90,15 +113,20 @@
             "y": 0.0,
             "scale_x": 1.0,
             "scale_y": 1.0,
-            "opacity": 0.4,
+            "opacity": 0.35,
             "visible": true,
             "z_index": 1
         },
         "Fragment01": {
-            "start_x": -82.0,
-            "start_y": -332.0,
-            "target_x": -328.0,
-            "target_y": -536.9,
+            "target_region": "D1",
+            "start_x": 600.0,
+            "start_y": 300.0,
+            "mid_x": 380.0,
+            "mid_y": 360.0,
+            "target_x": 215.0,
+            "target_y": 465.0,
+            "duration": 2.2,
+            "ease": "OUT_QUAD",
             "start_rot": -4.5,
             "target_rot": -25.0,
             "scale_x": 0.52,
@@ -110,10 +138,15 @@
             "z_index": 5
         },
         "Fragment02": {
-            "start_x": 108.0,
-            "start_y": -332.0,
-            "target_x": 329.4,
-            "target_y": -536.5,
+            "target_region": "D2",
+            "start_x": 660.0,
+            "start_y": 300.0,
+            "mid_x": 680.0,
+            "mid_y": 310.0,
+            "target_x": 645.0,
+            "target_y": 350.0,
+            "duration": 1.8,
+            "ease": "IN_OUT_CUBIC",
             "start_rot": 4.0,
             "target_rot": 35.0,
             "scale_x": 0.52,
@@ -125,10 +158,15 @@
             "z_index": 5
         },
         "Fragment03": {
-            "start_x": -67.0,
-            "start_y": -192.0,
-            "target_x": 422.4,
-            "target_y": -23.1,
+            "target_region": "D3",
+            "start_x": 670.0,
+            "start_y": 340.0,
+            "mid_x": 840.0,
+            "mid_y": 250.0,
+            "target_x": 980.0,
+            "target_y": 225.0,
+            "duration": 2.0,
+            "ease": "OUT_EXPO",
             "start_rot": -3.0,
             "target_rot": -18.0,
             "scale_x": 0.52,
@@ -140,10 +178,15 @@
             "z_index": 5
         },
         "Fragment04": {
-            "start_x": 98.0,
-            "start_y": -192.0,
-            "target_x": -272.8,
-            "target_y": -75.9,
+            "target_region": "D4",
+            "start_x": 610.0,
+            "start_y": 340.0,
+            "mid_x": 480.0,
+            "mid_y": 220.0,
+            "target_x": 410.0,
+            "target_y": 160.0,
+            "duration": 1.6,
+            "ease": "OUT_CIRC",
             "start_rot": 3.5,
             "target_rot": 45.0,
             "scale_x": 0.52,
