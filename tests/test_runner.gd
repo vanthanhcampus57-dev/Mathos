@@ -205,5 +205,5 @@ func _count_suite_tests(name: String) -> int:
 		"Math Content Renderer QA": return 19
 		"Replay & Continue Semantics 090": return 6
 		"Prologue Gate Persistence Bug 141": return 7
-		"Sanctum Nexus Hub QA": return 10
+		"Sanctum Nexus Hub QA": return 11
 		_: return 1

@@ -48,8 +48,15 @@ const REF_MARGIN_BOTTOM: float = 24.0
 
 const REF_BADGE_SIZE: Vector2 = Vector2(280.0, 64.0)
 const REF_HUD_SIZE: Vector2 = Vector2(302.0, 52.0)
-const REF_IDENTITY_SIZE: Vector2 = Vector2(320.0, 150.0)
-const REF_JOURNEY_SIZE: Vector2 = Vector2(360.0, 246.0)
+const REF_IDENTITY_SIZE: Vector2 = Vector2(340.0, 175.0)
+const REF_JOURNEY_SIZE: Vector2 = Vector2(350.0, 260.0)
+
+# Authoritative WAD2 Component Pack v1 Assets
+const WAD2_JOURNEY_FOCAL_CREST_PATH: String = "res://assets/ui/hub/wad2_v1/JOURNEY_FOCAL_CREST.png"
+const WAD2_JOURNEY_EDGE_CAP_PATH: String = "res://assets/ui/hub/wad2_v1/JOURNEY_EDGE_CAP.png"
+const WAD2_IDENTITY_EMBLEM_RAIL_PATH: String = "res://assets/ui/hub/wad2_v1/IDENTITY_EMBLEM_RAIL.png"
+const WAD2_CORNER_ORNAMENT_PATH: String = "res://assets/ui/hub/wad2_v1/CORNER_ORNAMENT.png"
+const WAD2_STAGE_BADGE_SILHOUETTE_PATH: String = "res://assets/ui/hub/wad2_v1/STAGE_BADGE_SILHOUETTE.png"
 
 # Canonical Assets
 const SANCTUM_BG_PATH: String = "res://assets/prologue/beat_01/prologue_bg_01_mathos_world.png"
@@ -87,6 +94,7 @@ var _current_mission: String = "Khám phá Khu Rừng Sương Mù và tìm kiế
 var _fragments_x_of_4: String = "0/4 Mảnh Vỡ"
 var _dungeons_x_of_4: String = "0/4 Dungeon"
 var _fragment_states: Array[bool] = [false, false, false, false]
+var _lore_snippet: String = "« Cổng dẫn lối vào Khu Rừng Mù Sương đã thức tỉnh. Mảnh Trật Tự đầu tiên đang chờ được phục hồi. »"
 var _has_save: bool = false
 var _is_muted: bool = false
 var _is_built: bool = false
@@ -114,13 +122,20 @@ var _dungeons_count_label: Label = null
 
 var _identity_panel: PanelContainer = null
 var _identity_emblem_rect: TextureRect = null
+var _identity_rail_rect: TextureRect = null
+var _identity_corner_rect: TextureRect = null
 var _identity_title_label: Label = null
 var _identity_subtitle_label: Label = null
 var _identity_version_label: Label = null
+var _identity_lore_label: Label = null
 var _grimoire_button: Button = null
 var _achievements_button: Button = null
 
 var _journey_panel: PanelContainer = null
+var _journey_focal_crest_rect: TextureRect = null
+var _journey_corner_rect: TextureRect = null
+var _journey_edge_cap_rect: TextureRect = null
+var _stage_badge_icon: TextureRect = null
 var _journey_category_label: Label = null
 var _journey_status_badge: Label = null
 var _active_dungeon_label: Label = null
@@ -503,27 +518,70 @@ func _build_identity_panel() -> void:
 	_identity_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Color(0.03, 0.06, 0.12, 0.85)
-	style.border_width_left = 2
-	style.border_color = Color(0.92, 0.78, 0.35, 0.90)
-	style.corner_radius_top_left = 16
-	style.corner_radius_top_right = 16
-	style.corner_radius_bottom_left = 16
-	style.corner_radius_bottom_right = 16
+	style.bg_color = Color(0.04, 0.08, 0.16, 0.88)
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_width_top = 1
+	style.border_width_bottom = 1
+	style.border_color = Color(0.0, 0.95, 1.0, 0.25)
+	style.corner_radius_top_left = 14
+	style.corner_radius_top_right = 14
+	style.corner_radius_bottom_left = 14
+	style.corner_radius_bottom_right = 14
 	style.shadow_color = Color(0, 0, 0, 0.45)
 	style.shadow_size = 10
-	style.content_margin_left = 20
-	style.content_margin_right = 20
-	style.content_margin_top = 16
-	style.content_margin_bottom = 16
+	style.content_margin_left = 18
+	style.content_margin_right = 18
+	style.content_margin_top = 14
+	style.content_margin_bottom = 14
 	_identity_panel.add_theme_stylebox_override("panel", style)
 
+	# Overlay control for decorative ornaments behind content
+	var ornament_overlay: Control = Control.new()
+	ornament_overlay.name = "IdentityOrnamentOverlay"
+	ornament_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ornament_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	_identity_corner_rect = TextureRect.new()
+	_identity_corner_rect.name = "IdentityCornerOrnament"
+	_identity_corner_rect.texture = _load_texture_safe([WAD2_CORNER_ORNAMENT_PATH])
+	_identity_corner_rect.custom_minimum_size = Vector2(32, 32)
+	_identity_corner_rect.size = Vector2(32, 32)
+	_identity_corner_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_identity_corner_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_identity_corner_rect.modulate = Color(0.0, 0.95, 1.0, 0.35)
+	_identity_corner_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_identity_corner_rect.anchor_left = 1.0
+	_identity_corner_rect.anchor_top = 0.0
+	_identity_corner_rect.anchor_right = 1.0
+	_identity_corner_rect.anchor_bottom = 0.0
+	_identity_corner_rect.offset_left = -34.0
+	_identity_corner_rect.offset_top = 2.0
+	_identity_corner_rect.offset_right = -2.0
+	_identity_corner_rect.offset_bottom = 34.0
+	ornament_overlay.add_child(_identity_corner_rect)
+	_identity_panel.add_child(ornament_overlay)
+
 	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.name = "IdentityVBox"
 	vbox.add_theme_constant_override("separation", 6)
 	_identity_panel.add_child(vbox)
 
-	var title_hbox: HBoxContainer = HBoxContainer.new()
-	title_hbox.add_theme_constant_override("separation", 10)
+	# Brand & Rail Row
+	var brand_hbox: HBoxContainer = HBoxContainer.new()
+	brand_hbox.name = "BrandHBox"
+	brand_hbox.add_theme_constant_override("separation", 8)
+	brand_hbox.alignment = BoxContainer.ALIGNMENT_BEGIN
+
+	_identity_rail_rect = TextureRect.new()
+	_identity_rail_rect.name = "IdentityEmblemRail"
+	_identity_rail_rect.texture = _load_texture_safe([WAD2_IDENTITY_EMBLEM_RAIL_PATH])
+	_identity_rail_rect.custom_minimum_size = Vector2(20, 36)
+	_identity_rail_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_identity_rail_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_identity_rail_rect.modulate = Color(0.95, 0.82, 0.35, 0.85)
+	_identity_rail_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	brand_hbox.add_child(_identity_rail_rect)
 
 	_identity_emblem_rect = TextureRect.new()
 	_identity_emblem_rect.name = "IdentityEmblem"
@@ -531,52 +589,111 @@ func _build_identity_panel() -> void:
 	_identity_emblem_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_identity_emblem_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_identity_emblem_rect.texture = _load_texture_safe([BRAND_LOGO_EMBLEM_PATH, BRAND_LOGO_MAIN_PATH])
-	title_hbox.add_child(_identity_emblem_rect)
+	brand_hbox.add_child(_identity_emblem_rect)
+
+	var titles_vbox: VBoxContainer = VBoxContainer.new()
+	titles_vbox.name = "TitlesVBox"
+	titles_vbox.add_theme_constant_override("separation", 2)
+	titles_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var title_ver_hbox: HBoxContainer = HBoxContainer.new()
+	title_ver_hbox.name = "TitleVerHBox"
+	title_ver_hbox.add_theme_constant_override("separation", 6)
+	title_ver_hbox.alignment = BoxContainer.ALIGNMENT_BEGIN
 
 	_identity_title_label = Label.new()
 	_identity_title_label.name = "IdentityTitleLabel"
 	_identity_title_label.text = "MATHOS"
 	_identity_title_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
-	_identity_title_label.add_theme_font_size_override("font_size", 22)
-	_identity_title_label.add_theme_color_override("font_outline_color", Color(0.1, 0.65, 0.9, 0.5))
-	_identity_title_label.add_theme_constant_override("outline_size", 3)
-	title_hbox.add_child(_identity_title_label)
+	_identity_title_label.add_theme_font_size_override("font_size", 20)
+	_identity_title_label.add_theme_color_override("font_outline_color", Color(0.0, 0.85, 1.0, 0.4))
+	_identity_title_label.add_theme_constant_override("outline_size", 2)
+	title_ver_hbox.add_child(_identity_title_label)
 
-	vbox.add_child(title_hbox)
+	var ver_panel: PanelContainer = PanelContainer.new()
+	ver_panel.name = "VersionPanel"
+	var ver_style: StyleBoxFlat = StyleBoxFlat.new()
+	ver_style.bg_color = Color(0.02, 0.10, 0.18, 0.80)
+	ver_style.border_width_left = 1
+	ver_style.border_width_top = 1
+	ver_style.border_width_right = 1
+	ver_style.border_width_bottom = 1
+	ver_style.border_color = Color(0.0, 0.85, 1.0, 0.30)
+	ver_style.corner_radius_top_left = 4
+	ver_style.corner_radius_top_right = 4
+	ver_style.corner_radius_bottom_left = 4
+	ver_style.corner_radius_bottom_right = 4
+	ver_style.content_margin_left = 5
+	ver_style.content_margin_right = 5
+	ver_style.content_margin_top = 1
+	ver_style.content_margin_bottom = 1
+	ver_panel.add_theme_stylebox_override("panel", ver_style)
+
+	_identity_version_label = Label.new()
+	_identity_version_label.name = "IdentityVersionLabel"
+	_identity_version_label.text = "v0.1.0-rc4"
+	_identity_version_label.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0))
+	_identity_version_label.add_theme_font_size_override("font_size", 9)
+	ver_panel.add_child(_identity_version_label)
+	title_ver_hbox.add_child(ver_panel)
+
+	titles_vbox.add_child(title_ver_hbox)
 
 	_identity_subtitle_label = Label.new()
 	_identity_subtitle_label.name = "IdentitySubtitleLabel"
 	_identity_subtitle_label.text = "Thánh Điện Tri Thức Toán Học"
-	_identity_subtitle_label.add_theme_color_override("font_color", Color(0.92, 0.78, 0.35))
-	_identity_subtitle_label.add_theme_font_size_override("font_size", 12)
-	vbox.add_child(_identity_subtitle_label)
+	_identity_subtitle_label.add_theme_color_override("font_color", Color(0.56, 0.63, 0.75))
+	_identity_subtitle_label.add_theme_font_size_override("font_size", 11)
+	titles_vbox.add_child(_identity_subtitle_label)
 
-	_identity_version_label = Label.new()
-	_identity_version_label.name = "IdentityVersionLabel"
-	_identity_version_label.text = "Phiên bản 0.1.0-rc4 • Hệ Thống Ổn Định"
-	_identity_version_label.add_theme_color_override("font_color", Color(0.55, 0.65, 0.75))
-	_identity_version_label.add_theme_font_size_override("font_size", 11)
-	vbox.add_child(_identity_version_label)
+	brand_hbox.add_child(titles_vbox)
+	vbox.add_child(brand_hbox)
 
+	# Fine illuminated hairline separator
+	var sep_panel: PanelContainer = PanelContainer.new()
+	sep_panel.name = "HairlineSeparator"
+	sep_panel.custom_minimum_size = Vector2(0, 1)
+	var sep_style: StyleBoxFlat = StyleBoxFlat.new()
+	sep_style.bg_color = Color(0.0, 0.85, 1.0, 0.25)
+	sep_panel.add_theme_stylebox_override("panel", sep_style)
+	vbox.add_child(sep_panel)
+
+	# Runtime Lore Snippet
+	_identity_lore_label = Label.new()
+	_identity_lore_label.name = "IdentityLoreLabel"
+	_identity_lore_label.text = _lore_snippet
+	_identity_lore_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_identity_lore_label.custom_minimum_size = Vector2(304, 0)
+	_identity_lore_label.add_theme_color_override("font_color", Color(0.72, 0.80, 0.90, 0.85))
+	_identity_lore_label.add_theme_font_size_override("font_size", 11)
+	vbox.add_child(_identity_lore_label)
+
+	# Compact disabled future reference chips (No giant dead boxes!)
 	var future_hbox: HBoxContainer = HBoxContainer.new()
 	future_hbox.name = "FutureButtonsHBox"
-	future_hbox.add_theme_constant_override("separation", 8)
+	future_hbox.add_theme_constant_override("separation", 6)
 
 	_grimoire_button = Button.new()
 	_grimoire_button.name = "GrimoireButton"
-	_grimoire_button.text = "📖 Hồ Sơ Bí Thuật"
+	_grimoire_button.text = "📜 Hồ Sơ Bí Thuật (Sắp ra mắt)"
 	_grimoire_button.tooltip_text = "Tính năng đang được chuẩn bị"
 	_grimoire_button.disabled = true
+	_grimoire_button.custom_minimum_size = Vector2(0, 26)
+	_grimoire_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_grimoire_button.theme_type_variation = &"MathosSecondaryButton"
+	_grimoire_button.add_theme_font_size_override("font_size", 10)
 	_grimoire_button.modulate.a = 0.55
 	future_hbox.add_child(_grimoire_button)
 
 	_achievements_button = Button.new()
 	_achievements_button.name = "AchievementsButton"
-	_achievements_button.text = "🏆 Thành Tựu"
+	_achievements_button.text = "🏆 Thành Tựu (Sắp ra mắt)"
 	_achievements_button.tooltip_text = "Tính năng đang được chuẩn bị"
 	_achievements_button.disabled = true
+	_achievements_button.custom_minimum_size = Vector2(0, 26)
+	_achievements_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_achievements_button.theme_type_variation = &"MathosSecondaryButton"
+	_achievements_button.add_theme_font_size_override("font_size", 10)
 	_achievements_button.modulate.a = 0.55
 	future_hbox.add_child(_achievements_button)
 
@@ -594,7 +711,7 @@ func _build_contextual_journey_panel() -> void:
 	style.border_width_right = 1
 	style.border_width_top = 1
 	style.border_width_bottom = 1
-	style.border_color = Color(0.25, 0.85, 1.0, 0.35)
+	style.border_color = Color(0.0, 0.85, 1.0, 0.35)
 	style.corner_radius_top_left = 14
 	style.corner_radius_top_right = 14
 	style.corner_radius_bottom_left = 14
@@ -607,96 +724,260 @@ func _build_contextual_journey_panel() -> void:
 	style.content_margin_bottom = 12
 	_journey_panel.add_theme_stylebox_override("panel", style)
 
+	# Overlay control for decorative ornaments behind content
+	var ornament_overlay: Control = Control.new()
+	ornament_overlay.name = "JourneyOrnamentOverlay"
+	ornament_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ornament_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	# 1. Main focal crest watermark behind panel/header
+	_journey_focal_crest_rect = TextureRect.new()
+	_journey_focal_crest_rect.name = "JourneyFocalCrest"
+	_journey_focal_crest_rect.texture = _load_texture_safe([WAD2_JOURNEY_FOCAL_CREST_PATH])
+	_journey_focal_crest_rect.custom_minimum_size = Vector2(56, 56)
+	_journey_focal_crest_rect.size = Vector2(56, 56)
+	_journey_focal_crest_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_journey_focal_crest_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_journey_focal_crest_rect.modulate = Color(0.0, 0.85, 1.0, 0.18)
+	_journey_focal_crest_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_journey_focal_crest_rect.anchor_left = 1.0
+	_journey_focal_crest_rect.anchor_top = 0.0
+	_journey_focal_crest_rect.anchor_right = 1.0
+	_journey_focal_crest_rect.anchor_bottom = 0.0
+	_journey_focal_crest_rect.offset_left = -64.0
+	_journey_focal_crest_rect.offset_top = 8.0
+	_journey_focal_crest_rect.offset_right = -8.0
+	_journey_focal_crest_rect.offset_bottom = 64.0
+	ornament_overlay.add_child(_journey_focal_crest_rect)
+
+	# 2. Corner ornament
+	_journey_corner_rect = TextureRect.new()
+	_journey_corner_rect.name = "JourneyCornerOrnament"
+	_journey_corner_rect.texture = _load_texture_safe([WAD2_CORNER_ORNAMENT_PATH])
+	_journey_corner_rect.custom_minimum_size = Vector2(32, 32)
+	_journey_corner_rect.size = Vector2(32, 32)
+	_journey_corner_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_journey_corner_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_journey_corner_rect.modulate = Color(0.0, 0.85, 1.0, 0.35)
+	_journey_corner_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_journey_corner_rect.anchor_left = 1.0
+	_journey_corner_rect.anchor_top = 0.0
+	_journey_corner_rect.anchor_right = 1.0
+	_journey_corner_rect.anchor_bottom = 0.0
+	_journey_corner_rect.offset_left = -34.0
+	_journey_corner_rect.offset_top = 2.0
+	_journey_corner_rect.offset_right = -2.0
+	_journey_corner_rect.offset_bottom = 34.0
+	ornament_overlay.add_child(_journey_corner_rect)
+
+	_journey_panel.add_child(ornament_overlay)
+
 	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.name = "JourneyVBox"
 	vbox.add_theme_constant_override("separation", 5)
 	_journey_panel.add_child(vbox)
 
+	# Top header row: Category + Status Chip
 	var top_row: HBoxContainer = HBoxContainer.new()
+	top_row.name = "TopRowHBox"
 	top_row.add_theme_constant_override("separation", 8)
+	top_row.alignment = BoxContainer.ALIGNMENT_BEGIN
 
 	_journey_category_label = Label.new()
 	_journey_category_label.name = "CategoryLabel"
-	_journey_category_label.text = "HÀNH TRÌNH CHÍNH"
-	_journey_category_label.add_theme_color_override("font_color", Color(0.92, 0.78, 0.35))
+	_journey_category_label.text = "◆ HÀNH TRÌNH CHÍNH"
+	_journey_category_label.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0))
 	_journey_category_label.add_theme_font_size_override("font_size", 11)
 	_journey_category_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_row.add_child(_journey_category_label)
+
+	var status_panel: PanelContainer = PanelContainer.new()
+	status_panel.name = "StatusBadgePanel"
+	var status_style: StyleBoxFlat = StyleBoxFlat.new()
+	status_style.bg_color = Color(0.02, 0.12, 0.20, 0.85)
+	status_style.border_width_left = 1
+	status_style.border_width_top = 1
+	status_style.border_width_right = 1
+	status_style.border_width_bottom = 1
+	status_style.border_color = Color(0.0, 0.85, 1.0, 0.40)
+	status_style.corner_radius_top_left = 10
+	status_style.corner_radius_top_right = 10
+	status_style.corner_radius_bottom_left = 10
+	status_style.corner_radius_bottom_right = 10
+	status_style.content_margin_left = 8
+	status_style.content_margin_right = 8
+	status_style.content_margin_top = 2
+	status_style.content_margin_bottom = 2
+	status_panel.add_theme_stylebox_override("panel", status_style)
 
 	_journey_status_badge = Label.new()
 	_journey_status_badge.name = "StatusBadge"
 	_journey_status_badge.text = "ĐANG MỞ"
 	_journey_status_badge.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0))
-	_journey_status_badge.add_theme_font_size_override("font_size", 11)
-	top_row.add_child(_journey_status_badge)
+	_journey_status_badge.add_theme_font_size_override("font_size", 10)
+	status_panel.add_child(_journey_status_badge)
+	top_row.add_child(status_panel)
 
 	vbox.add_child(top_row)
 
-	_active_dungeon_label = Label.new()
-	_active_dungeon_label.name = "ActiveDungeonLabel"
-	_active_dungeon_label.text = _active_dungeon
-	_active_dungeon_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
-	_active_dungeon_label.add_theme_font_size_override("font_size", 15)
-	vbox.add_child(_active_dungeon_label)
+	# Destination, Stage Badge & Mission
+	var stage_badge_hbox: HBoxContainer = HBoxContainer.new()
+	stage_badge_hbox.name = "StageBadgeHBox"
+	stage_badge_hbox.add_theme_constant_override("separation", 6)
+
+	_stage_badge_icon = TextureRect.new()
+	_stage_badge_icon.name = "StageBadgeSilhouette"
+	_stage_badge_icon.texture = _load_texture_safe([WAD2_STAGE_BADGE_SILHOUETTE_PATH])
+	_stage_badge_icon.custom_minimum_size = Vector2(16, 16)
+	_stage_badge_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_stage_badge_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_stage_badge_icon.modulate = Color(0.95, 0.82, 0.35)
+	_stage_badge_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stage_badge_hbox.add_child(_stage_badge_icon)
 
 	_current_stage_label = Label.new()
 	_current_stage_label.name = "CurrentStageLabel"
 	_current_stage_label.text = _current_stage
 	_current_stage_label.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0))
-	_current_stage_label.add_theme_font_size_override("font_size", 12)
-	vbox.add_child(_current_stage_label)
+	_current_stage_label.add_theme_font_size_override("font_size", 11)
+	stage_badge_hbox.add_child(_current_stage_label)
+
+	vbox.add_child(stage_badge_hbox)
+
+	_active_dungeon_label = Label.new()
+	_active_dungeon_label.name = "ActiveDungeonLabel"
+	_active_dungeon_label.text = _active_dungeon
+	_active_dungeon_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	_active_dungeon_label.add_theme_font_size_override("font_size", 16)
+	vbox.add_child(_active_dungeon_label)
 
 	_current_mission_label = Label.new()
 	_current_mission_label.name = "CurrentMissionLabel"
 	_current_mission_label.text = _current_mission
 	_current_mission_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_current_mission_label.custom_minimum_size = Vector2(320, 0)
+	_current_mission_label.custom_minimum_size = Vector2(310, 0)
 	_current_mission_label.add_theme_color_override("font_color", Color(0.72, 0.78, 0.86))
 	_current_mission_label.add_theme_font_size_override("font_size", 11)
 	vbox.add_child(_current_mission_label)
 
+	# Decorative Edge Cap Separator
+	var cap_hbox: HBoxContainer = HBoxContainer.new()
+	cap_hbox.name = "EdgeCapHBox"
+	cap_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+
+	_journey_edge_cap_rect = TextureRect.new()
+	_journey_edge_cap_rect.name = "JourneyEdgeCap"
+	_journey_edge_cap_rect.texture = _load_texture_safe([WAD2_JOURNEY_EDGE_CAP_PATH])
+	_journey_edge_cap_rect.custom_minimum_size = Vector2(200, 10)
+	_journey_edge_cap_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_journey_edge_cap_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_journey_edge_cap_rect.modulate = Color(0.0, 0.85, 1.0, 0.60)
+	_journey_edge_cap_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cap_hbox.add_child(_journey_edge_cap_rect)
+	vbox.add_child(cap_hbox)
+
+	# Action VBox with Visual Hierarchy (PRES-LAYOUT-001 preserved)
 	_action_vbox = VBoxContainer.new()
 	_action_vbox.name = "ActionVBox"
 	_action_vbox.add_theme_constant_override("separation", 6)
 
+	# 1. Primary Dominant CTA (TIẾP TỤC HÀNH TRÌNH)
 	_continue_button = Button.new()
 	_continue_button.name = "ContinueButton"
 	_continue_button.text = "TIẾP TỤC HÀNH TRÌNH"
-	_continue_button.custom_minimum_size = Vector2(320, 38)
+	_continue_button.custom_minimum_size = Vector2(310, 40)
 	_continue_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_continue_button.focus_mode = Control.FOCUS_ALL
 	_continue_button.theme_type_variation = &"MathosPrimaryButton"
+	var cont_style: StyleBoxFlat = StyleBoxFlat.new()
+	cont_style.bg_color = Color(0.0, 0.85, 1.0, 0.95)
+	cont_style.border_width_left = 1
+	cont_style.border_width_top = 1
+	cont_style.border_width_right = 1
+	cont_style.border_width_bottom = 1
+	cont_style.border_color = Color(0.70, 0.95, 1.0, 0.90)
+	cont_style.corner_radius_top_left = 10
+	cont_style.corner_radius_top_right = 10
+	cont_style.corner_radius_bottom_left = 10
+	cont_style.corner_radius_bottom_right = 10
+	cont_style.shadow_color = Color(0.0, 0.85, 1.0, 0.40)
+	cont_style.shadow_size = 8
+	_continue_button.add_theme_stylebox_override("normal", cont_style)
+	_continue_button.add_theme_stylebox_override("hover", cont_style)
+	_continue_button.add_theme_stylebox_override("pressed", cont_style)
+	_continue_button.add_theme_stylebox_override("focus", cont_style)
+	_continue_button.add_theme_color_override("font_color", Color(0.02, 0.05, 0.12))
+	_continue_button.add_theme_color_override("font_hover_color", Color(0.0, 0.0, 0.0))
+	_continue_button.add_theme_color_override("font_focus_color", Color(0.02, 0.05, 0.12))
+	_continue_button.add_theme_font_size_override("font_size", 13)
 	_continue_button.pressed.connect(func():
 		continue_game_requested.emit()
 		continue_requested.emit()
 	)
 	_action_vbox.add_child(_continue_button)
 
+	# 2. Secondary Navigation Pillar (BẢN ĐỒ THẾ GIỚI MATHOS)
+	_journey_map_button = Button.new()
+	_journey_map_button.name = "JourneyMapButton"
+	_journey_map_button.text = "🧭 BẢN ĐỒ THẾ GIỚI MATHOS"
+	_journey_map_button.custom_minimum_size = Vector2(310, 34)
+	_journey_map_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_journey_map_button.focus_mode = Control.FOCUS_ALL
+	_journey_map_button.theme_type_variation = &"MathosSecondaryButton"
+	var map_style: StyleBoxFlat = StyleBoxFlat.new()
+	map_style.bg_color = Color(0.04, 0.07, 0.14, 0.90)
+	map_style.border_width_left = 1
+	map_style.border_width_top = 1
+	map_style.border_width_right = 1
+	map_style.border_width_bottom = 1
+	map_style.border_color = Color(0.0, 0.85, 1.0, 0.40)
+	map_style.corner_radius_top_left = 10
+	map_style.corner_radius_top_right = 10
+	map_style.corner_radius_bottom_left = 10
+	map_style.corner_radius_bottom_right = 10
+	_journey_map_button.add_theme_stylebox_override("normal", map_style)
+	_journey_map_button.add_theme_stylebox_override("hover", map_style)
+	_journey_map_button.add_theme_stylebox_override("pressed", map_style)
+	_journey_map_button.add_theme_stylebox_override("focus", map_style)
+	_journey_map_button.add_theme_color_override("font_color", Color(0.75, 0.92, 1.0))
+	_journey_map_button.add_theme_font_size_override("font_size", 12)
+	_journey_map_button.pressed.connect(func():
+		show_map_requested.emit()
+		map_requested.emit()
+	)
+	_action_vbox.add_child(_journey_map_button)
+
+	# 3. Tertiary Subordinate Action (BẮT ĐẦU MỚI / REPLAY)
 	_new_game_button = Button.new()
 	_new_game_button.name = "NewGameButton"
 	_new_game_button.text = "BẮT ĐẦU MỚI"
-	_new_game_button.custom_minimum_size = Vector2(320, 32)
+	_new_game_button.custom_minimum_size = Vector2(310, 26)
 	_new_game_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_new_game_button.focus_mode = Control.FOCUS_ALL
 	_new_game_button.theme_type_variation = &"MathosSecondaryButton"
+	var new_style: StyleBoxFlat = StyleBoxFlat.new()
+	new_style.bg_color = Color(0.05, 0.08, 0.14, 0.50)
+	new_style.border_width_left = 1
+	new_style.border_width_top = 1
+	new_style.border_width_right = 1
+	new_style.border_width_bottom = 1
+	new_style.border_color = Color(1.0, 1.0, 1.0, 0.10)
+	new_style.corner_radius_top_left = 8
+	new_style.corner_radius_top_right = 8
+	new_style.corner_radius_bottom_left = 8
+	new_style.corner_radius_bottom_right = 8
+	_new_game_button.add_theme_stylebox_override("normal", new_style)
+	_new_game_button.add_theme_stylebox_override("hover", new_style)
+	_new_game_button.add_theme_stylebox_override("pressed", new_style)
+	_new_game_button.add_theme_stylebox_override("focus", new_style)
+	_new_game_button.add_theme_color_override("font_color", Color(0.55, 0.65, 0.75))
+	_new_game_button.add_theme_font_size_override("font_size", 11)
 	_new_game_button.pressed.connect(func():
 		if _progression_state == HubProgressionState.D1_COMPLETE:
 			replay_requested.emit()
 		new_game_requested.emit()
 	)
 	_action_vbox.add_child(_new_game_button)
-
-	_journey_map_button = Button.new()
-	_journey_map_button.name = "JourneyMapButton"
-	_journey_map_button.text = "BẢN ĐỒ THẾ GIỚI MATHOS"
-	_journey_map_button.custom_minimum_size = Vector2(320, 32)
-	_journey_map_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_journey_map_button.focus_mode = Control.FOCUS_ALL
-	_journey_map_button.theme_type_variation = &"MathosSecondaryButton"
-	_journey_map_button.pressed.connect(func():
-		show_map_requested.emit()
-		map_requested.emit()
-	)
-	_action_vbox.add_child(_journey_map_button)
 
 	_save_summary_label = Label.new()
 	_save_summary_label.name = "SaveSummaryLabel"
@@ -790,6 +1071,7 @@ func _apply_progression_visuals() -> void:
 			_fragments_x_of_4 = "0/4 Mảnh Vỡ"
 			_dungeons_x_of_4 = "0/4 Dungeon"
 			_fragment_states = [false, false, false, false]
+			_lore_snippet = "« Cổng dẫn lối vào Khu Rừng Mù Sương đã thức tỉnh. Mảnh Trật Tự đầu tiên đang chờ được phục hồi. »"
 			if _journey_status_badge != null:
 				_journey_status_badge.text = "ĐANG MỞ"
 				_journey_status_badge.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0))
@@ -798,6 +1080,7 @@ func _apply_progression_visuals() -> void:
 				_continue_button.visible = _has_save
 			if _new_game_button != null:
 				_new_game_button.visible = true
+				_new_game_button.text = "BẮT ĐẦU MỚI"
 
 		HubProgressionState.D1_ACTIVE:
 			_active_dungeon = CANONICAL_DUNGEONS["dungeon_01"]
@@ -806,6 +1089,7 @@ func _apply_progression_visuals() -> void:
 			_fragments_x_of_4 = "0/4 Mảnh Vỡ"
 			_dungeons_x_of_4 = "0/4 Dungeon"
 			_fragment_states = [false, false, false, false]
+			_lore_snippet = "« Cổng dẫn lối vào Khu Rừng Mù Sương đã thức tỉnh. Mảnh Trật Tự đầu tiên đang chờ được phục hồi. »"
 			if _journey_status_badge != null:
 				_journey_status_badge.text = "ĐANG MỞ"
 				_journey_status_badge.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0))
@@ -814,6 +1098,7 @@ func _apply_progression_visuals() -> void:
 				_continue_button.visible = true
 			if _new_game_button != null:
 				_new_game_button.visible = true
+				_new_game_button.text = "BẮT ĐẦU MỚI"
 
 		HubProgressionState.D1_COMPLETE:
 			_active_dungeon = CANONICAL_DUNGEONS["dungeon_01"]
@@ -823,6 +1108,7 @@ func _apply_progression_visuals() -> void:
 			_fragments_x_of_4 = "1/4 Mảnh Vỡ"
 			_dungeons_x_of_4 = "1/4 Dungeon"
 			_fragment_states = [true, false, false, false]
+			_lore_snippet = "« Khu Rừng Mù Sương đã được thanh tẩy. Mảnh Trật Tự đầu tiên đã tỏa sáng trở lại. »"
 			if _journey_status_badge != null:
 				_journey_status_badge.text = "✓ HOÀN THÀNH"
 				_journey_status_badge.add_theme_color_override("font_color", Color(0.95, 0.82, 0.25))
@@ -857,6 +1143,8 @@ func _update_labels() -> void:
 		_fragments_count_label.text = _fragments_x_of_4
 	if _dungeons_count_label != null:
 		_dungeons_count_label.text = _dungeons_x_of_4
+	if _identity_lore_label != null:
+		_identity_lore_label.text = _lore_snippet
 
 func _update_fragments_ui() -> void:
 	for i in range(_fragment_slots.size()):
@@ -917,6 +1205,12 @@ func set_hub_data(data: Dictionary) -> void:
 		_current_stage = String(data["current_stage"])
 	if data.has("current_mission"):
 		_current_mission = String(data["current_mission"])
+	if data.has("lore"):
+		_lore_snippet = String(data["lore"])
+	elif data.has("lore_snippet"):
+		_lore_snippet = String(data["lore_snippet"])
+	elif data.has("region_lore"):
+		_lore_snippet = String(data["region_lore"])
 	if data.has("fragments_x_of_4"):
 		_fragments_x_of_4 = String(data["fragments_x_of_4"])
 	if data.has("dungeons_x_of_4"):
@@ -990,6 +1284,42 @@ func get_identity_panel() -> PanelContainer:
 func get_journey_panel() -> PanelContainer:
 	_ensure_built()
 	return _journey_panel
+
+func get_identity_rail_rect() -> TextureRect:
+	_ensure_built()
+	return _identity_rail_rect
+
+func get_identity_corner_rect() -> TextureRect:
+	_ensure_built()
+	return _identity_corner_rect
+
+func get_journey_focal_crest_rect() -> TextureRect:
+	_ensure_built()
+	return _journey_focal_crest_rect
+
+func get_journey_corner_rect() -> TextureRect:
+	_ensure_built()
+	return _journey_corner_rect
+
+func get_journey_edge_cap_rect() -> TextureRect:
+	_ensure_built()
+	return _journey_edge_cap_rect
+
+func get_stage_badge_icon() -> TextureRect:
+	_ensure_built()
+	return _stage_badge_icon
+
+func get_identity_lore_label() -> Label:
+	_ensure_built()
+	return _identity_lore_label
+
+func get_grimoire_button() -> Button:
+	_ensure_built()
+	return _grimoire_button
+
+func get_achievements_button() -> Button:
+	_ensure_built()
+	return _achievements_button
 
 func _load_texture_safe(paths: Array) -> Texture2D:
 	for p in paths:

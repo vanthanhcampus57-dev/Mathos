@@ -14,7 +14,7 @@ func _initialize() -> void:
 
 static func run_all_tests() -> bool:
 	print("==================================================")
-	print("STARTING SANCTUM NEXUS HUB TEST SUITE (HUB-001..010)")
+	print("STARTING SANCTUM NEXUS HUB TEST SUITE (HUB-001..011)")
 	print("==================================================")
 
 	if not test_hub_001_instantiation(): return false
@@ -27,9 +27,10 @@ static func run_all_tests() -> bool:
 	if not test_hub_008_multi_resolution_responsive(): return false
 	if not test_hub_009_navigation_and_utility_signals(): return false
 	if not test_hub_010_pres_layout_compatibility(): return false
+	if not test_hub_011_wad2_stitch_visual_parity(): return false
 
 	print("==================================================")
-	print("SANCTUM NEXUS HUB SUMMARY: 10 / 10 passed")
+	print("SANCTUM NEXUS HUB SUMMARY: 11 / 11 passed")
 	print("==================================================")
 	return true
 
@@ -578,3 +579,117 @@ static func test_hub_010_pres_layout_compatibility() -> bool:
 	hub.queue_free()
 	print("[HUB-010] PASS: PRES-LAYOUT-001 compatibility verified!")
 	return true
+
+# HUB-011: WAD2 Component Pack & Stitch Visual Parity
+static func test_hub_011_wad2_stitch_visual_parity() -> bool:
+	print("[HUB-011] Verifying WAD2 assets and Stitch visual parity contracts...")
+	var hub: SanctumNexusHub = _create_hub()
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	if tree != null and tree.root != null:
+		tree.root.add_child(hub)
+
+	# 1. Verify all 5 WAD2 production textures exist and load
+	var wad2_paths: Array[String] = [
+		SanctumNexusHub.WAD2_IDENTITY_EMBLEM_RAIL_PATH,
+		SanctumNexusHub.WAD2_CORNER_ORNAMENT_PATH,
+		SanctumNexusHub.WAD2_JOURNEY_FOCAL_CREST_PATH,
+		SanctumNexusHub.WAD2_JOURNEY_EDGE_CAP_PATH,
+		SanctumNexusHub.WAD2_STAGE_BADGE_SILHOUETTE_PATH
+	]
+	for path in wad2_paths:
+		if not ResourceLoader.exists(path):
+			print("[HUB-011] FAIL: WAD2 asset does not exist: %s" % path)
+			hub.queue_free()
+			return false
+		var tex: Texture2D = load(path) as Texture2D
+		if tex == null:
+			print("[HUB-011] FAIL: Could not load WAD2 texture: %s" % path)
+			hub.queue_free()
+			return false
+
+	# 2. Verify Identity panel Stitch visual elements
+	var id_rail: TextureRect = hub.get_identity_rail_rect()
+	var id_corner: TextureRect = hub.get_identity_corner_rect()
+	var lore_lbl: Label = hub.get_identity_lore_label()
+	var grim_btn: Button = hub.get_grimoire_button()
+	var ach_btn: Button = hub.get_achievements_button()
+
+	if id_rail == null or id_rail.texture == null or id_rail.texture.resource_path != SanctumNexusHub.WAD2_IDENTITY_EMBLEM_RAIL_PATH:
+		print("[HUB-011] FAIL: Identity emblem rail texture missing or incorrect")
+		hub.queue_free()
+		return false
+
+	if id_corner == null or id_corner.texture == null or id_corner.texture.resource_path != SanctumNexusHub.WAD2_CORNER_ORNAMENT_PATH:
+		print("[HUB-011] FAIL: Identity corner ornament texture missing or incorrect")
+		hub.queue_free()
+		return false
+
+	if lore_lbl == null:
+		print("[HUB-011] FAIL: Identity dynamic lore label missing")
+		hub.queue_free()
+		return false
+
+	if grim_btn == null or not grim_btn.disabled or grim_btn.custom_minimum_size.y > 32.0:
+		print("[HUB-011] FAIL: Grimoire future button not properly styled/disabled")
+		hub.queue_free()
+		return false
+
+	if ach_btn == null or not ach_btn.disabled or ach_btn.custom_minimum_size.y > 32.0:
+		print("[HUB-011] FAIL: Achievements future button not properly styled/disabled")
+		hub.queue_free()
+		return false
+
+	# 3. Verify Journey panel Stitch visual elements
+	var j_crest: TextureRect = hub.get_journey_focal_crest_rect()
+	var j_corner: TextureRect = hub.get_journey_corner_rect()
+	var j_edge: TextureRect = hub.get_journey_edge_cap_rect()
+	var s_badge: TextureRect = hub.get_stage_badge_icon()
+
+	if j_crest == null or j_crest.texture == null or j_crest.texture.resource_path != SanctumNexusHub.WAD2_JOURNEY_FOCAL_CREST_PATH:
+		print("[HUB-011] FAIL: Journey focal crest texture missing or incorrect")
+		hub.queue_free()
+		return false
+
+	if j_corner == null or j_corner.texture == null or j_corner.texture.resource_path != SanctumNexusHub.WAD2_CORNER_ORNAMENT_PATH:
+		print("[HUB-011] FAIL: Journey corner ornament texture missing or incorrect")
+		hub.queue_free()
+		return false
+
+	if j_edge == null or j_edge.texture == null or j_edge.texture.resource_path != SanctumNexusHub.WAD2_JOURNEY_EDGE_CAP_PATH:
+		print("[HUB-011] FAIL: Journey edge cap texture missing or incorrect")
+		hub.queue_free()
+		return false
+
+	if s_badge == null or s_badge.texture == null or s_badge.texture.resource_path != SanctumNexusHub.WAD2_STAGE_BADGE_SILHOUETTE_PATH:
+		print("[HUB-011] FAIL: Stage badge silhouette texture missing or incorrect")
+		hub.queue_free()
+		return false
+
+	# 4. Verify dynamic lore update via set_hub_data
+	var custom_lore: String = "Thử thách bí ẩn đang chờ đợi người dũng cảm."
+	hub.set_hub_data({"lore_snippet": custom_lore})
+	if lore_lbl.text != custom_lore:
+		print("[HUB-011] FAIL: Lore snippet dynamic binding failed: expected '%s', got '%s'" % [custom_lore, lore_lbl.text])
+		hub.queue_free()
+		return false
+
+	# 5. Verify Journey CTA visual hierarchy
+	hub.set_progression_state(SanctumNexusHub.HubProgressionState.D1_ACTIVE)
+	var cont_btn: Button = hub.get_continue_button()
+	var map_btn: Button = hub.get_journey_map_button()
+
+	if not cont_btn.visible or not map_btn.visible:
+		print("[HUB-011] FAIL: Continue or Map button not visible in HUB_D1_ACTIVE")
+		hub.queue_free()
+		return false
+
+	# Dominant CTA has taller height and prominent font sizing
+	if cont_btn.custom_minimum_size.y < 38.0:
+		print("[HUB-011] FAIL: ContinueButton min height below dominant CTA standard: %f" % cont_btn.custom_minimum_size.y)
+		hub.queue_free()
+		return false
+
+	hub.queue_free()
+	print("[HUB-011] PASS: WAD2 assets and Stitch visual parity verified!")
+	return true
+
