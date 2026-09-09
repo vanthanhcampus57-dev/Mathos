@@ -104,7 +104,7 @@ func _ensure_built() -> void:
 
 	clip_contents = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	custom_minimum_size = Vector2(CANVAS_WIDTH, CANVAS_HEIGHT)
+	custom_minimum_size = Vector2.ZERO
 	if get_parent() != null:
 		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
@@ -155,6 +155,17 @@ func update_responsive_layout(target_size: Vector2 = Vector2.ZERO) -> void:
 	var scaled_h: float = CANVAS_HEIGHT * fit_scale
 	_canvas_container.position = Vector2((vp_size.x - scaled_w) * 0.5, (vp_size.y - scaled_h) * 0.5)
 
+	if _controls_node != null:
+		_controls_node.position = Vector2.ZERO
+		_controls_node.size = vp_size
+		var tr: Control = _controls_node.get_node_or_null("TopRightHBox") as Control
+		if tr != null:
+			tr.position = Vector2(vp_size.x - 160.0, 20.0)
+			tr.size = Vector2(136.0, 44.0)
+		if _skip_btn != null:
+			_skip_btn.position = Vector2(vp_size.x - 160.0, vp_size.y - 64.0)
+			_skip_btn.size = Vector2(136.0, 44.0)
+
 func _update_responsive_layout() -> void:
 	update_responsive_layout()
 
@@ -166,19 +177,24 @@ func _update_responsive_layout() -> void:
 func _build_controls_structure() -> void:
 	_controls_node = Control.new()
 	_controls_node.name = "PlayerControls"
-	_controls_node.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_controls_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_controls_node.clip_contents = false
 	add_child(_controls_node)
 
-	# Top-right container for Volume and Settings
+	# Top-right container for Volume and Settings (Anchor-based, minimum 24px right margin)
 	var top_right_hbox: HBoxContainer = HBoxContainer.new()
 	top_right_hbox.name = "TopRightHBox"
-	top_right_hbox.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	top_right_hbox.offset_left = -110.0
+	top_right_hbox.anchor_left = 1.0
+	top_right_hbox.anchor_top = 0.0
+	top_right_hbox.anchor_right = 1.0
+	top_right_hbox.anchor_bottom = 0.0
+	top_right_hbox.offset_left = -160.0
 	top_right_hbox.offset_top = 20.0
 	top_right_hbox.offset_right = -24.0
-	top_right_hbox.offset_bottom = 60.0
+	top_right_hbox.offset_bottom = 64.0
+	top_right_hbox.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	top_right_hbox.grow_vertical = Control.GROW_DIRECTION_END
+	top_right_hbox.alignment = BoxContainer.ALIGNMENT_END
 	top_right_hbox.add_theme_constant_override("separation", 10)
 	top_right_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_controls_node.add_child(top_right_hbox)
@@ -188,7 +204,7 @@ func _build_controls_structure() -> void:
 	_volume_btn.name = "VolumeBtn"
 	_volume_btn.text = "🔊"
 	_volume_btn.tooltip_text = "Âm lượng"
-	_volume_btn.custom_minimum_size = Vector2(38, 36)
+	_volume_btn.custom_minimum_size = Vector2(40, 36)
 	_volume_btn.pressed.connect(func(): volume_pressed.emit())
 	top_right_hbox.add_child(_volume_btn)
 
@@ -197,20 +213,25 @@ func _build_controls_structure() -> void:
 	_settings_btn.name = "SettingsBtn"
 	_settings_btn.text = "⚙"
 	_settings_btn.tooltip_text = "Cài đặt"
-	_settings_btn.custom_minimum_size = Vector2(38, 36)
+	_settings_btn.custom_minimum_size = Vector2(40, 36)
 	_settings_btn.pressed.connect(func(): settings_pressed.emit())
 	top_right_hbox.add_child(_settings_btn)
 
-	# 3. Skip Button (Bottom-Right)
+	# 3. Skip Button (Bottom-Right, anchor-based, minimum 24px right margin)
 	_skip_btn = Button.new()
 	_skip_btn.name = "SkipBtn"
 	_skip_btn.text = "BỎ QUA >>"
 	_skip_btn.tooltip_text = "Bỏ qua đoạn dẫn nhập"
-	_skip_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_skip_btn.offset_left = -140.0
-	_skip_btn.offset_top = -60.0
+	_skip_btn.anchor_left = 1.0
+	_skip_btn.anchor_top = 1.0
+	_skip_btn.anchor_right = 1.0
+	_skip_btn.anchor_bottom = 1.0
+	_skip_btn.offset_left = -160.0
+	_skip_btn.offset_top = -64.0
 	_skip_btn.offset_right = -24.0
 	_skip_btn.offset_bottom = -20.0
+	_skip_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_skip_btn.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_skip_btn.custom_minimum_size = Vector2(116, 40)
 	_skip_btn.pressed.connect(_on_skip_pressed)
 	_controls_node.add_child(_skip_btn)
@@ -582,8 +603,8 @@ func _build_beat04_structure() -> void:
 	# 2. Background: Mathos World Continent Backdrop
 	var bg: TextureRect = TextureRect.new()
 	bg.name = "Background"
-	bg.size = Vector2(1672, 941)
-	bg.position = Vector2(-196.0, -110.0)
+	bg.position = Vector2.ZERO
+	bg.size = Vector2(CANVAS_WIDTH, CANVAS_HEIGHT)
 	bg.pivot_offset = bg.size * 0.5
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -605,17 +626,17 @@ func _build_beat04_structure() -> void:
 
 	# 3b. Arcane Trajectory Trails (Line2D)
 	var trail_configs: Array[Dictionary] = [
-		{"name": "Trail01", "color": Color(0.2, 0.92, 0.76, 0.65)},
-		{"name": "Trail02", "color": Color(0.85, 0.6, 0.25, 0.65)},
-		{"name": "Trail03", "color": Color(0.35, 0.7, 1.0, 0.65)},
-		{"name": "Trail04", "color": Color(1.0, 0.85, 0.35, 0.65)}
+		{"name": "Trail01", "color": Color(0.2, 0.92, 0.76, 0.60)},
+		{"name": "Trail02", "color": Color(0.85, 0.6, 0.25, 0.60)},
+		{"name": "Trail03", "color": Color(0.35, 0.7, 1.0, 0.60)},
+		{"name": "Trail04", "color": Color(1.0, 0.85, 0.35, 0.60)}
 	]
 	for tc in trail_configs:
 		var line: Line2D = Line2D.new()
 		line.name = tc["name"]
-		line.width = 2.5
+		line.width = 2.0
 		line.default_color = tc["color"]
-		line.z_index = 3
+		line.z_index = 2
 		_b4_world_content.add_child(line)
 		_b4_layers[tc["name"]] = line
 
@@ -655,22 +676,30 @@ func _build_beat04_structure() -> void:
 		}
 	]
 
+	var clean_titles: Dictionary = {
+		"Destination01": "KHU RỪNG SƯƠNG MÙ",
+		"Destination02": "ĐẦM LẦY TỶ LỆ",
+		"Destination03": "CUNG ĐIỆN HỢP NHẤT",
+		"Destination04": "ĐỈNH THÁP ĐỘC LẬP"
+	}
+
 	for d in dest_specs:
 		var d_root: Control = Control.new()
 		d_root.name = d["id"]
 		d_root.position = d["pos"]
 		d_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		d_root.modulate.a = 0.0
+		d_root.z_index = 3
 		_b4_world_content.add_child(d_root)
 		_b4_destinations[d["id"]] = d_root
 		_b4_layers[d["id"]] = d_root
 
-		# Regional Landmark Graphic (116x116 px centered at (0,0), safe from safe areas)
+		# Regional Landmark Graphic (88x88 px centered at (0,0), safe from safe areas)
 		var landmark: TextureRect = TextureRect.new()
 		landmark.name = "Landmark"
-		landmark.size = Vector2(116, 116)
-		landmark.position = Vector2(-58, -58)
-		landmark.pivot_offset = Vector2(58, 58)
+		landmark.size = Vector2(88, 88)
+		landmark.position = Vector2(-44, -44)
+		landmark.pivot_offset = Vector2(44, 44)
 		landmark.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		landmark.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		landmark.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -681,29 +710,29 @@ func _build_beat04_structure() -> void:
 		# Outer glow beacon
 		var beacon: TextureRect = TextureRect.new()
 		beacon.name = "Beacon"
-		beacon.size = Vector2(100, 100)
-		beacon.position = Vector2(-50, -50)
-		beacon.pivot_offset = Vector2(50, 50)
+		beacon.size = Vector2(80, 80)
+		beacon.position = Vector2(-40, -40)
+		beacon.pivot_offset = Vector2(40, 40)
 		beacon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		beacon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		beacon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		beacon.texture = _load_texture_safely(ENERGY_BURST_PATH)
 		beacon.modulate = d["color"]
-		beacon.modulate.a = 0.75
+		beacon.modulate.a = 0.55
 		d_root.add_child(beacon)
 
 		# Title card label (positioned above destination node, zero safe-area intrusion)
 		var lbl: Label = Label.new()
 		lbl.name = "TitleLabel"
-		lbl.text = d["name"]
-		lbl.custom_minimum_size = Vector2(320, 32)
-		lbl.position = Vector2(-160, -75)
+		lbl.text = clean_titles.get(d["id"], d["name"])
+		lbl.custom_minimum_size = Vector2(200, 20)
+		lbl.position = Vector2(-100, -56)
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lbl.add_theme_color_override("font_color", d["color"])
 		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
 		lbl.add_theme_constant_override("shadow_offset_x", 1)
 		lbl.add_theme_constant_override("shadow_offset_y", 1)
-		lbl.add_theme_font_size_override("font_size", 16)
+		lbl.add_theme_font_size_override("font_size", 12)
 		d_root.add_child(lbl)
 
 	# 5. Four Fragments (using exact canonical Beat 3 textures, sized 600x600)
@@ -1301,48 +1330,25 @@ func _process_beat04(_delta: float) -> void:
 	var prog: float = clampf(_playback_time / total_dur, 0.0, 1.0) if total_dur > 0.0 else 1.0
 	var t: float = prog * BEAT4_DURATION
 
-	# 1. CAMERA-LED SEQUENTIAL GUIDANCE
-	# Guides viewer sequentially through destinations:
-	# 0.0 - 2.0: Continental Overview
-	# 2.0 - 4.2: Camera focuses on D1 (NW)
-	# 4.2 - 6.4: Camera focuses on D2 (NE)
-	# 6.4 - 8.4: Camera focuses on D3 (SW)
-	# 8.4 - 10.4: Camera focuses on D4 (SE)
-	# 10.4 - 14.2: Camera-led Final Reveal (Wide continental overview with all 4 pulsing beacons)
-	# 14.2 - 14.8: Dissolve to black / D1 Story handoff
+	# 1. CAMERA-LED SEQUENTIAL GUIDANCE (Horizontal guidance protecting safe areas)
 	if _b4_world_content != null:
 		var cam_pos: Vector2 = Vector2.ZERO
-		var cam_scale: float = 1.0
-
 		if t < 2.0:
 			cam_pos = Vector2.ZERO
-			cam_scale = 1.0
 		elif t < 4.2:
 			var p_c1: float = _smooth_step(2.0, 4.2, t)
-			cam_pos = Vector2.ZERO.lerp(Vector2(160.0, 90.0), p_c1)
-			cam_scale = lerpf(1.0, 1.14, p_c1)
+			cam_pos = Vector2.ZERO.lerp(Vector2(160.0, 0.0), p_c1)
 		elif t < 6.4:
 			var p_c2: float = _smooth_step(4.2, 6.4, t)
-			cam_pos = Vector2(160.0, 90.0).lerp(Vector2(-160.0, 90.0), p_c2)
-			cam_scale = 1.14
+			cam_pos = Vector2(160.0, 0.0).lerp(Vector2(-160.0, 0.0), p_c2)
 		elif t < 8.4:
 			var p_c3: float = _smooth_step(6.4, 8.4, t)
-			cam_pos = Vector2(-160.0, 90.0).lerp(Vector2(150.0, -90.0), p_c3)
-			cam_scale = 1.14
-		elif t < 10.4:
-			var p_c4: float = _smooth_step(8.4, 10.4, t)
-			cam_pos = Vector2(150.0, -90.0).lerp(Vector2(-150.0, -90.0), p_c4)
-			cam_scale = 1.14
-		elif t < 14.2:
-			var p_c5: float = _smooth_step(10.4, 12.6, t)
-			cam_pos = Vector2(-150.0, -90.0).lerp(Vector2.ZERO, p_c5)
-			cam_scale = lerpf(1.14, 1.0, p_c5)
+			cam_pos = Vector2(-160.0, 0.0).lerp(Vector2.ZERO, p_c3)
 		else:
 			cam_pos = Vector2.ZERO
-			cam_scale = 1.0
 
 		_b4_world_content.position = cam_pos
-		_b4_world_content.scale = Vector2(cam_scale, cam_scale)
+		_b4_world_content.scale = Vector2.ONE
 
 	# 2. INDIVIDUAL FRAGMENT TRAJECTORIES & TIMING
 	var fids: Array[String] = ["Fragment01", "Fragment02", "Fragment03", "Fragment04"]
@@ -1367,18 +1373,20 @@ func _process_beat04(_delta: float) -> void:
 		var cur_rot: float = r_start
 
 		if t < t_start:
+			# Phase A/B: Rapidly ease scale down from 0.52 to 0.24 after initial handoff (t > 0.3) so central stone doesn't block map reading
+			var p_ab: float = clampf((t - 0.3) / 3.7, 0.0, 1.0)
+			cur_scale = FRAGMENT_START_SCALE.lerp(Vector2(0.24, 0.24), p_ab)
 			var idle_drift: float = sin(t * 3.0 + float(i)) * 2.0
 			cur_pos = p0 + Vector2(0.0, idle_drift)
-			cur_scale = FRAGMENT_START_SCALE
-			cur_rot = r_start
+			cur_rot = r_start + sin(t * 2.0 + float(i)) * 3.0
 		elif t < t_end:
 			var raw_p: float = clampf((t - t_start) / dur, 0.0, 1.0)
 			var u: float = _apply_easing(ease_type, raw_p)
 			cur_pos = _evaluate_quad_bezier(p0, p1, p2, u)
-			cur_scale = FRAGMENT_START_SCALE.lerp(FRAGMENT_TARGET_SCALE, u)
+			cur_scale = Vector2(0.24, 0.24).lerp(FRAGMENT_TARGET_SCALE, u)
 			cur_rot = lerpf(r_start, r_target, u)
 		else:
-			var bob: float = sin((t - t_end) * 2.5) * 2.5
+			var bob: float = sin((t - t_end) * 2.5) * 2.0
 			cur_pos = p2 + Vector2(0.0, bob)
 			cur_scale = FRAGMENT_TARGET_SCALE
 			cur_rot = r_target + sin((t - t_end) * 1.5) * 1.5

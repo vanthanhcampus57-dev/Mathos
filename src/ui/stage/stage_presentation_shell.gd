@@ -160,18 +160,19 @@ func _ensure_sub_components() -> void:
 		if _stage_map_panel == null:
 			_stage_map_panel = DungeonStageMapPanel.new()
 			_stage_map_panel.name = "DungeonStageMapPanel"
-			_stage_map_panel.custom_minimum_size = Vector2(1280, 720)
+			_stage_map_panel.custom_minimum_size = Vector2.ZERO
 			_stage_map_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			_stage_map_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 			_stage_map_panel.visible = false
 			main_content.add_child(_stage_map_panel)
 		else:
-			_stage_map_panel.custom_minimum_size = Vector2(1280, 720)
+			_stage_map_panel.custom_minimum_size = Vector2.ZERO
 			_stage_map_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			_stage_map_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
 		if not _stage_map_panel.is_node_ready():
 			_stage_map_panel._ready()
+		_stage_map_panel.custom_minimum_size = Vector2.ZERO
 
 		if not _stage_map_panel.stage_selected.is_connected(_on_map_stage_selected):
 			_stage_map_panel.stage_selected.connect(_on_map_stage_selected)
@@ -194,7 +195,7 @@ func _ensure_sub_components() -> void:
 			if _story_panel != null:
 				_story_panel.name = "StoryPanel"
 				_story_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-				_story_panel.custom_minimum_size = Vector2(1280, 720)
+				_story_panel.custom_minimum_size = Vector2.ZERO
 				_story_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				_story_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 				_story_panel.visible = false
@@ -202,7 +203,7 @@ func _ensure_sub_components() -> void:
 				if _pause_overlay != null:
 					move_child(_story_panel, _pause_overlay.get_index())
 		else:
-			_story_panel.custom_minimum_size = Vector2(1280, 720)
+			_story_panel.custom_minimum_size = Vector2.ZERO
 			_story_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			_story_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
@@ -226,7 +227,7 @@ func _ensure_sub_components() -> void:
 		if _prologue_player != null:
 			_prologue_player.name = "ProloguePlayer"
 			_prologue_player.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-			_prologue_player.custom_minimum_size = Vector2(1280, 720)
+			_prologue_player.custom_minimum_size = Vector2.ZERO
 			_prologue_player.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			_prologue_player.size_flags_vertical = Control.SIZE_EXPAND_FILL
 			_prologue_player.visible = false
@@ -272,13 +273,14 @@ func _ensure_sub_components() -> void:
 		if _hub_panel != null:
 			_hub_panel.name = "SanctumNexusHub"
 			_hub_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-			_hub_panel.custom_minimum_size = Vector2(1280, 720)
+			_hub_panel.custom_minimum_size = Vector2.ZERO
 			_hub_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			_hub_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 			_hub_panel.visible = (_current_mode == ViewMode.MODE_ENTRY)
 			add_child(_hub_panel)
 			if _pause_overlay != null:
 				move_child(_hub_panel, _pause_overlay.get_index())
+			_hub_panel.custom_minimum_size = Vector2.ZERO
 
 			if _hub_panel.has_signal("continue_requested") and not _hub_panel.continue_requested.is_connected(_on_continue_game_pressed):
 				_hub_panel.continue_requested.connect(_on_continue_game_pressed)
@@ -343,8 +345,8 @@ func _notification(what: int) -> void:
 		if _prologue_player != null and _prologue_player.visible:
 			if size.x > 0 and size.y > 0:
 				_prologue_player.size = size
-				if _prologue_player.has_method("_update_responsive_layout"):
-					_prologue_player.call("_update_responsive_layout")
+				if _prologue_player.has_method("update_responsive_layout"):
+					_prologue_player.call("update_responsive_layout", size)
 		if _hub_panel != null and _hub_panel.visible:
 			if size.x > 0 and size.y > 0:
 				if _hub_panel.has_method("update_responsive_layout"):
@@ -767,6 +769,12 @@ func set_view_mode(mode: ViewMode) -> void:
 	var f_host: MarginContainer = get_feedback_host_container()
 	var complete_panel: StageCompletePanel = get_stage_complete_panel()
 
+	if _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_STORY or _current_mode == ViewMode.MODE_PROLOGUE or _current_mode == ViewMode.MODE_ENTRY:
+		add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	else:
+		if has_theme_stylebox_override("panel"):
+			remove_theme_stylebox_override("panel")
+
 	if _story_panel != null:
 		_story_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_story_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -797,6 +805,8 @@ func set_view_mode(mode: ViewMode) -> void:
 				else:
 					target_size_pro = Vector2(1280, 720)
 			_prologue_player.size = target_size_pro
+			if _prologue_player.has_method("update_responsive_layout"):
+				_prologue_player.call("update_responsive_layout", target_size_pro)
 			if _prologue_player.has_method("start_prologue"):
 				_prologue_player.call("start_prologue")
 
@@ -876,14 +886,11 @@ func set_view_mode(mode: ViewMode) -> void:
 			main_body.add_theme_constant_override("margin_right", 0)
 			main_body.add_theme_constant_override("margin_top", 0)
 			main_body.add_theme_constant_override("margin_bottom", 0)
-			add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 		else:
 			main_body.add_theme_constant_override("margin_left", 16)
 			main_body.add_theme_constant_override("margin_right", 16)
 			main_body.add_theme_constant_override("margin_top", 16)
 			main_body.add_theme_constant_override("margin_bottom", 16)
-			if has_theme_stylebox_override("panel"):
-				remove_theme_stylebox_override("panel")
 
 	if _current_mode == ViewMode.MODE_STORY:
 		if _story_panel != null and _context_info != null:

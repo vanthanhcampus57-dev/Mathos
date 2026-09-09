@@ -86,7 +86,8 @@ func _initialize() -> void:
 		{"name": "Prologue Gate Persistence Bug 141", "func": Callable(preload("res://tests/unit/presentation/test_prologue_gate_persistence_bug_141.gd"), "run_all_tests")},
 		{"name": "Sanctum Nexus Hub QA", "func": Callable(preload("res://tests/unit/presentation/test_sanctum_nexus_hub.gd"), "run_all_tests")},
 		{"name": "D1 Story Draven Karl Parity 185", "func": Callable(preload("res://tests/unit/presentation/test_d1_story_draven_karl_parity_185.gd"), "run_all_tests")},
-		{"name": "D1 Beat 4 World Map 189", "func": Callable(preload("res://tests/unit/presentation/test_prologue_beat04_world_map_189.gd"), "run_all_tests")}
+		{"name": "D1 Beat 4 World Map 189", "func": Callable(preload("res://tests/unit/presentation/test_prologue_beat04_world_map_189.gd"), "run_all_tests")},
+		{"name": "Runtime Visual Fixes 195", "func": Callable(preload("res://tests/unit/presentation/test_runtime_visual_fixes_195.gd"), "run_all_tests")}
 	]
 
 	for s in bool_suites:
@@ -210,4 +211,5 @@ func _count_suite_tests(name: String) -> int:
 		"Sanctum Nexus Hub QA": return 11
 		"D1 Story Draven Karl Parity 185": return 10
 		"D1 Beat 4 World Map 189": return 13
+		"Runtime Visual Fixes 195": return 13
 		_: return 1

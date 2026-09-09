@@ -210,9 +210,9 @@ func _build_top_bar(parent: Control) -> void:
 	topbar_margin.custom_minimum_size = Vector2(0, 72)
 	topbar_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	topbar_margin.mouse_filter = MOUSE_FILTER_IGNORE
-	topbar_margin.add_theme_constant_override("margin_top", 24)
-	topbar_margin.add_theme_constant_override("margin_left", 32)
-	topbar_margin.add_theme_constant_override("margin_right", 32)
+	topbar_margin.add_theme_constant_override("margin_top", 16)
+	topbar_margin.add_theme_constant_override("margin_left", 24)
+	topbar_margin.add_theme_constant_override("margin_right", 24)
 	parent.add_child(topbar_margin)
 	_top_bar = topbar_margin
 
@@ -299,11 +299,11 @@ func _build_top_bar(parent: Control) -> void:
 	_phase_badge_label.add_theme_color_override("font_color", Color(0.40, 0.90, 1.0, 1.0))
 	badge_panel.add_child(_phase_badge_label)
 
-	# Right: Tạm dừng button (~118x34 reference)
+	# Right: Tạm dừng button (~118x34 reference, stable right margin >= 24px)
 	_pause_button = Button.new()
 	_pause_button.name = "PauseButton"
 	_pause_button.text = "Tạm dừng"
-	_pause_button.custom_minimum_size = Vector2(118, 34)
+	_pause_button.custom_minimum_size = Vector2(110, 34)
 	_pause_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_pause_button.theme_type_variation = &"MathosSecondaryButton"
 	_pause_button.focus_mode = FOCUS_ALL
@@ -316,9 +316,9 @@ func _build_character_and_dialogue_stage(parent: Control) -> void:
 	stage_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	stage_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	stage_margin.mouse_filter = MOUSE_FILTER_IGNORE
-	stage_margin.add_theme_constant_override("margin_left", 32)
-	stage_margin.add_theme_constant_override("margin_right", 32)
-	stage_margin.add_theme_constant_override("margin_bottom", 28)
+	stage_margin.add_theme_constant_override("margin_left", 24)
+	stage_margin.add_theme_constant_override("margin_right", 24)
+	stage_margin.add_theme_constant_override("margin_bottom", 16)
 	parent.add_child(stage_margin)
 	_stage_container = stage_margin
 
