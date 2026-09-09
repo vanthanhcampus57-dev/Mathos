@@ -316,9 +316,9 @@ func _build_character_and_dialogue_stage(parent: Control) -> void:
 	stage_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	stage_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	stage_margin.mouse_filter = MOUSE_FILTER_IGNORE
-	stage_margin.add_theme_constant_override("margin_left", 40)
-	stage_margin.add_theme_constant_override("margin_right", 40)
-	stage_margin.add_theme_constant_override("margin_bottom", 32)
+	stage_margin.add_theme_constant_override("margin_left", 32)
+	stage_margin.add_theme_constant_override("margin_right", 32)
+	stage_margin.add_theme_constant_override("margin_bottom", 28)
 	parent.add_child(stage_margin)
 	_stage_container = stage_margin
 
@@ -344,7 +344,8 @@ func _build_draven_slot(parent: Control) -> void:
 	draven_vbox.custom_minimum_size = Vector2(340, 480)
 	draven_vbox.size_flags_vertical = Control.SIZE_SHRINK_END
 	draven_vbox.mouse_filter = MOUSE_FILTER_IGNORE
-	draven_vbox.add_theme_constant_override("separation", -24) # Overlap nameplate on bottom of portrait
+	draven_vbox.clip_contents = true # Guarantees portrait is visually contained in left slot
+	draven_vbox.add_theme_constant_override("separation", -20) # Overlap nameplate on bottom of portrait
 	parent.add_child(draven_vbox)
 	_character_slot = draven_vbox
 
@@ -355,6 +356,7 @@ func _build_draven_slot(parent: Control) -> void:
 	portrait_container.size_flags_horizontal = Control.SIZE_FILL
 	portrait_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	portrait_container.mouse_filter = MOUSE_FILTER_IGNORE
+	portrait_container.clip_contents = true
 	draven_vbox.add_child(portrait_container)
 
 	# 1. Subtle Cyan Rim & Backplate Glow (behind character)
@@ -386,7 +388,7 @@ func _build_draven_slot(parent: Control) -> void:
 	_draven_rect.mouse_filter = MOUSE_FILTER_IGNORE
 	portrait_container.add_child(_draven_rect)
 
-	# Non-destructive native bottom alpha fade shader
+	# Non-destructive native bottom alpha fade shader with strict transparency guard
 	_apply_bottom_alpha_shader(_draven_rect)
 
 	# 3. Soft Lower Dark/Cyan Environmental Gradient Overlay (in front of character bottom)
@@ -398,11 +400,11 @@ func _build_draven_slot(parent: Control) -> void:
 	lower_grad_rect.mouse_filter = MOUSE_FILTER_IGNORE
 
 	var lower_grad: Gradient = Gradient.new()
-	lower_grad.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
+	lower_grad.offsets = PackedFloat32Array([0.0, 0.55, 1.0])
 	lower_grad.colors = PackedColorArray([
 		Color(0.0, 0.0, 0.0, 0.0),       # Top clear
 		Color(0.02, 0.08, 0.16, 0.0),     # Mid transition
-		Color(0.03, 0.10, 0.18, 0.78)    # Bottom atmospheric dark cyan fade
+		Color(0.03, 0.10, 0.18, 0.78)    # Bottom atmospheric dark cyan fade (no white artifact)
 	])
 	
 	var lower_tex: GradientTexture2D = GradientTexture2D.new()
@@ -416,7 +418,7 @@ func _build_draven_slot(parent: Control) -> void:
 	# 4. Breathing Tween setup
 	_start_rim_breathing(rim_rect)
 
-	# Nameplate (~147px wide, dark navy, cyan border, gold diamond accents)
+	# Nameplate (~154px wide, dark navy, cyan border, gold diamond accents)
 	var nameplate_center: CenterContainer = CenterContainer.new()
 	nameplate_center.name = "NameplateCenter"
 	nameplate_center.size_flags_horizontal = Control.SIZE_FILL
@@ -425,7 +427,7 @@ func _build_draven_slot(parent: Control) -> void:
 
 	_nameplate_panel = PanelContainer.new()
 	_nameplate_panel.name = "DravenNameplate"
-	_nameplate_panel.custom_minimum_size = Vector2(148, 44)
+	_nameplate_panel.custom_minimum_size = Vector2(154, 44)
 	var np_sb: StyleBoxFlat = StyleBoxFlat.new()
 	np_sb.bg_color = Color(0.04, 0.08, 0.16, 0.94)
 	np_sb.border_color = Color(0.25, 0.85, 0.95, 0.85)
@@ -493,10 +495,10 @@ func _build_dialogue_panel(parent: Control) -> void:
 	_dialogue_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_dialogue_panel.size_flags_vertical = Control.SIZE_SHRINK_END
 
-	# Translucent dark navy with cyan border and subtle glow
+	# Translucent cyan/dark navy glass-like panel with subtle glow
 	var dlg_sb: StyleBoxFlat = StyleBoxFlat.new()
 	dlg_sb.bg_color = Color(0.03, 0.06, 0.12, 0.88)
-	dlg_sb.border_color = Color(0.20, 0.80, 0.95, 0.40)
+	dlg_sb.border_color = Color(0.20, 0.80, 0.95, 0.45)
 	dlg_sb.border_width_left = 1
 	dlg_sb.border_width_top = 1
 	dlg_sb.border_width_right = 1
@@ -507,12 +509,20 @@ func _build_dialogue_panel(parent: Control) -> void:
 	dlg_sb.corner_radius_bottom_right = 8
 	dlg_sb.shadow_color = Color(0.02, 0.35, 0.50, 0.25)
 	dlg_sb.shadow_size = 14
-	dlg_sb.content_margin_left = 24
-	dlg_sb.content_margin_right = 24
+	dlg_sb.content_margin_left = 28
+	dlg_sb.content_margin_right = 28
 	dlg_sb.content_margin_top = 20
 	dlg_sb.content_margin_bottom = 20
 	_dialogue_panel.add_theme_stylebox_override("panel", dlg_sb)
 	parent.add_child(_dialogue_panel)
+
+	# Dedicated overlay container for restrained gold/cyan corner ornaments
+	var ornament_overlay: Control = Control.new()
+	ornament_overlay.name = "CornerOrnamentsOverlay"
+	ornament_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ornament_overlay.mouse_filter = MOUSE_FILTER_IGNORE
+	_dialogue_panel.add_child(ornament_overlay)
+	_add_gold_corner_accents(ornament_overlay)
 
 	# Dialogue inner layout
 	var dlg_vbox: VBoxContainer = VBoxContainer.new()
@@ -568,15 +578,12 @@ func _build_dialogue_panel(parent: Control) -> void:
 	_continue_button.pressed.connect(_on_continue_pressed)
 	footer_hbox.add_child(_continue_button)
 
-	# 12x12 Gold corner accents
-	_add_gold_corner_accents(_dialogue_panel)
-
-func _add_gold_corner_accents(panel: Control) -> void:
+func _add_gold_corner_accents(overlay: Control) -> void:
 	var corners = [
-		{"name": "CornerTL", "symbol": "┌"},
-		{"name": "CornerTR", "symbol": "┐"},
-		{"name": "CornerBL", "symbol": "└"},
-		{"name": "CornerBR", "symbol": "┘"}
+		{"name": "CornerTL", "symbol": "┌", "anchor_x": 0.0, "anchor_y": 0.0, "offset_x": 8.0, "offset_y": 6.0},
+		{"name": "CornerTR", "symbol": "┐", "anchor_x": 1.0, "anchor_y": 0.0, "offset_x": -20.0, "offset_y": 6.0},
+		{"name": "CornerBL", "symbol": "└", "anchor_x": 0.0, "anchor_y": 1.0, "offset_x": 8.0, "offset_y": -18.0},
+		{"name": "CornerBR", "symbol": "┘", "anchor_x": 1.0, "anchor_y": 1.0, "offset_x": -20.0, "offset_y": -18.0}
 	]
 	for c in corners:
 		var lbl: Label = Label.new()
@@ -584,9 +591,15 @@ func _add_gold_corner_accents(panel: Control) -> void:
 		lbl.text = c["symbol"]
 		lbl.custom_minimum_size = Vector2(12, 12)
 		lbl.mouse_filter = MOUSE_FILTER_IGNORE
+		lbl.anchor_left = c["anchor_x"]
+		lbl.anchor_right = c["anchor_x"]
+		lbl.anchor_top = c["anchor_y"]
+		lbl.anchor_bottom = c["anchor_y"]
+		lbl.offset_left = c["offset_x"]
+		lbl.offset_top = c["offset_y"]
 		lbl.add_theme_font_size_override("font_size", 12)
-		lbl.add_theme_color_override("font_color", Color(0.96, 0.77, 0.26, 0.65))
-		panel.add_child(lbl)
+		lbl.add_theme_color_override("font_color", Color(0.96, 0.77, 0.26, 0.75))
+		overlay.add_child(lbl)
 
 func _start_rim_breathing(target: Control) -> void:
 	if target == null:
@@ -601,12 +614,15 @@ func _apply_bottom_alpha_shader(target: CanvasItem) -> void:
 	var shader_code: String = """
 shader_type canvas_item;
 
-uniform float fade_start : hint_range(0.0, 1.0) = 0.62;
+uniform float fade_start : hint_range(0.0, 1.0) = 0.65;
 uniform float fade_end : hint_range(0.0, 1.0) = 1.0;
 uniform vec3 ambient_tint = vec3(0.04, 0.12, 0.22);
 
 void fragment() {
 	vec4 col = texture(TEXTURE, UV);
+	if (col.a <= 0.001) {
+		discard;
+	}
 	float alpha_mult = 1.0 - smoothstep(fade_start, fade_end, UV.y);
 	vec3 blended_rgb = mix(col.rgb, ambient_tint, (1.0 - alpha_mult) * 0.45);
 	COLOR = vec4(blended_rgb, col.a * alpha_mult);
@@ -616,7 +632,7 @@ void fragment() {
 	shader.code = shader_code
 	_draven_shader_material = ShaderMaterial.new()
 	_draven_shader_material.shader = shader
-	_draven_shader_material.set_shader_parameter("fade_start", 0.62)
+	_draven_shader_material.set_shader_parameter("fade_start", 0.65)
 	_draven_shader_material.set_shader_parameter("fade_end", 1.0)
 	target.material = _draven_shader_material
 
@@ -866,3 +882,43 @@ func get_page_indicator_label() -> Label:
 
 func get_continue_button() -> Button:
 	return _continue_button
+
+func get_character_slot_rect() -> Rect2:
+	if _character_slot != null:
+		var rect: Rect2 = _character_slot.get_global_rect()
+		if rect.size == Vector2.ZERO:
+			rect.size = _character_slot.custom_minimum_size
+		return rect
+	return Rect2()
+
+func get_dialogue_panel_rect() -> Rect2:
+	if _dialogue_panel != null:
+		var rect: Rect2 = _dialogue_panel.get_global_rect()
+		if rect.size == Vector2.ZERO:
+			rect.size = _dialogue_panel.custom_minimum_size
+		return rect
+	return Rect2()
+
+func get_draven_visual_rect() -> Rect2:
+	if _draven_rect != null:
+		var rect: Rect2 = _draven_rect.get_global_rect()
+		if rect.size == Vector2.ZERO:
+			rect.size = _draven_rect.custom_minimum_size
+		return rect
+	return Rect2()
+
+func has_draven_dialogue_overlap() -> bool:
+	if _character_slot == null or _dialogue_panel == null:
+		return false
+	var char_rect: Rect2 = _character_slot.get_global_rect()
+	var dlg_rect: Rect2 = _dialogue_panel.get_global_rect()
+	if char_rect.size == Vector2.ZERO or dlg_rect.size == Vector2.ZERO:
+		return false
+	if char_rect.intersects(dlg_rect):
+		return true
+	if _draven_rect != null:
+		var draven_rect: Rect2 = _draven_rect.get_global_rect()
+		if draven_rect.size != Vector2.ZERO and draven_rect.intersects(dlg_rect):
+			return true
+	return false
+

@@ -65,7 +65,7 @@ const D1_OVERLAY_PATH: String = "res://assets/backgrounds/d1_misty_forest_bg.png
 const D1_FOG_LAYER_PATH: String = "res://assets/backgrounds/d1_misty_forest_fog_layer.png"
 const BRAND_LOGO_EMBLEM_PATH: String = "res://assets/branding/mathos_logo_emblem.png"
 const BRAND_LOGO_MAIN_PATH: String = "res://assets/branding/mathos_logo_main.png"
-const DRAVEN_PORTRAIT_PATH: String = "res://assets/characters/story/draven/draven_portrait.png"
+const KARL_PORTRAIT_PATH: String = "res://assets/characters/player/karl/karl_portrait.png"
 
 const ORDER_STONE_INTACT_PATH: String = "res://assets/prologue/beat_03/order_stone_intact.png"
 const ORDER_STONE_CRACKED_PATH: String = "res://assets/prologue/beat_03/order_stone_cracked.png"
@@ -339,7 +339,8 @@ func _build_player_badge() -> void:
 	_player_avatar_rect.custom_minimum_size = Vector2(40, 40)
 	_player_avatar_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_player_avatar_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_player_avatar_rect.texture = _load_texture_safe([DRAVEN_PORTRAIT_PATH, BRAND_LOGO_EMBLEM_PATH])
+	# Karl avatar binding: Use Karl asset if available, otherwise neutral player emblem. Never use Draven.
+	_player_avatar_rect.texture = _load_texture_safe([KARL_PORTRAIT_PATH, BRAND_LOGO_EMBLEM_PATH])
 	avatar_panel.add_child(_player_avatar_rect)
 	hbox.add_child(avatar_panel)
 
