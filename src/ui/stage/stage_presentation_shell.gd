@@ -835,13 +835,18 @@ func set_view_mode(mode: ViewMode) -> void:
 		if gameplay_hbox != null:
 			var advisor: Control = gameplay_hbox.get_node_or_null("AdvisorPanel") as Control
 			var is_boss: bool = is_boss_stage()
+			var q_host_panel: MarginContainer = gameplay_hbox.get_node_or_null("QuestionPanelHost") as MarginContainer
 			if is_boss:
 				if _current_mode == ViewMode.MODE_QUESTION_HOST:
 					var boss_panel: BossCombatPanel = get_boss_combat_panel()
 					if boss_panel != null:
 						boss_panel.visible = true
+						boss_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 					if advisor != null:
 						advisor.visible = false
+					if q_host_panel != null:
+						q_host_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+						q_host_panel.custom_minimum_size = Vector2(380, 0)
 				else:
 					var existing_boss: BossCombatPanel = get_existing_boss_combat_panel()
 					if existing_boss != null:
@@ -852,9 +857,13 @@ func set_view_mode(mode: ViewMode) -> void:
 				var existing_boss: BossCombatPanel = get_existing_boss_combat_panel()
 				if existing_boss != null:
 					existing_boss.visible = false
-					existing_boss.set_controller(null)
+					if _context_info != null and not is_boss_stage():
+						existing_boss.set_controller(null)
 				if advisor != null:
 					advisor.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
+				if q_host_panel != null:
+					q_host_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+					q_host_panel.custom_minimum_size = Vector2(0, 0)
 
 	if f_host != null: f_host.visible = (_current_mode == ViewMode.MODE_FEEDBACK_HOST)
 	if complete_panel != null: complete_panel.visible = (_current_mode == ViewMode.MODE_STAGE_COMPLETE)

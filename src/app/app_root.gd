@@ -282,6 +282,8 @@ func select_stage(stage_id: String) -> Dictionary:
 	var context: Dictionary = _game_flow_service.get_stage_context(is_cleared)
 
 	if _presentation_shell != null and _presentation_shell.has_method("set_stage_context"):
+		_presentation_shell.call("set_stage_context", context)
+
 		var is_first_run: bool = false
 		var prog_snap: ProgressState = _progress_service.create_snapshot_view() if _progress_service != null else null
 		if get_prologue_gate().is_first_dungeon_entry(stage_id, prog_snap):
@@ -295,7 +297,6 @@ func select_stage(stage_id: String) -> Dictionary:
 				_presentation_shell.call("set_view_mode", 7) # MODE_STORY
 			elif _presentation_shell.has_method("set_view_mode"):
 				_presentation_shell.call("set_view_mode", 1) # MODE_LESSON
-		_presentation_shell.call("set_stage_context", context)
 		if _bootstrap_ui != null:
 			_bootstrap_ui.visible = false
 		_presentation_shell.visible = true
@@ -896,6 +897,15 @@ func _on_lesson_continue_requested() -> void:
 			_active_question_res = orch.advance_to_question_phase()
 	if _presentation_shell != null and _presentation_shell.has_method("set_view_mode"):
 		_presentation_shell.call("set_view_mode", 2) # MODE_QUESTION_HOST
+	if _active_combat_controller != null and _presentation_shell != null and _presentation_shell.has_method("get_boss_combat_panel"):
+		var boss_panel: BossCombatPanel = _presentation_shell.call("get_boss_combat_panel") as BossCombatPanel
+		if boss_panel != null:
+			boss_panel.set_controller(_active_combat_controller)
+			if not boss_panel.retry_pressed.is_connected(_on_combat_retry_pressed):
+				boss_panel.retry_pressed.connect(_on_combat_retry_pressed)
+			if not boss_panel.card_selected.is_connected(_on_combat_card_selected):
+				boss_panel.card_selected.connect(_on_combat_card_selected)
+		_update_question_panel_combat_cta()
 	_start_current_question()
 
 func _on_question_host_ready(host_container: Control) -> void:

@@ -44,12 +44,38 @@ var _submit_button: Button = null
 func set_combat_action(action_name: String, action_value: String = "") -> void:
 	if action_name.is_empty():
 		_combat_action_text = ""
+		_apply_combat_styling(false)
 	else:
 		if not action_value.is_empty():
 			_combat_action_text = "XUẤT CHIÊU: %s (%s)" % [action_name.to_upper(), action_value]
 		else:
 			_combat_action_text = "XUẤT CHIÊU: %s" % action_name.to_upper()
+		_apply_combat_styling(true)
 	_update_submit_button_text()
+
+func _apply_combat_styling(is_combat: bool) -> void:
+	_ensure_ui_built()
+	if is_combat:
+		size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var glass_box: StyleBoxFlat = StyleBoxFlat.new()
+		glass_box.bg_color = Color(0.06, 0.08, 0.14, 0.72)
+		glass_box.border_width_left = 1
+		glass_box.border_width_top = 1
+		glass_box.border_width_right = 1
+		glass_box.border_width_bottom = 1
+		glass_box.border_color = Color(0.35, 0.45, 0.65, 0.50)
+		glass_box.corner_radius_top_left = 10
+		glass_box.corner_radius_top_right = 10
+		glass_box.corner_radius_bottom_right = 10
+		glass_box.corner_radius_bottom_left = 10
+		glass_box.content_margin_left = 16
+		glass_box.content_margin_top = 16
+		glass_box.content_margin_right = 16
+		glass_box.content_margin_bottom = 16
+		add_theme_stylebox_override("panel", glass_box)
+	else:
+		size_flags_vertical = Control.SIZE_EXPAND_FILL
+		remove_theme_stylebox_override("panel")
 
 func get_combat_action_text() -> String:
 	return _combat_action_text

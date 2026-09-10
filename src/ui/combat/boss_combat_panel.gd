@@ -22,8 +22,8 @@ const CARD_STRIKE_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/STRIKE
 const CARD_DEFEND_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/DEFEND.png"
 const CARD_HEAL_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/HEAL.png"
 const CARD_PROBABILITY_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/PROBABILITY.png"
-const CARD_WIDTH: float = 106.0
-const CARD_HEIGHT: float = 154.0
+const CARD_WIDTH: float = 114.0
+const CARD_HEIGHT: float = 162.0
 
 const CARD_DEFINITIONS: Array[Dictionary] = [
 	{
@@ -195,7 +195,7 @@ func _ensure_ui() -> void:
 	var boss_hud_panel: PanelContainer = PanelContainer.new()
 	boss_hud_panel.name = "BossHudPanel"
 	boss_hud_panel.layout_direction = Control.LAYOUT_DIRECTION_LTR
-	boss_hud_panel.custom_minimum_size = Vector2(400, 56)
+	boss_hud_panel.custom_minimum_size = Vector2(270, 50)
 	boss_hud_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 
 	var boss_hud_style: StyleBoxFlat = StyleBoxFlat.new()
@@ -311,6 +311,7 @@ func _ensure_ui() -> void:
 
 	# --- 1B. SPACER ---
 	var top_spacer: Control = Control.new()
+	top_spacer.name = "TopHudSpacer"
 	top_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top_hud_hbox.add_child(top_spacer)
@@ -319,7 +320,7 @@ func _ensure_ui() -> void:
 	var player_hud_panel: PanelContainer = PanelContainer.new()
 	player_hud_panel.name = "PlayerHudPanel"
 	player_hud_panel.layout_direction = Control.LAYOUT_DIRECTION_LTR
-	player_hud_panel.custom_minimum_size = Vector2(400, 56)
+	player_hud_panel.custom_minimum_size = Vector2(270, 50)
 	player_hud_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 
 	var player_hud_style: StyleBoxFlat = StyleBoxFlat.new()
@@ -418,36 +419,29 @@ func _ensure_ui() -> void:
 	# ---------------------------------------------------------
 	var arena_hbox: HBoxContainer = HBoxContainer.new()
 	arena_hbox.name = "ArenaHBox"
+	arena_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	arena_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	arena_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	arena_hbox.mouse_filter = Control.MOUSE_FILTER_PASS
 	arena_hbox.add_theme_constant_override("separation", 16)
 	vbox.add_child(arena_hbox)
 
-	# 2A. Challenge Zone Clearance Spacer (leaves left ~720px for QuestionPanelHost)
-	var challenge_clearance: Control = Control.new()
-	challenge_clearance.name = "ChallengeClearance"
-	challenge_clearance.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	challenge_clearance.custom_minimum_size = Vector2(0, 300)
-	challenge_clearance.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	arena_hbox.add_child(challenge_clearance)
-
-	# 2B. BOSS VISUAL CONTAINER (Prominent STOCHAS Pixel-Art Character in Arena)
+	# BOSS VISUAL CONTAINER (Prominent STOCHAS Pixel-Art Character in Arena)
 	_boss_visual_rect = PanelContainer.new()
 	_boss_visual_rect.name = "BossVisualContainer"
-	_boss_visual_rect.custom_minimum_size = Vector2(460, BOSS_VISUAL_CONTAINER_HEIGHT)
-	_boss_visual_rect.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_boss_visual_rect.custom_minimum_size = Vector2(360, BOSS_VISUAL_CONTAINER_HEIGHT)
+	_boss_visual_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_boss_visual_rect.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_boss_visual_rect.clip_contents = true
 
 	# Unboxed aesthetic: transparent frame with subtle mystical aura
 	var boss_visual_style: StyleBoxFlat = StyleBoxFlat.new()
-	boss_visual_style.bg_color = Color(0.08, 0.05, 0.14, 0.20)
+	boss_visual_style.bg_color = Color(0.08, 0.05, 0.14, 0.10)
 	boss_visual_style.border_width_left = 1
 	boss_visual_style.border_width_top = 1
 	boss_visual_style.border_width_right = 1
 	boss_visual_style.border_width_bottom = 1
-	boss_visual_style.border_color = Color(0.45, 0.28, 0.70, 0.35)
+	boss_visual_style.border_color = Color(0.45, 0.28, 0.70, 0.20)
 	boss_visual_style.corner_radius_top_left = 10
 	boss_visual_style.corner_radius_top_right = 10
 	boss_visual_style.corner_radius_bottom_right = 10
@@ -510,9 +504,9 @@ func _ensure_ui() -> void:
 	_cards_container.name = "CardsContainer"
 	_cards_container.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	_cards_container.alignment = BoxContainer.ALIGNMENT_CENTER
-	_cards_container.add_theme_constant_override("separation", 12)
+	_cards_container.add_theme_constant_override("separation", 10)
 	_cards_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_cards_container.custom_minimum_size = Vector2(0, 172)
+	_cards_container.custom_minimum_size = Vector2(0, 168)
 	_cards_container.mouse_filter = Control.MOUSE_FILTER_PASS
 	bottom_hbox.add_child(_cards_container)
 
@@ -522,8 +516,9 @@ func _ensure_ui() -> void:
 	var log_panel: PanelContainer = PanelContainer.new()
 	log_panel.name = "CombatFeedPanel"
 	log_panel.layout_direction = Control.LAYOUT_DIRECTION_LTR
-	log_panel.custom_minimum_size = Vector2(340, 170)
+	log_panel.custom_minimum_size = Vector2(270, 96)
 	log_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	log_panel.size_flags_vertical = Control.SIZE_SHRINK_END
 
 	var log_style: StyleBoxFlat = StyleBoxFlat.new()
 	log_style.bg_color = Color(0.05, 0.07, 0.12, 0.88)
@@ -1108,7 +1103,7 @@ func _get_card_dynamic_value_text(card_id: String, model: CardModel) -> String:
 		_: return ""
 
 func _on_card_button_pressed(card_id: String) -> void:
-	if _combat_controller != null and _combat_controller.is_in_combat:
+	if _combat_controller != null:
 		_combat_controller.select_card(card_id)
 		card_selected.emit(card_id)
 		_render_cards()
@@ -1215,6 +1210,20 @@ func get_card_status_label(card_id: String) -> Label:
 	_build_card_slots()
 	var norm: String = _normalize_card_id(card_id)
 	return _card_statuses_by_id.get(norm, null) as Label
+
+func get_cards_container() -> HBoxContainer:
+	_ensure_ui()
+	return _cards_container
+
+func get_card_buttons() -> Array[Button]:
+	_ensure_ui()
+	_build_card_slots()
+	var buttons: Array[Button] = []
+	for k in _card_buttons_by_id:
+		var btn: Button = _card_buttons_by_id[k] as Button
+		if btn != null:
+			buttons.append(btn)
+	return buttons
 
 func is_card_selected(card_id: String) -> bool:
 	if _combat_controller == null or not _combat_controller.is_in_combat:
