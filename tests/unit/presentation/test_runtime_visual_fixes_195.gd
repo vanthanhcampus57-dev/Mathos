@@ -19,7 +19,7 @@ extends SceneTree
 
 const ProloguePlayerClass = preload("res://src/ui/prologue/prologue_player.gd")
 const StoryPanelClass = preload("res://src/ui/story/story_panel.gd")
-const NARRATION_SAFE_RECT: Rect2 = Rect2(60.0, 530.0, 1160.0, 160.0)
+const NARRATION_SAFE_RECT: Rect2 = Rect2(390.0, 582.0, 500.0, 110.0)
 
 func _initialize() -> void:
 	var ok: bool = run_all_tests()

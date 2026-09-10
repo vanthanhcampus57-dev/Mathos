@@ -22,8 +22,12 @@ const BEAT2_DURATION: float = 9.5
 const BEAT3_DURATION: float = 7.0
 const BEAT4_DURATION: float = 14.8
 const CROSSFADE_DURATION: float = 0.6
-const FRAGMENT_START_SCALE: Vector2 = Vector2(0.52, 0.52)
-const FRAGMENT_TARGET_SCALE: Vector2 = Vector2(0.15, 0.15)
+const FRAGMENT_START_SCALE: Vector2 = Vector2(0.258, 0.258)
+const FRAGMENT_TARGET_SCALE: Vector2 = Vector2(0.258, 0.258)
+const FRAGMENT_BASE_SIZE: Vector2 = Vector2(600.0, 600.0)
+const FRAGMENT_DISPLAY_SIZE: Vector2 = Vector2(155.0, 155.0)
+const LANDMARK_SIZE: Vector2 = Vector2(340.0, 340.0)
+const SOCKET_FOOTPRINT: Vector2 = Vector2(420.0, 360.0)
 
 # Authoritative Production Layout Paths (Inside project res://)
 const BEAT01_LAYOUT_RES_PATH: String = "res://assets/prologue/beat_01/layout/prologue_lab_beat01_layout_human_accepted.json"
@@ -31,7 +35,8 @@ const BEAT02_LAYOUT_RES_PATH: String = "res://assets/prologue/beat_02/layout/pro
 const BEAT03_LAYOUT_RES_PATH: String = "res://assets/prologue/beat_03/layout/prologue_beat03_layout.json"
 const BEAT04_LAYOUT_RES_PATH: String = "res://assets/prologue/beat_04/layout/prologue_beat04_layout.json"
 
-const WORLD_MAP_BG_PATH: String = "res://assets/backgrounds/map/d1_world_map_bg.jpg"
+const FRACTURED_REALM_BG_PATH: String = "res://assets/prologue/beat_04/beat04_fractured_realm_bg.png"
+const WORLD_MAP_BG_PATH: String = FRACTURED_REALM_BG_PATH
 const D1_LANDMARK_PATH: String = "res://assets/prologue/beat_04/landmarks/wad2_beat04_d1_forest_landmark.png"
 const D2_LANDMARK_PATH: String = "res://assets/prologue/beat_04/landmarks/wad2_beat04_d2_swamp_landmark.png"
 const D3_LANDMARK_PATH: String = "res://assets/prologue/beat_04/landmarks/wad2_beat04_d3_palace_landmark.png"
@@ -600,7 +605,7 @@ func _build_beat04_structure() -> void:
 	_b4_world_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_beat04_root.add_child(_b4_world_content)
 
-	# 2. Background: Mathos World Continent Backdrop
+	# 2. Background: Fractured Realm Backdrop (Full-screen, aspect ratio preserved, no distortion)
 	var bg: TextureRect = TextureRect.new()
 	bg.name = "Background"
 	bg.position = Vector2.ZERO
@@ -610,21 +615,54 @@ func _build_beat04_structure() -> void:
 	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bg.clip_contents = false
-	bg.texture = _load_texture_safely(WORLD_MAP_BG_PATH)
-	bg.modulate = Color(0.92, 0.92, 0.96, 0.95)
+	bg.texture = _load_texture_safely(FRACTURED_REALM_BG_PATH)
+	bg.modulate = Color(1.0, 1.0, 1.0, 0.98)
 	_b4_world_content.add_child(bg)
 	_b4_layers["Background"] = bg
+
+	# 2b. Center Atmosphere: Subtle Vortex Pulse and Arcane Sparkles
+	var vortex: TextureRect = TextureRect.new()
+	vortex.name = "CenterVortex"
+	vortex.size = Vector2(280.0, 280.0)
+	vortex.position = Vector2(CANVAS_WIDTH * 0.5 - 140.0, CANVAS_HEIGHT * 0.5 - 140.0)
+	vortex.pivot_offset = Vector2(140.0, 140.0)
+	vortex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	vortex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	vortex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vortex.texture = _create_radial_vortex_texture()
+	vortex.modulate = Color(0.35, 0.55, 0.95, 0.45)
+	vortex.z_index = 2
+	_b4_world_content.add_child(vortex)
+	_b4_layers["CenterVortex"] = vortex
+
+	var sparkles: CPUParticles2D = CPUParticles2D.new()
+	sparkles.name = "CenterSparkles"
+	sparkles.position = Vector2(CANVAS_WIDTH * 0.5, CANVAS_HEIGHT * 0.5)
+	sparkles.amount = 14
+	sparkles.lifetime = 2.4
+	sparkles.explosiveness = 0.0
+	sparkles.randomness = 0.4
+	sparkles.spread = 180.0
+	sparkles.gravity = Vector2.ZERO
+	sparkles.initial_velocity_min = 10.0
+	sparkles.initial_velocity_max = 30.0
+	sparkles.scale_amount_min = 1.5
+	sparkles.scale_amount_max = 3.5
+	sparkles.color = Color(0.7, 0.85, 1.0, 0.5)
+	sparkles.z_index = 3
+	_b4_world_content.add_child(sparkles)
+	_b4_layers["CenterSparkles"] = sparkles
 
 	# 3. Vignette
 	var vignette: ColorRect = ColorRect.new()
 	vignette.name = "Vignette"
 	vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vignette.color = Color(0.01, 0.01, 0.03, 0.35)
+	vignette.color = Color(0.01, 0.01, 0.03, 0.25)
 	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_b4_world_content.add_child(vignette)
 	_b4_layers["Vignette"] = vignette
 
-	# 3b. Arcane Trajectory Trails (Line2D)
+	# 3b. Arcane Trajectory Trails (Line2D, short fading trails)
 	var trail_configs: Array[Dictionary] = [
 		{"name": "Trail01", "color": Color(0.2, 0.92, 0.76, 0.60)},
 		{"name": "Trail02", "color": Color(0.85, 0.6, 0.25, 0.60)},
@@ -634,19 +672,35 @@ func _build_beat04_structure() -> void:
 	for tc in trail_configs:
 		var line: Line2D = Line2D.new()
 		line.name = tc["name"]
-		line.width = 2.0
+		line.width = 2.5
 		line.default_color = tc["color"]
 		line.z_index = 2
 		_b4_world_content.add_child(line)
 		_b4_layers[tc["name"]] = line
 
-	# 4. Canonical Destinations (Dungeon I..IV) with regional landmarks
+	# 4. Four Dungeon Sockets (~420x360 footprint, 90-96% landmark occupancy)
 	var dest_specs: Array[Dictionary] = [
+		{
+			"id": "Destination04",
+			"region_id": "D4",
+			"name": "Dungeon IV — ĐỈNH THÁP ĐỘC LẬP",
+			"pos": Vector2(200.0, 185.0),
+			"landmark": D4_LANDMARK_PATH,
+			"color": Color(1.0, 0.85, 0.35, 1.0)
+		},
+		{
+			"id": "Destination03",
+			"region_id": "D3",
+			"name": "Dungeon III — CUNG ĐIỆN HỢP NHẤT",
+			"pos": Vector2(940.0, 185.0),
+			"landmark": D3_LANDMARK_PATH,
+			"color": Color(0.35, 0.7, 1.0, 1.0)
+		},
 		{
 			"id": "Destination01",
 			"region_id": "D1",
-			"name": "Dungeon I — KHU RỪNG SƯƠNG MÙ",
-			"pos": Vector2(215.0, 465.0),
+			"name": "Dungeon I — KHU RỪNG MÙ SƯƠNG",
+			"pos": Vector2(200.0, 520.0),
 			"landmark": D1_LANDMARK_PATH,
 			"color": Color(0.2, 0.92, 0.76, 1.0)
 		},
@@ -654,30 +708,14 @@ func _build_beat04_structure() -> void:
 			"id": "Destination02",
 			"region_id": "D2",
 			"name": "Dungeon II — ĐẦM LẦY TỶ LỆ",
-			"pos": Vector2(645.0, 350.0),
+			"pos": Vector2(1080.0, 520.0),
 			"landmark": D2_LANDMARK_PATH,
 			"color": Color(0.85, 0.6, 0.25, 1.0)
-		},
-		{
-			"id": "Destination03",
-			"region_id": "D3",
-			"name": "Dungeon III — CUNG ĐIỆN HỢP NHẤT",
-			"pos": Vector2(980.0, 225.0),
-			"landmark": D3_LANDMARK_PATH,
-			"color": Color(0.35, 0.7, 1.0, 1.0)
-		},
-		{
-			"id": "Destination04",
-			"region_id": "D4",
-			"name": "Dungeon IV — ĐỈNH THÁP ĐỘC LẬP",
-			"pos": Vector2(410.0, 160.0),
-			"landmark": D4_LANDMARK_PATH,
-			"color": Color(1.0, 0.85, 0.35, 1.0)
 		}
 	]
 
 	var clean_titles: Dictionary = {
-		"Destination01": "KHU RỪNG SƯƠNG MÙ",
+		"Destination01": "KHU RỪNG MÙ SƯƠNG",
 		"Destination02": "ĐẦM LẦY TỶ LỆ",
 		"Destination03": "CUNG ĐIỆN HỢP NHẤT",
 		"Destination04": "ĐỈNH THÁP ĐỘC LẬP"
@@ -694,67 +732,83 @@ func _build_beat04_structure() -> void:
 		_b4_destinations[d["id"]] = d_root
 		_b4_layers[d["id"]] = d_root
 
-		# Regional Landmark Graphic (88x88 px centered at (0,0), safe from safe areas)
-		var landmark: TextureRect = TextureRect.new()
-		landmark.name = "Landmark"
-		landmark.size = Vector2(88, 88)
-		landmark.position = Vector2(-44, -44)
-		landmark.pivot_offset = Vector2(44, 44)
-		landmark.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		landmark.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		landmark.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		landmark.texture = _load_texture_safely(d["landmark"])
-		landmark.modulate = Color(1.0, 1.0, 1.0, 0.95)
-		d_root.add_child(landmark)
-
-		# Outer glow beacon
+		# Outer glow beacon behind landmark
 		var beacon: TextureRect = TextureRect.new()
 		beacon.name = "Beacon"
-		beacon.size = Vector2(80, 80)
-		beacon.position = Vector2(-40, -40)
-		beacon.pivot_offset = Vector2(40, 40)
+		beacon.size = Vector2(180.0, 180.0)
+		beacon.position = Vector2(-90.0, -90.0)
+		beacon.pivot_offset = Vector2(90.0, 90.0)
 		beacon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		beacon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		beacon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		beacon.texture = _load_texture_safely(ENERGY_BURST_PATH)
 		beacon.modulate = d["color"]
-		beacon.modulate.a = 0.55
+		beacon.modulate.a = 0.45
 		d_root.add_child(beacon)
 
-		# Title card label (positioned above destination node, zero safe-area intrusion)
+		# Regional Landmark Graphic (340x340 px, 94.4% of 360px socket height)
+		var landmark: TextureRect = TextureRect.new()
+		landmark.name = "Landmark"
+		landmark.size = LANDMARK_SIZE
+		landmark.position = -LANDMARK_SIZE * 0.5
+		landmark.pivot_offset = LANDMARK_SIZE * 0.5
+		landmark.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		landmark.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		landmark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		landmark.texture = _load_texture_safely(d["landmark"])
+		landmark.modulate = Color(1.0, 1.0, 1.0, 0.96)
+		d_root.add_child(landmark)
+
+		# Native edge dissolve for D1 & D2 into portal atmosphere
+		if d["region_id"] in ["D1", "D2"]:
+			var dissolve: TextureRect = TextureRect.new()
+			dissolve.name = "EdgeDissolve"
+			dissolve.size = Vector2(340.0, 120.0)
+			dissolve.position = Vector2(-170.0, 50.0)
+			dissolve.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			dissolve.stretch_mode = TextureRect.STRETCH_SCALE
+			dissolve.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var bg_tint: Color = Color(0.12, 0.16, 0.24, 0.98) if d["region_id"] == "D1" else Color(0.14, 0.16, 0.22, 0.98)
+			dissolve.texture = _create_vertical_fade_gradient(Color(bg_tint.r, bg_tint.g, bg_tint.b, 0.0), bg_tint)
+			d_root.add_child(dissolve)
+
+		# Cinematic Label (small, clean, no HUD boxes)
 		var lbl: Label = Label.new()
 		lbl.name = "TitleLabel"
 		lbl.text = clean_titles.get(d["id"], d["name"])
-		lbl.custom_minimum_size = Vector2(200, 20)
-		lbl.position = Vector2(-100, -56)
+		lbl.custom_minimum_size = Vector2(260.0, 22.0)
+		if d["region_id"] in ["D3", "D4"]:
+			lbl.position = Vector2(-130.0, 172.0)
+		else:
+			lbl.position = Vector2(-130.0, -195.0)
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		lbl.add_theme_color_override("font_color", d["color"])
-		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
+		lbl.add_theme_color_override("font_color", Color(0.95, 0.92, 0.82, 0.95))
+		lbl.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.95))
 		lbl.add_theme_constant_override("shadow_offset_x", 1)
 		lbl.add_theme_constant_override("shadow_offset_y", 1)
-		lbl.add_theme_font_size_override("font_size", 12)
+		lbl.add_theme_font_size_override("font_size", 13)
 		d_root.add_child(lbl)
 
-	# 5. Four Fragments (using exact canonical Beat 3 textures, sized 600x600)
+	# 5. Four Fragments (~155x155 display size, canonical start quadrants)
 	var frag_specs: Array[Dictionary] = [
-		{"name": "Fragment01", "path": "res://assets/prologue/beat_03/order_fragment_01.png"},
-		{"name": "Fragment02", "path": "res://assets/prologue/beat_03/order_fragment_02.png"},
-		{"name": "Fragment03", "path": "res://assets/prologue/beat_03/order_fragment_03.png"},
-		{"name": "Fragment04", "path": "res://assets/prologue/beat_03/order_fragment_04.png"}
+		{"name": "Fragment01", "path": "res://assets/prologue/beat_03/order_fragment_01.png", "start": Vector2(575.0, 295.0)},
+		{"name": "Fragment02", "path": "res://assets/prologue/beat_03/order_fragment_02.png", "start": Vector2(705.0, 295.0)},
+		{"name": "Fragment03", "path": "res://assets/prologue/beat_03/order_fragment_03.png", "start": Vector2(705.0, 425.0)},
+		{"name": "Fragment04", "path": "res://assets/prologue/beat_03/order_fragment_04.png", "start": Vector2(575.0, 425.0)}
 	]
 
-	var stone_sz: Vector2 = Vector2(600, 600)
 	for f in frag_specs:
 		var f_name: String = f["name"]
 		var tex_rect: TextureRect = TextureRect.new()
 		tex_rect.name = f_name
-		tex_rect.size = stone_sz
-		tex_rect.pivot_offset = stone_sz * 0.5
+		tex_rect.size = FRAGMENT_BASE_SIZE
+		tex_rect.pivot_offset = FRAGMENT_BASE_SIZE * 0.5
+		tex_rect.position = f["start"] - tex_rect.pivot_offset
 		tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		tex_rect.clip_contents = false
-		tex_rect.scale = Vector2(0.52, 0.52)
+		tex_rect.scale = FRAGMENT_START_SCALE
 		tex_rect.texture = _load_texture_safely(f["path"])
 		tex_rect.visible = true
 		tex_rect.modulate.a = 1.0
@@ -766,12 +820,12 @@ func _build_beat04_structure() -> void:
 	var b4_gradient: ColorRect = ColorRect.new()
 	b4_gradient.name = "CinematicGradient"
 	b4_gradient.set_anchors_preset(Control.PRESET_FULL_RECT)
-	b4_gradient.color = Color(0.02, 0.0, 0.04, 0.55)
+	b4_gradient.color = Color(0.02, 0.0, 0.04, 0.35)
 	b4_gradient.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b4_gradient.z_index = 10
 	_beat04_root.add_child(b4_gradient)
 
-	# 7. Beat 4 Narration UI (Canonical narration phrases, z_index = 11)
+	# 7. Beat 4 Narration UI (Compact bottom-center panel, z_index = 11)
 	_b4_narration = Control.new()
 	_b4_narration.name = "NarrationContainer"
 	_b4_narration.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -779,23 +833,43 @@ func _build_beat04_structure() -> void:
 	_b4_narration.z_index = 11
 	_beat04_root.add_child(_b4_narration)
 
+	var narr_panel: PanelContainer = PanelContainer.new()
+	narr_panel.name = "NarrationPanel"
+	narr_panel.custom_minimum_size = Vector2(500.0, 110.0)
+	narr_panel.size = Vector2(500.0, 110.0)
+	narr_panel.position = Vector2(390.0, 582.0)
+	narr_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.05, 0.08, 0.82)
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	style.border_width_left = 1
+	style.border_width_top = 1
+	style.border_width_right = 1
+	style.border_width_bottom = 1
+	style.border_color = Color(0.25, 0.4, 0.6, 0.35)
+	style.content_margin_left = 14.0
+	style.content_margin_right = 14.0
+	style.content_margin_top = 10.0
+	style.content_margin_bottom = 10.0
+	narr_panel.add_theme_stylebox_override("panel", style)
+	_b4_narration.add_child(narr_panel)
+
 	var b4_vbox: VBoxContainer = VBoxContainer.new()
 	b4_vbox.name = "NarrationVBox"
-	b4_vbox.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	b4_vbox.offset_top = -170.0
-	b4_vbox.offset_bottom = -30.0
-	b4_vbox.offset_left = 60.0
-	b4_vbox.offset_right = -60.0
-	b4_vbox.add_theme_constant_override("separation", 10)
 	b4_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	_b4_narration.add_child(b4_vbox)
+	b4_vbox.add_theme_constant_override("separation", 6)
+	narr_panel.add_child(b4_vbox)
 
 	_b4_phrase1_lbl = Label.new()
 	_b4_phrase1_lbl.name = "Phrase1Label"
-	_b4_phrase1_lbl.text = "Bốn mảnh vỡ của Viên Đá Trật Tự bị cuốn đi khắp Mathos..."
+	_b4_phrase1_lbl.text = "Bốn mảnh vỡ của Viên Đá Trật Tự\nbị cuốn đi khắp Mathos..."
 	_b4_phrase1_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_b4_phrase1_lbl.add_theme_color_override("font_color", Color(0.95, 0.85, 0.45, 1.0))
-	_b4_phrase1_lbl.add_theme_font_size_override("font_size", 24)
+	_b4_phrase1_lbl.add_theme_font_size_override("font_size", 15)
 	_b4_phrase1_lbl.modulate.a = 0.0
 	b4_vbox.add_child(_b4_phrase1_lbl)
 
@@ -805,7 +879,7 @@ func _build_beat04_structure() -> void:
 	_b4_phrase2_lbl.text = "[center]Mỗi mảnh rơi vào một vùng đất khác nhau,\nnơi ma thuật và hỗn loạn bắt đầu biến đổi thế giới.[/center]"
 	_b4_phrase2_lbl.fit_content = true
 	_b4_phrase2_lbl.add_theme_color_override("default_color", Color(0.92, 0.94, 0.98, 0.95))
-	_b4_phrase2_lbl.add_theme_font_size_override("normal_font_size", 18)
+	_b4_phrase2_lbl.add_theme_font_size_override("normal_font_size", 13)
 	_b4_phrase2_lbl.modulate.a = 0.0
 	b4_vbox.add_child(_b4_phrase2_lbl)
 
@@ -976,7 +1050,7 @@ func get_fragment_nodes(beat_num: int = -1) -> Array[Control]:
 
 func get_destination_names() -> Array[String]:
 	return [
-		"Dungeon I — KHU RỪNG SƯƠNG MÙ",
+		"Dungeon I — KHU RỪNG MÙ SƯƠNG",
 		"Dungeon II — ĐẦM LẦY TỶ LỆ",
 		"Dungeon III — CUNG ĐIỆN HỢP NHẤT",
 		"Dungeon IV — ĐỈNH THÁP ĐỘC LẬP"
@@ -1011,7 +1085,7 @@ func get_fragment_start_scale(fid: String = "Fragment01") -> Vector2:
 	return FRAGMENT_START_SCALE
 
 func get_b4_narration_safe_rect() -> Rect2:
-	return Rect2(60.0, 530.0, 1160.0, 160.0)
+	return Rect2(390.0, 582.0, 500.0, 110.0)
 
 func get_b4_skip_safe_rect() -> Rect2:
 	return Rect2(1120.0, 20.0, 140.0, 44.0)
@@ -1028,24 +1102,26 @@ func get_b4_fragment_core_rect(fid: String) -> Rect2:
 	var node: Control = get_fragment_node(fid, 4)
 	if node == null:
 		return Rect2()
-	var core_sizes: Dictionary = {
-		"Fragment01": Vector2(727.0, 1177.0),
-		"Fragment02": Vector2(802.0, 1152.0),
-		"Fragment03": Vector2(863.0, 972.0),
-		"Fragment04": Vector2(856.0, 1067.0)
-	}
-	var base_sz: Vector2 = core_sizes.get(fid, Vector2(856.0, 1067.0))
-	var scale_factor: float = node.size.x / 1254.0 if node.size.x > 0.0 else 1.0
-	var sz: Vector2 = base_sz * scale_factor * node.scale
+	var sz: Vector2 = node.size * node.scale
 	var center: Vector2 = node.position + node.pivot_offset
 	return Rect2(center - sz * 0.5, sz)
 
+func get_b4_destination_visual_rect(dest_id: String) -> Rect2:
+	var d_node: Control = get_destination_node(dest_id)
+	if d_node == null:
+		return Rect2()
+	var landmark: TextureRect = d_node.get_node_or_null("Landmark") as TextureRect
+	if landmark != null:
+		var center: Vector2 = d_node.position
+		return Rect2(center - landmark.size * 0.5, landmark.size)
+	return Rect2(d_node.position - LANDMARK_SIZE * 0.5, LANDMARK_SIZE)
+
 func get_canonical_geography() -> Dictionary:
 	return {
-		"D1": Vector2(215.0, 465.0),
-		"D2": Vector2(645.0, 350.0),
-		"D3": Vector2(980.0, 225.0),
-		"D4": Vector2(410.0, 160.0)
+		"D1": Vector2(200.0, 520.0),
+		"D2": Vector2(1080.0, 520.0),
+		"D3": Vector2(940.0, 185.0),
+		"D4": Vector2(200.0, 185.0)
 	}
 
 func get_landmark_paths() -> Dictionary:
@@ -1073,41 +1149,41 @@ func get_landmark_node(region_or_dest_id: String) -> TextureRect:
 func get_trajectory_spec(fid: String) -> Dictionary:
 	var specs: Dictionary = {
 		"Fragment01": {
-			"start": Vector2(600.0, 300.0),
-			"mid": Vector2(380.0, 360.0),
-			"target": Vector2(215.0, 465.0),
-			"start_time": 8.0,
+			"start": Vector2(575.0, 295.0),
+			"mid": Vector2(360.0, 390.0),
+			"target": Vector2(200.0, 520.0),
+			"start_time": 6.5,
 			"duration": 2.2,
 			"ease": "OUT_QUAD",
 			"start_rot": -4.5,
 			"target_rot": -25.0
 		},
 		"Fragment02": {
-			"start": Vector2(660.0, 300.0),
-			"mid": Vector2(680.0, 310.0),
-			"target": Vector2(645.0, 350.0),
-			"start_time": 7.4,
-			"duration": 1.8,
+			"start": Vector2(705.0, 295.0),
+			"mid": Vector2(910.0, 390.0),
+			"target": Vector2(1080.0, 520.0),
+			"start_time": 7.5,
+			"duration": 2.2,
 			"ease": "IN_OUT_CUBIC",
 			"start_rot": 4.0,
 			"target_rot": 35.0
 		},
 		"Fragment03": {
-			"start": Vector2(670.0, 340.0),
-			"mid": Vector2(840.0, 250.0),
-			"target": Vector2(980.0, 225.0),
-			"start_time": 6.2,
-			"duration": 2.0,
+			"start": Vector2(705.0, 425.0),
+			"mid": Vector2(860.0, 290.0),
+			"target": Vector2(940.0, 185.0),
+			"start_time": 5.5,
+			"duration": 2.2,
 			"ease": "OUT_EXPO",
 			"start_rot": -3.0,
 			"target_rot": -18.0
 		},
 		"Fragment04": {
-			"start": Vector2(610.0, 340.0),
-			"mid": Vector2(480.0, 220.0),
-			"target": Vector2(410.0, 160.0),
-			"start_time": 5.6,
-			"duration": 1.6,
+			"start": Vector2(575.0, 425.0),
+			"mid": Vector2(360.0, 290.0),
+			"target": Vector2(200.0, 185.0),
+			"start_time": 4.5,
+			"duration": 2.2,
 			"ease": "OUT_CIRC",
 			"start_rot": 3.5,
 			"target_rot": 45.0
@@ -1135,6 +1211,32 @@ static func _apply_easing(ease_name: String, p: float) -> float:
 			return sqrt(maxf(0.0, 1.0 - pow(t - 1.0, 2.0)))
 		_:
 			return t
+
+static func _create_vertical_fade_gradient(top_color: Color, bottom_color: Color, width: int = 64, height: int = 64) -> GradientTexture2D:
+	var grad_tex: GradientTexture2D = GradientTexture2D.new()
+	grad_tex.width = width
+	grad_tex.height = height
+	grad_tex.fill = GradientTexture2D.FILL_LINEAR
+	grad_tex.fill_from = Vector2(0.5, 0.0)
+	grad_tex.fill_to = Vector2(0.5, 1.0)
+	var grad: Gradient = Gradient.new()
+	grad.set_color(0, top_color)
+	grad.set_color(1, bottom_color)
+	grad_tex.gradient = grad
+	return grad_tex
+
+static func _create_radial_vortex_texture(width: int = 128, height: int = 128) -> GradientTexture2D:
+	var grad_tex: GradientTexture2D = GradientTexture2D.new()
+	grad_tex.width = width
+	grad_tex.height = height
+	grad_tex.fill = GradientTexture2D.FILL_RADIAL
+	grad_tex.fill_from = Vector2(0.5, 0.5)
+	grad_tex.fill_to = Vector2(0.5, 0.0)
+	var grad: Gradient = Gradient.new()
+	grad.set_color(0, Color(0.6, 0.8, 1.0, 0.85))
+	grad.set_color(1, Color(0.1, 0.2, 0.5, 0.0))
+	grad_tex.gradient = grad
+	return grad_tex
 
 func get_current_beat() -> int:
 	return _current_beat
@@ -1330,25 +1432,17 @@ func _process_beat04(_delta: float) -> void:
 	var prog: float = clampf(_playback_time / total_dur, 0.0, 1.0) if total_dur > 0.0 else 1.0
 	var t: float = prog * BEAT4_DURATION
 
-	# 1. CAMERA-LED SEQUENTIAL GUIDANCE (Horizontal guidance protecting safe areas)
+	# 1. FIXED SCREEN FRAMING (Zero distortion, zero unintended Y pan)
 	if _b4_world_content != null:
-		var cam_pos: Vector2 = Vector2.ZERO
-		if t < 2.0:
-			cam_pos = Vector2.ZERO
-		elif t < 4.2:
-			var p_c1: float = _smooth_step(2.0, 4.2, t)
-			cam_pos = Vector2.ZERO.lerp(Vector2(160.0, 0.0), p_c1)
-		elif t < 6.4:
-			var p_c2: float = _smooth_step(4.2, 6.4, t)
-			cam_pos = Vector2(160.0, 0.0).lerp(Vector2(-160.0, 0.0), p_c2)
-		elif t < 8.4:
-			var p_c3: float = _smooth_step(6.4, 8.4, t)
-			cam_pos = Vector2(-160.0, 0.0).lerp(Vector2.ZERO, p_c3)
-		else:
-			cam_pos = Vector2.ZERO
-
-		_b4_world_content.position = cam_pos
+		_b4_world_content.position = Vector2.ZERO
 		_b4_world_content.scale = Vector2.ONE
+
+	# 1b. CENTER ATMOSPHERE (Vortex pulse and sparkles)
+	var vortex: TextureRect = _b4_layers.get("CenterVortex", null) as TextureRect
+	if vortex != null:
+		var pulse: float = 1.0 + sin(t * 2.0) * 0.05
+		vortex.scale = Vector2(pulse, pulse)
+		vortex.modulate.a = clampf((10.0 - t) / 3.0, 0.0, 0.45)
 
 	# 2. INDIVIDUAL FRAGMENT TRAJECTORIES & TIMING
 	var fids: Array[String] = ["Fragment01", "Fragment02", "Fragment03", "Fragment04"]
@@ -1362,7 +1456,7 @@ func _process_beat04(_delta: float) -> void:
 		var p1: Vector2 = spec.get("mid", Vector2(640.0, 320.0)) as Vector2
 		var p2: Vector2 = spec.get("target", Vector2(640.0, 320.0)) as Vector2
 		var t_start: float = float(spec.get("start_time", 5.0))
-		var dur: float = float(spec.get("duration", 2.0))
+		var dur: float = float(spec.get("duration", 2.2))
 		var t_end: float = t_start + dur
 		var ease_type: String = String(spec.get("ease", "OUT_QUAD"))
 		var r_start: float = float(spec.get("start_rot", 0.0))
@@ -1373,42 +1467,46 @@ func _process_beat04(_delta: float) -> void:
 		var cur_rot: float = r_start
 
 		if t < t_start:
-			# Phase A/B: Rapidly ease scale down from 0.52 to 0.24 after initial handoff (t > 0.3) so central stone doesn't block map reading
-			var p_ab: float = clampf((t - 0.3) / 3.7, 0.0, 1.0)
-			cur_scale = FRAGMENT_START_SCALE.lerp(Vector2(0.24, 0.24), p_ab)
-			var idle_drift: float = sin(t * 3.0 + float(i)) * 2.0
-			cur_pos = p0 + Vector2(0.0, idle_drift)
-			cur_rot = r_start + sin(t * 2.0 + float(i)) * 3.0
+			# Micro fragment drift before flight
+			var drift_x: float = sin(t * 2.5 + float(i)) * 2.0
+			var drift_y: float = cos(t * 2.0 + float(i)) * 2.0
+			cur_pos = p0 + Vector2(drift_x, drift_y)
+			cur_rot = r_start + sin(t * 1.5 + float(i)) * 2.0
 		elif t < t_end:
 			var raw_p: float = clampf((t - t_start) / dur, 0.0, 1.0)
 			var u: float = _apply_easing(ease_type, raw_p)
 			cur_pos = _evaluate_quad_bezier(p0, p1, p2, u)
-			cur_scale = Vector2(0.24, 0.24).lerp(FRAGMENT_TARGET_SCALE, u)
 			cur_rot = lerpf(r_start, r_target, u)
 		else:
 			var bob: float = sin((t - t_end) * 2.5) * 2.0
 			cur_pos = p2 + Vector2(0.0, bob)
-			cur_scale = FRAGMENT_TARGET_SCALE
 			cur_rot = r_target + sin((t - t_end) * 1.5) * 1.5
 
 		frag.position = cur_pos - frag.pivot_offset
 		frag.scale = cur_scale
 		frag.rotation_degrees = cur_rot
 
-		# Arcane Trajectory Trail (Line2D)
+		# Arcane Trajectory Trail (Line2D, short fading trail during flight)
 		var trail_name: String = "Trail0" + str(i + 1)
 		var trail_line: Line2D = _b4_layers.get(trail_name, null) as Line2D
 		if trail_line != null:
 			if t < t_start:
 				trail_line.clear_points()
-			else:
+			elif t <= t_end:
 				var pts: PackedVector2Array = PackedVector2Array()
-				var max_u: float = 1.0 if t >= t_end else _apply_easing(ease_type, clampf((t - t_start) / dur, 0.0, 1.0))
-				var seg_count: int = 16
+				var max_u: float = _apply_easing(ease_type, clampf((t - t_start) / dur, 0.0, 1.0))
+				var min_u: float = maxf(0.0, max_u - 0.35)
+				var seg_count: int = 12
 				for s in range(seg_count + 1):
-					var sample_u: float = (float(s) / float(seg_count)) * max_u
+					var sample_u: float = lerpf(min_u, max_u, float(s) / float(seg_count))
 					pts.append(_evaluate_quad_bezier(p0, p1, p2, sample_u))
 				trail_line.points = pts
+				trail_line.modulate.a = 1.0
+			else:
+				var fade_prog: float = clampf((t - t_end) / 0.8, 0.0, 1.0)
+				trail_line.modulate.a = 1.0 - fade_prog
+				if fade_prog >= 1.0:
+					trail_line.clear_points()
 
 	# 3. DESTINATION DISCOVERY & REVEAL STATES
 	var d1: Control = _b4_destinations.get("Destination01", null) as Control
@@ -1416,18 +1514,18 @@ func _process_beat04(_delta: float) -> void:
 	var d3: Control = _b4_destinations.get("Destination03", null) as Control
 	var d4: Control = _b4_destinations.get("Destination04", null) as Control
 
-	if d1 != null:
-		d1.modulate.a = clampf((t - 3.2) / 0.8, 0.0, 1.0)
-	if d2 != null:
-		d2.modulate.a = clampf((t - 5.4) / 0.8, 0.0, 1.0)
-	if d3 != null:
-		d3.modulate.a = clampf((t - 7.4) / 0.8, 0.0, 1.0)
 	if d4 != null:
-		d4.modulate.a = clampf((t - 9.4) / 0.8, 0.0, 1.0)
+		d4.modulate.a = clampf((t - 3.0) / 1.0, 0.0, 1.0)
+	if d3 != null:
+		d3.modulate.a = clampf((t - 4.2) / 1.0, 0.0, 1.0)
+	if d1 != null:
+		d1.modulate.a = clampf((t - 5.2) / 1.0, 0.0, 1.0)
+	if d2 != null:
+		d2.modulate.a = clampf((t - 6.2) / 1.0, 0.0, 1.0)
 
 	# Harmonic pulse during final reveal
 	if t >= 10.4 and t < 14.2:
-		var pulse: float = 1.0 + sin(t * 4.0) * 0.10
+		var pulse: float = 1.0 + sin(t * 3.5) * 0.08
 		for d_node in [d1, d2, d3, d4]:
 			if d_node != null:
 				var beacon: Control = d_node.get_node_or_null("Beacon") as Control
@@ -1436,9 +1534,9 @@ func _process_beat04(_delta: float) -> void:
 
 	# 4. NARRATION PHRASE-BASED REVEAL
 	if _b4_phrase1_lbl != null:
-		_b4_phrase1_lbl.modulate.a = clampf((t - 0.6) / 1.0, 0.0, 1.0)
+		_b4_phrase1_lbl.modulate.a = clampf((t - 0.8) / 1.2, 0.0, 1.0)
 	if _b4_phrase2_lbl != null:
-		_b4_phrase2_lbl.modulate.a = clampf((t - 8.4) / 1.2, 0.0, 1.0)
+		_b4_phrase2_lbl.modulate.a = clampf((t - 7.8) / 1.4, 0.0, 1.0)
 
 	# 5. DISSOLVE TO BLACK AT THE END (14.2s - 14.8s)
 	if _b4_fade_overlay != null:

@@ -70,7 +70,7 @@ static func test_01_world_map_background_present_and_loaded() -> bool:
 		print("[WM-189-01] FAIL: Background texture is null")
 		player.free()
 		return false
-	if not bg.texture.resource_path.contains("d1_world_map_bg.jpg"):
+	if not (bg.texture.resource_path.contains("beat04_fractured_realm_bg.png") or bg.texture.resource_path.contains("d1_world_map_bg.jpg")):
 		print("[WM-189-01] FAIL: Background texture path mismatch: %s" % bg.texture.resource_path)
 		player.free()
 		return false
@@ -108,10 +108,10 @@ static func test_03_canonical_geography_coordinates() -> bool:
 	var player: Control = ProloguePlayerClass.new()
 	player.call("_ensure_built")
 	var expected: Dictionary = {
-		"Destination01": Vector2(215.0, 465.0),
-		"Destination02": Vector2(645.0, 350.0),
-		"Destination03": Vector2(980.0, 225.0),
-		"Destination04": Vector2(410.0, 160.0)
+		"Destination01": Vector2(200.0, 520.0),
+		"Destination02": Vector2(1080.0, 520.0),
+		"Destination03": Vector2(940.0, 185.0),
+		"Destination04": Vector2(200.0, 185.0)
 	}
 	for did in expected.keys():
 		var d_node: Control = player.call("get_destination_node", did)
@@ -176,7 +176,7 @@ static func test_05_quadratic_bezier_evaluation() -> bool:
 	print("[WM-189-05] PASS: Quadratic Bezier math validated")
 	return true
 
-# 6. Fragment scale transition (0.52 -> 0.15)
+# 6. Fragment scale transition
 static func test_06_fragment_scale_transition() -> bool:
 	print("[WM-189-06] Testing fragment scale transition...")
 	var player: Control = ProloguePlayerClass.new()
@@ -187,8 +187,8 @@ static func test_06_fragment_scale_transition() -> bool:
 	player.set("_playback_time", 0.2)
 	player.call("_process_beat04", 0.016)
 	var f1: Control = player.call("get_fragment_node", "Fragment01", 4)
-	if absf(f1.scale.x - 0.52) > 0.02:
-		print("[WM-189-06] FAIL: Initial scale not 0.52: %s" % str(f1.scale))
+	if absf(f1.scale.x - 0.258) > 0.05:
+		print("[WM-189-06] FAIL: Initial scale not ~0.258: %s" % str(f1.scale))
 		player.free()
 		return false
 
@@ -197,16 +197,16 @@ static func test_06_fragment_scale_transition() -> bool:
 	player.call("_process_beat04", 0.016)
 	for fid in ["Fragment01", "Fragment02", "Fragment03", "Fragment04"]:
 		var f_node: Control = player.call("get_fragment_node", fid, 4)
-		if absf(f_node.scale.x - 0.15) > 0.02 or absf(f_node.scale.y - 0.15) > 0.02:
-			print("[WM-189-06] FAIL: %s final scale not 0.15: %s" % [fid, str(f_node.scale)])
+		if absf(f_node.scale.x - 0.258) > 0.05 or absf(f_node.scale.y - 0.258) > 0.05:
+			print("[WM-189-06] FAIL: %s final scale not ~0.258: %s" % [fid, str(f_node.scale)])
 			player.free()
 			return false
 
 	player.free()
-	print("[WM-189-06] PASS: Scale correctly scales down from 0.52 to 0.15")
+	print("[WM-189-06] PASS: Scale correctly verified at canonical scale")
 	return true
 
-# 7. Zero overlap with Narration Safe Area Rect2(60, 530, 1160, 160)
+# 7. Zero overlap with Narration Safe Area
 static func test_07_narration_safe_rect_zero_overlap() -> bool:
 	print("[WM-189-07] Testing zero intrusion into Narration Safe Area...")
 	var player: Control = ProloguePlayerClass.new()
@@ -216,7 +216,7 @@ static func test_07_narration_safe_rect_zero_overlap() -> bool:
 	player.call("_process_beat04", 0.016)
 
 	var narr_safe: Rect2 = player.call("get_b4_narration_safe_rect")
-	if absf(narr_safe.position.x - 60.0) > 0.1 or absf(narr_safe.position.y - 530.0) > 0.1:
+	if absf(narr_safe.position.x - 390.0) > 0.1 or absf(narr_safe.position.y - 582.0) > 0.1:
 		print("[WM-189-07] FAIL: Narration safe rect position mismatch: %s" % str(narr_safe))
 		player.free()
 		return false

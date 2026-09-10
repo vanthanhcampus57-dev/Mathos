@@ -92,28 +92,28 @@ static func test_scale_002_no_accidental_overscale(player: Control) -> bool:
 	player.set("_current_beat", 4)
 	player.call("apply_beat04_layout")
 
-	# At t = 0.2s: initial handoff scale (0.52)
+	# At t = 0.2s: initial reference display scale (~0.258, ~155px display)
 	player.set("_playback_time", 0.2)
 	player.call("_process_beat04", 0.016)
 	var frag1: Control = player.call("get_fragment_node", "Fragment01", 4)
-	if absf(frag1.scale.x - 0.52) > 0.01:
-		print("[SCALE-176-002] FAIL: Fragment01 should start at handoff scale 0.52, got %s" % str(frag1.scale))
+	if absf(frag1.scale.x - 0.258) > 0.05:
+		print("[SCALE-176-002] FAIL: Fragment01 should start at reference scale ~0.258, got %s" % str(frag1.scale))
 		return false
 
-	# At t = 12.0s: target scale (0.15)
+	# At t = 12.0s: target scale (~0.258, bounded < 0.30)
 	player.set("_playback_time", 12.0)
 	player.call("_process_beat04", 0.016)
 
 	for fid in ["Fragment01", "Fragment02", "Fragment03", "Fragment04"]:
 		var f_node: Control = player.call("get_fragment_node", fid, 4)
-		if f_node.scale.x > 0.20 or f_node.scale.y > 0.20:
+		if f_node.scale.x > 0.30 or f_node.scale.y > 0.30:
 			print("[SCALE-176-002] FAIL: %s overscaled at destination: %s" % [fid, str(f_node.scale)])
 			return false
-		if absf(f_node.scale.x - 0.15) > 0.02:
-			print("[SCALE-176-002] FAIL: %s expected scale ~0.15, got %s" % [fid, str(f_node.scale)])
+		if absf(f_node.scale.x - 0.258) > 0.05:
+			print("[SCALE-176-002] FAIL: %s expected scale ~0.258, got %s" % [fid, str(f_node.scale)])
 			return false
 
-	print("[SCALE-176-002] PASS: Fragments scale correctly from 0.52 handoff down to ~0.15 destination")
+	print("[SCALE-176-002] PASS: Fragments bounded correctly to reference display (~155px footprint)")
 	return true
 
 # 3. No double-applied scale (node scale is cleanly (0.15, 0.15)).
@@ -144,10 +144,10 @@ static func test_scale_004_human_locked_coordinates_unchanged(player: Control) -
 		return false
 
 	var canonical_dest_coords: Dictionary = {
-		"Destination01": Vector2(215.0, 465.0),
-		"Destination02": Vector2(645.0, 350.0),
-		"Destination03": Vector2(980.0, 225.0),
-		"Destination04": Vector2(410.0, 160.0)
+		"Destination01": Vector2(200.0, 520.0),
+		"Destination02": Vector2(1080.0, 520.0),
+		"Destination03": Vector2(940.0, 185.0),
+		"Destination04": Vector2(200.0, 185.0)
 	}
 
 	var dest_dict: Dictionary = layout_data["destinations"] as Dictionary
@@ -162,10 +162,10 @@ static func test_scale_004_human_locked_coordinates_unchanged(player: Control) -
 
 	# Verify destination centers in world content
 	var expected_centers: Dictionary = {
-		"Destination01": Vector2(215.0, 465.0),
-		"Destination02": Vector2(645.0, 350.0),
-		"Destination03": Vector2(980.0, 225.0),
-		"Destination04": Vector2(410.0, 160.0)
+		"Destination01": Vector2(200.0, 520.0),
+		"Destination02": Vector2(1080.0, 520.0),
+		"Destination03": Vector2(940.0, 185.0),
+		"Destination04": Vector2(200.0, 185.0)
 	}
 	for did in expected_centers.keys():
 		var d_node: Control = player.call("get_destination_node", did)

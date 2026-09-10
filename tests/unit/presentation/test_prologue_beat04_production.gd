@@ -204,7 +204,7 @@ static func test_b4_005_four_distinct_destination_states() -> bool:
 
 	var names: Array[String] = player.call("get_destination_names")
 	var expected_names: Array[String] = [
-		"Dungeon I — KHU RỪNG SƯƠNG MÙ",
+		"Dungeon I — KHU RỪNG MÙ SƯƠNG",
 		"Dungeon II — ĐẦM LẦY TỶ LỆ",
 		"Dungeon III — CUNG ĐIỆN HỢP NHẤT",
 		"Dungeon IV — ĐỈNH THÁP ĐỘC LẬP"
@@ -309,39 +309,43 @@ static func test_b4_007_sequential_guidance_and_fragment_trajectories() -> bool:
 		player.free()
 		return false
 
-	# Time t = 4.0s: Fragment 01 arrived at D1 (NW), D1 revealed, camera focused NW
-	player.set("_playback_time", 4.0)
+	# Time t = 4.2s: D4 revealed (TL), fixed framing preserved
+	player.set("_playback_time", 4.2)
 	player.call("_process_beat04", 0.016)
-	if d1.modulate.a <= 0.5:
-		print("[PROLOGUE-B4-007] FAIL: Destination 1 should be revealed at t = 4.0s")
+	if d4.modulate.a <= 0.5:
+		print("[PROLOGUE-B4-007] FAIL: Destination 4 should be revealed at t = 4.2s")
 		player.free()
 		return false
-	if world.position.x <= 50.0:
-		print("[PROLOGUE-B4-007] FAIL: Camera should be offset towards NW at t = 4.0s")
+	if world.position != Vector2.ZERO:
+		print("[PROLOGUE-B4-007] FAIL: Fixed framing violated at t = 4.2s: ", world.position)
 		player.free()
 		return false
 
-	# Time t = 6.2s: Fragment 02 arrived at D2 (NE), D2 revealed, camera focused NE
-	player.set("_playback_time", 6.2)
-	player.call("_process_beat04", 0.016)
-	if d2.modulate.a <= 0.5:
-		print("[PROLOGUE-B4-007] FAIL: Destination 2 should be revealed at t = 6.2s")
-		player.free()
-		return false
-	if world.position.x >= -50.0:
-		print("[PROLOGUE-B4-007] FAIL: Camera should be offset towards NE at t = 6.2s")
-		player.free()
-		return false
-
-	# Time t = 8.2s: Fragment 03 arrived at D3 (SW), D3 revealed
-	player.set("_playback_time", 8.2)
+	# Time t = 5.5s: D3 revealed (TR)
+	player.set("_playback_time", 5.5)
 	player.call("_process_beat04", 0.016)
 	if d3.modulate.a <= 0.5:
-		print("[PROLOGUE-B4-007] FAIL: Destination 3 should be revealed at t = 8.2s")
+		print("[PROLOGUE-B4-007] FAIL: Destination 3 should be revealed at t = 5.5s")
 		player.free()
 		return false
 
-	# Time t = 10.2s: Fragment 04 arrived at D4 (SE), D4 revealed, Phrase 2 visible
+	# Time t = 6.5s: D1 revealed (BL)
+	player.set("_playback_time", 6.5)
+	player.call("_process_beat04", 0.016)
+	if d1.modulate.a <= 0.5:
+		print("[PROLOGUE-B4-007] FAIL: Destination 1 should be revealed at t = 6.5s")
+		player.free()
+		return false
+
+	# Time t = 7.5s: D2 revealed (BR)
+	player.set("_playback_time", 7.5)
+	player.call("_process_beat04", 0.016)
+	if d2.modulate.a <= 0.5:
+		print("[PROLOGUE-B4-007] FAIL: Destination 2 should be revealed at t = 7.5s")
+		player.free()
+		return false
+
+	# Time t = 10.2s: All destinations revealed, Phrase 2 visible
 	player.set("_playback_time", 10.2)
 	player.call("_process_beat04", 0.016)
 	if d4.modulate.a <= 0.5 or p2_lbl.modulate.a <= 0.5:
