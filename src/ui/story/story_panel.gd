@@ -391,31 +391,7 @@ func _build_draven_slot(parent: Control) -> void:
 	# Non-destructive native bottom alpha fade shader with strict transparency guard
 	_apply_bottom_alpha_shader(_draven_rect)
 
-	# 3. Soft Lower Dark/Cyan Environmental Gradient Overlay (in front of character bottom)
-	var lower_grad_rect: TextureRect = TextureRect.new()
-	lower_grad_rect.name = "DravenLowerGradient"
-	lower_grad_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	lower_grad_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	lower_grad_rect.stretch_mode = TextureRect.STRETCH_SCALE
-	lower_grad_rect.mouse_filter = MOUSE_FILTER_IGNORE
-
-	var lower_grad: Gradient = Gradient.new()
-	lower_grad.offsets = PackedFloat32Array([0.0, 0.55, 1.0])
-	lower_grad.colors = PackedColorArray([
-		Color(0.0, 0.0, 0.0, 0.0),       # Top clear
-		Color(0.02, 0.08, 0.16, 0.0),     # Mid transition
-		Color(0.03, 0.10, 0.18, 0.78)    # Bottom atmospheric dark cyan fade (no white artifact)
-	])
-	
-	var lower_tex: GradientTexture2D = GradientTexture2D.new()
-	lower_tex.gradient = lower_grad
-	lower_tex.fill = GradientTexture2D.FILL_LINEAR
-	lower_tex.fill_from = Vector2(0.5, 0.0)
-	lower_tex.fill_to = Vector2(0.5, 1.0)
-	lower_grad_rect.texture = lower_tex
-	portrait_container.add_child(lower_grad_rect)
-
-	# 4. Breathing Tween setup
+	# 3. Breathing Tween setup
 	_start_rim_breathing(rim_rect)
 
 	# Nameplate (~154px wide, dark navy, cyan border, gold diamond accents)
