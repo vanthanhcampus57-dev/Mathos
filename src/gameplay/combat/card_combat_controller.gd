@@ -37,8 +37,10 @@ func start_combat(p_player: PlayerRuntime, p_boss: EnemyEntity, p_cards: Array[C
 	combat_log_emitted.emit("⚔️ Trận quyết chiến với %s bắt đầu!" % boss_entity.display_name, "info")
 
 func select_card(card_id: String) -> bool:
+	var target_id: String = card_id.strip_edges().to_lower()
 	for c in hand_cards:
-		if c.card_id == card_id:
+		var cid: String = c.card_id.strip_edges().to_lower()
+		if cid == target_id or cid == "card_" + target_id or ("card_" + cid) == target_id or (target_id.begins_with("card_") and cid == target_id.substr(5)):
 			selected_card = c
 			card_selected.emit(selected_card)
 			combat_state_changed.emit()
@@ -75,18 +77,19 @@ func resolve_answer_outcome(is_correct: bool) -> Dictionary:
 					"damage":
 						var hp_loss: int = boss_entity.apply_damage(amt)
 						boss_hp_changed.emit(boss_entity.current_hp, boss_entity.max_hp, -hp_loss)
-						combat_log_emitted.emit("⚔️ Chính xác! %s gây %d sát thương lên %s!" % [active_card.name, amt, boss_entity.display_name], "player_success")
+						combat_log_emitted.emit("⚔️ STRIKE — STOCHAS -%d HP" % hp_loss, "player_success")
 						outcome["effects_applied"].append({"type": "damage", "target": "boss", "amount": amt})
 					"shield":
 						player_runtime.apply_shield(amt)
-						combat_log_emitted.emit("🛡️ Chính xác! %s tạo %d Giáp bảo vệ!" % [active_card.name, amt], "player_success")
+						player_hp_changed.emit(player_runtime.current_hp, player_runtime.max_hp, 0)
+						combat_log_emitted.emit("🛡️ DEFEND — +%d SHIELD" % amt, "player_success")
 						outcome["effects_applied"].append({"type": "shield", "target": "player", "amount": amt})
 					"heal":
 						var prev_hp: int = player_runtime.current_hp
 						player_runtime.heal(amt)
 						var healed: int = player_runtime.current_hp - prev_hp
 						player_hp_changed.emit(player_runtime.current_hp, player_runtime.max_hp, healed)
-						combat_log_emitted.emit("💚 Chính xác! %s hồi phục %d HP!" % [active_card.name, healed], "player_success")
+						combat_log_emitted.emit("💚 HEAL — +%d HP" % healed, "player_success")
 						outcome["effects_applied"].append({"type": "heal", "target": "player", "amount": amt})
 
 		if boss_entity.is_defeated:
@@ -98,8 +101,6 @@ func resolve_answer_outcome(is_correct: bool) -> Dictionary:
 			return outcome
 	else:
 		# Player answered incorrectly: card fails & boss attacks with intent
-		combat_log_emitted.emit("❌ Trả lời sai! Thẻ bài %s không thể kích hoạt!" % (active_card.name if active_card != null else ""), "player_fail")
-
 		var intent: Dictionary = boss_entity.get_current_intent()
 		var dmg_amount: int = 10
 		var raw_effects: Array = intent.get("effects", []) as Array
@@ -113,8 +114,7 @@ func resolve_answer_outcome(is_correct: bool) -> Dictionary:
 		var actual_loss: int = prev_hp - player_runtime.current_hp
 		player_hp_changed.emit(player_runtime.current_hp, player_runtime.max_hp, -actual_loss)
 
-		var telegraph: String = String(intent.get("telegraph_text", "%s tấn công!" % boss_entity.display_name))
-		combat_log_emitted.emit("💥 %s (-%d HP)!" % [telegraph, dmg_amount], "boss_attack")
+		combat_log_emitted.emit("❌ SAI — STOCHAS TẤN CÔNG -%d HP" % dmg_amount, "boss_attack")
 		boss_entity.advance_intent()
 
 		if player_runtime.is_defeated:

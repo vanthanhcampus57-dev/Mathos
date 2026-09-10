@@ -498,7 +498,13 @@ static func test_012_no_overlap_with_combat_feed() -> bool:
 		_cleanup(panel)
 		return _fail("CARD-012", "Cards container or Combat log label is null")
 
-	var log_panel: PanelContainer = log_label.get_parent() as PanelContainer
+	var log_panel: PanelContainer = null
+	var parent_node: Node = log_label.get_parent()
+	while parent_node != null and parent_node != panel:
+		if parent_node is PanelContainer:
+			log_panel = parent_node as PanelContainer
+			break
+		parent_node = parent_node.get_parent()
 	if log_panel == null:
 		_cleanup(panel)
 		return _fail("CARD-012", "Log panel container is null")

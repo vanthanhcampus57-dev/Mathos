@@ -735,7 +735,7 @@ func _update_header() -> void:
 		badge_label.text = ""
 		badge_label.visible = (_context_info != null and _context_info.is_restored_context)
 
-	if _current_mode == ViewMode.MODE_ENTRY or _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_VICTORY or _current_mode == ViewMode.MODE_DUNGEON_COMPLETE or _current_mode == ViewMode.MODE_STORY or _current_mode == ViewMode.MODE_PROLOGUE:
+	if _current_mode == ViewMode.MODE_ENTRY or _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_VICTORY or _current_mode == ViewMode.MODE_DUNGEON_COMPLETE or _current_mode == ViewMode.MODE_STORY or _current_mode == ViewMode.MODE_PROLOGUE or (_current_mode == ViewMode.MODE_QUESTION_HOST and is_boss_stage()):
 		header_bar.visible = false
 		return
 
@@ -769,7 +769,8 @@ func set_view_mode(mode: ViewMode) -> void:
 	var f_host: MarginContainer = get_feedback_host_container()
 	var complete_panel: StageCompletePanel = get_stage_complete_panel()
 
-	if _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_STORY or _current_mode == ViewMode.MODE_PROLOGUE or _current_mode == ViewMode.MODE_ENTRY:
+	var _boss_fullscreen: bool = (_current_mode == ViewMode.MODE_QUESTION_HOST and is_boss_stage())
+	if _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_STORY or _current_mode == ViewMode.MODE_PROLOGUE or _current_mode == ViewMode.MODE_ENTRY or _boss_fullscreen:
 		add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	else:
 		if has_theme_stylebox_override("panel"):
@@ -881,7 +882,7 @@ func set_view_mode(mode: ViewMode) -> void:
 
 	var main_body: MarginContainer = get_node_or_null("VBoxContainer/MainBody") as MarginContainer
 	if main_body != null:
-		if _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_STORY or _current_mode == ViewMode.MODE_PROLOGUE:
+		if _current_mode == ViewMode.MODE_MAP or _current_mode == ViewMode.MODE_STORY or _current_mode == ViewMode.MODE_PROLOGUE or _boss_fullscreen:
 			main_body.add_theme_constant_override("margin_left", 0)
 			main_body.add_theme_constant_override("margin_right", 0)
 			main_body.add_theme_constant_override("margin_top", 0)
@@ -907,8 +908,9 @@ func set_view_mode(mode: ViewMode) -> void:
 		feedback_host_ready.emit(f_host)
 
 	var sidebar: Control = get_node_or_null("VBoxContainer/MainBody/ContentHBox/LeftSidebar") as Control
+	var _is_boss_question: bool = (is_boss_stage() and _current_mode == ViewMode.MODE_QUESTION_HOST)
 	if sidebar != null:
-		sidebar.visible = (_current_mode != ViewMode.MODE_ENTRY and _current_mode != ViewMode.MODE_MAP and _current_mode != ViewMode.MODE_VICTORY and _current_mode != ViewMode.MODE_DUNGEON_COMPLETE and _current_mode != ViewMode.MODE_STORY and _current_mode != ViewMode.MODE_PROLOGUE)
+		sidebar.visible = (_current_mode != ViewMode.MODE_ENTRY and _current_mode != ViewMode.MODE_MAP and _current_mode != ViewMode.MODE_VICTORY and _current_mode != ViewMode.MODE_DUNGEON_COMPLETE and _current_mode != ViewMode.MODE_STORY and _current_mode != ViewMode.MODE_PROLOGUE and not _is_boss_question)
 
 func show_story_phase() -> void:
 	if _context_info != null and not _context_info.story_steps.is_empty():

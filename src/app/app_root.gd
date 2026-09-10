@@ -406,6 +406,9 @@ func _setup_combat_if_needed(stage_id: String) -> void:
 				boss_panel.set_controller(_active_combat_controller)
 				if not boss_panel.retry_pressed.is_connected(_on_combat_retry_pressed):
 					boss_panel.retry_pressed.connect(_on_combat_retry_pressed)
+				if not boss_panel.card_selected.is_connected(_on_combat_card_selected):
+					boss_panel.card_selected.connect(_on_combat_card_selected)
+			_update_question_panel_combat_cta()
 	else:
 		_active_combat_controller = null
 		_active_enemy_entity = null
@@ -423,7 +426,52 @@ func _on_combat_retry_pressed() -> void:
 	_first_attempt_results.clear()
 	_retry_question_id = _current_question_id
 	_active_question_res = {}
+	_update_question_panel_combat_cta()
 	_start_current_question()
+
+func _on_combat_card_selected(card_id: String) -> void:
+	_update_question_panel_combat_cta()
+
+func _update_question_panel_combat_cta() -> void:
+	if _active_combat_controller == null:
+		return
+	var q_panel: QuestionPanel = get_question_panel()
+	if q_panel == null:
+		return
+	var active_card: CardModel = _active_combat_controller.get_selected_card()
+	if active_card == null:
+		q_panel.set_combat_action("")
+		return
+	var action_name: String = ""
+	var action_value: String = ""
+	var norm_id: String = active_card.card_id.to_lower()
+	if not norm_id.begins_with("card_"):
+		norm_id = "card_" + norm_id
+	match norm_id:
+		"card_strike":
+			action_name = "TẤN CÔNG"
+			if not active_card.effects.is_empty():
+				var ef: Dictionary = active_card.effects[0] as Dictionary
+				action_value = "%d ST" % int(ef.get("amount", 10))
+			else:
+				action_value = "10 ST"
+		"card_defend":
+			action_name = "PHÒNG THỦ"
+			if not active_card.effects.is_empty():
+				var ef: Dictionary = active_card.effects[0] as Dictionary
+				action_value = "+%d Giáp" % int(ef.get("amount", 8))
+			else:
+				action_value = "+8 Giáp"
+		"card_heal":
+			action_name = "HỒI PHỤC"
+			if not active_card.effects.is_empty():
+				var ef: Dictionary = active_card.effects[0] as Dictionary
+				action_value = "+%d HP" % int(ef.get("amount", 15))
+			else:
+				action_value = "+15 HP"
+		_:
+			action_name = active_card.display_name if active_card.display_name != "" else norm_id
+	q_panel.set_combat_action(action_name, action_value)
 
 # Internal Helper Methods
 func _is_visual_lab_mode() -> bool:
@@ -891,6 +939,9 @@ func _on_question_host_ready(host_container: Control) -> void:
 			boss_panel.set_controller(_active_combat_controller)
 			if not boss_panel.retry_pressed.is_connected(_on_combat_retry_pressed):
 				boss_panel.retry_pressed.connect(_on_combat_retry_pressed)
+			if not boss_panel.card_selected.is_connected(_on_combat_card_selected):
+				boss_panel.card_selected.connect(_on_combat_card_selected)
+		_update_question_panel_combat_cta()
 
 	_start_current_question()
 

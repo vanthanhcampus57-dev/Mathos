@@ -29,6 +29,7 @@ var _validation_warning_visible: bool = false
 var _feedback_visible: bool = false
 var _panel_tween: Tween = null
 var _feedback_tween: Tween = null
+var _combat_action_text: String = ""
 
 # UI Control nodes
 var _main_vbox: VBoxContainer = null
@@ -39,6 +40,31 @@ var _feedback_label: Label = null
 var _action_hbox: HBoxContainer = null
 var _hint_button: Button = null
 var _submit_button: Button = null
+
+func set_combat_action(action_name: String, action_value: String = "") -> void:
+	if action_name.is_empty():
+		_combat_action_text = ""
+	else:
+		if not action_value.is_empty():
+			_combat_action_text = "XUẤT CHIÊU: %s (%s)" % [action_name.to_upper(), action_value]
+		else:
+			_combat_action_text = "XUẤT CHIÊU: %s" % action_name.to_upper()
+	_update_submit_button_text()
+
+func get_combat_action_text() -> String:
+	return _combat_action_text
+
+func _update_submit_button_text() -> void:
+	if _submit_button == null:
+		return
+	if _lifecycle_state == LifecycleState.EVALUATED_CORRECT:
+		_submit_button.text = "TIẾP TỤC"
+	elif _lifecycle_state == LifecycleState.EVALUATED_WRONG:
+		_submit_button.text = "THỬ LẠI"
+	elif not _combat_action_text.is_empty():
+		_submit_button.text = _combat_action_text
+	else:
+		_submit_button.text = "Xác nhận"
 
 func _ready() -> void:
 	_ensure_ui_built()
@@ -256,7 +282,7 @@ func clear_question() -> void:
 		_objective_label.visible = false
 
 	if _submit_button != null:
-		_submit_button.text = "Xác nhận"
+		_update_submit_button_text()
 		_submit_button.disabled = false
 
 	if _hint_button != null:
@@ -315,7 +341,7 @@ func setup_question(question_view: Dictionary) -> bool:
 	_ensure_ui_built()
 
 	if _submit_button != null:
-		_submit_button.text = "Xác nhận"
+		_update_submit_button_text()
 		_submit_button.disabled = false
 
 	if _active_interaction_view != null:
@@ -477,7 +503,7 @@ func _on_submit_button_pressed() -> void:
 			_feedback_label.text = ""
 			_feedback_label.modulate.a = 0.0
 		if _submit_button != null:
-			_submit_button.text = "Xác nhận"
+			_update_submit_button_text()
 		if _active_interaction_view != null:
 			if _active_interaction_view.has_method("reset_interaction"):
 				_active_interaction_view.call("reset_interaction")
@@ -579,7 +605,7 @@ func on_submission_failed(error_info: Dictionary = {}) -> void:
 
 	if _submit_button != null:
 		_submit_button.disabled = false
-		_submit_button.text = "Xác nhận"
+		_update_submit_button_text()
 
 	if _active_interaction_view != null and _active_interaction_view.has_method("set_disabled"):
 		_active_interaction_view.call("set_disabled", false)

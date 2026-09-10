@@ -86,6 +86,7 @@ var _card_badge_panels_by_id: Dictionary = {}
 var _card_statuses_by_id: Dictionary = {}
 var _card_status_panels_by_id: Dictionary = {}
 
+var _feed_vbox: VBoxContainer = null
 var _combat_log_label: Label = null
 var _defeat_overlay: PanelContainer = null
 var _defeat_retry_button: Button = null
@@ -114,6 +115,10 @@ func _disconnect_controller() -> void:
 		_combat_controller.combat_state_changed.disconnect(_update_full_display)
 	if _combat_controller.combat_log_emitted.is_connected(_on_combat_log):
 		_combat_controller.combat_log_emitted.disconnect(_on_combat_log)
+	if _combat_controller.boss_hp_changed.is_connected(_on_boss_hp_changed):
+		_combat_controller.boss_hp_changed.disconnect(_on_boss_hp_changed)
+	if _combat_controller.player_hp_changed.is_connected(_on_player_hp_changed):
+		_combat_controller.player_hp_changed.disconnect(_on_player_hp_changed)
 	if _combat_controller.boss_defeated.is_connected(_on_boss_defeated):
 		_combat_controller.boss_defeated.disconnect(_on_boss_defeated)
 	if _combat_controller.player_defeated.is_connected(_on_player_defeated):
@@ -128,6 +133,10 @@ func _connect_controller() -> void:
 		_combat_controller.combat_state_changed.connect(_update_full_display)
 	if not _combat_controller.combat_log_emitted.is_connected(_on_combat_log):
 		_combat_controller.combat_log_emitted.connect(_on_combat_log)
+	if not _combat_controller.boss_hp_changed.is_connected(_on_boss_hp_changed):
+		_combat_controller.boss_hp_changed.connect(_on_boss_hp_changed)
+	if not _combat_controller.player_hp_changed.is_connected(_on_player_hp_changed):
+		_combat_controller.player_hp_changed.connect(_on_player_hp_changed)
 	if not _combat_controller.boss_defeated.is_connected(_on_boss_defeated):
 		_combat_controller.boss_defeated.connect(_on_boss_defeated)
 	if not _combat_controller.player_defeated.is_connected(_on_player_defeated):
@@ -142,75 +151,77 @@ func _ensure_ui() -> void:
 	custom_minimum_size = Vector2(460, 0)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mouse_filter = Control.MOUSE_FILTER_PASS
 
-	# Main Boss Combat Outer Panel Styling (Dark Void Indigo with Arcane Glow)
-	var main_style: StyleBoxFlat = StyleBoxFlat.new()
-	main_style.bg_color = Color(0.07, 0.06, 0.12, 0.94)
-	main_style.border_width_left = 2
-	main_style.border_width_top = 2
-	main_style.border_width_right = 2
-	main_style.border_width_bottom = 2
-	main_style.border_color = Color(0.38, 0.28, 0.55, 0.7)
-	main_style.corner_radius_top_left = 12
-	main_style.corner_radius_top_right = 12
-	main_style.corner_radius_bottom_right = 12
-	main_style.corner_radius_bottom_left = 12
-	add_theme_stylebox_override("panel", main_style)
+	# Authoritative Stitch layout: NO opaque background box; full misty forest & fog show through!
+	var empty_style: StyleBoxEmpty = StyleBoxEmpty.new()
+	add_theme_stylebox_override("panel", empty_style)
 
 	var margin: MarginContainer = MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", 12)
-	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_top", 8)
 	margin.add_theme_constant_override("margin_right", 12)
-	margin.add_theme_constant_override("margin_bottom", 12)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(margin)
 
 	var vbox: VBoxContainer = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 8)
+	vbox.name = "RootVBox"
+	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.mouse_filter = Control.MOUSE_FILTER_PASS
+	vbox.add_theme_constant_override("separation", 6)
 	margin.add_child(vbox)
 
 	# ---------------------------------------------------------
-	# 1. TOP DUAL HUD ROW (Player HUD on Left, Boss HUD on Right)
+	# 1. TOP DUAL HUD ROW (Player HUD Top-Left, Boss HUD Top-Right)
 	# Uses LAYOUT_DIRECTION_RTL so that:
 	# - Child 0 (Boss HUD) is visited FIRST by find_children() -> _boss_hp_bar is found first!
-	# - Visually, Child 0 is placed on the RIGHT, and Child 1 (Player HUD) is on the LEFT!
-	# Inner panels use LAYOUT_DIRECTION_LTR for proper standard text flow.
+	# - Visually, Child 0 is placed on the RIGHT, and Child 2 (Player HUD) is on the LEFT!
+	# Inner panels use LAYOUT_DIRECTION_LTR for standard text flow.
 	# ---------------------------------------------------------
 	var top_hud_hbox: HBoxContainer = HBoxContainer.new()
 	top_hud_hbox.name = "TopHudHBox"
 	top_hud_hbox.layout_direction = Control.LAYOUT_DIRECTION_RTL
-	top_hud_hbox.add_theme_constant_override("separation", 8)
+	top_hud_hbox.add_theme_constant_override("separation", 16)
 	top_hud_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_hud_hbox.custom_minimum_size = Vector2(0, 60)
+	top_hud_hbox.mouse_filter = Control.MOUSE_FILTER_PASS
 	vbox.add_child(top_hud_hbox)
 
 	# --- 1A. BOSS HUD PANEL (Child 0 in tree -> visited first, rendered on the RIGHT) ---
 	var boss_hud_panel: PanelContainer = PanelContainer.new()
 	boss_hud_panel.name = "BossHudPanel"
 	boss_hud_panel.layout_direction = Control.LAYOUT_DIRECTION_LTR
-	boss_hud_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	boss_hud_panel.custom_minimum_size = Vector2(400, 56)
+	boss_hud_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 
 	var boss_hud_style: StyleBoxFlat = StyleBoxFlat.new()
-	boss_hud_style.bg_color = Color(0.12, 0.06, 0.14, 0.90)
+	boss_hud_style.bg_color = Color(0.14, 0.06, 0.12, 0.88)
 	boss_hud_style.border_width_left = 1
 	boss_hud_style.border_width_top = 1
 	boss_hud_style.border_width_right = 1
 	boss_hud_style.border_width_bottom = 1
-	boss_hud_style.border_color = Color(0.85, 0.22, 0.42, 0.65)
+	boss_hud_style.border_color = Color(0.90, 0.20, 0.45, 0.80)
 	boss_hud_style.corner_radius_top_left = 8
 	boss_hud_style.corner_radius_top_right = 8
 	boss_hud_style.corner_radius_bottom_right = 8
 	boss_hud_style.corner_radius_bottom_left = 8
-	boss_hud_style.content_margin_left = 8
+	boss_hud_style.content_margin_left = 10
 	boss_hud_style.content_margin_top = 6
-	boss_hud_style.content_margin_right = 8
+	boss_hud_style.content_margin_right = 10
 	boss_hud_style.content_margin_bottom = 6
 	boss_hud_panel.add_theme_stylebox_override("panel", boss_hud_style)
 	top_hud_hbox.add_child(boss_hud_panel)
 
 	var boss_vbox: VBoxContainer = VBoxContainer.new()
-	boss_vbox.add_theme_constant_override("separation", 4)
+	boss_vbox.add_theme_constant_override("separation", 3)
 	boss_hud_panel.add_child(boss_vbox)
 
 	var boss_title_box: HBoxContainer = HBoxContainer.new()
+	boss_title_box.add_theme_constant_override("separation", 6)
 	boss_vbox.add_child(boss_title_box)
 
 	_boss_name_label = Label.new()
@@ -220,12 +231,13 @@ func _ensure_ui() -> void:
 	boss_title_box.add_child(_boss_name_label)
 
 	var role_tag: Label = Label.new()
-	role_tag.text = " [THỦ LĨNH]"
+	role_tag.text = "[THỦ LĨNH]"
 	role_tag.add_theme_font_size_override("font_size", 11)
-	role_tag.add_theme_color_override("font_color", Color(0.8, 0.7, 1.0, 0.8))
+	role_tag.add_theme_color_override("font_color", Color(0.85, 0.70, 1.0, 0.85))
 	boss_title_box.add_child(role_tag)
 
 	var boss_hp_box: HBoxContainer = HBoxContainer.new()
+	boss_hp_box.add_theme_constant_override("separation", 8)
 	boss_vbox.add_child(boss_hp_box)
 
 	var boss_hp_tag: Label = Label.new()
@@ -256,7 +268,7 @@ func _ensure_ui() -> void:
 	_boss_hp_bar.add_theme_stylebox_override("background", bhp_bg)
 
 	var bhp_fill: StyleBoxFlat = StyleBoxFlat.new()
-	bhp_fill.bg_color = Color(0.85, 0.15, 0.40, 0.95)
+	bhp_fill.bg_color = Color(0.88, 0.18, 0.42, 0.98)
 	bhp_fill.corner_radius_top_left = 4
 	bhp_fill.corner_radius_top_right = 4
 	bhp_fill.corner_radius_bottom_right = 4
@@ -274,58 +286,66 @@ func _ensure_ui() -> void:
 	# Boss Intent Pill Box
 	var intent_panel: PanelContainer = PanelContainer.new()
 	var intent_style: StyleBoxFlat = StyleBoxFlat.new()
-	intent_style.bg_color = Color(0.18, 0.13, 0.05, 0.80)
+	intent_style.bg_color = Color(0.18, 0.13, 0.05, 0.85)
 	intent_style.border_width_left = 1
 	intent_style.border_width_top = 1
 	intent_style.border_width_right = 1
 	intent_style.border_width_bottom = 1
-	intent_style.border_color = Color(0.95, 0.75, 0.20, 0.70)
+	intent_style.border_color = Color(0.95, 0.75, 0.20, 0.75)
 	intent_style.corner_radius_top_left = 4
 	intent_style.corner_radius_top_right = 4
 	intent_style.corner_radius_bottom_right = 4
 	intent_style.corner_radius_bottom_left = 4
 	intent_style.content_margin_left = 6
-	intent_style.content_margin_top = 2
+	intent_style.content_margin_top = 1
 	intent_style.content_margin_right = 6
-	intent_style.content_margin_bottom = 2
+	intent_style.content_margin_bottom = 1
 	intent_panel.add_theme_stylebox_override("panel", intent_style)
 	boss_vbox.add_child(intent_panel)
 
 	_boss_intent_label = Label.new()
 	_boss_intent_label.text = "⚡ Ý định: Ma Thuật Ngẫu Nhiên (10 ST)"
-	_boss_intent_label.add_theme_font_size_override("font_size", 11)
+	_boss_intent_label.add_theme_font_size_override("font_size", 10)
 	_boss_intent_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35, 1.0))
 	intent_panel.add_child(_boss_intent_label)
 
-	# --- 1B. PLAYER HUD PANEL (Child 1 in tree -> visited second, rendered on the LEFT) ---
+	# --- 1B. SPACER ---
+	var top_spacer: Control = Control.new()
+	top_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_hud_hbox.add_child(top_spacer)
+
+	# --- 1C. PLAYER HUD PANEL (Child 2 in tree -> visited second, rendered on the LEFT) ---
 	var player_hud_panel: PanelContainer = PanelContainer.new()
 	player_hud_panel.name = "PlayerHudPanel"
 	player_hud_panel.layout_direction = Control.LAYOUT_DIRECTION_LTR
-	player_hud_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_hud_panel.custom_minimum_size = Vector2(400, 56)
+	player_hud_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 
 	var player_hud_style: StyleBoxFlat = StyleBoxFlat.new()
-	player_hud_style.bg_color = Color(0.05, 0.09, 0.14, 0.90)
+	player_hud_style.bg_color = Color(0.06, 0.10, 0.16, 0.88)
 	player_hud_style.border_width_left = 1
 	player_hud_style.border_width_top = 1
 	player_hud_style.border_width_right = 1
 	player_hud_style.border_width_bottom = 1
-	player_hud_style.border_color = Color(0.20, 0.75, 0.85, 0.65)
+	player_hud_style.border_color = Color(0.18, 0.75, 0.88, 0.75)
 	player_hud_style.corner_radius_top_left = 8
 	player_hud_style.corner_radius_top_right = 8
 	player_hud_style.corner_radius_bottom_right = 8
 	player_hud_style.corner_radius_bottom_left = 8
-	player_hud_style.content_margin_left = 8
+	player_hud_style.content_margin_left = 10
 	player_hud_style.content_margin_top = 6
-	player_hud_style.content_margin_right = 8
+	player_hud_style.content_margin_right = 10
 	player_hud_style.content_margin_bottom = 6
 	player_hud_panel.add_theme_stylebox_override("panel", player_hud_style)
 	top_hud_hbox.add_child(player_hud_panel)
 
 	var player_vbox: VBoxContainer = VBoxContainer.new()
-	player_vbox.add_theme_constant_override("separation", 4)
+	player_vbox.add_theme_constant_override("separation", 3)
 	player_hud_panel.add_child(player_vbox)
 
 	var player_title_box: HBoxContainer = HBoxContainer.new()
+	player_title_box.add_theme_constant_override("separation", 6)
 	player_vbox.add_child(player_title_box)
 
 	var p_title: Label = Label.new()
@@ -341,6 +361,7 @@ func _ensure_ui() -> void:
 	player_title_box.add_child(_player_shield_label)
 
 	var player_hp_box: HBoxContainer = HBoxContainer.new()
+	player_hp_box.add_theme_constant_override("separation", 8)
 	player_vbox.add_child(player_hp_box)
 
 	var p_hp_tag: Label = Label.new()
@@ -371,7 +392,7 @@ func _ensure_ui() -> void:
 	_player_hp_bar.add_theme_stylebox_override("background", php_bg)
 
 	var php_fill: StyleBoxFlat = StyleBoxFlat.new()
-	php_fill.bg_color = Color(0.20, 0.80, 0.35, 0.95)
+	php_fill.bg_color = Color(0.20, 0.82, 0.38, 0.98)
 	php_fill.corner_radius_top_left = 4
 	php_fill.corner_radius_top_right = 4
 	php_fill.corner_radius_bottom_right = 4
@@ -393,27 +414,46 @@ func _ensure_ui() -> void:
 	player_vbox.add_child(p_status_label)
 
 	# ---------------------------------------------------------
-	# 2. BOSS VISUAL CONTAINER (Prominent STOCHAS Pixel-Art Frame)
+	# 2. MIDDLE ARENA ROW (Math Challenge clearance on left, STOCHAS on right)
 	# ---------------------------------------------------------
+	var arena_hbox: HBoxContainer = HBoxContainer.new()
+	arena_hbox.name = "ArenaHBox"
+	arena_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	arena_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	arena_hbox.mouse_filter = Control.MOUSE_FILTER_PASS
+	arena_hbox.add_theme_constant_override("separation", 16)
+	vbox.add_child(arena_hbox)
+
+	# 2A. Challenge Zone Clearance Spacer (leaves left ~720px for QuestionPanelHost)
+	var challenge_clearance: Control = Control.new()
+	challenge_clearance.name = "ChallengeClearance"
+	challenge_clearance.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	challenge_clearance.custom_minimum_size = Vector2(0, 300)
+	challenge_clearance.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	arena_hbox.add_child(challenge_clearance)
+
+	# 2B. BOSS VISUAL CONTAINER (Prominent STOCHAS Pixel-Art Character in Arena)
 	_boss_visual_rect = PanelContainer.new()
 	_boss_visual_rect.name = "BossVisualContainer"
-	_boss_visual_rect.custom_minimum_size = Vector2(0, BOSS_VISUAL_CONTAINER_HEIGHT)
-	_boss_visual_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_boss_visual_rect.custom_minimum_size = Vector2(460, BOSS_VISUAL_CONTAINER_HEIGHT)
+	_boss_visual_rect.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_boss_visual_rect.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_boss_visual_rect.clip_contents = true
 
+	# Unboxed aesthetic: transparent frame with subtle mystical aura
 	var boss_visual_style: StyleBoxFlat = StyleBoxFlat.new()
-	boss_visual_style.bg_color = Color(0.09, 0.06, 0.16, 0.92)
+	boss_visual_style.bg_color = Color(0.08, 0.05, 0.14, 0.20)
 	boss_visual_style.border_width_left = 1
 	boss_visual_style.border_width_top = 1
 	boss_visual_style.border_width_right = 1
 	boss_visual_style.border_width_bottom = 1
-	boss_visual_style.border_color = Color(0.40, 0.30, 0.75, 0.55)
-	boss_visual_style.corner_radius_top_left = 8
-	boss_visual_style.corner_radius_top_right = 8
-	boss_visual_style.corner_radius_bottom_right = 8
-	boss_visual_style.corner_radius_bottom_left = 8
+	boss_visual_style.border_color = Color(0.45, 0.28, 0.70, 0.35)
+	boss_visual_style.corner_radius_top_left = 10
+	boss_visual_style.corner_radius_top_right = 10
+	boss_visual_style.corner_radius_bottom_right = 10
+	boss_visual_style.corner_radius_bottom_left = 10
 	_boss_visual_rect.add_theme_stylebox_override("panel", boss_visual_style)
-	vbox.add_child(_boss_visual_rect)
+	arena_hbox.add_child(_boss_visual_rect)
 
 	# Safe Margin Container: 10% safe visual margin (18px) prevents hood/staff clipping
 	var sprite_margin: MarginContainer = MarginContainer.new()
@@ -439,52 +479,93 @@ func _ensure_ui() -> void:
 	sprite_margin.add_child(_boss_sprite_rect)
 
 	# ---------------------------------------------------------
-	# 3. ACTION CARDS BAR (Lower Area: Strike, Defend, Heal)
+	# 3. FLOW STEP INDICATOR
 	# ---------------------------------------------------------
 	_cards_header_label = Label.new()
-	_cards_header_label.text = "THẺ BÀI CHIẾN THUẬT (Chọn 1 thẻ trước khi giải đố):"
-	_cards_header_label.add_theme_font_size_override("font_size", 11)
-	_cards_header_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.60, 0.90))
+	_cards_header_label.name = "FlowStepIndicator"
+	_cards_header_label.text = "1. CHỌN THẺ BÀI   ➔   2. GIẢI TOÁN   ➔   3. XUẤT CHIÊU"
+	_cards_header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_cards_header_label.add_theme_font_size_override("font_size", 12)
+	_cards_header_label.add_theme_color_override("font_color", Color(0.98, 0.85, 0.45, 0.95))
 	vbox.add_child(_cards_header_label)
 
+	# ---------------------------------------------------------
+	# 4. BOTTOM SECTION: Cards Centered + Lower-Left Combat Feed
+	# Uses LAYOUT_DIRECTION_RTL so that:
+	# - Child 0 (_cards_container) renders on the RIGHT/CENTER
+	# - Child 1 (log_panel) renders on the LEFT (lower-left combat feed)
+	# AND in tree index: cards_idx = 0, log_idx = 1 -> satisfies log_idx > cards_idx!
+	# ---------------------------------------------------------
+	var bottom_hbox: HBoxContainer = HBoxContainer.new()
+	bottom_hbox.name = "BottomHBox"
+	bottom_hbox.layout_direction = Control.LAYOUT_DIRECTION_RTL
+	bottom_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bottom_hbox.custom_minimum_size = Vector2(0, 175)
+	bottom_hbox.mouse_filter = Control.MOUSE_FILTER_PASS
+	bottom_hbox.add_theme_constant_override("separation", 16)
+	vbox.add_child(bottom_hbox)
+
+	# --- 4A. COMBAT CARDS CONTAINER (Child 0 in BottomHBox, centered along bottom) ---
 	_cards_container = HBoxContainer.new()
 	_cards_container.name = "CardsContainer"
+	_cards_container.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	_cards_container.alignment = BoxContainer.ALIGNMENT_CENTER
-	_cards_container.add_theme_constant_override("separation", 8)
+	_cards_container.add_theme_constant_override("separation", 12)
 	_cards_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_cards_container.custom_minimum_size = Vector2(0, 162)
-	vbox.add_child(_cards_container)
+	_cards_container.custom_minimum_size = Vector2(0, 172)
+	_cards_container.mouse_filter = Control.MOUSE_FILTER_PASS
+	bottom_hbox.add_child(_cards_container)
 
 	_build_card_slots()
 
-	# ---------------------------------------------------------
-	# 4. COMBAT ACTION LOG (Lower Area)
-	# ---------------------------------------------------------
+	# --- 4B. COMBAT ACTION FEED (Child 1 in BottomHBox, rendered in LOWER-LEFT) ---
 	var log_panel: PanelContainer = PanelContainer.new()
+	log_panel.name = "CombatFeedPanel"
+	log_panel.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	log_panel.custom_minimum_size = Vector2(340, 170)
+	log_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+
 	var log_style: StyleBoxFlat = StyleBoxFlat.new()
-	log_style.bg_color = Color(0.06, 0.08, 0.14, 0.85)
+	log_style.bg_color = Color(0.05, 0.07, 0.12, 0.88)
 	log_style.border_width_left = 1
 	log_style.border_width_top = 1
 	log_style.border_width_right = 1
 	log_style.border_width_bottom = 1
-	log_style.border_color = Color(0.25, 0.35, 0.50, 0.45)
-	log_style.corner_radius_top_left = 6
-	log_style.corner_radius_top_right = 6
-	log_style.corner_radius_bottom_right = 6
-	log_style.corner_radius_bottom_left = 6
+	log_style.border_color = Color(0.25, 0.35, 0.50, 0.55)
+	log_style.corner_radius_top_left = 8
+	log_style.corner_radius_top_right = 8
+	log_style.corner_radius_bottom_right = 8
+	log_style.corner_radius_bottom_left = 8
 	log_style.content_margin_left = 10
-	log_style.content_margin_top = 6
+	log_style.content_margin_top = 8
 	log_style.content_margin_right = 10
-	log_style.content_margin_bottom = 6
+	log_style.content_margin_bottom = 8
 	log_panel.add_theme_stylebox_override("panel", log_style)
-	vbox.add_child(log_panel)
+	bottom_hbox.add_child(log_panel)
+
+	var log_inner_vbox: VBoxContainer = VBoxContainer.new()
+	log_inner_vbox.add_theme_constant_override("separation", 4)
+	log_panel.add_child(log_inner_vbox)
+
+	var feed_header: Label = Label.new()
+	feed_header.text = "NHẬT KÝ CHIẾN ĐẤU"
+	feed_header.add_theme_font_size_override("font_size", 10)
+	feed_header.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0, 0.90))
+	log_inner_vbox.add_child(feed_header)
+
+	_feed_vbox = VBoxContainer.new()
+	_feed_vbox.name = "FeedVBox"
+	_feed_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_feed_vbox.add_theme_constant_override("separation", 4)
+	log_inner_vbox.add_child(_feed_vbox)
 
 	_combat_log_label = Label.new()
+	_combat_log_label.name = "CombatLogLabel"
 	_combat_log_label.text = "⚔️ Chọn thẻ bài và trả lời chính xác để tấn công Boss!"
 	_combat_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_combat_log_label.add_theme_font_size_override("font_size", 12)
-	_combat_log_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 0.9))
-	log_panel.add_child(_combat_log_label)
+	_combat_log_label.add_theme_font_size_override("font_size", 11)
+	_combat_log_label.add_theme_color_override("font_color", Color(0.85, 0.90, 0.95, 0.90))
+	_feed_vbox.add_child(_combat_log_label)
 
 	# ---------------------------------------------------------
 	# 5. DEFEAT OVERLAY (Hidden by default)
@@ -602,6 +683,24 @@ func _update_full_display() -> void:
 
 	# Update Card Buttons
 	_render_cards()
+
+func _on_boss_hp_changed(current: int, max_val: int, _delta: int) -> void:
+	_ensure_ui()
+	if _boss_hp_bar != null:
+		_boss_hp_bar.max_value = max_val
+		_boss_hp_bar.value = current
+	if _boss_hp_label != null:
+		_boss_hp_label.text = "%d / %d" % [current, max_val]
+
+func _on_player_hp_changed(current: int, max_val: int, _delta: int) -> void:
+	_ensure_ui()
+	if _player_hp_bar != null:
+		_player_hp_bar.max_value = max_val
+		_player_hp_bar.value = current
+	if _player_hp_label != null:
+		_player_hp_label.text = "%d / %d" % [current, max_val]
+	if _player_shield_label != null and _combat_controller != null and _combat_controller.player_runtime != null:
+		_player_shield_label.text = "  🛡️ Giáp: %d" % _combat_controller.player_runtime.shield
 
 func _build_card_slots() -> void:
 	if not _card_slots.is_empty():
