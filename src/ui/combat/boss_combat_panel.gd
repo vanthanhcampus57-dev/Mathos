@@ -1,5 +1,5 @@
 class_name BossCombatPanel
-extends PanelContainer
+extends Control
 
 ## Production Boss Combat Panel for Stage 1.5 (Boss STOCHAS).
 ## Implements authoritative Stitch reference presentation layout (1280 x 720 canvas):
@@ -112,6 +112,7 @@ var _float_time: float = 0.0
 
 func _ready() -> void:
 	_ensure_ui()
+	_layout_elements()
 	set_process(true)
 
 func _process(delta: float) -> void:
@@ -183,7 +184,6 @@ func _ensure_ui() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
 
 	var empty_style: StyleBoxEmpty = StyleBoxEmpty.new()
-	add_theme_stylebox_override("panel", empty_style)
 
 	# ---------------------------------------------------------
 	# 1. BOSS STAGE CONTAINER (Right ~8px, top ~40px, bottom ~48px, width ~460px)
@@ -588,6 +588,8 @@ func _ensure_ui() -> void:
 	_combat_log_label = Label.new()
 	_combat_log_label.name = "CombatLogLabel"
 	_combat_log_label.text = "⚔️ Chọn thẻ bài và trả lời chính xác để tấn công Boss!"
+	_combat_log_label.custom_minimum_size = Vector2(210, 36)
+	_combat_log_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_combat_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_combat_log_label.add_theme_font_size_override("font_size", 11)
 	_combat_log_label.add_theme_color_override("font_color", Color(0.85, 0.90, 0.95, 0.90))
@@ -732,14 +734,15 @@ func _layout_elements() -> void:
 	# 3. Bottom Cards Area: centered horizontally, bottom ~10px
 	var cards_w: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP # 4 * 106 + 3 * 14 = 466.0
 	var cards_h: float = CARD_HEIGHT # 154.0
-	var cards_x: float = (w - cards_w) * 0.5
-	var cards_y: float = maxf(0.0, h - 10.0 - cards_h)
 
 	if _bottom_center_container != null:
+		var min_bottom_w: float = _bottom_center_container.get_combined_minimum_size().x
+		var actual_bottom_w: float = maxf(cards_w, min_bottom_w)
+		var actual_bottom_x: float = (w - actual_bottom_w) * 0.5
 		var total_bottom_h: float = cards_h + 30.0 # cards + flow pill
 		var bottom_y: float = maxf(0.0, h - 10.0 - total_bottom_h)
-		_bottom_center_container.position = Vector2(cards_x, bottom_y)
-		_bottom_center_container.size = Vector2(cards_w, total_bottom_h)
+		_bottom_center_container.position = Vector2(actual_bottom_x, bottom_y)
+		_bottom_center_container.size = Vector2(actual_bottom_w, total_bottom_h)
 
 	# 4. Combat Feed: left ~32px, bottom ~16px, width ~240px
 	if _combat_feed_panel != null:

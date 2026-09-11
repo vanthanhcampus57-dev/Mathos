@@ -150,6 +150,8 @@ func _build_ui() -> void:
 	_confirm_prompt_lbl.name = "ConfirmPromptLabel"
 	_confirm_prompt_lbl.text = "Bạn có chắc chắn muốn đăng xuất không?\nTiến trình chưa lưu có thể bị mất."
 	_confirm_prompt_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_confirm_prompt_lbl.custom_minimum_size = Vector2(340, 40)
+	_confirm_prompt_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_confirm_prompt_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_confirm_vbox.add_child(_confirm_prompt_lbl)
 

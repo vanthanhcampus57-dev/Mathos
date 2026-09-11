@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://src/ui/combat/boss_combat_panel.gd" id="1_script"]
 
-[node name="BossCombatPanel" type="PanelContainer"]
+[node name="BossCombatPanel" type="Control"]
 custom_minimum_size = Vector2(320, 0)
 anchors_preset = 15
 anchor_right = 1.0

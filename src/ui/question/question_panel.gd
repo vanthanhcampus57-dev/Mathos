@@ -83,8 +83,17 @@ func _apply_combat_styling(is_combat: bool) -> void:
 		if _objective_label != null:
 			_objective_label.text = "ARCANE MATH CHALLENGE • STAGE 1.5"
 			_objective_label.visible = true
+			_objective_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 			_objective_label.add_theme_color_override("font_color", Color(0.20, 0.85, 0.95, 0.95))
 			_objective_label.add_theme_font_size_override("font_size", 11)
+
+		if _prompt_label != null:
+			_prompt_label.custom_minimum_size = Vector2(460, 36)
+			_prompt_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+		if _feedback_label != null:
+			_feedback_label.custom_minimum_size = Vector2(460, 24)
+			_feedback_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 		if _submit_button != null:
 			var btn_style: StyleBoxFlat = StyleBoxFlat.new()
@@ -139,10 +148,14 @@ func _ensure_combat_rule_footer(show: bool) -> void:
 			r_style.content_margin_top = 4
 			r_style.content_margin_right = 8
 			r_style.content_margin_bottom = 4
+			_combat_rule_footer.custom_minimum_size = Vector2(460, 28)
+			_combat_rule_footer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			_combat_rule_footer.add_theme_stylebox_override("panel", r_style)
 
 			_combat_rule_label = Label.new()
 			_combat_rule_label.text = "Quy tắc khế ước: Trả lời đúng để thi triển thẻ bài đã chọn. Trả lời sai: STOCHAS phản kích gây 10 DMG."
+			_combat_rule_label.custom_minimum_size = Vector2(440, 24)
+			_combat_rule_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			_combat_rule_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			_combat_rule_label.add_theme_font_size_override("font_size", 10)
 			_combat_rule_label.add_theme_color_override("font_color", Color(0.90, 0.85, 0.70, 0.85))
@@ -236,7 +249,7 @@ func _ensure_ui_built() -> void:
 		_prompt_label.name = "PromptLabel"
 		_prompt_label.theme_type_variation = &"MathosHeading"
 		_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_prompt_label.custom_minimum_size = Vector2(0, 36)
+		_prompt_label.custom_minimum_size = Vector2(460, 36)
 		_prompt_label.size_flags_horizontal = SIZE_EXPAND_FILL
 		_main_vbox.add_child(_prompt_label)
 
@@ -302,12 +315,16 @@ func _ensure_ui_built() -> void:
 	# Ensure theme variations and layout properties on existing scene nodes
 	if _objective_label != null:
 		_objective_label.theme_type_variation = &"MathosMeta"
+		_objective_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	if _prompt_label != null:
 		_prompt_label.theme_type_variation = &"MathosHeading"
 		_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_prompt_label.custom_minimum_size = Vector2(0, 44)
+		_prompt_label.custom_minimum_size = Vector2(460, 44)
+		_prompt_label.size_flags_horizontal = SIZE_EXPAND_FILL
 	if _feedback_label != null:
 		_feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_feedback_label.custom_minimum_size = Vector2(460, 24)
+		_feedback_label.size_flags_horizontal = SIZE_EXPAND_FILL
 	if _submit_button != null:
 		_submit_button.theme_type_variation = &"MathosPrimaryButton"
 

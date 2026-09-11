@@ -334,6 +334,7 @@ func _ensure_sub_components() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
+		queue_sort()
 		if _stage_map_panel != null and _stage_map_panel.visible:
 			if size.x > 0 and size.y > 0:
 				_stage_map_panel.size = size
@@ -789,6 +790,7 @@ func set_view_mode(mode: ViewMode) -> void:
 					target_size = Vector2(root_win.size)
 				else:
 					target_size = Vector2(1280, 720)
+			_story_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			_story_panel.size = target_size
 			if _context_info != null:
 				_story_panel.set_context_info(_context_info)
@@ -798,6 +800,7 @@ func set_view_mode(mode: ViewMode) -> void:
 		_prologue_player.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_prologue_player.visible = (_current_mode == ViewMode.MODE_PROLOGUE)
 		if _current_mode == ViewMode.MODE_PROLOGUE:
+			_prologue_player.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			var target_size_pro: Vector2 = size
 			if target_size_pro.x <= 0 or target_size_pro.y <= 0:
 				var root_win_pro: Window = get_tree().root if is_inside_tree() else null
@@ -854,9 +857,18 @@ func set_view_mode(mode: ViewMode) -> void:
 						main_body.add_theme_constant_override("margin_top", 0)
 						main_body.add_theme_constant_override("margin_right", 0)
 						main_body.add_theme_constant_override("margin_bottom", 0)
+					if q_host != null:
+						q_host.add_theme_constant_override("margin_left", 0)
+						q_host.add_theme_constant_override("margin_top", 0)
+						q_host.add_theme_constant_override("margin_right", 0)
+						q_host.add_theme_constant_override("margin_bottom", 0)
 					if q_host_panel != null:
 						q_host_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 						q_host_panel.custom_minimum_size = Vector2(530, 0)
+						q_host_panel.add_theme_constant_override("margin_left", 0)
+						q_host_panel.add_theme_constant_override("margin_top", 0)
+						q_host_panel.add_theme_constant_override("margin_right", 0)
+						q_host_panel.add_theme_constant_override("margin_bottom", 0)
 				else:
 					var existing_boss: BossCombatPanel = get_existing_boss_combat_panel()
 					if existing_boss != null:
@@ -870,6 +882,16 @@ func set_view_mode(mode: ViewMode) -> void:
 						main_body.add_theme_constant_override("margin_top", 16)
 						main_body.add_theme_constant_override("margin_right", 16)
 						main_body.add_theme_constant_override("margin_bottom", 16)
+					if q_host != null:
+						q_host.remove_theme_constant_override("margin_left")
+						q_host.remove_theme_constant_override("margin_top")
+						q_host.remove_theme_constant_override("margin_right")
+						q_host.remove_theme_constant_override("margin_bottom")
+					if q_host_panel != null:
+						q_host_panel.remove_theme_constant_override("margin_left")
+						q_host_panel.remove_theme_constant_override("margin_top")
+						q_host_panel.remove_theme_constant_override("margin_right")
+						q_host_panel.remove_theme_constant_override("margin_bottom")
 			else:
 				var existing_boss: BossCombatPanel = get_existing_boss_combat_panel()
 				if existing_boss != null:
@@ -885,9 +907,18 @@ func set_view_mode(mode: ViewMode) -> void:
 					main_body.add_theme_constant_override("margin_top", 16)
 					main_body.add_theme_constant_override("margin_right", 16)
 					main_body.add_theme_constant_override("margin_bottom", 16)
+				if q_host != null:
+					q_host.remove_theme_constant_override("margin_left")
+					q_host.remove_theme_constant_override("margin_top")
+					q_host.remove_theme_constant_override("margin_right")
+					q_host.remove_theme_constant_override("margin_bottom")
 				if q_host_panel != null:
 					q_host_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 					q_host_panel.custom_minimum_size = Vector2(0, 0)
+					q_host_panel.remove_theme_constant_override("margin_left")
+					q_host_panel.remove_theme_constant_override("margin_top")
+					q_host_panel.remove_theme_constant_override("margin_right")
+					q_host_panel.remove_theme_constant_override("margin_bottom")
 
 	if f_host != null: f_host.visible = (_current_mode == ViewMode.MODE_FEEDBACK_HOST)
 	if complete_panel != null: complete_panel.visible = (_current_mode == ViewMode.MODE_STAGE_COMPLETE)
