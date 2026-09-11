@@ -181,10 +181,10 @@ static func test_004_math_challenge_top_center_and_styling(tree: SceneTree) -> b
 		_cleanup(root)
 		return _fail("PARITY-208R-04", "QuestionPanelHost is null")
 
-	# Check width constraint (530px)
-	if q_host_panel.custom_minimum_size.x != 530.0:
+	# Check width constraint (Task 214 human rework: 580-650px, previously 530px)
+	if q_host_panel.custom_minimum_size.x < 580.0 or q_host_panel.custom_minimum_size.x > 650.0:
 		_cleanup(root)
-		return _fail("PARITY-208R-04", "QuestionPanelHost custom_minimum_size.x expected 530, got %f" % q_host_panel.custom_minimum_size.x)
+		return _fail("PARITY-208R-04", "QuestionPanelHost custom_minimum_size.x expected 580-650, got %f" % q_host_panel.custom_minimum_size.x)
 
 	# Verify glass theme styling override applied in combat
 	if not q_panel.has_theme_stylebox_override("panel"):
@@ -314,13 +314,16 @@ static func test_007_tactical_card_row_and_flow_pill(tree: SceneTree) -> bool:
 	panel._layout_elements()
 
 	var card_row_rect: Rect2 = panel.get_card_row_rect()
-	# 4 cards * 106 + 3 gaps * 14 = 466px. Centered on 1280: (1280 - 466) / 2 = 407.
-	if card_row_rect.position.x < 400.0 or card_row_rect.position.x > 414.0:
+	# 4 cards * CARD_WIDTH + 3 gaps * CARD_GAP. Centered on 1280.
+	# Task 214 human rework: cards are 125-140 x 175-200 (132x188, total row 570px centered at x=355).
+	var expected_w: float = 4.0 * BossCombatPanel.CARD_WIDTH + 3.0 * BossCombatPanel.CARD_GAP
+	var expected_x: float = (1280.0 - expected_w) * 0.5
+	if absf(card_row_rect.position.x - expected_x) > 2.0:
 		panel.free()
-		return _fail("PARITY-208R-07", "Card row expected centered at x ~407, got %f" % card_row_rect.position.x)
-	if card_row_rect.size.x < 460.0 or card_row_rect.size.x > 475.0:
+		return _fail("PARITY-208R-07", "Card row expected centered at x ~%f, got %f" % [expected_x, card_row_rect.position.x])
+	if absf(card_row_rect.size.x - expected_w) > 2.0:
 		panel.free()
-		return _fail("PARITY-208R-07", "Card row width expected ~466, got %f" % card_row_rect.size.x)
+		return _fail("PARITY-208R-07", "Card row width expected ~%f, got %f" % [expected_w, card_row_rect.size.x])
 
 	# Verify exact 4 cards
 	for cid in ["card_strike", "card_defend", "card_heal", "card_probability"]:
@@ -328,9 +331,9 @@ static func test_007_tactical_card_row_and_flow_pill(tree: SceneTree) -> bool:
 		if btn == null:
 			panel.free()
 			return _fail("PARITY-208R-07", "Card button %s is null" % cid)
-		if btn.custom_minimum_size != Vector2(106, 154):
+		if btn.custom_minimum_size != Vector2(BossCombatPanel.CARD_WIDTH, BossCombatPanel.CARD_HEIGHT):
 			panel.free()
-			return _fail("PARITY-208R-07", "Card %s expected 106x154, got %s" % [cid, str(btn.custom_minimum_size)])
+			return _fail("PARITY-208R-07", "Card %s expected %sx%s, got %s" % [cid, str(BossCombatPanel.CARD_WIDTH), str(BossCombatPanel.CARD_HEIGHT), str(btn.custom_minimum_size)])
 
 	# Verify Flow Pill
 	var pill_rect: Rect2 = panel.get_flow_pill_rect()
@@ -408,13 +411,13 @@ static func test_009_combat_feed_position_and_styling(tree: SceneTree) -> bool:
 	if feed_rect.position.x < 30.0 or feed_rect.position.x > 34.0:
 		panel.free()
 		return _fail("PARITY-208R-09", "Combat feed expected at x ~32, got %f" % feed_rect.position.x)
-	# Bottom ~16px on 720 canvas: 720 - 16 - 110 = 594
-	if feed_rect.position.y < 580.0 or feed_rect.position.y > 605.0:
+	# Bottom ~16px on 720 canvas: 720 - 16 - 120 = 584 (Task 214 expanded feed 260x120)
+	if feed_rect.position.y < 575.0 or feed_rect.position.y > 605.0:
 		panel.free()
-		return _fail("PARITY-208R-09", "Combat feed expected at y ~594, got %f" % feed_rect.position.y)
-	if feed_rect.size.x != 240.0:
+		return _fail("PARITY-208R-09", "Combat feed expected at y ~584, got %f" % feed_rect.position.y)
+	if feed_rect.size.x < 240.0 or feed_rect.size.x > 270.0:
 		panel.free()
-		return _fail("PARITY-208R-09", "Combat feed width expected 240, got %f" % feed_rect.size.x)
+		return _fail("PARITY-208R-09", "Combat feed width expected 240-270, got %f" % feed_rect.size.x)
 
 	panel.free()
 	print("[PARITY-208R-09] PASS: Lower-Left Combat Action Feed position (32, 594) verified")

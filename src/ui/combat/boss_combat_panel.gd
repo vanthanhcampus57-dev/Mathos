@@ -16,6 +16,7 @@ signal card_selected(card_id: String)
 signal retry_pressed()
 signal victory_acknowledged()
 
+const KARL_PORTRAIT_PATH: String = "res://assets/characters/player/karl/karl_portrait.png"
 const STOCHAS_TEXTURE_PATH: String = "res://assets/characters/bosses/dungeon_1/stochas_boss.png"
 const BOSS_VISUAL_CONTAINER_HEIGHT: float = 180.0
 const SAFE_MARGIN_PERCENT: float = 0.10 # 10% safe visual margin (8–12% requirement)
@@ -27,9 +28,16 @@ const CARD_STRIKE_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/STRIKE
 const CARD_DEFEND_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/DEFEND.png"
 const CARD_HEAL_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/HEAL.png"
 const CARD_PROBABILITY_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/PROBABILITY.png"
-const CARD_WIDTH: float = 106.0
-const CARD_HEIGHT: float = 154.0
+const CARD_WIDTH: float = 132.0
+const CARD_HEIGHT: float = 188.0
 const CARD_GAP: float = 14.0
+
+const _PRELOAD_STRIKE: Texture2D = preload("res://assets/ui/combat/cards_v1/STRIKE.png")
+const _PRELOAD_DEFEND: Texture2D = preload("res://assets/ui/combat/cards_v1/DEFEND.png")
+const _PRELOAD_HEAL: Texture2D = preload("res://assets/ui/combat/cards_v1/HEAL.png")
+const _PRELOAD_PROBABILITY: Texture2D = preload("res://assets/ui/combat/cards_v1/PROBABILITY.png")
+const _PRELOAD_KARL: Texture2D = preload("res://assets/characters/player/karl/karl_portrait.png")
+const _PRELOAD_STOCHAS: Texture2D = preload("res://assets/characters/bosses/dungeon_1/stochas_boss.png")
 
 const CARD_DEFINITIONS: Array[Dictionary] = [
 	{
@@ -103,6 +111,7 @@ var _card_statuses_by_id: Dictionary = {}
 var _card_status_panels_by_id: Dictionary = {}
 
 var _feed_vbox: VBoxContainer = null
+var _prev_combat_log_label: Label = null
 var _combat_log_label: Label = null
 var _defeat_overlay: PanelContainer = null
 var _defeat_retry_button: Button = null
@@ -350,23 +359,29 @@ func _ensure_ui() -> void:
 	boss_sigil.name = "BossSigil"
 	boss_sigil.custom_minimum_size = Vector2(44, 44)
 	boss_sigil.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	boss_sigil.clip_contents = true
 	var sigil_style: StyleBoxFlat = StyleBoxFlat.new()
 	sigil_style.bg_color = Color(0.24, 0.08, 0.16, 0.85)
 	sigil_style.border_width_left = 1
 	sigil_style.border_width_top = 1
 	sigil_style.border_width_right = 1
 	sigil_style.border_width_bottom = 1
-	sigil_style.border_color = Color(0.90, 0.25, 0.35, 0.65)
+	sigil_style.border_color = Color(0.90, 0.25, 0.35, 0.75)
 	sigil_style.corner_radius_top_left = 8
 	sigil_style.corner_radius_top_right = 8
 	sigil_style.corner_radius_bottom_right = 8
 	sigil_style.corner_radius_bottom_left = 8
 	boss_sigil.add_theme_stylebox_override("panel", sigil_style)
-	var sigil_lbl: Label = Label.new()
-	sigil_lbl.text = "☠️"
-	sigil_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sigil_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	boss_sigil.add_child(sigil_lbl)
+
+	var sigil_tex: TextureRect = TextureRect.new()
+	sigil_tex.name = "BossSigilRect"
+	sigil_tex.texture = load_boss_sprite()
+	sigil_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sigil_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	sigil_tex.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sigil_tex.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	sigil_tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	boss_sigil.add_child(sigil_tex)
 	boss_inner_hbox.add_child(boss_sigil)
 
 	# --- 2B. PLAYER HUD PANEL (Child 1 in tree -> rendered on LEFT) ---
@@ -404,23 +419,29 @@ func _ensure_ui() -> void:
 	player_avatar.name = "PlayerAvatar"
 	player_avatar.custom_minimum_size = Vector2(44, 44)
 	player_avatar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	player_avatar.clip_contents = true
 	var av_style: StyleBoxFlat = StyleBoxFlat.new()
 	av_style.bg_color = Color(0.08, 0.16, 0.28, 0.85)
 	av_style.border_width_left = 1
 	av_style.border_width_top = 1
 	av_style.border_width_right = 1
 	av_style.border_width_bottom = 1
-	av_style.border_color = Color(0.20, 0.75, 0.90, 0.65)
+	av_style.border_color = Color(0.25, 0.90, 1.0, 0.75)
 	av_style.corner_radius_top_left = 8
 	av_style.corner_radius_top_right = 8
 	av_style.corner_radius_bottom_right = 8
 	av_style.corner_radius_bottom_left = 8
 	player_avatar.add_theme_stylebox_override("panel", av_style)
-	var av_lbl: Label = Label.new()
-	av_lbl.text = "🧙"
-	av_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	av_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	player_avatar.add_child(av_lbl)
+
+	var karl_tex: TextureRect = TextureRect.new()
+	karl_tex.name = "KarlPortraitRect"
+	karl_tex.texture = load_karl_portrait()
+	karl_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	karl_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	karl_tex.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	karl_tex.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	karl_tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	player_avatar.add_child(karl_tex)
 	player_inner_hbox.add_child(player_avatar)
 
 	var player_vbox: VBoxContainer = VBoxContainer.new()
@@ -548,7 +569,7 @@ func _ensure_ui() -> void:
 	# ---------------------------------------------------------
 	_combat_feed_panel = PanelContainer.new()
 	_combat_feed_panel.name = "CombatFeedPanel"
-	_combat_feed_panel.custom_minimum_size = Vector2(240, 110)
+	_combat_feed_panel.custom_minimum_size = Vector2(260, 120)
 	_combat_feed_panel.mouse_filter = Control.MOUSE_FILTER_PASS
 
 	var log_style: StyleBoxFlat = StyleBoxFlat.new()
@@ -585,10 +606,20 @@ func _ensure_ui() -> void:
 	_feed_vbox.add_theme_constant_override("separation", 3)
 	log_inner_vbox.add_child(_feed_vbox)
 
+	_prev_combat_log_label = Label.new()
+	_prev_combat_log_label.name = "PrevCombatLogLabel"
+	_prev_combat_log_label.text = ""
+	_prev_combat_log_label.custom_minimum_size = Vector2(230, 22)
+	_prev_combat_log_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_prev_combat_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_prev_combat_log_label.add_theme_font_size_override("font_size", 10)
+	_prev_combat_log_label.modulate = Color(0.70, 0.75, 0.85, 0.55)
+	_feed_vbox.add_child(_prev_combat_log_label)
+
 	_combat_log_label = Label.new()
 	_combat_log_label.name = "CombatLogLabel"
 	_combat_log_label.text = "⚔️ Chọn thẻ bài và trả lời chính xác để tấn công Boss!"
-	_combat_log_label.custom_minimum_size = Vector2(210, 36)
+	_combat_log_label.custom_minimum_size = Vector2(230, 36)
 	_combat_log_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_combat_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_combat_log_label.add_theme_font_size_override("font_size", 11)
@@ -711,7 +742,7 @@ func _layout_elements() -> void:
 
 	if _player_hud_panel != null:
 		_player_hud_panel.position = Vector2(32.0, 16.0)
-		_player_hud_panel.size = Vector2(272.0, 56.0)
+		_player_hud_panel.size = Vector2(280.0, 56.0)
 
 	if _boss_hud_panel != null:
 		var bh_w: float = 304.0
@@ -731,23 +762,23 @@ func _layout_elements() -> void:
 			_boss_visual_rect.position = Vector2.ZERO
 			_boss_visual_rect.size = Vector2(stage_w, stage_h)
 
-	# 3. Bottom Cards Area: centered horizontally, bottom ~10px
-	var cards_w: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP # 4 * 106 + 3 * 14 = 466.0
-	var cards_h: float = CARD_HEIGHT # 154.0
+	# 3. Bottom Cards Area: centered horizontally, bottom ~8px
+	var cards_w: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP # 4 * 132 + 3 * 14 = 570.0
+	var cards_h: float = CARD_HEIGHT # 188.0
 
 	if _bottom_center_container != null:
 		var min_bottom_w: float = _bottom_center_container.get_combined_minimum_size().x
 		var actual_bottom_w: float = maxf(cards_w, min_bottom_w)
 		var actual_bottom_x: float = (w - actual_bottom_w) * 0.5
 		var total_bottom_h: float = cards_h + 30.0 # cards + flow pill
-		var bottom_y: float = maxf(0.0, h - 10.0 - total_bottom_h)
+		var bottom_y: float = maxf(0.0, h - 8.0 - total_bottom_h)
 		_bottom_center_container.position = Vector2(actual_bottom_x, bottom_y)
 		_bottom_center_container.size = Vector2(actual_bottom_w, total_bottom_h)
 
-	# 4. Combat Feed: left ~32px, bottom ~16px, width ~240px
+	# 4. Combat Feed: left ~32px, bottom ~16px, width ~260px
 	if _combat_feed_panel != null:
-		var feed_w: float = 240.0
-		var feed_h: float = 110.0
+		var feed_w: float = 260.0
+		var feed_h: float = 120.0
 		var feed_x: float = 32.0
 		var feed_y: float = maxf(0.0, h - 16.0 - feed_h)
 		_combat_feed_panel.position = Vector2(feed_x, feed_y)
@@ -868,7 +899,7 @@ func _build_card_slots() -> void:
 		var badge_margin: MarginContainer = MarginContainer.new()
 		badge_margin.name = "BadgeMargin"
 		badge_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		badge_margin.add_theme_constant_override("margin_top", 3)
+		badge_margin.add_theme_constant_override("margin_top", 4)
 		badge_margin.add_theme_constant_override("margin_left", 4)
 		badge_margin.add_theme_constant_override("margin_right", 4)
 		card_vbox.add_child(badge_margin)
@@ -883,7 +914,7 @@ func _build_card_slots() -> void:
 		badge_label.text = String(def["default_badge"])
 		badge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		badge_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		badge_label.add_theme_font_size_override("font_size", 9)
+		badge_label.add_theme_font_size_override("font_size", 10)
 		badge_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		badge_panel.add_child(badge_label)
 
@@ -892,8 +923,8 @@ func _build_card_slots() -> void:
 		art_margin.name = "ArtMargin"
 		art_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		art_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		art_margin.add_theme_constant_override("margin_left", 3)
-		art_margin.add_theme_constant_override("margin_right", 3)
+		art_margin.add_theme_constant_override("margin_left", 4)
+		art_margin.add_theme_constant_override("margin_right", 4)
 		card_vbox.add_child(art_margin)
 
 		var tex_rect: TextureRect = TextureRect.new()
@@ -911,9 +942,9 @@ func _build_card_slots() -> void:
 		var status_margin: MarginContainer = MarginContainer.new()
 		status_margin.name = "StatusMargin"
 		status_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		status_margin.add_theme_constant_override("margin_bottom", 3)
-		status_margin.add_theme_constant_override("margin_left", 3)
-		status_margin.add_theme_constant_override("margin_right", 3)
+		status_margin.add_theme_constant_override("margin_bottom", 4)
+		status_margin.add_theme_constant_override("margin_left", 4)
+		status_margin.add_theme_constant_override("margin_right", 4)
 		card_vbox.add_child(status_margin)
 
 		var status_panel: PanelContainer = PanelContainer.new()
@@ -926,7 +957,7 @@ func _build_card_slots() -> void:
 		status_label.text = "CHƯA KÍCH HOẠT" if is_skill else ""
 		status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		status_label.add_theme_font_size_override("font_size", 9)
+		status_label.add_theme_font_size_override("font_size", 10)
 		status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		status_panel.add_child(status_label)
 
@@ -1001,12 +1032,12 @@ func _render_cards() -> void:
 			btn.disabled = true
 
 			var skill_style: StyleBoxFlat = StyleBoxFlat.new()
-			skill_style.bg_color = Color(0.07, 0.06, 0.12, 0.90)
+			skill_style.bg_color = Color(0.08, 0.06, 0.14, 0.90)
 			skill_style.border_width_left = 1
 			skill_style.border_width_top = 1
 			skill_style.border_width_right = 1
 			skill_style.border_width_bottom = 1
-			skill_style.border_color = Color(0.55, 0.35, 0.80, 0.60)
+			skill_style.border_color = Color(0.60, 0.40, 0.85, 0.65)
 			skill_style.corner_radius_top_left = 8
 			skill_style.corner_radius_top_right = 8
 			skill_style.corner_radius_bottom_right = 8
@@ -1014,7 +1045,7 @@ func _render_cards() -> void:
 			btn.add_theme_stylebox_override("normal", skill_style)
 			btn.add_theme_stylebox_override("disabled", skill_style)
 
-			tex_rect.modulate = Color(0.65, 0.60, 0.80, 0.75)
+			tex_rect.modulate = Color(0.70, 0.60, 0.85, 0.75)
 
 			if badge_lbl != null:
 				badge_lbl.text = "KỸ NĂNG"
@@ -1049,7 +1080,7 @@ func _render_cards() -> void:
 				status_panel.add_theme_stylebox_override("panel", sp_style)
 
 		elif is_selected:
-			# SELECTED BASIC CARD (Lifted upward ~8px, cyan border, restrained glow, ĐANG CHỌN badge)
+			# SELECTED BASIC CARD (Lifted upward ~6-8px, cyan border, restrained glow, ĐANG CHỌN badge)
 			slot.add_theme_constant_override("margin_top", 0)
 			slot.add_theme_constant_override("margin_bottom", 6)
 			btn.disabled = false
@@ -1065,8 +1096,8 @@ func _render_cards() -> void:
 			sel_style.corner_radius_top_right = 8
 			sel_style.corner_radius_bottom_right = 8
 			sel_style.corner_radius_bottom_left = 8
-			sel_style.shadow_color = Color(0.20, 0.85, 1.0, 0.40)
-			sel_style.shadow_size = 8
+			sel_style.shadow_color = Color(0.20, 0.85, 1.0, 0.45)
+			sel_style.shadow_size = 10
 			btn.add_theme_stylebox_override("normal", sel_style)
 			btn.add_theme_stylebox_override("hover", sel_style)
 			btn.add_theme_stylebox_override("pressed", sel_style)
@@ -1118,18 +1149,20 @@ func _render_cards() -> void:
 			btn.disabled = false
 
 			var norm_style: StyleBoxFlat = StyleBoxFlat.new()
-			norm_style.bg_color = Color(0.08, 0.10, 0.16, 0.92)
-			norm_style.border_width_left = 1
-			norm_style.border_width_top = 1
-			norm_style.border_width_right = 1
-			norm_style.border_width_bottom = 1
+			norm_style.border_width_left = 2
+			norm_style.border_width_top = 2
+			norm_style.border_width_right = 2
+			norm_style.border_width_bottom = 2
 			match c_id:
 				"card_defend":
-					norm_style.border_color = Color(0.95, 0.75, 0.20, 0.75) # Amber/gold border
+					norm_style.bg_color = Color(0.10, 0.08, 0.05, 0.95)
+					norm_style.border_color = Color(1.0, 0.82, 0.28, 0.95) # Amber/gold border
 				"card_heal":
-					norm_style.border_color = Color(0.25, 0.85, 0.45, 0.75) # Emerald/green border
+					norm_style.bg_color = Color(0.06, 0.12, 0.09, 0.95)
+					norm_style.border_color = Color(0.28, 0.92, 0.52, 0.90) # Emerald/green border
 				_:
-					norm_style.border_color = Color(0.28, 0.36, 0.50, 0.65) # Slate border
+					norm_style.bg_color = Color(0.06, 0.09, 0.16, 0.95)
+					norm_style.border_color = Color(0.35, 0.65, 0.95, 0.85) # Slate/azure border
 			norm_style.corner_radius_top_left = 8
 			norm_style.corner_radius_top_right = 8
 			norm_style.corner_radius_bottom_right = 8
@@ -1137,17 +1170,17 @@ func _render_cards() -> void:
 
 			var hov_style: StyleBoxFlat = StyleBoxFlat.new()
 			hov_style.bg_color = Color(0.12, 0.16, 0.26, 0.96)
-			hov_style.border_width_left = 1
-			hov_style.border_width_top = 1
-			hov_style.border_width_right = 1
-			hov_style.border_width_bottom = 1
+			hov_style.border_width_left = 2
+			hov_style.border_width_top = 2
+			hov_style.border_width_right = 2
+			hov_style.border_width_bottom = 2
 			match c_id:
 				"card_defend":
-					hov_style.border_color = Color(1.0, 0.85, 0.30, 0.95)
+					hov_style.border_color = Color(1.0, 0.92, 0.45, 1.0)
 				"card_heal":
-					hov_style.border_color = Color(0.35, 1.0, 0.55, 0.95)
+					hov_style.border_color = Color(0.38, 1.0, 0.60, 1.0)
 				_:
-					hov_style.border_color = Color(0.45, 0.65, 0.85, 0.85)
+					hov_style.border_color = Color(0.45, 0.75, 1.0, 1.0)
 			hov_style.corner_radius_top_left = 8
 			hov_style.corner_radius_top_right = 8
 			hov_style.corner_radius_bottom_right = 8
@@ -1158,7 +1191,13 @@ func _render_cards() -> void:
 			btn.add_theme_stylebox_override("pressed", norm_style)
 			btn.add_theme_stylebox_override("focus", hov_style)
 
-			tex_rect.modulate = Color(0.92, 0.92, 0.95, 0.92)
+			match c_id:
+				"card_defend":
+					tex_rect.modulate = Color(1.0, 0.98, 0.92, 1.0) # 100% full brightness so shield radiates
+				"card_heal":
+					tex_rect.modulate = Color(0.95, 1.0, 0.95, 1.0)
+				_:
+					tex_rect.modulate = Color(0.95, 0.98, 1.0, 1.0)
 
 			if badge_lbl != null:
 				badge_lbl.text = String(def["default_badge"])
@@ -1166,7 +1205,7 @@ func _render_cards() -> void:
 					"card_strike":
 						badge_lbl.add_theme_color_override("font_color", Color(1.0, 0.75, 0.75, 0.95))
 					"card_defend":
-						badge_lbl.add_theme_color_override("font_color", Color(1.0, 0.88, 0.55, 0.95))
+						badge_lbl.add_theme_color_override("font_color", Color(1.0, 0.90, 0.50, 1.0))
 					"card_heal":
 						badge_lbl.add_theme_color_override("font_color", Color(0.65, 1.0, 0.75, 0.95))
 					_:
@@ -1178,7 +1217,7 @@ func _render_cards() -> void:
 					"card_strike":
 						bp_style.bg_color = Color(0.38, 0.12, 0.16, 0.75)
 					"card_defend":
-						bp_style.bg_color = Color(0.38, 0.28, 0.08, 0.75)
+						bp_style.bg_color = Color(0.42, 0.30, 0.08, 0.85)
 					"card_heal":
 						bp_style.bg_color = Color(0.08, 0.32, 0.18, 0.75)
 					_:
@@ -1195,7 +1234,13 @@ func _render_cards() -> void:
 
 			if status_lbl != null:
 				status_lbl.text = _get_card_dynamic_value_text(c_id, model)
-				status_lbl.add_theme_color_override("font_color", Color(0.85, 0.88, 0.95, 0.90))
+				match c_id:
+					"card_defend":
+						status_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.30, 1.0))
+					"card_heal":
+						status_lbl.add_theme_color_override("font_color", Color(0.50, 1.0, 0.70, 1.0))
+					_:
+						status_lbl.add_theme_color_override("font_color", Color(0.85, 0.88, 0.95, 0.90))
 			if status_panel != null:
 				var sp_style: StyleBoxFlat = StyleBoxFlat.new()
 				sp_style.bg_color = Color(0.05, 0.07, 0.12, 0.85)
@@ -1244,6 +1289,8 @@ func _on_card_button_pressed(card_id: String) -> void:
 func _on_combat_log(message: String, type: String) -> void:
 	_ensure_ui()
 	if _combat_log_label != null:
+		if _prev_combat_log_label != null and not _combat_log_label.text.is_empty():
+			_prev_combat_log_label.text = _combat_log_label.text
 		_combat_log_label.text = message
 		match type:
 			"player_success":
@@ -1292,7 +1339,23 @@ func get_boss_texture() -> Texture2D:
 func _load_boss_texture() -> Texture2D:
 	return load_boss_sprite()
 
+static func load_karl_portrait() -> Texture2D:
+	if _PRELOAD_KARL != null:
+		return _PRELOAD_KARL
+	var path: String = KARL_PORTRAIT_PATH
+	if ResourceLoader.exists(path):
+		var res: Resource = load(path)
+		if res is Texture2D:
+			return res as Texture2D
+	var global_path: String = ProjectSettings.globalize_path(path)
+	var img: Image = Image.new()
+	if img.load(global_path) == OK or img.load(path) == OK:
+		return ImageTexture.create_from_image(img)
+	return null
+
 static func load_boss_sprite() -> Texture2D:
+	if _PRELOAD_STOCHAS != null:
+		return _PRELOAD_STOCHAS
 	var path: String = STOCHAS_TEXTURE_PATH
 	if ResourceLoader.exists(path):
 		var res: Resource = load(path)
@@ -1393,6 +1456,15 @@ func _normalize_card_id(card_id: String) -> String:
 	return lower
 
 static func load_card_texture(path: String) -> Texture2D:
+	if path == CARD_STRIKE_TEXTURE_PATH and _PRELOAD_STRIKE != null:
+		return _PRELOAD_STRIKE
+	if path == CARD_DEFEND_TEXTURE_PATH and _PRELOAD_DEFEND != null:
+		return _PRELOAD_DEFEND
+	if path == CARD_HEAL_TEXTURE_PATH and _PRELOAD_HEAL != null:
+		return _PRELOAD_HEAL
+	if path == CARD_PROBABILITY_TEXTURE_PATH and _PRELOAD_PROBABILITY != null:
+		return _PRELOAD_PROBABILITY
+
 	if ResourceLoader.exists(path):
 		var res: Resource = load(path)
 		if res is Texture2D:
@@ -1419,12 +1491,12 @@ func get_player_hud_rect() -> Rect2:
 	_ensure_ui()
 	_layout_elements()
 	if _player_hud_panel != null:
-		var pw: float = _player_hud_panel.size.x if _player_hud_panel.size.x > 0.0 else 272.0
+		var pw: float = _player_hud_panel.size.x if _player_hud_panel.size.x > 0.0 else 280.0
 		var ph: float = _player_hud_panel.size.y if _player_hud_panel.size.y > 0.0 else 56.0
 		var px: float = _player_hud_panel.position.x if _player_hud_panel.position.x > 0.0 else 32.0
 		var py: float = _player_hud_panel.position.y if _player_hud_panel.position.y > 0.0 else 16.0
 		return Rect2(px, py, pw, ph)
-	return Rect2(32, 16, 272, 56)
+	return Rect2(32, 16, 280, 56)
 
 func get_boss_hud_rect() -> Rect2:
 	_ensure_ui()
@@ -1464,12 +1536,12 @@ func get_combat_feed_rect() -> Rect2:
 	_layout_elements()
 	var h: float = size.y if size.y > 0.0 else 720.0
 	if _combat_feed_panel != null:
-		var fw: float = _combat_feed_panel.size.x if _combat_feed_panel.size.x > 0.0 else 240.0
-		var fh: float = _combat_feed_panel.size.y if _combat_feed_panel.size.y > 0.0 else 110.0
+		var fw: float = _combat_feed_panel.size.x if _combat_feed_panel.size.x > 0.0 else 260.0
+		var fh: float = _combat_feed_panel.size.y if _combat_feed_panel.size.y > 0.0 else 120.0
 		var fx: float = _combat_feed_panel.position.x if _combat_feed_panel.position.x > 0.0 else 32.0
 		var fy: float = _combat_feed_panel.position.y if _combat_feed_panel.position.y > 0.0 else maxf(0.0, h - 16.0 - fh)
 		return Rect2(fx, fy, fw, fh)
-	return Rect2(32, maxf(0.0, h - 16.0 - 110.0), 240, 110)
+	return Rect2(32, maxf(0.0, h - 16.0 - 120.0), 260, 120)
 
 func get_flow_pill_rect() -> Rect2:
 	_ensure_ui()
@@ -1478,7 +1550,7 @@ func get_flow_pill_rect() -> Rect2:
 	var h: float = size.y if size.y > 0.0 else 720.0
 	var cw: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP
 	var cx: float = (w - cw) * 0.5
-	var cy: float = maxf(0.0, h - 10.0 - CARD_HEIGHT - 30.0)
+	var cy: float = maxf(0.0, h - 8.0 - CARD_HEIGHT - 30.0)
 	return Rect2(cx, cy, cw, 24)
 
 func get_card_row_rect() -> Rect2:
@@ -1489,7 +1561,7 @@ func get_card_row_rect() -> Rect2:
 	var cw: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP
 	var ch: float = CARD_HEIGHT
 	var cx: float = (w - cw) * 0.5
-	var cy: float = maxf(0.0, h - 10.0 - ch)
+	var cy: float = maxf(0.0, h - 8.0 - ch)
 	return Rect2(cx, cy, cw, ch)
 
 func get_card_rect(card_id: String) -> Rect2:

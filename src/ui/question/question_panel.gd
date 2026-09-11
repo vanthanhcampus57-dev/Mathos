@@ -60,7 +60,7 @@ func _apply_combat_styling(is_combat: bool) -> void:
 	_ensure_ui_built()
 	if is_combat:
 		size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		custom_minimum_size = Vector2(530, 0)
+		custom_minimum_size = Vector2(600, 0)
 		var glass_box: StyleBoxFlat = StyleBoxFlat.new()
 		glass_box.bg_color = Color(0.06, 0.08, 0.14, 0.88)
 		glass_box.border_width_left = 1
@@ -74,10 +74,10 @@ func _apply_combat_styling(is_combat: bool) -> void:
 		glass_box.corner_radius_bottom_left = 16
 		glass_box.shadow_color = Color(0.20, 0.75, 0.90, 0.25)
 		glass_box.shadow_size = 10
-		glass_box.content_margin_left = 16
-		glass_box.content_margin_top = 12
-		glass_box.content_margin_right = 16
-		glass_box.content_margin_bottom = 12
+		glass_box.content_margin_left = 18
+		glass_box.content_margin_top = 14
+		glass_box.content_margin_right = 18
+		glass_box.content_margin_bottom = 14
 		add_theme_stylebox_override("panel", glass_box)
 
 		if _objective_label != null:
@@ -85,19 +85,19 @@ func _apply_combat_styling(is_combat: bool) -> void:
 			_objective_label.visible = true
 			_objective_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 			_objective_label.add_theme_color_override("font_color", Color(0.20, 0.85, 0.95, 0.95))
-			_objective_label.add_theme_font_size_override("font_size", 11)
+			_objective_label.add_theme_font_size_override("font_size", 12)
 
 		if _prompt_label != null:
-			_prompt_label.custom_minimum_size = Vector2(460, 36)
+			_prompt_label.custom_minimum_size = Vector2(540, 36)
 			_prompt_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 		if _feedback_label != null:
-			_feedback_label.custom_minimum_size = Vector2(460, 24)
+			_feedback_label.custom_minimum_size = Vector2(540, 24)
 			_feedback_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 		if _submit_button != null:
 			var btn_style: StyleBoxFlat = StyleBoxFlat.new()
-			btn_style.bg_color = Color(0.12, 0.55, 0.75, 0.95)
+			btn_style.bg_color = Color(0.12, 0.58, 0.80, 0.98)
 			btn_style.border_width_left = 1
 			btn_style.border_width_top = 1
 			btn_style.border_width_right = 1
@@ -107,11 +107,11 @@ func _apply_combat_styling(is_combat: bool) -> void:
 			btn_style.corner_radius_top_right = 8
 			btn_style.corner_radius_bottom_right = 8
 			btn_style.corner_radius_bottom_left = 8
-			btn_style.shadow_color = Color(0.20, 0.85, 1.0, 0.35)
-			btn_style.shadow_size = 6
+			btn_style.shadow_color = Color(0.20, 0.85, 1.0, 0.45)
+			btn_style.shadow_size = 8
 			_submit_button.add_theme_stylebox_override("normal", btn_style)
 			_submit_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
-			_submit_button.custom_minimum_size = Vector2(0, 42)
+			_submit_button.custom_minimum_size = Vector2(0, 44)
 
 		_ensure_combat_rule_footer(true)
 		if _active_interaction_view != null and _active_interaction_view.has_method("set_combat_grid_mode"):

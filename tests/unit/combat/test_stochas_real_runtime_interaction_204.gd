@@ -273,16 +273,16 @@ static func test_rr_006_layout_hierarchy_and_dimensions(tree: SceneTree) -> bool
 		_cleanup(root)
 		return _fail("RR-006", "QuestionPanelHost is null")
 
-	# Check QuestionPanelHost size flags and minimum width (530px Stitch parity)
-	if q_panel_host.custom_minimum_size.x != 530:
+	# Check QuestionPanelHost size flags and minimum width (Task 214: 580-650px human layout)
+	if q_panel_host.custom_minimum_size.x < 580.0 or q_panel_host.custom_minimum_size.x > 650.0:
 		_cleanup(root)
-		return _fail("RR-006", "QuestionPanelHost custom_minimum_size.x expected 530, got %f" % q_panel_host.custom_minimum_size.x)
+		return _fail("RR-006", "QuestionPanelHost custom_minimum_size.x expected 580-650, got %f" % q_panel_host.custom_minimum_size.x)
 
 	if q_panel_host.size_flags_horizontal != Control.SIZE_SHRINK_BEGIN:
 		_cleanup(root)
 		return _fail("RR-006", "QuestionPanelHost size_flags_horizontal expected SIZE_SHRINK_BEGIN")
 
-	# Check exact Stitch card dimensions in BossCombatPanel (106x154)
+	# Check enlarged card dimensions in BossCombatPanel (Task 214: 125-140x175-200)
 	var card_btn: Button = boss_panel.get_card_button("card_strike")
 	if card_btn == null:
 		_cleanup(root)
@@ -292,9 +292,9 @@ static func test_rr_006_layout_hierarchy_and_dimensions(tree: SceneTree) -> bool
 		_cleanup(root)
 		return _fail("RR-006", "Card button size expected %fx%f, got %s" % [BossCombatPanel.CARD_WIDTH, BossCombatPanel.CARD_HEIGHT, str(card_btn.custom_minimum_size)])
 
-	if BossCombatPanel.CARD_WIDTH != 106.0 or BossCombatPanel.CARD_HEIGHT != 154.0:
+	if BossCombatPanel.CARD_WIDTH < 125.0 or BossCombatPanel.CARD_WIDTH > 140.0 or BossCombatPanel.CARD_HEIGHT < 175.0 or BossCombatPanel.CARD_HEIGHT > 200.0:
 		_cleanup(root)
-		return _fail("RR-006", "Card dimensions expected 106x154, got %fx%f" % [BossCombatPanel.CARD_WIDTH, BossCombatPanel.CARD_HEIGHT])
+		return _fail("RR-006", "Card dimensions expected 125-140x175-200, got %fx%f" % [BossCombatPanel.CARD_WIDTH, BossCombatPanel.CARD_HEIGHT])
 
 	# Check unboxed BossVisualContainer (460px Stitch parity)
 	var visual_container: Control = boss_panel._boss_visual_rect

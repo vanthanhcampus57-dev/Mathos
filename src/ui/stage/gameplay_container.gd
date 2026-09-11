@@ -26,17 +26,18 @@ func _resort_children() -> void:
 		# 1. BossCombatPanel spans the entire container area
 		fit_child_in_rect(boss_panel, Rect2(Vector2.ZERO, size))
 
-		# 2. QuestionPanelHost is placed TOP-CENTER (width ~530px, top ~100px)
+		# 2. QuestionPanelHost is placed TOP-CENTER (width 580–650px, top ~88px)
 		if q_host_panel != null and q_host_panel.visible:
 			var min_w: float = q_host_panel.get_combined_minimum_size().x
-			var q_w: float = clampf(maxf(530.0, min_w), 480.0, minf(560.0, size.x))
+			var target_w: float = 600.0
+			var q_w: float = clampf(maxf(target_w, min_w), 580.0, minf(650.0, size.x))
 			var q_x: float = (size.x - q_w) * 0.5
 			var min_h: float = q_host_panel.get_combined_minimum_size().y
-			var max_h: float = minf(360.0, maxf(200.0, size.y - 320.0))
-			var q_h: float = clampf(min_h, 240.0, max_h)
-			var q_y: float = 100.0
+			var max_h: float = minf(290.0, maxf(220.0, size.y - 380.0))
+			var q_h: float = clampf(min_h, 220.0, max_h)
+			var q_y: float = 88.0
 			if size.y < 700.0:
-				q_y = 64.0
+				q_y = 60.0
 			fit_child_in_rect(q_host_panel, Rect2(Vector2(q_x, q_y), Vector2(q_w, q_h)))
 
 		if advisor != null and advisor.visible:
