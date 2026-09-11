@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://d1_stage_presentation_shell_001"]
+[gd_scene load_steps=6 format=3 uid="uid://d1_stage_presentation_shell_001"]
 
 [ext_resource type="Script" path="res://src/ui/stage/stage_presentation_shell.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://mathos_theme_001" path="res://src/ui/theme/mathos_theme.tres" id="2_theme"]
 [ext_resource type="PackedScene" uid="uid://d1_lesson_panel_001" path="res://src/ui/lesson/lesson_panel.tscn" id="3_lesson"]
 [ext_resource type="PackedScene" uid="uid://d1_stage_complete_panel_001" path="res://src/ui/stage/stage_complete_panel.tscn" id="4_complete"]
+[ext_resource type="Script" path="res://src/ui/stage/gameplay_container.gd" id="5_gameplay_container"]
 
 [node name="StagePresentationShell" type="PanelContainer"]
 anchors_preset = 15
@@ -190,11 +191,11 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="GameplayHBox" type="HBoxContainer" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer"]
+[node name="GameplayHBox" type="Container" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 16
+script = ExtResource("5_gameplay_container")
 
 [node name="QuestionPanelHost" type="MarginContainer" parent="VBoxContainer/MainBody/ContentHBox/MainContentVBox/QuestionHostContainer/GameplayHBox"]
 layout_mode = 2

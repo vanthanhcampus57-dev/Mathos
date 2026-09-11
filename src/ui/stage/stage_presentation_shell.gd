@@ -836,6 +836,9 @@ func set_view_mode(mode: ViewMode) -> void:
 			var advisor: Control = gameplay_hbox.get_node_or_null("AdvisorPanel") as Control
 			var is_boss: bool = is_boss_stage()
 			var q_host_panel: MarginContainer = gameplay_hbox.get_node_or_null("QuestionPanelHost") as MarginContainer
+			var left_sidebar: Control = get_node_or_null("VBoxContainer/MainBody/ContentHBox/LeftSidebar") as Control
+			var main_body: MarginContainer = get_node_or_null("VBoxContainer/MainBody") as MarginContainer
+
 			if is_boss:
 				if _current_mode == ViewMode.MODE_QUESTION_HOST:
 					var boss_panel: BossCombatPanel = get_boss_combat_panel()
@@ -844,15 +847,29 @@ func set_view_mode(mode: ViewMode) -> void:
 						boss_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 					if advisor != null:
 						advisor.visible = false
+					if left_sidebar != null:
+						left_sidebar.visible = false
+					if main_body != null:
+						main_body.add_theme_constant_override("margin_left", 0)
+						main_body.add_theme_constant_override("margin_top", 0)
+						main_body.add_theme_constant_override("margin_right", 0)
+						main_body.add_theme_constant_override("margin_bottom", 0)
 					if q_host_panel != null:
 						q_host_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-						q_host_panel.custom_minimum_size = Vector2(380, 0)
+						q_host_panel.custom_minimum_size = Vector2(530, 0)
 				else:
 					var existing_boss: BossCombatPanel = get_existing_boss_combat_panel()
 					if existing_boss != null:
 						existing_boss.visible = false
 					if advisor != null:
 						advisor.visible = false
+					if left_sidebar != null:
+						left_sidebar.visible = true
+					if main_body != null:
+						main_body.add_theme_constant_override("margin_left", 16)
+						main_body.add_theme_constant_override("margin_top", 16)
+						main_body.add_theme_constant_override("margin_right", 16)
+						main_body.add_theme_constant_override("margin_bottom", 16)
 			else:
 				var existing_boss: BossCombatPanel = get_existing_boss_combat_panel()
 				if existing_boss != null:
@@ -861,6 +878,13 @@ func set_view_mode(mode: ViewMode) -> void:
 						existing_boss.set_controller(null)
 				if advisor != null:
 					advisor.visible = (_current_mode == ViewMode.MODE_QUESTION_HOST)
+				if left_sidebar != null:
+					left_sidebar.visible = true
+				if main_body != null:
+					main_body.add_theme_constant_override("margin_left", 16)
+					main_body.add_theme_constant_override("margin_top", 16)
+					main_body.add_theme_constant_override("margin_right", 16)
+					main_body.add_theme_constant_override("margin_bottom", 16)
 				if q_host_panel != null:
 					q_host_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 					q_host_panel.custom_minimum_size = Vector2(0, 0)

@@ -53,29 +53,108 @@ func set_combat_action(action_name: String, action_value: String = "") -> void:
 		_apply_combat_styling(true)
 	_update_submit_button_text()
 
+var _combat_rule_footer: PanelContainer = null
+var _combat_rule_label: Label = null
+
 func _apply_combat_styling(is_combat: bool) -> void:
 	_ensure_ui_built()
 	if is_combat:
 		size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		custom_minimum_size = Vector2(530, 0)
 		var glass_box: StyleBoxFlat = StyleBoxFlat.new()
-		glass_box.bg_color = Color(0.06, 0.08, 0.14, 0.72)
+		glass_box.bg_color = Color(0.06, 0.08, 0.14, 0.88)
 		glass_box.border_width_left = 1
 		glass_box.border_width_top = 1
 		glass_box.border_width_right = 1
 		glass_box.border_width_bottom = 1
-		glass_box.border_color = Color(0.35, 0.45, 0.65, 0.50)
-		glass_box.corner_radius_top_left = 10
-		glass_box.corner_radius_top_right = 10
-		glass_box.corner_radius_bottom_right = 10
-		glass_box.corner_radius_bottom_left = 10
+		glass_box.border_color = Color(0.20, 0.75, 0.90, 0.80)
+		glass_box.corner_radius_top_left = 16
+		glass_box.corner_radius_top_right = 16
+		glass_box.corner_radius_bottom_right = 16
+		glass_box.corner_radius_bottom_left = 16
+		glass_box.shadow_color = Color(0.20, 0.75, 0.90, 0.25)
+		glass_box.shadow_size = 10
 		glass_box.content_margin_left = 16
-		glass_box.content_margin_top = 16
+		glass_box.content_margin_top = 12
 		glass_box.content_margin_right = 16
-		glass_box.content_margin_bottom = 16
+		glass_box.content_margin_bottom = 12
 		add_theme_stylebox_override("panel", glass_box)
+
+		if _objective_label != null:
+			_objective_label.text = "ARCANE MATH CHALLENGE • STAGE 1.5"
+			_objective_label.visible = true
+			_objective_label.add_theme_color_override("font_color", Color(0.20, 0.85, 0.95, 0.95))
+			_objective_label.add_theme_font_size_override("font_size", 11)
+
+		if _submit_button != null:
+			var btn_style: StyleBoxFlat = StyleBoxFlat.new()
+			btn_style.bg_color = Color(0.12, 0.55, 0.75, 0.95)
+			btn_style.border_width_left = 1
+			btn_style.border_width_top = 1
+			btn_style.border_width_right = 1
+			btn_style.border_width_bottom = 1
+			btn_style.border_color = Color(0.35, 0.85, 1.0, 0.95)
+			btn_style.corner_radius_top_left = 8
+			btn_style.corner_radius_top_right = 8
+			btn_style.corner_radius_bottom_right = 8
+			btn_style.corner_radius_bottom_left = 8
+			btn_style.shadow_color = Color(0.20, 0.85, 1.0, 0.35)
+			btn_style.shadow_size = 6
+			_submit_button.add_theme_stylebox_override("normal", btn_style)
+			_submit_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
+			_submit_button.custom_minimum_size = Vector2(0, 42)
+
+		_ensure_combat_rule_footer(true)
+		if _active_interaction_view != null and _active_interaction_view.has_method("set_combat_grid_mode"):
+			_active_interaction_view.call("set_combat_grid_mode", true)
 	else:
 		size_flags_vertical = Control.SIZE_EXPAND_FILL
+		custom_minimum_size = Vector2(0, 300)
 		remove_theme_stylebox_override("panel")
+		if _objective_label != null:
+			_objective_label.remove_theme_color_override("font_color")
+			_objective_label.remove_theme_font_size_override("font_size")
+		if _submit_button != null:
+			_submit_button.remove_theme_stylebox_override("normal")
+			_submit_button.remove_theme_color_override("font_color")
+		_ensure_combat_rule_footer(false)
+		if _active_interaction_view != null and _active_interaction_view.has_method("set_combat_grid_mode"):
+			_active_interaction_view.call("set_combat_grid_mode", false)
+
+func _ensure_combat_rule_footer(show: bool) -> void:
+	if show:
+		if _combat_rule_footer == null:
+			_combat_rule_footer = PanelContainer.new()
+			_combat_rule_footer.name = "CombatRuleFooter"
+			var r_style: StyleBoxFlat = StyleBoxFlat.new()
+			r_style.bg_color = Color(0.08, 0.09, 0.14, 0.70)
+			r_style.border_width_left = 3
+			r_style.border_width_top = 0
+			r_style.border_width_right = 0
+			r_style.border_width_bottom = 0
+			r_style.border_color = Color(1.0, 0.75, 0.20, 0.90)
+			r_style.corner_radius_top_right = 4
+			r_style.corner_radius_bottom_right = 4
+			r_style.content_margin_left = 8
+			r_style.content_margin_top = 4
+			r_style.content_margin_right = 8
+			r_style.content_margin_bottom = 4
+			_combat_rule_footer.add_theme_stylebox_override("panel", r_style)
+
+			_combat_rule_label = Label.new()
+			_combat_rule_label.text = "Quy tắc khế ước: Trả lời đúng để thi triển thẻ bài đã chọn. Trả lời sai: STOCHAS phản kích gây 10 DMG."
+			_combat_rule_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			_combat_rule_label.add_theme_font_size_override("font_size", 10)
+			_combat_rule_label.add_theme_color_override("font_color", Color(0.90, 0.85, 0.70, 0.85))
+			_combat_rule_footer.add_child(_combat_rule_label)
+
+			var footer_vbox: Control = _main_vbox.get_node_or_null("FooterVBox") as Control
+			if footer_vbox != null:
+				footer_vbox.add_child(_combat_rule_footer)
+		_combat_rule_footer.visible = true
+	else:
+		if _combat_rule_footer != null:
+			_combat_rule_footer.visible = false
 
 func get_combat_action_text() -> String:
 	return _combat_action_text
@@ -345,6 +424,8 @@ func setup_question(question_view: Dictionary) -> bool:
 	match interaction_type:
 		"multiple_choice":
 			var mc_view: MultipleChoiceView = MultipleChoiceView.new()
+			if not _combat_action_text.is_empty():
+				mc_view.set_combat_grid_mode(true)
 			if not mc_view.setup(payload as Dictionary):
 				return false
 			_active_interaction_view = mc_view

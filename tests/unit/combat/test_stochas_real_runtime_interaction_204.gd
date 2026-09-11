@@ -1,4 +1,4 @@
-﻿class_name TestStochasRealRuntimeInteraction204
+class_name TestStochasRealRuntimeInteraction204
 extends SceneTree
 
 ## TASK-204: Real Mounted Runtime Combat Verification Test Suite
@@ -273,16 +273,16 @@ static func test_rr_006_layout_hierarchy_and_dimensions(tree: SceneTree) -> bool
 		_cleanup(root)
 		return _fail("RR-006", "QuestionPanelHost is null")
 
-	# Check QuestionPanelHost size flags and minimum width
-	if q_panel_host.custom_minimum_size.x != 380:
+	# Check QuestionPanelHost size flags and minimum width (530px Stitch parity)
+	if q_panel_host.custom_minimum_size.x != 530:
 		_cleanup(root)
-		return _fail("RR-006", "QuestionPanelHost custom_minimum_size.x expected 380, got %f" % q_panel_host.custom_minimum_size.x)
+		return _fail("RR-006", "QuestionPanelHost custom_minimum_size.x expected 530, got %f" % q_panel_host.custom_minimum_size.x)
 
 	if q_panel_host.size_flags_horizontal != Control.SIZE_SHRINK_BEGIN:
 		_cleanup(root)
 		return _fail("RR-006", "QuestionPanelHost size_flags_horizontal expected SIZE_SHRINK_BEGIN")
 
-	# Check enlarged card dimensions in BossCombatPanel
+	# Check exact Stitch card dimensions in BossCombatPanel (106x154)
 	var card_btn: Button = boss_panel.get_card_button("card_strike")
 	if card_btn == null:
 		_cleanup(root)
@@ -292,19 +292,19 @@ static func test_rr_006_layout_hierarchy_and_dimensions(tree: SceneTree) -> bool
 		_cleanup(root)
 		return _fail("RR-006", "Card button size expected %fx%f, got %s" % [BossCombatPanel.CARD_WIDTH, BossCombatPanel.CARD_HEIGHT, str(card_btn.custom_minimum_size)])
 
-	if BossCombatPanel.CARD_WIDTH < 110 or BossCombatPanel.CARD_HEIGHT < 160:
+	if BossCombatPanel.CARD_WIDTH != 106.0 or BossCombatPanel.CARD_HEIGHT != 154.0:
 		_cleanup(root)
-		return _fail("RR-006", "Card dimensions are smaller than enlarged target (114x162)")
+		return _fail("RR-006", "Card dimensions expected 106x154, got %fx%f" % [BossCombatPanel.CARD_WIDTH, BossCombatPanel.CARD_HEIGHT])
 
-	# Check unboxed BossVisualContainer
+	# Check unboxed BossVisualContainer (460px Stitch parity)
 	var visual_container: Control = boss_panel._boss_visual_rect
 	if visual_container == null:
 		_cleanup(root)
 		return _fail("RR-006", "BossVisualContainer is null")
 
-	if visual_container.custom_minimum_size.x != 360:
+	if visual_container.custom_minimum_size.x != 460:
 		_cleanup(root)
-		return _fail("RR-006", "BossVisualContainer custom_minimum_size.x expected 360, got %f" % visual_container.custom_minimum_size.x)
+		return _fail("RR-006", "BossVisualContainer custom_minimum_size.x expected 460, got %f" % visual_container.custom_minimum_size.x)
 
 	# Check QuestionPanel has combat glass styling
 	if not q_panel.has_theme_stylebox_override("panel"):
