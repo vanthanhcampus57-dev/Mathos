@@ -1,23 +1,41 @@
 extends Control
 
-## MATHOS-STOCHAS-COMBAT-UI-LAB-REFINE-219L
-## Isolated Native Godot UI Lab Refinement for STOCHAS Combat Presentation
+## MATHOS-STOCHAS-STITCH-FINAL-LAB-PARITY-220L
+## Native Godot LAB Parity Implementation from Approved Final Stitch Reference
 ## Viewport: 1280 x 720
 
-# Metric specifications (authoritative lab targets per Task 219L)
-const CARD_SHELL_WIDTH: float = 140.0
-const CARD_SHELL_HEIGHT: float = 200.0
-const CARD_ART_WIDTH: float = 124.0
-const CARD_ART_HEIGHT: float = 166.0
+# Authoritative Composition Grid & Axis
+const CENTER_INTERACTION_X: float = 690.0
 
-# Question Panel footprint & positioning
-const QUESTION_PANEL_WIDTH: float = 660.0
-const QUESTION_PANEL_HEIGHT: float = 285.0
-const QUESTION_PANEL_POS_X: float = 310.0
-const QUESTION_PANEL_POS_Y: float = 120.0
-const HUD_SAFE_TOP_ZONE_Y: float = 110.0
+# Question Module
+const QUESTION_WIDTH: float = 640.0
+const QUESTION_TOP: float = 160.0
+const QUESTION_HEIGHT: float = 210.0
 
-# Asset paths (real production assets)
+# Card Specifications (Approved Stitch visual size)
+const CARD_WIDTH: float = 104.0
+const CARD_HEIGHT: float = 158.0
+const CARD_GAP: float = 14.0
+const CARD_ROW_BOTTOM: float = 20.0
+
+# Hover Detail Panel
+const HOVER_DETAIL_WIDTH: float = 440.0
+const HOVER_DETAIL_HEIGHT: float = 42.0
+const HOVER_DETAIL_Y: float = 486.0
+
+# Boss Battlefield Entity
+const BOSS_WIDTH: float = 480.0
+const BOSS_HEIGHT: float = 520.0
+const BOSS_RIGHT: float = 0.0
+const BOSS_BOTTOM: float = 70.0
+
+# Karl Battlefield Entity
+const KARL_ENTITY_LEFT: float = 70.0
+const KARL_ENTITY_BOTTOM: float = 75.0
+const KARL_ENTITY_WIDTH: float = 140.0
+const KARL_ENTITY_HEIGHT: float = 180.0
+
+# Asset paths (canonical production assets)
 const ASSET_BG: String = "res://assets/backgrounds/d1_misty_forest_bg.png"
 const ASSET_KARL: String = "res://assets/characters/player/karl/karl_portrait.png"
 const ASSET_BOSS: String = "res://assets/characters/bosses/dungeon_1/stochas_boss.png"
@@ -41,6 +59,7 @@ const COLOR_TEXT_MUTED: Color = Color(0.75, 0.82, 0.90, 0.85)
 
 # State
 var selected_card_idx: int = 0
+var hovered_card_idx: int = 0
 var selected_answer_idx: int = 0
 var current_question_idx: int = 0
 var debug_mode: bool = false
@@ -52,6 +71,7 @@ var boss_rect: TextureRect = null
 var karl_hud: PanelContainer = null
 var boss_hud: PanelContainer = null
 var karl_portrait_rect: TextureRect = null
+var karl_battlefield_entity: Control = null
 var question_panel: PanelContainer = null
 var question_prompt_label: Label = null
 var question_stage_label: Label = null
@@ -59,59 +79,64 @@ var answer_buttons: Array[Button] = []
 var hint_button: Button = null
 var cta_button: Button = null
 var helper_label: Label = null
+var hover_detail_panel: PanelContainer = null
+var hover_title_lbl: Label = null
+var hover_desc_lbl: Label = null
 var card_panels: Array[PanelContainer] = []
 var card_art_rects: Array[TextureRect] = []
-var card_footer_labels: Array[Label] = []
 var debug_overlay: Control = null
-var status_toast: Label = null
+var floating_status_container: Control = null
 
 # Sample Questions
 var questions_data: Array[Dictionary] = [
 	{
-		"stage": "ARCANE MATH CHALLENGE • CÂU HỎI 1 / 3",
+		"stage": "ARCANE CHALLENGE • CÂU HỎI 1 / 3",
+		"round": "GIAI ĐOẠN 1 • 45s",
 		"prompt": "Tính xác suất rút được 1 thẻ bài Tấn công từ bộ bài 20 lá gồm 8 Tấn công, 6 Phòng thủ, 6 Hồi máu?",
 		"choices": [
-			"[ A ]  8 / 20  =  40%",
-			"[ B ]  6 / 20  =  30%",
-			"[ C ]  12 / 20  =  60%",
-			"[ D ]  14 / 20  =  70%"
+			{"code": "A", "val": "40%", "sub": "8 / 20"},
+			{"code": "B", "val": "30%", "sub": "6 / 20"},
+			{"code": "C", "val": "60%", "sub": "12 / 20"},
+			{"code": "D", "val": "70%", "sub": "14 / 20"}
 		],
 		"correct": 0,
-		"hint": "Gợi ý: Xác suất P = Số lá mong muốn (8) chia cho Tổng số lá (20)."
+		"hint": "Gợi ý: Xác suất P = Số lá thuận lợi (8) / Tổng số lá (20) = 40%."
 	},
 	{
-		"stage": "ARCANE MATH CHALLENGE • CÂU HỎI 2 / 3",
-		"prompt": "Gieo một xúc xắc 6 mặt cân đối. Xác suất xuất hiện mặt có số chấm là số nguyên tố bằng bao nhiêu?",
+		"stage": "ARCANE CHALLENGE • CÂU HỎI 2 / 3",
+		"round": "GIAI ĐOẠN 1 • 45s",
+		"prompt": "Gieo một xúc xắc 6 mặt cân đối. Xác suất xuất hiện mặt là số nguyên tố bằng bao nhiêu?",
 		"choices": [
-			"[ A ]  1 / 6  (~16.7%)",
-			"[ B ]  2 / 6  (~33.3%)",
-			"[ C ]  3 / 6  =  50%",
-			"[ D ]  4 / 6  (~66.7%)"
+			{"code": "A", "val": "16.7%", "sub": "1 / 6"},
+			{"code": "B", "val": "33.3%", "sub": "2 / 6"},
+			{"code": "C", "val": "50.0%", "sub": "3 / 6"},
+			{"code": "D", "val": "66.7%", "sub": "4 / 6"}
 		],
 		"correct": 2,
-		"hint": "Gợi ý: Các số nguyên tố từ 1 đến 6 là {2, 3, 5}, có tổng cộng 3 trường hợp thuận lợi."
+		"hint": "Gợi ý: Các số nguyên tố là {2, 3, 5} -> có 3/6 = 50%."
 	},
 	{
-		"stage": "ARCANE MATH CHALLENGE • CÂU HỎI 3 / 3",
+		"stage": "ARCANE CHALLENGE • CÂU HỎI 3 / 3",
+		"round": "GIAI ĐOẠN 1 • 45s",
 		"prompt": "Một túi có 5 viên bi đỏ và 3 viên bi xanh. Rút ngẫu nhiên 1 viên, xác suất rút được bi đỏ là:",
 		"choices": [
-			"[ A ]  3 / 8  =  37.5%",
-			"[ B ]  5 / 8  =  62.5%",
-			"[ C ]  5 / 3  (~166%)",
-			"[ D ]  1 / 2  =  50%"
+			{"code": "A", "val": "37.5%", "sub": "3 / 8"},
+			{"code": "B", "val": "62.5%", "sub": "5 / 8"},
+			{"code": "C", "val": "50.0%", "sub": "4 / 8"},
+			{"code": "D", "val": "75.0%", "sub": "6 / 8"}
 		],
 		"correct": 1,
-		"hint": "Gợi ý: Tổng số bi = 5 + 3 = 8. Số bi đỏ = 5. P = 5/8."
+		"hint": "Gợi ý: Tổng 8 viên, 5 viên đỏ -> 5/8 = 62.5%."
 	}
 ]
 
-# Card Configurations (Top title labels removed per Fix 1)
+# Locked Mathos Combat Contract (Canonical values: 10 / +8 / +15)
 var cards_data: Array[Dictionary] = [
 	{
 		"id": "strike",
 		"name": "TẤN CÔNG",
-		"cost": "1 MP",
-		"desc": "10 DMG",
+		"effect": "Gây 10 sát thương",
+		"stat_badge": "10 DMG",
 		"color": COLOR_ACCENT_RED,
 		"asset": ASSET_CARD_STRIKE,
 		"disabled": false
@@ -119,26 +144,26 @@ var cards_data: Array[Dictionary] = [
 	{
 		"id": "defend",
 		"name": "PHÒNG THỦ",
-		"cost": "1 MP",
-		"desc": "+8 GIÁP",
+		"effect": "Nhận +8 Giáp",
+		"stat_badge": "+8 GIÁP",
 		"color": COLOR_ACCENT_CYAN,
 		"asset": ASSET_CARD_DEFEND,
 		"disabled": false
 	},
 	{
 		"id": "heal",
-		"name": "HỒI MÁU",
-		"cost": "2 MP",
-		"desc": "+15 HP",
+		"name": "HỒI PHỤC",
+		"effect": "Hồi +15 HP",
+		"stat_badge": "+15 HP",
 		"color": COLOR_ACCENT_GREEN,
 		"asset": ASSET_CARD_HEAL,
 		"disabled": false
 	},
 	{
 		"id": "probability",
-		"name": "XÁC SUẤT",
-		"cost": "3 MP",
-		"desc": "BỊ KHÓA",
+		"name": "KỸ NĂNG XÁC SUẤT",
+		"effect": "CHƯA KÍCH HOẠT",
+		"stat_badge": "BỊ KHÓA",
 		"color": COLOR_ACCENT_PURPLE,
 		"asset": ASSET_CARD_PROBABILITY,
 		"disabled": true
@@ -151,7 +176,14 @@ func _ready() -> void:
 
 	_build_scene()
 	_update_card_selection()
+	_update_hover_detail(selected_card_idx)
 	_update_question_view()
+
+	# Trigger initial demonstration floating combat status feedback
+	_spawn_floating_feedback(Vector2(140, 520), "+8 GIÁP", COLOR_ACCENT_CYAN)
+	_spawn_floating_feedback(Vector2(150, 480), "+15 HP", COLOR_ACCENT_GREEN)
+	_spawn_floating_feedback(Vector2(1040, 240), "-10 HP", COLOR_ACCENT_RED)
+	_spawn_floating_feedback(Vector2(1040, 210), "CRITICAL!", COLOR_ACCENT_GOLD)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.pressed or event.echo:
@@ -175,63 +207,69 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_D:
 			toggle_debug_overlay()
 
-# Public helpers for verification
-func get_card_shell_size() -> Vector2:
-	return Vector2(CARD_SHELL_WIDTH, CARD_SHELL_HEIGHT)
+# Getters for Verification
+func get_center_interaction_x() -> float:
+	return CENTER_INTERACTION_X
 
-func get_card_art_size() -> Vector2:
-	return Vector2(CARD_ART_WIDTH, CARD_ART_HEIGHT)
+func get_question_center_x() -> float:
+	if question_panel == null:
+		return 0.0
+	return question_panel.position.x + (question_panel.size.x / 2.0)
 
-func get_question_panel_size() -> Vector2:
-	return Vector2(QUESTION_PANEL_WIDTH, QUESTION_PANEL_HEIGHT)
+func get_hover_detail_center_x() -> float:
+	if hover_detail_panel == null:
+		return 0.0
+	return hover_detail_panel.position.x + (hover_detail_panel.size.x / 2.0)
 
-func get_question_panel_position() -> Vector2:
-	return Vector2(QUESTION_PANEL_POS_X, QUESTION_PANEL_POS_Y)
+func get_card_row_center_x() -> float:
+	var total_width: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP
+	var row_start_x: float = CENTER_INTERACTION_X - (total_width / 2.0)
+	return row_start_x + (total_width / 2.0)
 
-func get_hud_safe_top_zone() -> float:
-	return HUD_SAFE_TOP_ZONE_Y
+func get_card_size() -> Vector2:
+	return Vector2(CARD_WIDTH, CARD_HEIGHT)
+
+func get_card_gap() -> float:
+	return CARD_GAP
+
+func get_question_position() -> Vector2:
+	return Vector2(CENTER_INTERACTION_X - (QUESTION_WIDTH / 2.0), QUESTION_TOP)
+
+func get_question_size() -> Vector2:
+	return Vector2(QUESTION_WIDTH, QUESTION_HEIGHT)
+
+func get_hover_detail_position() -> Vector2:
+	return Vector2(CENTER_INTERACTION_X - (HOVER_DETAIL_WIDTH / 2.0), HOVER_DETAIL_Y)
+
+func get_boss_position() -> Vector2:
+	return Vector2(1280.0 - BOSS_WIDTH - BOSS_RIGHT, 720.0 - BOSS_HEIGHT - BOSS_BOTTOM)
+
+func get_boss_size() -> Vector2:
+	return Vector2(BOSS_WIDTH, BOSS_HEIGHT)
 
 func is_combat_feed_present() -> bool:
 	return false
 
-func has_card_top_labels() -> bool:
-	# Verifies Fix 1: No labels above cards
-	for card in card_panels:
-		for child in card.find_children("*", "Label", true, false):
+func has_permanent_card_stats() -> bool:
+	# Verifies that card shells have no permanent number labels printed under them
+	for panel in card_panels:
+		for child in panel.find_children("*", "Label", true, false):
 			var lbl = child as Label
 			var txt = lbl.text.strip_edges()
-			if txt in ["TẤN CÔNG", "PHÒNG THỦ", "HỒI MÁU", "XÁC SUẤT"]:
+			if txt in ["10 DMG", "+8 GIÁP", "+15 HP", "BỊ KHÓA"]:
 				return true
 	return false
-
-func does_overlap_stochas_hud() -> bool:
-	if boss_hud == null or question_panel == null:
-		return false
-	var hud_rect: Rect2 = Rect2(boss_hud.position, boss_hud.size)
-	var q_rect: Rect2 = Rect2(question_panel.position, question_panel.size)
-	return hud_rect.intersects(q_rect)
-
-func does_overlap_karl_hud() -> bool:
-	if karl_hud == null or question_panel == null:
-		return false
-	var hud_rect: Rect2 = Rect2(karl_hud.position, karl_hud.size)
-	var q_rect: Rect2 = Rect2(question_panel.position, question_panel.size)
-	return hud_rect.intersects(q_rect)
-
-func get_selected_card_index() -> int:
-	return selected_card_idx
-
-func get_selected_answer_index() -> int:
-	return selected_answer_idx
 
 func select_card(idx: int) -> void:
 	if idx < 0 or idx >= cards_data.size():
 		return
 	if cards_data[idx]["disabled"]:
-		_show_toast("Thẻ bài [XÁC SUẤT] đang bị khóa (cần 3 MP)!")
+		_spawn_floating_feedback(Vector2(690, 460), "CHƯA KÍCH HOẠT (CẦN 3 MP)", COLOR_ACCENT_PURPLE)
 		return
 	selected_card_idx = idx
+	hovered_card_idx = idx
 	_update_card_selection()
+	_update_hover_detail(selected_card_idx)
 	_update_cta_button_text()
 
 func cycle_question() -> void:
@@ -239,7 +277,7 @@ func cycle_question() -> void:
 	selected_answer_idx = 0
 	hint_shown = false
 	_update_question_view()
-	_show_toast("Đã chuyển sang Câu hỏi %d / %d" % [current_question_idx + 1, questions_data.size()])
+	_spawn_floating_feedback(Vector2(690, 130), "CÂU HỎI MỚI", COLOR_ACCENT_CYAN)
 
 func cycle_answer() -> void:
 	selected_answer_idx = (selected_answer_idx + 1) % 4
@@ -252,28 +290,50 @@ func select_answer(idx: int) -> void:
 
 func reset_lab() -> void:
 	selected_card_idx = 0
+	hovered_card_idx = 0
 	selected_answer_idx = 0
 	current_question_idx = 0
 	hint_shown = false
 	_update_card_selection()
+	_update_hover_detail(0)
 	_update_question_view()
-	_show_toast("Đã đặt lại giao diện Lab về trạng thái ban đầu.")
+	_spawn_floating_feedback(Vector2(690, 460), "ĐÃ RESET LAB", COLOR_ACCENT_GOLD)
 
 func toggle_debug_overlay() -> void:
 	debug_mode = not debug_mode
 	if debug_overlay != null:
 		debug_overlay.visible = debug_mode
-	_show_toast("Debug Outlines: %s" % ("BẬT" if debug_mode else "TẮT"))
 
 func _build_scene() -> void:
+	# 1. Background
 	_build_background()
+
+	# 2. STOCHAS Battlefield Entity (Right 0px, Bottom 70px)
 	_build_boss_render()
+
+	# 3. Karl Battlefield Entity (Left 70px, Bottom 75px)
+	_build_karl_battlefield_entity()
+
+	# 4. Top HUDs (Karl Top-Left, Stochas Top-Right)
 	_build_top_huds()
-	_build_question_panel()
-	_build_card_bar()
-	_build_controls_bar()
+
+	# 5. Question Module (Center X = 690px, Top = 160px, Width = 640px)
+	_build_question_module()
+
+	# 6. Card Hover Detail Panel (Center X = 690px, above card row)
+	_build_card_hover_detail()
+
+	# 7. Card Row (Center X = 690px, Bottom = 20px, 104x158px each)
+	_build_card_row()
+
+	# 8. Settings Button (Bottom-Right: 24px right, 20px bottom)
+	_build_settings_button()
+
+	# 9. Floating Combat Feedback Container
+	_build_floating_status_container()
+
+	# 10. Debug Overlay
 	_build_debug_overlay()
-	_build_toast()
 
 func _build_background() -> void:
 	bg_rect = TextureRect.new()
@@ -289,137 +349,180 @@ func _build_background() -> void:
 		bg_rect.texture = load(ASSET_BG)
 	add_child(bg_rect)
 
+	# Atmospheric dark fantasy vignette overlay
 	var dark_overlay: ColorRect = ColorRect.new()
 	dark_overlay.name = "AtmosphereOverlay"
 	dark_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dark_overlay.color = Color(0.02, 0.04, 0.08, 0.35)
+	dark_overlay.color = Color(0.02, 0.04, 0.08, 0.32)
 	add_child(dark_overlay)
 
 func _build_boss_render() -> void:
+	# Right 0px, Bottom 70px, 480x520px
 	boss_rect = TextureRect.new()
 	boss_rect.name = "StochasBossRender"
-	boss_rect.position = Vector2(810, 130)
-	boss_rect.size = Vector2(440, 480)
+	boss_rect.position = Vector2(1280.0 - BOSS_WIDTH - BOSS_RIGHT, 720.0 - BOSS_HEIGHT - BOSS_BOTTOM)
+	boss_rect.size = Vector2(BOSS_WIDTH, BOSS_HEIGHT)
 	boss_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	boss_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	if ResourceLoader.exists(ASSET_BOSS):
 		boss_rect.texture = load(ASSET_BOSS)
 	add_child(boss_rect)
 
+func _build_karl_battlefield_entity() -> void:
+	# Left 70px, Bottom 75px, 140x180px
+	karl_battlefield_entity = Control.new()
+	karl_battlefield_entity.name = "KarlBattlefieldEntity"
+	karl_battlefield_entity.position = Vector2(KARL_ENTITY_LEFT, 720.0 - KARL_ENTITY_BOTTOM - KARL_ENTITY_HEIGHT)
+	karl_battlefield_entity.size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
+	add_child(karl_battlefield_entity)
+
+	# Framed pedestal standee representing Karl on the battlefield
+	var pedestal: PanelContainer = PanelContainer.new()
+	pedestal.custom_minimum_size = Vector2(130, 160)
+	pedestal.position = Vector2(5, 10)
+	var ped_box: StyleBoxFlat = _create_glass_box(Color(0.06, 0.10, 0.18, 0.75), COLOR_ACCENT_CYAN, 12)
+	ped_box.border_width_left = 2
+	ped_box.border_width_top = 2
+	ped_box.border_width_right = 2
+	ped_box.border_width_bottom = 2
+	ped_box.shadow_color = Color(0.15, 0.75, 1.0, 0.35)
+	ped_box.shadow_size = 10
+	pedestal.add_theme_stylebox_override("panel", ped_box)
+	karl_battlefield_entity.add_child(pedestal)
+
+	var port: TextureRect = TextureRect.new()
+	port.custom_minimum_size = Vector2(118, 140)
+	port.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	port.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	if ResourceLoader.exists(ASSET_KARL):
+		port.texture = load(ASSET_KARL)
+	pedestal.add_child(port)
+
+	# Small hero tag underneath standee
+	var tag: Label = Label.new()
+	tag.text = "KARL"
+	tag.position = Vector2(0, 162)
+	tag.custom_minimum_size = Vector2(140, 18)
+	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tag.add_theme_font_size_override("font_size", 10)
+	tag.add_theme_color_override("font_color", COLOR_ACCENT_CYAN)
+	karl_battlefield_entity.add_child(tag)
+
 func _build_top_huds() -> void:
-	# Karl HUD (Top Left: (24, 18), height 72 -> bounds Y in [18, 90])
+	# Karl HUD: Left 24px, Top 20px, 260x68px
 	karl_hud = PanelContainer.new()
 	karl_hud.name = "KarlHUD"
-	karl_hud.position = Vector2(24, 18)
-	karl_hud.custom_minimum_size = Vector2(280, 72)
-	karl_hud.size = Vector2(280, 72)
-	var karl_box: StyleBoxFlat = _create_glass_box(Color(0.06, 0.09, 0.15, 0.85), Color(0.20, 0.60, 0.85, 0.70), 10)
+	karl_hud.position = Vector2(24, 20)
+	karl_hud.custom_minimum_size = Vector2(260, 68)
+	karl_hud.size = Vector2(260, 68)
+	var karl_box: StyleBoxFlat = _create_glass_box(Color(0.06, 0.09, 0.15, 0.85), Color(0.20, 0.60, 0.85, 0.70), 8)
 	karl_hud.add_theme_stylebox_override("panel", karl_box)
 	add_child(karl_hud)
 
 	var karl_hbox: HBoxContainer = HBoxContainer.new()
-	karl_hbox.add_theme_constant_override("separation", 12)
+	karl_hbox.add_theme_constant_override("separation", 10)
 	karl_hud.add_child(karl_hbox)
 
 	var port_frame: PanelContainer = PanelContainer.new()
-	port_frame.custom_minimum_size = Vector2(56, 56)
-	var port_box: StyleBoxFlat = _create_glass_box(Color(0.1, 0.14, 0.22, 1.0), COLOR_ACCENT_CYAN, 8)
-	port_frame.add_theme_stylebox_override("panel", port_box)
+	port_frame.custom_minimum_size = Vector2(50, 50)
+	var pbox: StyleBoxFlat = _create_glass_box(Color(0.1, 0.14, 0.22, 1.0), COLOR_ACCENT_CYAN, 6)
+	port_frame.add_theme_stylebox_override("panel", pbox)
 	karl_hbox.add_child(port_frame)
 
 	karl_portrait_rect = TextureRect.new()
 	karl_portrait_rect.name = "KarlPortrait"
-	karl_portrait_rect.custom_minimum_size = Vector2(50, 50)
+	karl_portrait_rect.custom_minimum_size = Vector2(46, 46)
 	karl_portrait_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	karl_portrait_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	if ResourceLoader.exists(ASSET_KARL):
 		karl_portrait_rect.texture = load(ASSET_KARL)
 	port_frame.add_child(karl_portrait_rect)
 
-	var karl_info_vbox: VBoxContainer = VBoxContainer.new()
-	karl_info_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	karl_info_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	karl_hbox.add_child(karl_info_vbox)
+	var karl_vbox: VBoxContainer = VBoxContainer.new()
+	karl_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	karl_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	karl_hbox.add_child(karl_vbox)
 
-	var karl_name_lbl: Label = Label.new()
-	karl_name_lbl.text = "KARL (TOÁN SƯ TẬP SỰ)"
-	karl_name_lbl.add_theme_font_size_override("font_size", 12)
-	karl_name_lbl.add_theme_color_override("font_color", COLOR_ACCENT_CYAN)
-	karl_info_vbox.add_child(karl_name_lbl)
+	var karl_name: Label = Label.new()
+	karl_name.text = "KARL • TOÁN SƯ TẬP SỰ"
+	karl_name.add_theme_font_size_override("font_size", 11)
+	karl_name.add_theme_color_override("font_color", COLOR_ACCENT_CYAN)
+	karl_vbox.add_child(karl_name)
 
 	var hp_bar: ProgressBar = ProgressBar.new()
-	hp_bar.custom_minimum_size = Vector2(170, 16)
+	hp_bar.custom_minimum_size = Vector2(170, 14)
 	hp_bar.max_value = 100.0
 	hp_bar.value = 100.0
 	hp_bar.show_percentage = false
-	var hp_bg: StyleBoxFlat = _create_solid_box(Color(0.12, 0.15, 0.22, 0.9), 4)
-	var hp_fill: StyleBoxFlat = _create_solid_box(Color(0.20, 0.78, 0.42, 1.0), 4)
+	var hp_bg: StyleBoxFlat = _create_solid_box(Color(0.12, 0.15, 0.22, 0.9), 3)
+	var hp_fill: StyleBoxFlat = _create_solid_box(Color(0.20, 0.78, 0.42, 1.0), 3)
 	hp_bar.add_theme_stylebox_override("background", hp_bg)
 	hp_bar.add_theme_stylebox_override("fill", hp_fill)
-	karl_info_vbox.add_child(hp_bar)
+	karl_vbox.add_child(hp_bar)
 
-	var hp_text_lbl: Label = Label.new()
-	hp_text_lbl.text = "HP: 100 / 100   •   GIÁP: 0"
-	hp_text_lbl.add_theme_font_size_override("font_size", 10)
-	hp_text_lbl.add_theme_color_override("font_color", COLOR_TEXT_MUTED)
-	karl_info_vbox.add_child(hp_text_lbl)
+	var hp_sub: Label = Label.new()
+	hp_sub.text = "HP: 100 / 100   •   GIÁP: 0"
+	hp_sub.add_theme_font_size_override("font_size", 9)
+	hp_sub.add_theme_color_override("font_color", COLOR_TEXT_MUTED)
+	karl_vbox.add_child(hp_sub)
 
-	# Stochas Boss HUD (Top Right: (936, 18), height 72 -> bounds Y in [18, 90])
+	# Stochas Boss HUD: Right 24px, Top 20px, 300x68px
 	boss_hud = PanelContainer.new()
 	boss_hud.name = "StochasHUD"
-	boss_hud.position = Vector2(936, 18)
-	boss_hud.custom_minimum_size = Vector2(320, 72)
-	boss_hud.size = Vector2(320, 72)
-	var boss_box: StyleBoxFlat = _create_glass_box(Color(0.12, 0.06, 0.08, 0.88), Color(0.95, 0.30, 0.35, 0.75), 10)
+	boss_hud.position = Vector2(1280.0 - 24.0 - 300.0, 20)
+	boss_hud.custom_minimum_size = Vector2(300, 68)
+	boss_hud.size = Vector2(300, 68)
+	var boss_box: StyleBoxFlat = _create_glass_box(Color(0.12, 0.06, 0.08, 0.88), Color(0.95, 0.30, 0.35, 0.75), 8)
 	boss_hud.add_theme_stylebox_override("panel", boss_box)
 	add_child(boss_hud)
 
 	var boss_vbox: VBoxContainer = VBoxContainer.new()
 	boss_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	boss_vbox.add_theme_constant_override("separation", 3)
+	boss_vbox.add_theme_constant_override("separation", 2)
 	boss_hud.add_child(boss_vbox)
 
-	var boss_name_lbl: Label = Label.new()
-	boss_name_lbl.text = "STOCHAS • CHÚA TỂ XÁC SUẤT"
-	boss_name_lbl.add_theme_font_size_override("font_size", 13)
-	boss_name_lbl.add_theme_color_override("font_color", COLOR_ACCENT_RED)
-	boss_vbox.add_child(boss_name_lbl)
+	var boss_name: Label = Label.new()
+	boss_name.text = "STOCHAS • CHÚA TỂ XÁC SUẤT"
+	boss_name.add_theme_font_size_override("font_size", 12)
+	boss_name.add_theme_color_override("font_color", COLOR_ACCENT_RED)
+	boss_vbox.add_child(boss_name)
 
 	var boss_hp_bar: ProgressBar = ProgressBar.new()
-	boss_hp_bar.custom_minimum_size = Vector2(296, 16)
+	boss_hp_bar.custom_minimum_size = Vector2(280, 14)
 	boss_hp_bar.max_value = 250.0
 	boss_hp_bar.value = 250.0
 	boss_hp_bar.show_percentage = false
-	var boss_hp_bg: StyleBoxFlat = _create_solid_box(Color(0.20, 0.10, 0.12, 0.9), 4)
-	var boss_hp_fill: StyleBoxFlat = _create_solid_box(Color(0.90, 0.22, 0.25, 1.0), 4)
-	boss_hp_bar.add_theme_stylebox_override("background", boss_hp_bg)
-	boss_hp_bar.add_theme_stylebox_override("fill", boss_hp_fill)
+	var b_bg: StyleBoxFlat = _create_solid_box(Color(0.20, 0.10, 0.12, 0.9), 3)
+	var b_fill: StyleBoxFlat = _create_solid_box(Color(0.90, 0.22, 0.25, 1.0), 3)
+	boss_hp_bar.add_theme_stylebox_override("background", b_bg)
+	boss_hp_bar.add_theme_stylebox_override("fill", b_fill)
 	boss_vbox.add_child(boss_hp_bar)
 
-	var boss_status_lbl: Label = Label.new()
-	boss_status_lbl.text = "HP: 250 / 250   •   Ý ĐỊNH: ĐÒN QUÉT (10 DMG)"
-	boss_status_lbl.add_theme_font_size_override("font_size", 10)
-	boss_status_lbl.add_theme_color_override("font_color", Color(1.0, 0.8, 0.8, 0.85))
-	boss_vbox.add_child(boss_status_lbl)
+	var boss_intent: Label = Label.new()
+	boss_intent.text = "HP: 250 / 250   •   Ý ĐỊNH: 10 DMG (ĐÒN QUÉT)"
+	boss_intent.add_theme_font_size_override("font_size", 9)
+	boss_intent.add_theme_color_override("font_color", Color(1.0, 0.8, 0.8, 0.85))
+	boss_vbox.add_child(boss_intent)
 
-func _build_question_panel() -> void:
-	# Fix 2 & Fix 3: Position below HUD safe zone (Y=120 > 110), size 660 x 285 px
+func _build_question_module() -> void:
+	# Center X = 690px, Top = 160px, Width = 640px
+	var start_x: float = CENTER_INTERACTION_X - (QUESTION_WIDTH / 2.0)
 	question_panel = PanelContainer.new()
 	question_panel.name = "QuestionPanel"
-	question_panel.position = Vector2(QUESTION_PANEL_POS_X, QUESTION_PANEL_POS_Y)
-	question_panel.custom_minimum_size = Vector2(QUESTION_PANEL_WIDTH, QUESTION_PANEL_HEIGHT)
-	question_panel.size = Vector2(QUESTION_PANEL_WIDTH, QUESTION_PANEL_HEIGHT)
+	question_panel.position = Vector2(start_x, QUESTION_TOP)
+	question_panel.custom_minimum_size = Vector2(QUESTION_WIDTH, QUESTION_HEIGHT)
+	question_panel.size = Vector2(QUESTION_WIDTH, QUESTION_HEIGHT)
 
-	var q_box: StyleBoxFlat = _create_glass_box(COLOR_PANEL_BG, COLOR_PANEL_BORDER, 12)
-	q_box.content_margin_left = 20
-	q_box.content_margin_top = 12
-	q_box.content_margin_right = 20
-	q_box.content_margin_bottom = 12
+	var q_box: StyleBoxFlat = _create_glass_box(COLOR_PANEL_BG, COLOR_PANEL_BORDER, 10)
+	q_box.content_margin_left = 14
+	q_box.content_margin_top = 10
+	q_box.content_margin_right = 14
+	q_box.content_margin_bottom = 10
 	question_panel.add_theme_stylebox_override("panel", q_box)
 	add_child(question_panel)
 
 	var main_vbox: VBoxContainer = VBoxContainer.new()
-	main_vbox.add_theme_constant_override("separation", 8)
+	main_vbox.add_theme_constant_override("separation", 6)
 	question_panel.add_child(main_vbox)
 
 	# 1. Header Row
@@ -427,68 +530,66 @@ func _build_question_panel() -> void:
 	main_vbox.add_child(header_hbox)
 
 	question_stage_label = Label.new()
-	question_stage_label.text = "ARCANE MATH CHALLENGE • CÂU HỎI 1 / 3"
+	question_stage_label.text = "ARCANE CHALLENGE • CÂU HỎI 1 / 3"
 	question_stage_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	question_stage_label.add_theme_font_size_override("font_size", 11)
 	question_stage_label.add_theme_color_override("font_color", COLOR_ACCENT_CYAN)
 	header_hbox.add_child(question_stage_label)
 
-	var round_badge: Label = Label.new()
-	round_badge.text = "GIAI ĐOẠN 1"
-	round_badge.add_theme_font_size_override("font_size", 10)
-	round_badge.add_theme_color_override("font_color", COLOR_ACCENT_GOLD)
-	header_hbox.add_child(round_badge)
+	var round_lbl: Label = Label.new()
+	round_lbl.name = "RoundLabel"
+	round_lbl.text = "GIAI ĐOẠN 1 • 45s"
+	round_lbl.add_theme_font_size_override("font_size", 10)
+	round_lbl.add_theme_color_override("font_color", COLOR_ACCENT_GOLD)
+	header_hbox.add_child(round_lbl)
 
-	# 2. Question Prompt with comfortable vertical space and line spacing
+	# 2. Question Prompt (compact, readable, no oversized black box)
 	question_prompt_label = Label.new()
-	question_prompt_label.custom_minimum_size = Vector2(620, 48)
+	question_prompt_label.custom_minimum_size = Vector2(612, 38)
 	question_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	question_prompt_label.add_theme_font_size_override("font_size", 13)
-	question_prompt_label.add_theme_constant_override("line_spacing", 4)
+	question_prompt_label.add_theme_font_size_override("font_size", 12)
 	question_prompt_label.add_theme_color_override("font_color", Color(0.96, 0.98, 1.0, 1.0))
 	main_vbox.add_child(question_prompt_label)
 
-	# 3. Answer Area: 2x2 GridContainer with increased button height (38 px)
-	var answer_grid: GridContainer = GridContainer.new()
-	answer_grid.columns = 2
-	answer_grid.add_theme_constant_override("h_separation", 10)
-	answer_grid.add_theme_constant_override("v_separation", 8)
-	main_vbox.add_child(answer_grid)
+	# 3. Answer Options: ONE HORIZONTAL 4-OPTION ROW (Approved Stitch Layout)
+	var answer_row: HBoxContainer = HBoxContainer.new()
+	answer_row.name = "AnswerRow"
+	answer_row.add_theme_constant_override("separation", 8)
+	main_vbox.add_child(answer_row)
 
 	answer_buttons.clear()
 	for i in range(4):
 		var btn: Button = Button.new()
 		btn.name = "AnswerBtn_%d" % i
-		btn.custom_minimum_size = Vector2(305, 38)
+		btn.custom_minimum_size = Vector2(146, 42)
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		btn.add_theme_font_size_override("font_size", 12)
 		btn.pressed.connect(select_answer.bind(i))
-		answer_grid.add_child(btn)
+		answer_row.add_child(btn)
 		answer_buttons.append(btn)
 
-	# 4. Action Row (Hint + CTA) with clear hierarchy and spacing
+	# 4. Action Row (Hint + Primary XUẤT CHIÊU CTA)
 	var action_hbox: HBoxContainer = HBoxContainer.new()
-	action_hbox.add_theme_constant_override("separation", 14)
+	action_hbox.add_theme_constant_override("separation", 10)
 	action_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	main_vbox.add_child(action_hbox)
 
 	hint_button = Button.new()
 	hint_button.name = "HintButton"
 	hint_button.text = "💡 GỢI Ý"
-	hint_button.custom_minimum_size = Vector2(115, 44)
+	hint_button.custom_minimum_size = Vector2(100, 38)
 	var hint_box: StyleBoxFlat = _create_glass_box(Color(0.12, 0.16, 0.24, 0.85), Color(0.40, 0.55, 0.70, 0.70), 6)
 	hint_button.add_theme_stylebox_override("normal", hint_box)
-	hint_button.add_theme_font_size_override("font_size", 12)
+	hint_button.add_theme_font_size_override("font_size", 11)
 	hint_button.pressed.connect(_on_hint_pressed)
 	action_hbox.add_child(hint_button)
 
 	cta_button = Button.new()
 	cta_button.name = "SubmitCTAButton"
 	cta_button.text = "XUẤT CHIÊU: TẤN CÔNG (10 DMG)"
-	cta_button.custom_minimum_size = Vector2(290, 48)
+	cta_button.custom_minimum_size = Vector2(260, 42)
 	cta_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var cta_box: StyleBoxFlat = _create_solid_box(Color(0.12, 0.55, 0.82, 0.98), 8)
+	var cta_box: StyleBoxFlat = _create_solid_box(Color(0.12, 0.55, 0.82, 0.98), 6)
 	cta_box.border_width_left = 1
 	cta_box.border_width_top = 1
 	cta_box.border_width_right = 1
@@ -497,122 +598,125 @@ func _build_question_panel() -> void:
 	cta_box.shadow_color = Color(0.15, 0.75, 1.0, 0.45)
 	cta_box.shadow_size = 6
 	cta_button.add_theme_stylebox_override("normal", cta_box)
-	cta_button.add_theme_font_size_override("font_size", 13)
+	cta_button.add_theme_font_size_override("font_size", 12)
 	cta_button.pressed.connect(_on_cta_pressed)
 	action_hbox.add_child(cta_button)
 
-	# 5. Helper Text (No horizontal bar, no scrollbar)
+	# 5. Combat rule subtext
 	helper_label = Label.new()
-	helper_label.custom_minimum_size = Vector2(620, 18)
-	helper_label.text = "Quy tắc: Chọn thẻ bài và phương án đúng để xuất chiêu. Sai: STOCHAS phản đòn 10 DMG."
+	helper_label.text = "Quy tắc: Đúng -> Thi triển chiêu thức. Sai -> STOCHAS phản đòn 10 DMG."
 	helper_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	helper_label.add_theme_font_size_override("font_size", 10)
+	helper_label.add_theme_font_size_override("font_size", 9)
 	helper_label.add_theme_color_override("font_color", COLOR_TEXT_MUTED)
 	main_vbox.add_child(helper_label)
 
-func _build_card_bar() -> void:
-	# Card bar positioned at bottom center
+func _build_card_hover_detail() -> void:
+	# Shared center X = 690px, positioned ~20-30px above card row
+	var start_x: float = CENTER_INTERACTION_X - (HOVER_DETAIL_WIDTH / 2.0)
+	hover_detail_panel = PanelContainer.new()
+	hover_detail_panel.name = "CardHoverDetailPanel"
+	hover_detail_panel.position = Vector2(start_x, HOVER_DETAIL_Y)
+	hover_detail_panel.custom_minimum_size = Vector2(HOVER_DETAIL_WIDTH, HOVER_DETAIL_HEIGHT)
+	hover_detail_panel.size = Vector2(HOVER_DETAIL_WIDTH, HOVER_DETAIL_HEIGHT)
+
+	var h_box: StyleBoxFlat = _create_glass_box(Color(0.06, 0.08, 0.14, 0.92), COLOR_PANEL_BORDER, 6)
+	h_box.content_margin_left = 12
+	h_box.content_margin_top = 4
+	h_box.content_margin_right = 12
+	h_box.content_margin_bottom = 4
+	hover_detail_panel.add_theme_stylebox_override("panel", h_box)
+	add_child(hover_detail_panel)
+
+	var h_vbox: VBoxContainer = VBoxContainer.new()
+	h_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	h_vbox.add_theme_constant_override("separation", 1)
+	hover_detail_panel.add_child(h_vbox)
+
+	hover_title_lbl = Label.new()
+	hover_title_lbl.name = "HoverTitleLabel"
+	hover_title_lbl.text = "TẤN CÔNG"
+	hover_title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hover_title_lbl.add_theme_font_size_override("font_size", 11)
+	hover_title_lbl.add_theme_color_override("font_color", COLOR_ACCENT_RED)
+	h_vbox.add_child(hover_title_lbl)
+
+	hover_desc_lbl = Label.new()
+	hover_desc_lbl.name = "HoverDescLabel"
+	hover_desc_lbl.text = "Gây 10 sát thương chuẩn lên STOCHAS"
+	hover_desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hover_desc_lbl.add_theme_font_size_override("font_size", 10)
+	hover_desc_lbl.add_theme_color_override("font_color", Color(0.9, 0.95, 1.0, 0.9))
+	h_vbox.add_child(hover_desc_lbl)
+
+func _build_card_row() -> void:
+	# Shared center X = 690px, Bottom = 20px
+	var total_width: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP
+	var start_x: float = CENTER_INTERACTION_X - (total_width / 2.0)
+	var start_y: float = 720.0 - CARD_ROW_BOTTOM - CARD_HEIGHT
+
 	var card_container: HBoxContainer = HBoxContainer.new()
-	card_container.name = "CardBarContainer"
-	card_container.position = Vector2(340, 498)
-	card_container.add_theme_constant_override("separation", 14)
+	card_container.name = "CardRowContainer"
+	card_container.position = Vector2(start_x, start_y)
+	card_container.add_theme_constant_override("separation", int(CARD_GAP))
 	add_child(card_container)
 
 	card_panels.clear()
 	card_art_rects.clear()
-	card_footer_labels.clear()
 
 	for i in range(cards_data.size()):
 		var data: Dictionary = cards_data[i]
 		var card_panel: PanelContainer = PanelContainer.new()
 		card_panel.name = "CardShell_%s" % data["id"]
-		card_panel.custom_minimum_size = Vector2(CARD_SHELL_WIDTH, CARD_SHELL_HEIGHT)
-		card_panel.size = Vector2(CARD_SHELL_WIDTH, CARD_SHELL_HEIGHT)
+		card_panel.custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
+		card_panel.size = Vector2(CARD_WIDTH, CARD_HEIGHT)
 
-		var shell_box: StyleBoxFlat = _create_card_style(COLOR_CARD_BG, COLOR_CARD_BORDER, 8)
+		var shell_box: StyleBoxFlat = _create_card_style(COLOR_CARD_BG, COLOR_CARD_BORDER, 6)
 		card_panel.add_theme_stylebox_override("panel", shell_box)
 		card_container.add_child(card_panel)
 		card_panels.append(card_panel)
 
+		# Make card clickable & hoverable
 		var hit_btn: Button = Button.new()
 		hit_btn.flat = true
 		hit_btn.set_anchors_preset(Control.PRESET_FULL_RECT)
 		hit_btn.mouse_filter = Control.MOUSE_FILTER_PASS
 		hit_btn.pressed.connect(select_card.bind(i))
+		hit_btn.mouse_entered.connect(_on_card_mouse_entered.bind(i))
+		hit_btn.mouse_exited.connect(_on_card_mouse_exited.bind(i))
 		card_panel.add_child(hit_btn)
 
-		var card_vbox: VBoxContainer = VBoxContainer.new()
-		card_vbox.add_theme_constant_override("separation", 4)
-		card_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-		card_panel.add_child(card_vbox)
-
-		# FIX 1: Completely removed top label strip!
-		# Inner artwork dominates the card body: 124 x 166 px (88.6% width, 83.0% height)
-		var art_frame: PanelContainer = PanelContainer.new()
-		art_frame.custom_minimum_size = Vector2(CARD_ART_WIDTH, CARD_ART_HEIGHT)
-		art_frame.size = Vector2(CARD_ART_WIDTH, CARD_ART_HEIGHT)
-		var art_box: StyleBoxFlat = _create_solid_box(Color(0.04, 0.05, 0.08, 0.70), 4)
-		art_frame.add_theme_stylebox_override("panel", art_box)
-		card_vbox.add_child(art_frame)
-
+		# Artwork fills the body, NO permanent numbers below cards!
 		var art_rect: TextureRect = TextureRect.new()
 		art_rect.name = "Art_%s" % data["id"]
-		art_rect.custom_minimum_size = Vector2(CARD_ART_WIDTH, CARD_ART_HEIGHT)
+		art_rect.custom_minimum_size = Vector2(CARD_WIDTH - 8, CARD_HEIGHT - 8)
+		art_rect.size = Vector2(CARD_WIDTH - 8, CARD_HEIGHT - 8)
 		art_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		art_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		art_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		if ResourceLoader.exists(data["asset"]):
 			art_rect.texture = load(data["asset"])
-		art_frame.add_child(art_rect)
+		card_panel.add_child(art_rect)
 		card_art_rects.append(art_rect)
 
-		# Compact effect footer ONLY (No duplicate card names)
-		var footer_lbl: Label = Label.new()
-		footer_lbl.text = data["desc"]
-		footer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		footer_lbl.add_theme_font_size_override("font_size", 10)
-		footer_lbl.add_theme_color_override("font_color", Color(0.92, 0.94, 0.98, 0.95))
-		card_vbox.add_child(footer_lbl)
-		card_footer_labels.append(footer_lbl)
-
 		if data["disabled"]:
-			card_panel.modulate = Color(0.55, 0.55, 0.60, 0.65)
-			footer_lbl.text = "BỊ KHÓA"
+			card_panel.modulate = Color(0.5, 0.5, 0.55, 0.60)
 
-func _build_controls_bar() -> void:
-	var legend_panel: PanelContainer = PanelContainer.new()
-	legend_panel.name = "LabControlsLegend"
-	legend_panel.position = Vector2(365, 12)
-	legend_panel.custom_minimum_size = Vector2(550, 30)
-	var leg_box: StyleBoxFlat = _create_glass_box(Color(0.05, 0.07, 0.12, 0.80), Color(0.20, 0.40, 0.60, 0.50), 6)
-	leg_box.content_margin_left = 12
-	leg_box.content_margin_right = 12
-	legend_panel.add_theme_stylebox_override("panel", leg_box)
-	add_child(legend_panel)
-
-	var leg_lbl: Label = Label.new()
-	leg_lbl.text = "[1-4] Chọn Card   |   [Q] Đổi Câu Hỏi   |   [A] Đổi Đáp Án   |   [D] Viền Debug   |   [R] Đặt lại"
-	leg_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	leg_lbl.add_theme_font_size_override("font_size", 10)
-	leg_lbl.add_theme_color_override("font_color", Color(0.70, 0.85, 0.95, 0.90))
-	legend_panel.add_child(leg_lbl)
-
+func _build_settings_button() -> void:
 	var settings_btn: Button = Button.new()
 	settings_btn.name = "SettingsButton"
 	settings_btn.text = "⚙ CÀI ĐẶT"
-	settings_btn.position = Vector2(1150, 665)
-	settings_btn.custom_minimum_size = Vector2(105, 38)
+	settings_btn.position = Vector2(1280.0 - 24.0 - 100.0, 720.0 - 20.0 - 36.0)
+	settings_btn.custom_minimum_size = Vector2(100, 36)
 	var set_box: StyleBoxFlat = _create_glass_box(Color(0.08, 0.10, 0.16, 0.85), Color(0.30, 0.45, 0.60, 0.60), 6)
 	settings_btn.add_theme_stylebox_override("normal", set_box)
 	settings_btn.add_theme_font_size_override("font_size", 11)
 	add_child(settings_btn)
 
-	var open_view_tag: Label = Label.new()
-	open_view_tag.name = "OpenForestTag"
-	open_view_tag.position = Vector2(24, 680)
-	open_view_tag.text = "KHÔNG GIAN MỞ (ĐÃ BỎ NHẬT KÝ CHIẾN ĐẤU)"
-	open_view_tag.add_theme_font_size_override("font_size", 10)
-	open_view_tag.add_theme_color_override("font_color", Color(0.40, 0.60, 0.50, 0.60))
-	add_child(open_view_tag)
+func _build_floating_status_container() -> void:
+	floating_status_container = Control.new()
+	floating_status_container.name = "FloatingStatusContainer"
+	floating_status_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	floating_status_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(floating_status_container)
 
 func _build_debug_overlay() -> void:
 	debug_overlay = Control.new()
@@ -622,63 +726,49 @@ func _build_debug_overlay() -> void:
 	debug_overlay.visible = false
 	add_child(debug_overlay)
 
-	# Question panel bounding outline & label
+	# Shared Center Axis Line (X = 690)
+	var axis_line: Line2D = Line2D.new()
+	axis_line.name = "CenterAxisLine"
+	axis_line.default_color = Color(1.0, 0.8, 0.2, 0.6)
+	axis_line.width = 1.0
+	axis_line.add_point(Vector2(CENTER_INTERACTION_X, 100))
+	axis_line.add_point(Vector2(CENTER_INTERACTION_X, 710))
+	debug_overlay.add_child(axis_line)
+
+	var axis_lbl: Label = Label.new()
+	axis_lbl.text = "Axis X = 690"
+	axis_lbl.position = Vector2(CENTER_INTERACTION_X - 35, 105)
+	axis_lbl.add_theme_font_size_override("font_size", 9)
+	axis_lbl.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2, 0.9))
+	debug_overlay.add_child(axis_lbl)
+
+	# Question outline
 	var q_outline: ReferenceRect = ReferenceRect.new()
-	q_outline.position = Vector2(QUESTION_PANEL_POS_X, QUESTION_PANEL_POS_Y)
-	q_outline.size = Vector2(QUESTION_PANEL_WIDTH, QUESTION_PANEL_HEIGHT)
+	q_outline.position = Vector2(CENTER_INTERACTION_X - (QUESTION_WIDTH / 2.0), QUESTION_TOP)
+	q_outline.size = Vector2(QUESTION_WIDTH, QUESTION_HEIGHT)
 	q_outline.border_color = Color(1.0, 0.2, 0.8, 0.9)
-	q_outline.border_width = 2.0
+	q_outline.border_width = 1.5
 	q_outline.editor_only = false
 	debug_overlay.add_child(q_outline)
 
-	var q_dim_lbl: Label = Label.new()
-	q_dim_lbl.text = "Question: 660 x 285 px (Y=%d > HUD safe %d)" % [int(QUESTION_PANEL_POS_Y), int(HUD_SAFE_TOP_ZONE_Y)]
-	q_dim_lbl.position = Vector2(QUESTION_PANEL_POS_X + 4, QUESTION_PANEL_POS_Y - 20)
-	q_dim_lbl.add_theme_font_size_override("font_size", 10)
-	q_dim_lbl.add_theme_color_override("font_color", Color(1.0, 0.2, 0.8, 1.0))
-	debug_overlay.add_child(q_dim_lbl)
+	# Hover detail outline
+	var h_outline: ReferenceRect = ReferenceRect.new()
+	h_outline.position = Vector2(CENTER_INTERACTION_X - (HOVER_DETAIL_WIDTH / 2.0), HOVER_DETAIL_Y)
+	h_outline.size = Vector2(HOVER_DETAIL_WIDTH, HOVER_DETAIL_HEIGHT)
+	h_outline.border_color = Color(0.2, 0.8, 1.0, 0.9)
+	h_outline.border_width = 1.5
+	h_outline.editor_only = false
+	debug_overlay.add_child(h_outline)
 
-	# Card Bar outlines
-	for i in range(4):
-		var c_outline: ReferenceRect = ReferenceRect.new()
-		c_outline.position = Vector2(340 + i * (CARD_SHELL_WIDTH + 14), 498)
-		c_outline.size = Vector2(CARD_SHELL_WIDTH, CARD_SHELL_HEIGHT)
-		c_outline.border_color = Color(0.2, 1.0, 0.3, 0.9)
-		c_outline.border_width = 1.5
-		c_outline.editor_only = false
-		debug_overlay.add_child(c_outline)
-
-		var c_art_outline: ReferenceRect = ReferenceRect.new()
-		c_art_outline.position = Vector2(340 + i * (CARD_SHELL_WIDTH + 14) + 8, 498 + 6)
-		c_art_outline.size = Vector2(CARD_ART_WIDTH, CARD_ART_HEIGHT)
-		c_art_outline.border_color = Color(1.0, 0.8, 0.1, 0.9)
-		c_art_outline.border_width = 1.0
-		c_art_outline.editor_only = false
-		debug_overlay.add_child(c_art_outline)
-
-func _build_toast() -> void:
-	status_toast = Label.new()
-	status_toast.name = "StatusToast"
-	status_toast.position = Vector2(340, 448)
-	status_toast.custom_minimum_size = Vector2(600, 26)
-	status_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	status_toast.add_theme_font_size_override("font_size", 11)
-	status_toast.add_theme_color_override("font_color", COLOR_ACCENT_GOLD)
-	status_toast.visible = false
-	add_child(status_toast)
-
-func _show_toast(msg: String) -> void:
-	if status_toast == null:
-		return
-	status_toast.text = msg
-	status_toast.visible = true
-	var tw: Tween = create_tween()
-	tw.tween_interval(2.0)
-	tw.tween_property(status_toast, "modulate:a", 0.0, 0.5)
-	tw.tween_callback(func():
-		status_toast.visible = false
-		status_toast.modulate.a = 1.0
-	)
+	# Card row outline
+	var total_w: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP
+	var c_outline: ReferenceRect = ReferenceRect.new()
+	c_outline.position = Vector2(CENTER_INTERACTION_X - (total_w / 2.0), 720.0 - CARD_ROW_BOTTOM - CARD_HEIGHT)
+	c_outline.size = Vector2(total_w, CARD_HEIGHT)
+	c_outline.border_color = Color(0.2, 1.0, 0.3, 0.9)
+	c_outline.border_width = 1.5
+	c_outline.editor_only = false
+	debug_overlay.add_child(c_outline)
 
 func _update_card_selection() -> void:
 	for i in range(card_panels.size()):
@@ -688,11 +778,11 @@ func _update_card_selection() -> void:
 
 		if is_disabled:
 			panel.position.y = 0
-			var dis_style: StyleBoxFlat = _create_card_style(Color(0.06, 0.08, 0.12, 0.8), Color(0.25, 0.30, 0.40, 0.4), 8)
+			var dis_style: StyleBoxFlat = _create_card_style(Color(0.06, 0.08, 0.12, 0.8), Color(0.25, 0.30, 0.40, 0.4), 6)
 			panel.add_theme_stylebox_override("panel", dis_style)
 		elif is_selected:
-			panel.position.y = -8.0
-			var sel_style: StyleBoxFlat = _create_card_style(Color(0.12, 0.16, 0.25, 0.98), COLOR_CARD_SELECTED_BORDER, 8)
+			panel.position.y = -8.0 # Small lift
+			var sel_style: StyleBoxFlat = _create_card_style(Color(0.12, 0.16, 0.25, 0.98), COLOR_CARD_SELECTED_BORDER, 6)
 			sel_style.border_width_left = 2
 			sel_style.border_width_top = 2
 			sel_style.border_width_right = 2
@@ -702,17 +792,37 @@ func _update_card_selection() -> void:
 			panel.add_theme_stylebox_override("panel", sel_style)
 		else:
 			panel.position.y = 0
-			var norm_style: StyleBoxFlat = _create_card_style(COLOR_CARD_BG, COLOR_CARD_BORDER, 8)
+			var norm_style: StyleBoxFlat = _create_card_style(COLOR_CARD_BG, COLOR_CARD_BORDER, 6)
 			panel.add_theme_stylebox_override("panel", norm_style)
+
+func _update_hover_detail(idx: int) -> void:
+	if hover_title_lbl == null or hover_desc_lbl == null:
+		return
+	var card = cards_data[idx]
+	hover_title_lbl.text = card["name"]
+	hover_title_lbl.add_theme_color_override("font_color", card["color"])
+	hover_desc_lbl.text = card["effect"]
+
+func _on_card_mouse_entered(idx: int) -> void:
+	hovered_card_idx = idx
+	_update_hover_detail(idx)
+
+func _on_card_mouse_exited(_idx: int) -> void:
+	hovered_card_idx = selected_card_idx
+	_update_hover_detail(selected_card_idx)
 
 func _update_question_view() -> void:
 	var q_data: Dictionary = questions_data[current_question_idx]
 	question_stage_label.text = q_data["stage"]
+	var round_lbl = question_panel.find_child("RoundLabel", true, false) as Label
+	if round_lbl != null:
+		round_lbl.text = q_data["round"]
 	question_prompt_label.text = q_data["prompt"]
 
 	for i in range(4):
 		var btn: Button = answer_buttons[i]
-		btn.text = q_data["choices"][i]
+		var c = q_data["choices"][i]
+		btn.text = "[ %s ]  %s" % [c["code"], c["val"]]
 
 	_update_answer_selection()
 	_update_cta_button_text()
@@ -727,10 +837,10 @@ func _update_answer_selection() -> void:
 		btn_style.corner_radius_top_right = 6
 		btn_style.corner_radius_bottom_right = 6
 		btn_style.corner_radius_bottom_left = 6
-		btn_style.content_margin_left = 14
-		btn_style.content_margin_right = 14
-		btn_style.content_margin_top = 6
-		btn_style.content_margin_bottom = 6
+		btn_style.content_margin_left = 8
+		btn_style.content_margin_right = 8
+		btn_style.content_margin_top = 4
+		btn_style.content_margin_bottom = 4
 
 		if is_selected:
 			btn_style.bg_color = Color(0.12, 0.26, 0.44, 0.95)
@@ -757,15 +867,13 @@ func _update_cta_button_text() -> void:
 	if cta_button == null:
 		return
 	var card: Dictionary = cards_data[selected_card_idx]
-	cta_button.text = "XUẤT CHIÊU: %s (%s)" % [card["name"], card["desc"]]
+	cta_button.text = "XUẤT CHIÊU: %s (%s)" % [card["name"], card["stat_badge"]]
 
 func _on_hint_pressed() -> void:
 	hint_shown = not hint_shown
 	var q_data: Dictionary = questions_data[current_question_idx]
 	if hint_shown:
-		_show_toast(q_data["hint"])
-	else:
-		_show_toast("Đã ẩn gợi ý.")
+		_spawn_floating_feedback(Vector2(690, 130), q_data["hint"], COLOR_ACCENT_GOLD)
 
 func _on_cta_pressed() -> void:
 	var q_data: Dictionary = questions_data[current_question_idx]
@@ -773,9 +881,36 @@ func _on_cta_pressed() -> void:
 	var card: Dictionary = cards_data[selected_card_idx]
 
 	if is_correct:
-		_show_toast("CHÍNH XÁC! Thi triển %s gây %s lên STOCHAS!" % [card["name"], card["desc"]])
+		if card["id"] == "strike":
+			_spawn_floating_feedback(Vector2(1040, 240), "-10 HP", COLOR_ACCENT_RED)
+			_spawn_floating_feedback(Vector2(1040, 210), "CRITICAL!", COLOR_ACCENT_GOLD)
+		elif card["id"] == "defend":
+			_spawn_floating_feedback(Vector2(140, 500), "+8 GIÁP", COLOR_ACCENT_CYAN)
+			_spawn_floating_feedback(Vector2(140, 470), "SHIELD!", COLOR_ACCENT_CYAN)
+		elif card["id"] == "heal":
+			_spawn_floating_feedback(Vector2(140, 500), "+15 HP", COLOR_ACCENT_GREEN)
+			_spawn_floating_feedback(Vector2(140, 470), "HEAL!", COLOR_ACCENT_GREEN)
 	else:
-		_show_toast("SAI RỒI! STOCHAS phản kích gây 10 DMG!")
+		_spawn_floating_feedback(Vector2(140, 500), "-10 HP", COLOR_ACCENT_RED)
+		_spawn_floating_feedback(Vector2(1040, 240), "PHẢN ĐÒN!", COLOR_ACCENT_RED)
+
+func _spawn_floating_feedback(pos: Vector2, text: String, color: Color) -> void:
+	if floating_status_container == null:
+		return
+	var lbl: Label = Label.new()
+	lbl.text = text
+	lbl.position = pos - Vector2(100, 10)
+	lbl.custom_minimum_size = Vector2(200, 24)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.add_theme_font_size_override("font_size", 12)
+	lbl.add_theme_color_override("font_color", color)
+	floating_status_container.add_child(lbl)
+
+	var tw: Tween = create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(lbl, "position:y", pos.y - 35.0, 1.8)
+	tw.tween_property(lbl, "modulate:a", 0.0, 1.8).set_delay(0.6)
+	tw.chain().tween_callback(lbl.queue_free)
 
 func _create_glass_box(bg: Color, border: Color, radius: int) -> StyleBoxFlat:
 	var box: StyleBoxFlat = StyleBoxFlat.new()
@@ -818,8 +953,8 @@ func _create_card_style(bg: Color, border: Color, radius: int) -> StyleBoxFlat:
 	box.corner_radius_top_right = radius
 	box.corner_radius_bottom_right = radius
 	box.corner_radius_bottom_left = radius
-	box.content_margin_left = 8
-	box.content_margin_top = 6
-	box.content_margin_right = 8
-	box.content_margin_bottom = 6
+	box.content_margin_left = 4
+	box.content_margin_top = 4
+	box.content_margin_right = 4
+	box.content_margin_bottom = 4
 	return box
