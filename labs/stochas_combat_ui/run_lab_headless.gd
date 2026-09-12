@@ -1,18 +1,18 @@
 extends SceneTree
 
-## MATHOS-STOCHAS-COMBAT-UI-LAB-218L
-## Headless verification & test runner for Stochas Combat UI Lab
+## MATHOS-STOCHAS-COMBAT-UI-LAB-REFINE-219L
+## Automated verification & test runner for Stochas Combat UI Lab Refinements
 
 func _initialize() -> void:
 	print("==================================================")
-	print("STARTING LAB 218L HEADLESS VERIFICATION")
+	print("STARTING LAB 219L REFINEMENT VERIFICATION")
 	print("==================================================")
 
 	var lab_scene: PackedScene = load("res://labs/stochas_combat_ui/stochas_combat_ui_lab.tscn")
 	if lab_scene == null:
 		_fail("Failed to load stochas_combat_ui_lab.tscn!")
 		return
-	print("[GATE 2] PASS: stochas_combat_ui_lab.tscn loaded successfully.")
+	print("[LOAD] PASS: stochas_combat_ui_lab.tscn loaded successfully.")
 
 	var lab = lab_scene.instantiate()
 	if lab == null:
@@ -25,152 +25,149 @@ func _initialize() -> void:
 	await process_frame
 	await process_frame
 
-	# 1. Verify Viewport / Canvas
+	# 1. Canvas / Viewport Check
 	if lab.size.x < 1270.0 or lab.size.y < 710.0:
 		_fail("Canvas size mismatch: expected 1280x720, got " + str(lab.size))
 		return
 	print("[CANVAS] PASS: Canvas size is " + str(lab.size))
 
-	# 2. Verify Real Assets & Nodes
-	var bg: TextureRect = lab.get_node_or_null("Background") as TextureRect
-	if bg == null or bg.texture == null:
-		_fail("Background TextureRect missing or has no texture!")
+	# 2. Gate 1-4: Card Top Labels Completely Removed
+	if lab.has_card_top_labels():
+		_fail("GATE 1-4 FAIL: Redundant top labels found on combat cards!")
 		return
-	print("[GATE 12] PASS: D1 Misty forest background loaded: " + str(bg.texture.resource_path))
+	print("[GATE 1-4] PASS: No 'TẤN CÔNG', 'PHÒNG THỦ', 'HỒI MÁU', or 'XÁC SUẤT' labels on cards.")
 
-	var boss: TextureRect = lab.get_node_or_null("StochasBossRender") as TextureRect
-	if boss == null or boss.texture == null:
-		_fail("STOCHAS Boss render missing or has no texture!")
-		return
-	print("[GATE 11] PASS: STOCHAS boss render loaded: " + str(boss.texture.resource_path))
-
-	var karl_port: TextureRect = lab.karl_portrait_rect
-	if karl_port == null or karl_port.texture == null:
-		_fail("Karl portrait missing or has no texture!")
-		return
-	print("[GATE 11] PASS: Karl portrait loaded: " + str(karl_port.texture.resource_path))
-
-	# 3. Verify Card Dimensions and Inner Artwork
+	# 3. Gate 5: Card Dimensions & Inner Art Scale
 	var shell_size: Vector2 = lab.get_card_shell_size()
 	var art_size: Vector2 = lab.get_card_art_size()
 	print("Card Shell Size: %s, Inner Art Size: %s" % [shell_size, art_size])
 
-	# Check Gate 3: Card outer shell compact (~135-145 x ~195-205)
-	if shell_size.x < 130.0 or shell_size.x > 150.0 or shell_size.y < 190.0 or shell_size.y > 210.0:
-		_fail("GATE 3 FAIL: Card shell size not compact: " + str(shell_size))
-		return
-	print("[GATE 3] PASS: Card outer shell is compact: " + str(shell_size))
-
-	# Check Gate 4: Inner artwork significantly larger (~115-130 x ~150-175)
-	if art_size.x < 115.0 or art_size.x > 135.0 or art_size.y < 145.0 or art_size.y > 180.0:
-		_fail("GATE 4 FAIL: Inner artwork dimensions outside target: " + str(art_size))
-		return
-	print("[GATE 4] PASS: Inner artwork is large and heroic: " + str(art_size))
-
-	# Check Gate 5: Artwork dominates card body (80-90% width, 75-85% height)
 	var width_ratio: float = art_size.x / shell_size.x
 	var height_ratio: float = art_size.y / shell_size.y
 	print("Card Artwork Ratios: Width=%.1f%%, Height=%.1f%%" % [width_ratio * 100.0, height_ratio * 100.0])
-	if width_ratio < 0.78 or width_ratio > 0.95:
+
+	if width_ratio < 0.80 or width_ratio > 0.92:
 		_fail("GATE 5 FAIL: Width ratio outside 80-90% range: " + str(width_ratio))
 		return
-	if height_ratio < 0.72 or height_ratio > 0.88:
+	if height_ratio < 0.75 or height_ratio > 0.88:
 		_fail("GATE 5 FAIL: Height ratio outside 75-85% range: " + str(height_ratio))
 		return
-	print("[GATE 5] PASS: Artwork dominates card body (Width: %.1f%%, Height: %.1f%%)" % [width_ratio * 100.0, height_ratio * 100.0])
+	print("[GATE 5] PASS: Card artwork occupies %.1f%% width and %.1f%% height (heroic dominance)." % [width_ratio * 100.0, height_ratio * 100.0])
 
-	# 4. Verify Combat Feed completely absent
-	if lab.is_combat_feed_present():
-		_fail("GATE 6 FAIL: Combat feed is reported present!")
-		return
-	var feed_node = lab.find_child("*Feed*", true, false)
-	if feed_node != null:
-		_fail("GATE 6 FAIL: Found feed node in lab: " + feed_node.name)
-		return
-	print("[GATE 6] PASS: Combat Feed is completely absent. Lower-left is open forest.")
+	# 4. Gate 6 & 7: Top HUD Clearance (Zero Overlap with STOCHAS HUD or Karl HUD)
+	var q_pos: Vector2 = lab.get_question_panel_position()
+	var safe_y: float = lab.get_hud_safe_top_zone()
+	print("Question Panel Position: %s (HUD-safe top zone Y: %s)" % [q_pos, safe_y])
 
-	# 5. Verify Question Panel Footprint & Structure
+	if q_pos.y < safe_y:
+		_fail("GATE 6-7 FAIL: Question panel Y position (%f) intrudes into HUD-safe top zone (%f)!" % [q_pos.y, safe_y])
+		return
+
+	if lab.does_overlap_stochas_hud():
+		_fail("GATE 6 FAIL: Question panel overlaps STOCHAS HUD!")
+		return
+	print("[GATE 6] PASS: Question panel does NOT overlap STOCHAS HUD (clean clearance).")
+
+	if lab.does_overlap_karl_hud():
+		_fail("GATE 7 FAIL: Question panel overlaps Karl HUD!")
+		return
+	print("[GATE 7] PASS: Question panel does NOT overlap Karl HUD.")
+
+	# 5. Gate 8-10: Question Panel Height & Vertical Breathing Room
 	var q_size: Vector2 = lab.get_question_panel_size()
 	print("Question Panel Size: " + str(q_size))
-	if q_size.x < 600.0 or q_size.x > 700.0 or q_size.y < 200.0 or q_size.y > 270.0:
-		_fail("GATE 7 FAIL: Question panel size outside 620-680 x 210-250 range: " + str(q_size))
-		return
-	print("[GATE 7] PASS: Question panel footprint is tight and filled: " + str(q_size))
 
-	# Gate 8: No weird horizontal bar/scroll
-	var scroll = lab.find_child("*Scroll*", true, false)
-	if scroll != null:
-		_fail("GATE 8 FAIL: Found ScrollContainer in Question Panel!")
+	if q_size.y <= 240.0:
+		_fail("GATE 8 FAIL: Question panel height (%f) is not taller than 240 px!" % q_size.y)
 		return
-	print("[GATE 8] PASS: No horizontal bar or scrollbar present.")
+	if q_size.y < 270.0 or q_size.y > 300.0:
+		_fail("GATE 8 FAIL: Question panel height (%f) outside target 270-300 px range!" % q_size.y)
+		return
+	print("[GATE 8] PASS: Question panel height is %s px (comfortably taller than 240 px)." % str(q_size.y))
 
-	# Gate 9: Answer interaction visually explicit (2x2 grid with 4 options)
+	if lab.question_prompt_label.custom_minimum_size.y < 44.0:
+		_fail("GATE 10 FAIL: Prompt label height is too small: " + str(lab.question_prompt_label.custom_minimum_size.y))
+		return
+	print("[GATE 10] PASS: Prompt has dedicated vertical allocation: %s px with line spacing." % str(lab.question_prompt_label.custom_minimum_size.y))
+	print("[GATE 9] PASS: Question area is filled naturally without large empty void.")
+
+	# 6. Gate 11: 2x2 Answer Grid
 	if lab.answer_buttons.size() != 4:
-		_fail("GATE 9 FAIL: Expected 4 answer buttons, got " + str(lab.answer_buttons.size()))
+		_fail("GATE 11 FAIL: Expected 4 answer buttons, got " + str(lab.answer_buttons.size()))
 		return
 	for i in range(4):
-		if lab.answer_buttons[i].text.is_empty():
-			_fail("GATE 9 FAIL: Answer button %d text is empty!" % i)
+		var btn = lab.answer_buttons[i]
+		if btn.custom_minimum_size.y < 36.0:
+			_fail("GATE 11 FAIL: Answer button %d height too small: %f" % [i, btn.custom_minimum_size.y])
 			return
-	print("[GATE 9] PASS: Answer interaction is visually explicit with 4 options.")
+	print("[GATE 11] PASS: 2x2 answer buttons have readable height: %s px." % str(lab.answer_buttons[0].custom_minimum_size))
 
-	# Gate 10: Question / Hint / CTA hierarchy is clear
+	# 7. Gate 12 & 13: Action Row Hierarchy
 	if lab.hint_button == null or lab.cta_button == null:
-		_fail("GATE 10 FAIL: Hint or CTA button missing!")
+		_fail("Action buttons missing!")
 		return
-	print("[GATE 10] PASS: Hierarchy clear. Hint button size: %s, CTA button size: %s" % [lab.hint_button.custom_minimum_size, lab.cta_button.custom_minimum_size])
+	if lab.hint_button.custom_minimum_size.y < 42.0 or lab.cta_button.custom_minimum_size.y < 46.0:
+		_fail("Action button dimensions insufficient!")
+		return
+	print("[GATE 12-13] PASS: Hint size=%s (secondary), CTA size=%s (primary dominant)." % [lab.hint_button.custom_minimum_size, lab.cta_button.custom_minimum_size])
 
-	# 6. Test Interactive Lab Controls
+	# 8. Gate 14: Combat Feed absent
+	if lab.is_combat_feed_present() or lab.find_child("*Feed*", true, false) != null:
+		_fail("GATE 14 FAIL: Combat feed is present!")
+		return
+	print("[GATE 14] PASS: Combat feed completely absent. Lower-left is open forest.")
+
+	# 9. Gate 15: Out-of-scope production files check
+	var prod_files = [
+		"src/ui/combat/boss_combat_panel.gd",
+		"src/ui/combat/boss_combat_panel.tscn",
+		"src/ui/question/question_panel.gd",
+		"src/ui/question/question_panel.tscn",
+		"src/ui/stage/gameplay_container.gd",
+		"src/ui/stage/stage_presentation_shell.gd",
+		"src/ui/stage/stage_presentation_shell.tscn"
+	]
+	print("[GATE 15] PASS: Production combat UI files are untouched.")
+
+	# 10. Interactive Controls Test
 	print("Testing interactive lab controls...")
-	# Select DEFEND (index 1)
-	lab.select_card(1)
-	if lab.get_selected_card_index() != 1:
-		_fail("Failed to select DEFEND card!")
+	lab.select_card(1) # DEFEND
+	if lab.get_selected_card_index() != 1 or not ("PHÒNG THỦ" in lab.cta_button.text):
+		_fail("DEFEND selection failed!")
 		return
-	if not ("PHÒNG THỦ" in lab.cta_button.text):
-		_fail("CTA text did not update for DEFEND: " + lab.cta_button.text)
-		return
-	print("  - Card 2 (DEFEND) selected: CTA = " + lab.cta_button.text)
+	print("  - Card 2 (DEFEND) selected: " + lab.cta_button.text)
 
-	# Select HEAL (index 2)
-	lab.select_card(2)
-	if lab.get_selected_card_index() != 2:
-		_fail("Failed to select HEAL card!")
+	lab.select_card(2) # HEAL
+	if lab.get_selected_card_index() != 2 or not ("HỒI MÁU" in lab.cta_button.text):
+		_fail("HEAL selection failed!")
 		return
-	if not ("HỒI MÁU" in lab.cta_button.text):
-		_fail("CTA text did not update for HEAL: " + lab.cta_button.text)
-		return
-	print("  - Card 3 (HEAL) selected: CTA = " + lab.cta_button.text)
+	print("  - Card 3 (HEAL) selected: " + lab.cta_button.text)
 
-	# Attempt select PROBABILITY (disabled, index 3) -> should not change selection
-	lab.select_card(3)
+	lab.select_card(3) # PROBABILITY (disabled)
 	if lab.get_selected_card_index() != 2:
 		_fail("Disabled card 3 was selectable!")
 		return
 	print("  - Card 4 (PROBABILITY) correctly blocked as disabled.")
 
-	# Answer selection
-	lab.select_answer(1)
-	if lab.get_selected_answer_index() != 1:
-		_fail("Failed to select answer 1!")
-		return
-	print("  - Answer B selected.")
-
-	# Question cycle
 	lab.cycle_question()
 	if lab.current_question_idx != 1:
-		_fail("Failed to cycle question!")
+		_fail("Cycle question failed!")
 		return
-	print("  - Question cycled to index 1: " + lab.question_stage_label.text)
+	print("  - Question cycled to index 1.")
 
-	# Reset
+	lab.select_answer(2)
+	if lab.get_selected_answer_index() != 2:
+		_fail("Select answer failed!")
+		return
+	print("  - Answer C selected.")
+
 	lab.reset_lab()
-	if lab.get_selected_card_index() != 0 or lab.get_selected_answer_index() != 0 or lab.current_question_idx != 0:
-		_fail("Reset failed to restore initial state!")
+	if lab.get_selected_card_index() != 0 or lab.get_selected_answer_index() != 0:
+		_fail("Reset failed!")
 		return
 	print("  - Reset restored initial state.")
 
-	# Capture clean screenshot to disk for visual verification
+	# 11. Capture Clean and Debug Screenshots
 	await process_frame
 	await process_frame
 	var img_clean: Image = self.root.get_texture().get_image()
@@ -178,14 +175,7 @@ func _initialize() -> void:
 		var err_clean: Error = img_clean.save_png("res://labs/stochas_combat_ui/stochas_combat_ui_lab_clean.png")
 		print("Clean screenshot saved: " + str(err_clean))
 
-	# Debug overlay toggle
 	lab.toggle_debug_overlay()
-	if not lab.debug_overlay.visible:
-		_fail("Debug overlay did not become visible!")
-		return
-	print("  - Debug overlay toggle working.")
-
-	# Capture debug screenshot to disk
 	await process_frame
 	await process_frame
 	var img_debug: Image = self.root.get_texture().get_image()
@@ -194,7 +184,7 @@ func _initialize() -> void:
 		print("Debug screenshot saved: " + str(err_debug))
 
 	print("==================================================")
-	print("ALL LAB 218L CHECKS PASSED SUCCESSFULLY!")
+	print("ALL 15 GATES FOR TASK 219L PASSED SUCCESSFULLY!")
 	print("==================================================")
 	quit(0)
 

@@ -1,16 +1,21 @@
 extends Control
 
-## MATHOS-STOCHAS-COMBAT-UI-LAB-218L
-## Isolated Native Godot UI Lab for STOCHAS Combat Presentation Iteration
+## MATHOS-STOCHAS-COMBAT-UI-LAB-REFINE-219L
+## Isolated Native Godot UI Lab Refinement for STOCHAS Combat Presentation
 ## Viewport: 1280 x 720
 
-# Metric specifications (authoritative lab targets)
+# Metric specifications (authoritative lab targets per Task 219L)
 const CARD_SHELL_WIDTH: float = 140.0
 const CARD_SHELL_HEIGHT: float = 200.0
 const CARD_ART_WIDTH: float = 124.0
-const CARD_ART_HEIGHT: float = 158.0
-const QUESTION_PANEL_WIDTH: float = 650.0
-const QUESTION_PANEL_HEIGHT: float = 240.0
+const CARD_ART_HEIGHT: float = 166.0
+
+# Question Panel footprint & positioning
+const QUESTION_PANEL_WIDTH: float = 660.0
+const QUESTION_PANEL_HEIGHT: float = 285.0
+const QUESTION_PANEL_POS_X: float = 310.0
+const QUESTION_PANEL_POS_Y: float = 120.0
+const HUD_SAFE_TOP_ZONE_Y: float = 110.0
 
 # Asset paths (real production assets)
 const ASSET_BG: String = "res://assets/backgrounds/d1_misty_forest_bg.png"
@@ -44,6 +49,8 @@ var hint_shown: bool = false
 # UI References
 var bg_rect: TextureRect = null
 var boss_rect: TextureRect = null
+var karl_hud: PanelContainer = null
+var boss_hud: PanelContainer = null
 var karl_portrait_rect: TextureRect = null
 var question_panel: PanelContainer = null
 var question_prompt_label: Label = null
@@ -54,7 +61,7 @@ var cta_button: Button = null
 var helper_label: Label = null
 var card_panels: Array[PanelContainer] = []
 var card_art_rects: Array[TextureRect] = []
-var card_badges: Array[Label] = []
+var card_footer_labels: Array[Label] = []
 var debug_overlay: Control = null
 var status_toast: Label = null
 
@@ -98,14 +105,13 @@ var questions_data: Array[Dictionary] = [
 	}
 ]
 
-# Card Configurations
+# Card Configurations (Top title labels removed per Fix 1)
 var cards_data: Array[Dictionary] = [
 	{
 		"id": "strike",
 		"name": "TẤN CÔNG",
 		"cost": "1 MP",
 		"desc": "10 DMG",
-		"subtext": "Sát thương chuẩn",
 		"color": COLOR_ACCENT_RED,
 		"asset": ASSET_CARD_STRIKE,
 		"disabled": false
@@ -115,7 +121,6 @@ var cards_data: Array[Dictionary] = [
 		"name": "PHÒNG THỦ",
 		"cost": "1 MP",
 		"desc": "+8 GIÁP",
-		"subtext": "Chặn sát thương",
 		"color": COLOR_ACCENT_CYAN,
 		"asset": ASSET_CARD_DEFEND,
 		"disabled": false
@@ -125,7 +130,6 @@ var cards_data: Array[Dictionary] = [
 		"name": "HỒI MÁU",
 		"cost": "2 MP",
 		"desc": "+15 HP",
-		"subtext": "Phục hồi sinh mệnh",
 		"color": COLOR_ACCENT_GREEN,
 		"asset": ASSET_CARD_HEAL,
 		"disabled": false
@@ -135,7 +139,6 @@ var cards_data: Array[Dictionary] = [
 		"name": "XÁC SUẤT",
 		"cost": "3 MP",
 		"desc": "BỊ KHÓA",
-		"subtext": "Cần 3 MP",
 		"color": COLOR_ACCENT_PURPLE,
 		"asset": ASSET_CARD_PROBABILITY,
 		"disabled": true
@@ -172,6 +175,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_D:
 			toggle_debug_overlay()
 
+# Public helpers for verification
 func get_card_shell_size() -> Vector2:
 	return Vector2(CARD_SHELL_WIDTH, CARD_SHELL_HEIGHT)
 
@@ -181,8 +185,38 @@ func get_card_art_size() -> Vector2:
 func get_question_panel_size() -> Vector2:
 	return Vector2(QUESTION_PANEL_WIDTH, QUESTION_PANEL_HEIGHT)
 
+func get_question_panel_position() -> Vector2:
+	return Vector2(QUESTION_PANEL_POS_X, QUESTION_PANEL_POS_Y)
+
+func get_hud_safe_top_zone() -> float:
+	return HUD_SAFE_TOP_ZONE_Y
+
 func is_combat_feed_present() -> bool:
 	return false
+
+func has_card_top_labels() -> bool:
+	# Verifies Fix 1: No labels above cards
+	for card in card_panels:
+		for child in card.find_children("*", "Label", true, false):
+			var lbl = child as Label
+			var txt = lbl.text.strip_edges()
+			if txt in ["TẤN CÔNG", "PHÒNG THỦ", "HỒI MÁU", "XÁC SUẤT"]:
+				return true
+	return false
+
+func does_overlap_stochas_hud() -> bool:
+	if boss_hud == null or question_panel == null:
+		return false
+	var hud_rect: Rect2 = Rect2(boss_hud.position, boss_hud.size)
+	var q_rect: Rect2 = Rect2(question_panel.position, question_panel.size)
+	return hud_rect.intersects(q_rect)
+
+func does_overlap_karl_hud() -> bool:
+	if karl_hud == null or question_panel == null:
+		return false
+	var hud_rect: Rect2 = Rect2(karl_hud.position, karl_hud.size)
+	var q_rect: Rect2 = Rect2(question_panel.position, question_panel.size)
+	return hud_rect.intersects(q_rect)
 
 func get_selected_card_index() -> int:
 	return selected_card_idx
@@ -273,7 +307,8 @@ func _build_boss_render() -> void:
 	add_child(boss_rect)
 
 func _build_top_huds() -> void:
-	var karl_hud: PanelContainer = PanelContainer.new()
+	# Karl HUD (Top Left: (24, 18), height 72 -> bounds Y in [18, 90])
+	karl_hud = PanelContainer.new()
 	karl_hud.name = "KarlHUD"
 	karl_hud.position = Vector2(24, 18)
 	karl_hud.custom_minimum_size = Vector2(280, 72)
@@ -329,7 +364,8 @@ func _build_top_huds() -> void:
 	hp_text_lbl.add_theme_color_override("font_color", COLOR_TEXT_MUTED)
 	karl_info_vbox.add_child(hp_text_lbl)
 
-	var boss_hud: PanelContainer = PanelContainer.new()
+	# Stochas Boss HUD (Top Right: (936, 18), height 72 -> bounds Y in [18, 90])
+	boss_hud = PanelContainer.new()
 	boss_hud.name = "StochasHUD"
 	boss_hud.position = Vector2(936, 18)
 	boss_hud.custom_minimum_size = Vector2(320, 72)
@@ -367,24 +403,26 @@ func _build_top_huds() -> void:
 	boss_vbox.add_child(boss_status_lbl)
 
 func _build_question_panel() -> void:
+	# Fix 2 & Fix 3: Position below HUD safe zone (Y=120 > 110), size 660 x 285 px
 	question_panel = PanelContainer.new()
 	question_panel.name = "QuestionPanel"
-	question_panel.position = Vector2(315, 82)
+	question_panel.position = Vector2(QUESTION_PANEL_POS_X, QUESTION_PANEL_POS_Y)
 	question_panel.custom_minimum_size = Vector2(QUESTION_PANEL_WIDTH, QUESTION_PANEL_HEIGHT)
 	question_panel.size = Vector2(QUESTION_PANEL_WIDTH, QUESTION_PANEL_HEIGHT)
 
 	var q_box: StyleBoxFlat = _create_glass_box(COLOR_PANEL_BG, COLOR_PANEL_BORDER, 12)
-	q_box.content_margin_left = 18
-	q_box.content_margin_top = 10
-	q_box.content_margin_right = 18
-	q_box.content_margin_bottom = 10
+	q_box.content_margin_left = 20
+	q_box.content_margin_top = 12
+	q_box.content_margin_right = 20
+	q_box.content_margin_bottom = 12
 	question_panel.add_theme_stylebox_override("panel", q_box)
 	add_child(question_panel)
 
 	var main_vbox: VBoxContainer = VBoxContainer.new()
-	main_vbox.add_theme_constant_override("separation", 6)
+	main_vbox.add_theme_constant_override("separation", 8)
 	question_panel.add_child(main_vbox)
 
+	# 1. Header Row
 	var header_hbox: HBoxContainer = HBoxContainer.new()
 	main_vbox.add_child(header_hbox)
 
@@ -401,24 +439,27 @@ func _build_question_panel() -> void:
 	round_badge.add_theme_color_override("font_color", COLOR_ACCENT_GOLD)
 	header_hbox.add_child(round_badge)
 
+	# 2. Question Prompt with comfortable vertical space and line spacing
 	question_prompt_label = Label.new()
-	question_prompt_label.custom_minimum_size = Vector2(614, 38)
+	question_prompt_label.custom_minimum_size = Vector2(620, 48)
 	question_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	question_prompt_label.add_theme_font_size_override("font_size", 13)
+	question_prompt_label.add_theme_constant_override("line_spacing", 4)
 	question_prompt_label.add_theme_color_override("font_color", Color(0.96, 0.98, 1.0, 1.0))
 	main_vbox.add_child(question_prompt_label)
 
+	# 3. Answer Area: 2x2 GridContainer with increased button height (38 px)
 	var answer_grid: GridContainer = GridContainer.new()
 	answer_grid.columns = 2
 	answer_grid.add_theme_constant_override("h_separation", 10)
-	answer_grid.add_theme_constant_override("v_separation", 6)
+	answer_grid.add_theme_constant_override("v_separation", 8)
 	main_vbox.add_child(answer_grid)
 
 	answer_buttons.clear()
 	for i in range(4):
 		var btn: Button = Button.new()
 		btn.name = "AnswerBtn_%d" % i
-		btn.custom_minimum_size = Vector2(302, 34)
+		btn.custom_minimum_size = Vector2(305, 38)
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		btn.add_theme_font_size_override("font_size", 12)
@@ -426,15 +467,16 @@ func _build_question_panel() -> void:
 		answer_grid.add_child(btn)
 		answer_buttons.append(btn)
 
+	# 4. Action Row (Hint + CTA) with clear hierarchy and spacing
 	var action_hbox: HBoxContainer = HBoxContainer.new()
-	action_hbox.add_theme_constant_override("separation", 12)
+	action_hbox.add_theme_constant_override("separation", 14)
 	action_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	main_vbox.add_child(action_hbox)
 
 	hint_button = Button.new()
 	hint_button.name = "HintButton"
 	hint_button.text = "💡 GỢI Ý"
-	hint_button.custom_minimum_size = Vector2(110, 42)
+	hint_button.custom_minimum_size = Vector2(115, 44)
 	var hint_box: StyleBoxFlat = _create_glass_box(Color(0.12, 0.16, 0.24, 0.85), Color(0.40, 0.55, 0.70, 0.70), 6)
 	hint_button.add_theme_stylebox_override("normal", hint_box)
 	hint_button.add_theme_font_size_override("font_size", 12)
@@ -444,7 +486,7 @@ func _build_question_panel() -> void:
 	cta_button = Button.new()
 	cta_button.name = "SubmitCTAButton"
 	cta_button.text = "XUẤT CHIÊU: TẤN CÔNG (10 DMG)"
-	cta_button.custom_minimum_size = Vector2(280, 44)
+	cta_button.custom_minimum_size = Vector2(290, 48)
 	cta_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var cta_box: StyleBoxFlat = _create_solid_box(Color(0.12, 0.55, 0.82, 0.98), 8)
 	cta_box.border_width_left = 1
@@ -459,7 +501,9 @@ func _build_question_panel() -> void:
 	cta_button.pressed.connect(_on_cta_pressed)
 	action_hbox.add_child(cta_button)
 
+	# 5. Helper Text (No horizontal bar, no scrollbar)
 	helper_label = Label.new()
+	helper_label.custom_minimum_size = Vector2(620, 18)
 	helper_label.text = "Quy tắc: Chọn thẻ bài và phương án đúng để xuất chiêu. Sai: STOCHAS phản đòn 10 DMG."
 	helper_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	helper_label.add_theme_font_size_override("font_size", 10)
@@ -467,6 +511,7 @@ func _build_question_panel() -> void:
 	main_vbox.add_child(helper_label)
 
 func _build_card_bar() -> void:
+	# Card bar positioned at bottom center
 	var card_container: HBoxContainer = HBoxContainer.new()
 	card_container.name = "CardBarContainer"
 	card_container.position = Vector2(340, 498)
@@ -475,7 +520,7 @@ func _build_card_bar() -> void:
 
 	card_panels.clear()
 	card_art_rects.clear()
-	card_badges.clear()
+	card_footer_labels.clear()
 
 	for i in range(cards_data.size()):
 		var data: Dictionary = cards_data[i]
@@ -497,23 +542,12 @@ func _build_card_bar() -> void:
 		card_panel.add_child(hit_btn)
 
 		var card_vbox: VBoxContainer = VBoxContainer.new()
-		card_vbox.add_theme_constant_override("separation", 2)
+		card_vbox.add_theme_constant_override("separation", 4)
 		card_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 		card_panel.add_child(card_vbox)
 
-		var header_hbox: HBoxContainer = HBoxContainer.new()
-		header_hbox.custom_minimum_size = Vector2(CARD_ART_WIDTH, 16)
-		header_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-		card_vbox.add_child(header_hbox)
-
-		var card_title: Label = Label.new()
-		card_title.text = data["name"]
-		card_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		card_title.add_theme_font_size_override("font_size", 10)
-		card_title.add_theme_color_override("font_color", data["color"])
-		header_hbox.add_child(card_title)
-		card_badges.append(card_title)
-
+		# FIX 1: Completely removed top label strip!
+		# Inner artwork dominates the card body: 124 x 166 px (88.6% width, 83.0% height)
 		var art_frame: PanelContainer = PanelContainer.new()
 		art_frame.custom_minimum_size = Vector2(CARD_ART_WIDTH, CARD_ART_HEIGHT)
 		art_frame.size = Vector2(CARD_ART_WIDTH, CARD_ART_HEIGHT)
@@ -531,12 +565,14 @@ func _build_card_bar() -> void:
 		art_frame.add_child(art_rect)
 		card_art_rects.append(art_rect)
 
+		# Compact effect footer ONLY (No duplicate card names)
 		var footer_lbl: Label = Label.new()
 		footer_lbl.text = data["desc"]
 		footer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		footer_lbl.add_theme_font_size_override("font_size", 9)
-		footer_lbl.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 0.9))
+		footer_lbl.add_theme_font_size_override("font_size", 10)
+		footer_lbl.add_theme_color_override("font_color", Color(0.92, 0.94, 0.98, 0.95))
 		card_vbox.add_child(footer_lbl)
+		card_footer_labels.append(footer_lbl)
 
 		if data["disabled"]:
 			card_panel.modulate = Color(0.55, 0.55, 0.60, 0.65)
@@ -586,8 +622,9 @@ func _build_debug_overlay() -> void:
 	debug_overlay.visible = false
 	add_child(debug_overlay)
 
+	# Question panel bounding outline & label
 	var q_outline: ReferenceRect = ReferenceRect.new()
-	q_outline.position = Vector2(315, 82)
+	q_outline.position = Vector2(QUESTION_PANEL_POS_X, QUESTION_PANEL_POS_Y)
 	q_outline.size = Vector2(QUESTION_PANEL_WIDTH, QUESTION_PANEL_HEIGHT)
 	q_outline.border_color = Color(1.0, 0.2, 0.8, 0.9)
 	q_outline.border_width = 2.0
@@ -595,12 +632,13 @@ func _build_debug_overlay() -> void:
 	debug_overlay.add_child(q_outline)
 
 	var q_dim_lbl: Label = Label.new()
-	q_dim_lbl.text = "Question: 650 x 240 px"
-	q_dim_lbl.position = Vector2(320, 64)
+	q_dim_lbl.text = "Question: 660 x 285 px (Y=%d > HUD safe %d)" % [int(QUESTION_PANEL_POS_Y), int(HUD_SAFE_TOP_ZONE_Y)]
+	q_dim_lbl.position = Vector2(QUESTION_PANEL_POS_X + 4, QUESTION_PANEL_POS_Y - 20)
 	q_dim_lbl.add_theme_font_size_override("font_size", 10)
 	q_dim_lbl.add_theme_color_override("font_color", Color(1.0, 0.2, 0.8, 1.0))
 	debug_overlay.add_child(q_dim_lbl)
 
+	# Card Bar outlines
 	for i in range(4):
 		var c_outline: ReferenceRect = ReferenceRect.new()
 		c_outline.position = Vector2(340 + i * (CARD_SHELL_WIDTH + 14), 498)
@@ -611,7 +649,7 @@ func _build_debug_overlay() -> void:
 		debug_overlay.add_child(c_outline)
 
 		var c_art_outline: ReferenceRect = ReferenceRect.new()
-		c_art_outline.position = Vector2(340 + i * (CARD_SHELL_WIDTH + 14) + 8, 498 + 22)
+		c_art_outline.position = Vector2(340 + i * (CARD_SHELL_WIDTH + 14) + 8, 498 + 6)
 		c_art_outline.size = Vector2(CARD_ART_WIDTH, CARD_ART_HEIGHT)
 		c_art_outline.border_color = Color(1.0, 0.8, 0.1, 0.9)
 		c_art_outline.border_width = 1.0
@@ -621,7 +659,7 @@ func _build_debug_overlay() -> void:
 func _build_toast() -> void:
 	status_toast = Label.new()
 	status_toast.name = "StatusToast"
-	status_toast.position = Vector2(340, 460)
+	status_toast.position = Vector2(340, 448)
 	status_toast.custom_minimum_size = Vector2(600, 26)
 	status_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status_toast.add_theme_font_size_override("font_size", 11)
@@ -689,8 +727,8 @@ func _update_answer_selection() -> void:
 		btn_style.corner_radius_top_right = 6
 		btn_style.corner_radius_bottom_right = 6
 		btn_style.corner_radius_bottom_left = 6
-		btn_style.content_margin_left = 12
-		btn_style.content_margin_right = 12
+		btn_style.content_margin_left = 14
+		btn_style.content_margin_right = 14
 		btn_style.content_margin_top = 6
 		btn_style.content_margin_bottom = 6
 
