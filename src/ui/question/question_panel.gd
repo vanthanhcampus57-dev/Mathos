@@ -60,7 +60,7 @@ func _apply_combat_styling(is_combat: bool) -> void:
 	_ensure_ui_built()
 	if is_combat:
 		size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		custom_minimum_size = Vector2(600, 0)
+		custom_minimum_size = Vector2(740, 290)
 		var glass_box: StyleBoxFlat = StyleBoxFlat.new()
 		glass_box.bg_color = Color(0.06, 0.08, 0.14, 0.88)
 		glass_box.border_width_left = 1
@@ -74,10 +74,10 @@ func _apply_combat_styling(is_combat: bool) -> void:
 		glass_box.corner_radius_bottom_left = 16
 		glass_box.shadow_color = Color(0.20, 0.75, 0.90, 0.25)
 		glass_box.shadow_size = 10
-		glass_box.content_margin_left = 18
-		glass_box.content_margin_top = 14
-		glass_box.content_margin_right = 18
-		glass_box.content_margin_bottom = 14
+		glass_box.content_margin_left = 24
+		glass_box.content_margin_top = 16
+		glass_box.content_margin_right = 24
+		glass_box.content_margin_bottom = 16
 		add_theme_stylebox_override("panel", glass_box)
 
 		if _objective_label != null:
@@ -85,15 +85,18 @@ func _apply_combat_styling(is_combat: bool) -> void:
 			_objective_label.visible = true
 			_objective_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 			_objective_label.add_theme_color_override("font_color", Color(0.20, 0.85, 0.95, 0.95))
-			_objective_label.add_theme_font_size_override("font_size", 12)
+			_objective_label.add_theme_font_size_override("font_size", 13)
 
 		if _prompt_label != null:
-			_prompt_label.custom_minimum_size = Vector2(540, 36)
+			_prompt_label.custom_minimum_size = Vector2(680, 40)
 			_prompt_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 		if _feedback_label != null:
-			_feedback_label.custom_minimum_size = Vector2(540, 24)
+			_feedback_label.custom_minimum_size = Vector2(680, 24)
 			_feedback_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+		if _hint_button != null:
+			_hint_button.custom_minimum_size = Vector2(160, 48)
 
 		if _submit_button != null:
 			var btn_style: StyleBoxFlat = StyleBoxFlat.new()
@@ -111,7 +114,8 @@ func _apply_combat_styling(is_combat: bool) -> void:
 			btn_style.shadow_size = 8
 			_submit_button.add_theme_stylebox_override("normal", btn_style)
 			_submit_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
-			_submit_button.custom_minimum_size = Vector2(0, 44)
+			_submit_button.custom_minimum_size = Vector2(220, 50)
+			_submit_button.add_theme_font_size_override("font_size", 14)
 
 		_ensure_combat_rule_footer(true)
 		if _active_interaction_view != null and _active_interaction_view.has_method("set_combat_grid_mode"):
@@ -123,9 +127,13 @@ func _apply_combat_styling(is_combat: bool) -> void:
 		if _objective_label != null:
 			_objective_label.remove_theme_color_override("font_color")
 			_objective_label.remove_theme_font_size_override("font_size")
+		if _hint_button != null:
+			_hint_button.custom_minimum_size = Vector2(140, 44)
 		if _submit_button != null:
 			_submit_button.remove_theme_stylebox_override("normal")
 			_submit_button.remove_theme_color_override("font_color")
+			_submit_button.remove_theme_font_size_override("font_size")
+			_submit_button.custom_minimum_size = Vector2(160, 44)
 		_ensure_combat_rule_footer(false)
 		if _active_interaction_view != null and _active_interaction_view.has_method("set_combat_grid_mode"):
 			_active_interaction_view.call("set_combat_grid_mode", false)
@@ -148,13 +156,13 @@ func _ensure_combat_rule_footer(show: bool) -> void:
 			r_style.content_margin_top = 4
 			r_style.content_margin_right = 8
 			r_style.content_margin_bottom = 4
-			_combat_rule_footer.custom_minimum_size = Vector2(460, 28)
+			_combat_rule_footer.custom_minimum_size = Vector2(680, 28)
 			_combat_rule_footer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			_combat_rule_footer.add_theme_stylebox_override("panel", r_style)
 
 			_combat_rule_label = Label.new()
 			_combat_rule_label.text = "Quy tắc khế ước: Trả lời đúng để thi triển thẻ bài đã chọn. Trả lời sai: STOCHAS phản kích gây 10 DMG."
-			_combat_rule_label.custom_minimum_size = Vector2(440, 24)
+			_combat_rule_label.custom_minimum_size = Vector2(660, 24)
 			_combat_rule_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			_combat_rule_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			_combat_rule_label.add_theme_font_size_override("font_size", 10)

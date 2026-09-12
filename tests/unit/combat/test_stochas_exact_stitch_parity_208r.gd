@@ -181,10 +181,10 @@ static func test_004_math_challenge_top_center_and_styling(tree: SceneTree) -> b
 		_cleanup(root)
 		return _fail("PARITY-208R-04", "QuestionPanelHost is null")
 
-	# Check width constraint (Task 214 human rework: 580-650px, previously 530px)
-	if q_host_panel.custom_minimum_size.x < 580.0 or q_host_panel.custom_minimum_size.x > 650.0:
+	# Check width constraint (Task 216 human rework: 700-760px, previously 580-650px)
+	if q_host_panel.custom_minimum_size.x < 700.0 or q_host_panel.custom_minimum_size.x > 760.0:
 		_cleanup(root)
-		return _fail("PARITY-208R-04", "QuestionPanelHost custom_minimum_size.x expected 580-650, got %f" % q_host_panel.custom_minimum_size.x)
+		return _fail("PARITY-208R-04", "QuestionPanelHost custom_minimum_size.x expected 700-760, got %f" % q_host_panel.custom_minimum_size.x)
 
 	# Verify glass theme styling override applied in combat
 	if not q_panel.has_theme_stylebox_override("panel"):
@@ -398,29 +398,33 @@ static func test_008_card_states_badges_and_lift(tree: SceneTree) -> bool:
 	return true
 
 # -----------------------------------------------------------------------------
-# 9. Combat Action Feed Position & Styling
+# 9. Combat Action Feed Position & Styling (Task 216: Absent from UI)
 # -----------------------------------------------------------------------------
 static func test_009_combat_feed_position_and_styling(tree: SceneTree) -> bool:
-	print("[PARITY-208R-09] Testing Lower-Left Combat Action Feed position and styling...")
+	print("[PARITY-208R-09] Testing Lower-Left Combat Action Feed absent and clean (Task 216)...")
 	var panel: BossCombatPanel = BossCombatPanel.new()
 	panel.size = Vector2(1280, 720)
 	panel._ensure_ui()
 	panel._layout_elements()
 
+	var feed_panel: Control = panel.get_node_or_null("CombatFeedPanel") as Control
+	if feed_panel != null and feed_panel.visible:
+		panel.free()
+		return _fail("PARITY-208R-09", "Combat feed panel must not be visible on combat screen")
+
 	var feed_rect: Rect2 = panel.get_combat_feed_rect()
-	if feed_rect.position.x < 30.0 or feed_rect.position.x > 34.0:
+	if feed_rect != Rect2():
 		panel.free()
-		return _fail("PARITY-208R-09", "Combat feed expected at x ~32, got %f" % feed_rect.position.x)
-	# Bottom ~16px on 720 canvas: 720 - 16 - 120 = 584 (Task 214 expanded feed 260x120)
-	if feed_rect.position.y < 575.0 or feed_rect.position.y > 605.0:
+		return _fail("PARITY-208R-09", "Combat feed rect expected empty Rect2, got %s" % str(feed_rect))
+
+	# Verify internal combat logging still updates without visual feed
+	panel._on_combat_log("Test combat log", "player_success")
+	if panel._combat_log_label == null or panel._combat_log_label.text != "Test combat log":
 		panel.free()
-		return _fail("PARITY-208R-09", "Combat feed expected at y ~584, got %f" % feed_rect.position.y)
-	if feed_rect.size.x < 240.0 or feed_rect.size.x > 270.0:
-		panel.free()
-		return _fail("PARITY-208R-09", "Combat feed width expected 240-270, got %f" % feed_rect.size.x)
+		return _fail("PARITY-208R-09", "Internal combat logging logic failed")
 
 	panel.free()
-	print("[PARITY-208R-09] PASS: Lower-Left Combat Action Feed position (32, 594) verified")
+	print("[PARITY-208R-09] PASS: Lower-Left Combat Action Feed absent, lower-left clean, logging intact")
 	return true
 
 # -----------------------------------------------------------------------------

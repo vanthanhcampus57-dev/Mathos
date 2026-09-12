@@ -103,33 +103,32 @@ func _initialize() -> void:
 			return
 	print("[RL-006B] PASS: Boss arena is unboxed and transparent")
 
-	# 4. Verify Defect 4: Combat Feed is at BOTTOM-LEFT (feed center_y > viewport_height * 0.65)
+	# 4. Verify Task 216: Combat Feed is REMOVED from screen (lower-left visually clean)
 	var feed: Control = bp.get_node_or_null("CombatFeedPanel") as Control
-	if feed == null or not feed.visible:
-		_fail("CombatFeedPanel missing or not visible!")
+	if feed != null and feed.visible:
+		_fail("CombatFeedPanel should be absent/not visible on combat screen!")
 		return
-	var feed_rect: Rect2 = feed.get_global_rect()
-	var feed_center_y: float = feed_rect.position.y + feed_rect.size.y * 0.5
-	if feed_rect.position.y < 500.0 or feed_rect.position.x > 60.0 or feed_rect.size.x > 320.0 or feed_rect.size.y > 180.0 or feed_center_y <= 720.0 * 0.65:
-		_fail("CombatFeedPanel not in bottom-left: " + str(feed_rect))
+	bp._on_combat_log("Combat log event", "player_success")
+	if bp._combat_log_label == null or bp._combat_log_label.text != "Combat log event":
+		_fail("Internal combat log logic failed!")
 		return
-	print("[RL-007] PASS: CombatFeedPanel positioned at bottom-left (center_y=%f > 468.0): %s" % [feed_center_y, str(feed_rect)])
+	print("[RL-007] PASS: CombatFeedPanel absent from combat screen (lower-left clean), internal log preserved")
 
-	# 5. Verify Defect 5: Math Challenge is TOP-CENTER, compact, non-modal (challenge center_x ~ viewport center)
+	# 5. Verify Defect 5: Math Challenge is TOP-CENTER, enlarged to ~740x300, non-modal (challenge center_x ~ viewport center)
 	var qp_host: Control = gh.get_node_or_null("QuestionPanelHost") as Control
 	if qp_host == null or not qp_host.visible:
 		_fail("QuestionPanelHost missing or not visible!")
 		return
 	var qp_rect: Rect2 = qp_host.get_global_rect()
 	var challenge_center_x: float = qp_rect.position.x + qp_rect.size.x * 0.5
-	if qp_rect.position.y < 60.0 or qp_rect.position.y > 130.0 or qp_rect.size.y > 360.0 or qp_rect.size.x < 460.0 or qp_rect.size.x > 600.0:
-		_fail("QuestionPanelHost not top-center compact: " + str(qp_rect))
+	if qp_rect.position.y < 60.0 or qp_rect.position.y > 130.0 or qp_rect.size.y < 280.0 or qp_rect.size.y > 330.0 or qp_rect.size.x < 700.0 or qp_rect.size.x > 760.0:
+		_fail("QuestionPanelHost not top-center enlarged (~740x300): " + str(qp_rect))
 		return
 	var center_diff: float = abs(challenge_center_x - 640.0)
 	if center_diff > 30.0:
 		_fail("QuestionPanelHost not horizontally centered: center_diff = " + str(center_diff))
 		return
-	print("[RL-008] PASS: Math Challenge is top-center, compact, non-modal (center_x=%f ~ 640): %s" % [challenge_center_x, str(qp_rect)])
+	print("[RL-008] PASS: Math Challenge is top-center, enlarged to ~740x300, non-modal (center_x=%f ~ 640): %s" % [challenge_center_x, str(qp_rect)])
 
 	# 6. Verify Defect 6: Tactical Card Row is BOTTOM-CENTER (card row center_x ~ viewport center)
 	var cards_container: Control = bp.get_node_or_null("BottomCenterContainer") as Control
@@ -138,7 +137,7 @@ func _initialize() -> void:
 		return
 	var cards_rect: Rect2 = cards_container.get_global_rect()
 	var cards_center_x: float = cards_rect.position.x + cards_rect.size.x * 0.5
-	if cards_rect.position.y < 480.0 or cards_rect.size.x < 400.0:
+	if cards_rect.position.y < 440.0 or cards_rect.size.x < 400.0:
 		_fail("BottomCenterContainer not at bottom-center: " + str(cards_rect))
 		return
 	var cards_center_diff: float = abs(cards_center_x - 640.0)
@@ -259,10 +258,10 @@ func _initialize() -> void:
 		var p_r = bp.get_node_or_null("TopHudContainer/PlayerHudPanel").get_global_rect()
 		var b_r = bp.get_node_or_null("TopHudContainer/BossHudPanel").get_global_rect()
 		var s_r = bp.get_node_or_null("BossStageContainer").get_global_rect()
-		var f_r = bp.get_node_or_null("CombatFeedPanel").get_global_rect()
+		var cards_r = bp.get_node_or_null("BottomCenterContainer").get_global_rect()
 		var st_r = bp.get_node_or_null("CombatSettingsButton").get_global_rect()
 
-		if p_r.position.x < 0 or b_r.position.x + b_r.size.x > res.x or s_r.position.x + s_r.size.x > res.x or f_r.position.y + f_r.size.y > res.y or st_r.position.x + st_r.size.x > res.x:
+		if p_r.position.x < 0 or b_r.position.x + b_r.size.x > res.x or s_r.position.x + s_r.size.x > res.x or cards_r.position.y + cards_r.size.y > res.y or st_r.position.x + st_r.size.x > res.x:
 			_fail("Layout boundary violation at resolution: " + str(res))
 			return
 	# Restore 1280x720

@@ -28,9 +28,9 @@ const CARD_STRIKE_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/STRIKE
 const CARD_DEFEND_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/DEFEND.png"
 const CARD_HEAL_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/HEAL.png"
 const CARD_PROBABILITY_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/PROBABILITY.png"
-const CARD_WIDTH: float = 132.0
-const CARD_HEIGHT: float = 188.0
-const CARD_GAP: float = 14.0
+const CARD_WIDTH: float = 160.0
+const CARD_HEIGHT: float = 225.0
+const CARD_GAP: float = 16.0
 
 const _PRELOAD_STRIKE: Texture2D = preload("res://assets/ui/combat/cards_v1/STRIKE.png")
 const _PRELOAD_DEFEND: Texture2D = preload("res://assets/ui/combat/cards_v1/DEFEND.png")
@@ -526,6 +526,7 @@ func _ensure_ui() -> void:
 
 	var pill_panel: PanelContainer = PanelContainer.new()
 	pill_panel.name = "FlowPillPanel"
+	pill_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	var pill_style: StyleBoxFlat = StyleBoxFlat.new()
 	pill_style.bg_color = Color(0.06, 0.08, 0.12, 0.85)
 	pill_style.border_width_left = 1
@@ -537,16 +538,16 @@ func _ensure_ui() -> void:
 	pill_style.corner_radius_top_right = 12
 	pill_style.corner_radius_bottom_right = 12
 	pill_style.corner_radius_bottom_left = 12
-	pill_style.content_margin_left = 12
+	pill_style.content_margin_left = 14
 	pill_style.content_margin_top = 3
-	pill_style.content_margin_right = 12
+	pill_style.content_margin_right = 14
 	pill_style.content_margin_bottom = 3
 	pill_panel.add_theme_stylebox_override("panel", pill_style)
 	_bottom_center_container.add_child(pill_panel)
 
 	_cards_header_label = Label.new()
 	_cards_header_label.name = "FlowStepIndicator"
-	_cards_header_label.text = "1. CHỌN THẺ BÀI   ➔   2. GIẢI TOÁN   ➔   3. XUẤT CHIÊU   |   ⚠️ STOCHAS PHẢN KÍCH NẾU SAI"
+	_cards_header_label.text = "1. CHỌN THẺ BÀI   ➔   2. GIẢI TOÁN   ➔   3. XUẤT CHIÊU"
 	_cards_header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_cards_header_label.add_theme_font_size_override("font_size", 11)
 	_cards_header_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.50, 0.95))
@@ -564,67 +565,26 @@ func _ensure_ui() -> void:
 	_build_card_slots()
 
 	# ---------------------------------------------------------
-	# 4. COMBAT FEED (Lower-Left: left ~32px, bottom ~16px, width ~240px)
-	# Added after _cards_container in tree order to satisfy test 12 log_idx > cards_idx
+	# 4. COMBAT FEED (REMOVED FROM UI per Task 216)
+	# Lower-left area is kept completely clean with background visible.
+	# Internal logging logic is preserved in-memory without rendering visible UI panel.
 	# ---------------------------------------------------------
-	_combat_feed_panel = PanelContainer.new()
-	_combat_feed_panel.name = "CombatFeedPanel"
-	_combat_feed_panel.custom_minimum_size = Vector2(260, 120)
-	_combat_feed_panel.mouse_filter = Control.MOUSE_FILTER_PASS
-
-	var log_style: StyleBoxFlat = StyleBoxFlat.new()
-	log_style.bg_color = Color(0.05, 0.07, 0.12, 0.88)
-	log_style.border_width_left = 1
-	log_style.border_width_top = 1
-	log_style.border_width_right = 1
-	log_style.border_width_bottom = 1
-	log_style.border_color = Color(0.25, 0.35, 0.50, 0.55)
-	log_style.corner_radius_top_left = 8
-	log_style.corner_radius_top_right = 8
-	log_style.corner_radius_bottom_right = 8
-	log_style.corner_radius_bottom_left = 8
-	log_style.content_margin_left = 10
-	log_style.content_margin_top = 8
-	log_style.content_margin_right = 10
-	log_style.content_margin_bottom = 8
-	_combat_feed_panel.add_theme_stylebox_override("panel", log_style)
-	add_child(_combat_feed_panel)
-
-	var log_inner_vbox: VBoxContainer = VBoxContainer.new()
-	log_inner_vbox.add_theme_constant_override("separation", 4)
-	_combat_feed_panel.add_child(log_inner_vbox)
-
-	var feed_header: Label = Label.new()
-	feed_header.text = "NHẬT KÝ CHIẾN ĐẤU"
-	feed_header.add_theme_font_size_override("font_size", 10)
-	feed_header.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0, 0.90))
-	log_inner_vbox.add_child(feed_header)
-
-	_feed_vbox = VBoxContainer.new()
-	_feed_vbox.name = "FeedVBox"
-	_feed_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_feed_vbox.add_theme_constant_override("separation", 3)
-	log_inner_vbox.add_child(_feed_vbox)
+	_combat_feed_panel = null
+	_feed_vbox = null
 
 	_prev_combat_log_label = Label.new()
 	_prev_combat_log_label.name = "PrevCombatLogLabel"
 	_prev_combat_log_label.text = ""
-	_prev_combat_log_label.custom_minimum_size = Vector2(230, 22)
-	_prev_combat_log_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_prev_combat_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_prev_combat_log_label.add_theme_font_size_override("font_size", 10)
-	_prev_combat_log_label.modulate = Color(0.70, 0.75, 0.85, 0.55)
-	_feed_vbox.add_child(_prev_combat_log_label)
+	_prev_combat_log_label.visible = false
+	_prev_combat_log_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_prev_combat_log_label)
 
 	_combat_log_label = Label.new()
 	_combat_log_label.name = "CombatLogLabel"
 	_combat_log_label.text = "⚔️ Chọn thẻ bài và trả lời chính xác để tấn công Boss!"
-	_combat_log_label.custom_minimum_size = Vector2(230, 36)
-	_combat_log_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_combat_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_combat_log_label.add_theme_font_size_override("font_size", 11)
-	_combat_log_label.add_theme_color_override("font_color", Color(0.85, 0.90, 0.95, 0.90))
-	_feed_vbox.add_child(_combat_log_label)
+	_combat_log_label.visible = false
+	_combat_log_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_combat_log_label)
 
 	# ---------------------------------------------------------
 	# 5. BOTTOM-RIGHT MINIMAL CONTROL
@@ -762,27 +722,20 @@ func _layout_elements() -> void:
 			_boss_visual_rect.position = Vector2.ZERO
 			_boss_visual_rect.size = Vector2(stage_w, stage_h)
 
-	# 3. Bottom Cards Area: centered horizontally, bottom ~8px
-	var cards_w: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP # 4 * 132 + 3 * 14 = 570.0
-	var cards_h: float = CARD_HEIGHT # 188.0
+	# 3. Bottom Cards Area: centered horizontally, bottom ~12px
+	var cards_w: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP # 4 * 160 + 3 * 16 = 688.0
+	var cards_h: float = CARD_HEIGHT # 225.0
 
 	if _bottom_center_container != null:
 		var min_bottom_w: float = _bottom_center_container.get_combined_minimum_size().x
 		var actual_bottom_w: float = maxf(cards_w, min_bottom_w)
 		var actual_bottom_x: float = (w - actual_bottom_w) * 0.5
-		var total_bottom_h: float = cards_h + 30.0 # cards + flow pill
-		var bottom_y: float = maxf(0.0, h - 8.0 - total_bottom_h)
+		var total_bottom_h: float = cards_h + 36.0 # cards + flow pill
+		var bottom_y: float = maxf(0.0, h - 12.0 - total_bottom_h)
 		_bottom_center_container.position = Vector2(actual_bottom_x, bottom_y)
 		_bottom_center_container.size = Vector2(actual_bottom_w, total_bottom_h)
 
-	# 4. Combat Feed: left ~32px, bottom ~16px, width ~260px
-	if _combat_feed_panel != null:
-		var feed_w: float = 260.0
-		var feed_h: float = 120.0
-		var feed_x: float = 32.0
-		var feed_y: float = maxf(0.0, h - 16.0 - feed_h)
-		_combat_feed_panel.position = Vector2(feed_x, feed_y)
-		_combat_feed_panel.size = Vector2(feed_w, feed_h)
+	# 4. Combat Feed: Removed from screen per Task 216 (lower-left visually clean)
 
 	# 5. Bottom Right Settings: right ~24px, bottom ~16px
 	if _settings_button != null:
@@ -918,11 +871,12 @@ func _build_card_slots() -> void:
 		badge_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		badge_panel.add_child(badge_label)
 
-		# Texture Rect
+		# Texture Rect (Artwork area enlarged to ~145–170px tall)
 		var art_margin: MarginContainer = MarginContainer.new()
 		art_margin.name = "ArtMargin"
 		art_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		art_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		art_margin.custom_minimum_size = Vector2(0, 156.0)
 		art_margin.add_theme_constant_override("margin_left", 4)
 		art_margin.add_theme_constant_override("margin_right", 4)
 		card_vbox.add_child(art_margin)
@@ -935,6 +889,7 @@ func _build_card_slots() -> void:
 		tex_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		tex_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tex_rect.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		tex_rect.custom_minimum_size = Vector2(0, 150.0)
 		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		art_margin.add_child(tex_rect)
 
@@ -1532,16 +1487,12 @@ func get_boss_art_rect() -> Rect2:
 	return Rect2(852, 91, 380, BOSS_ART_HEIGHT)
 
 func get_combat_feed_rect() -> Rect2:
-	_ensure_ui()
-	_layout_elements()
-	var h: float = size.y if size.y > 0.0 else 720.0
-	if _combat_feed_panel != null:
-		var fw: float = _combat_feed_panel.size.x if _combat_feed_panel.size.x > 0.0 else 260.0
-		var fh: float = _combat_feed_panel.size.y if _combat_feed_panel.size.y > 0.0 else 120.0
-		var fx: float = _combat_feed_panel.position.x if _combat_feed_panel.position.x > 0.0 else 32.0
-		var fy: float = _combat_feed_panel.position.y if _combat_feed_panel.position.y > 0.0 else maxf(0.0, h - 16.0 - fh)
-		return Rect2(fx, fy, fw, fh)
-	return Rect2(32, maxf(0.0, h - 16.0 - 120.0), 260, 120)
+	if _combat_feed_panel != null and _combat_feed_panel.is_inside_tree() and _combat_feed_panel.visible:
+		return _combat_feed_panel.get_global_rect()
+	return Rect2()
+
+func has_visible_combat_feed() -> bool:
+	return false
 
 func get_flow_pill_rect() -> Rect2:
 	_ensure_ui()
@@ -1550,8 +1501,9 @@ func get_flow_pill_rect() -> Rect2:
 	var h: float = size.y if size.y > 0.0 else 720.0
 	var cw: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP
 	var cx: float = (w - cw) * 0.5
-	var cy: float = maxf(0.0, h - 8.0 - CARD_HEIGHT - 30.0)
-	return Rect2(cx, cy, cw, 24)
+	var total_bottom_h: float = CARD_HEIGHT + 36.0
+	var bottom_y: float = maxf(0.0, h - 12.0 - total_bottom_h)
+	return Rect2(cx, bottom_y, cw, 26)
 
 func get_card_row_rect() -> Rect2:
 	_ensure_ui()
@@ -1561,8 +1513,9 @@ func get_card_row_rect() -> Rect2:
 	var cw: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP
 	var ch: float = CARD_HEIGHT
 	var cx: float = (w - cw) * 0.5
-	var cy: float = maxf(0.0, h - 8.0 - ch)
-	return Rect2(cx, cy, cw, ch)
+	var total_bottom_h: float = CARD_HEIGHT + 36.0
+	var bottom_y: float = maxf(0.0, h - 12.0 - total_bottom_h)
+	return Rect2(cx, bottom_y + 32.0, cw, ch)
 
 func get_card_rect(card_id: String) -> Rect2:
 	_ensure_ui()

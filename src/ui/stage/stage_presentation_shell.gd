@@ -864,7 +864,7 @@ func set_view_mode(mode: ViewMode) -> void:
 						q_host.add_theme_constant_override("margin_bottom", 0)
 					if q_host_panel != null:
 						q_host_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-						q_host_panel.custom_minimum_size = Vector2(600, 230)
+						q_host_panel.custom_minimum_size = Vector2(740, 300)
 						q_host_panel.add_theme_constant_override("margin_left", 0)
 						q_host_panel.add_theme_constant_override("margin_top", 0)
 						q_host_panel.add_theme_constant_override("margin_right", 0)

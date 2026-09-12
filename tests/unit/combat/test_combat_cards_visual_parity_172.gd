@@ -486,39 +486,29 @@ static func test_011_no_overlap_with_math_challenge(tree: SceneTree) -> bool:
 	print("[CARD-011] PASS: Math Challenge and combat cards occupy isolated layout branches with zero overlap")
 	return true
 
-# 12. No overlap with Combat Feed
+# 12. No overlap with Combat Feed (Task 216: Combat Feed absent from UI, lower-left clean)
 static func test_012_no_overlap_with_combat_feed() -> bool:
-	print("[CARD-012] Verifying no overlap between combat card row and Combat Action Feed...")
+	print("[CARD-012] Verifying Combat Action Feed is absent from UI and logging operates cleanly...")
 	var h: Dictionary = _create_harness()
 	var panel: BossCombatPanel = h["panel"]
 
-	var cards_c: HBoxContainer = panel._cards_container
-	var log_label: Label = panel._combat_log_label
-	if cards_c == null or log_label == null:
+	var feed_panel: Control = panel.get_node_or_null("CombatFeedPanel") as Control
+	if feed_panel != null and feed_panel.visible:
 		_cleanup(panel)
-		return _fail("CARD-012", "Cards container or Combat log label is null")
+		return _fail("CARD-012", "Combat feed panel must not be visible on combat screen")
 
-	var log_panel: PanelContainer = null
-	var parent_node: Node = log_label.get_parent()
-	while parent_node != null and parent_node != panel:
-		if parent_node is PanelContainer:
-			log_panel = parent_node as PanelContainer
-			break
-		parent_node = parent_node.get_parent()
-	if log_panel == null:
+	var feed_rect: Rect2 = panel.get_combat_feed_rect()
+	if feed_rect != Rect2():
 		_cleanup(panel)
-		return _fail("CARD-012", "Log panel container is null")
+		return _fail("CARD-012", "Combat feed rect expected empty Rect2")
 
-	# In BossCombatPanel VBox, cards_c is followed by log_panel
-	var cards_idx: int = cards_c.get_index()
-	var log_idx: int = log_panel.get_index()
-
-	if log_idx <= cards_idx:
+	panel._on_combat_log("Combat action logged", "player_success")
+	if panel._combat_log_label == null or panel._combat_log_label.text != "Combat action logged":
 		_cleanup(panel)
-		return _fail("CARD-012", "Combat feed (index %d) must render below cards (index %d)" % [log_idx, cards_idx])
+		return _fail("CARD-012", "Combat log internal logic failed")
 
 	_cleanup(panel)
-	print("[CARD-012] PASS: Card row renders cleanly above Combat Action Feed without overlap")
+	print("[CARD-012] PASS: Combat Feed absent from UI with zero card overlap, internal log logic preserved")
 	return true
 
 # 13. No overlap with Settings
