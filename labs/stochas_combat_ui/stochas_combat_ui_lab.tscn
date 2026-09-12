@@ -1,4 +1,4 @@
-﻿[gd_scene load_steps=2 format=3 uid="uid://stochas_combat_lab_001"]
+[gd_scene load_steps=2 format=3 uid="uid://stochas_combat_lab_001"]
 
 [ext_resource type="Script" path="res://labs/stochas_combat_ui/stochas_combat_ui_lab.gd" id="1_combat_lab"]
 

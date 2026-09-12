@@ -1,7 +1,7 @@
 extends Control
 
-## MATHOS-STOCHAS-STITCH-FINAL-LAB-PARITY-220L
-## Native Godot LAB Parity Implementation from Approved Final Stitch Reference
+## MATHOS-KARL-PIXEL-LAB-INTEGRATION-221B
+## Native Godot LAB Parity Implementation with Karl Pixel Combat-State Integration
 ## Viewport: 1280 x 720
 
 # Authoritative Composition Grid & Axis
@@ -29,20 +29,27 @@ const BOSS_HEIGHT: float = 520.0
 const BOSS_RIGHT: float = 0.0
 const BOSS_BOTTOM: float = 70.0
 
-# Karl Battlefield Entity
+# Karl Battlefield Entity (Target Left ~55–90px, Bottom ~60–80px, Height ~190–250px)
 const KARL_ENTITY_LEFT: float = 70.0
-const KARL_ENTITY_BOTTOM: float = 75.0
-const KARL_ENTITY_WIDTH: float = 140.0
-const KARL_ENTITY_HEIGHT: float = 180.0
+const KARL_ENTITY_BOTTOM: float = 70.0
+const KARL_ENTITY_WIDTH: float = 220.0
+const KARL_ENTITY_HEIGHT: float = 220.0
 
 # Asset paths (canonical production assets)
 const ASSET_BG: String = "res://assets/backgrounds/d1_misty_forest_bg.png"
-const ASSET_KARL: String = "res://assets/characters/player/karl/karl_portrait.png"
+const ASSET_KARL_PORTRAIT: String = "res://assets/characters/player/karl/karl_portrait.png"
 const ASSET_BOSS: String = "res://assets/characters/bosses/dungeon_1/stochas_boss.png"
 const ASSET_CARD_STRIKE: String = "res://assets/ui/combat/cards_v1/STRIKE.png"
 const ASSET_CARD_DEFEND: String = "res://assets/ui/combat/cards_v1/DEFEND.png"
 const ASSET_CARD_HEAL: String = "res://assets/ui/combat/cards_v1/HEAL.png"
 const ASSET_CARD_PROBABILITY: String = "res://assets/ui/combat/cards_v1/PROBABILITY.png"
+
+# Karl 5-State Pixel Combat Sprites
+const ASSET_KARL_IDLE: String = "res://assets/characters/player/karl/combat_pixel/karl_idle.png"
+const ASSET_KARL_CAST: String = "res://assets/characters/player/karl/combat_pixel/karl_cast.png"
+const ASSET_KARL_HIT: String = "res://assets/characters/player/karl/combat_pixel/karl_hit.png"
+const ASSET_KARL_HEAL: String = "res://assets/characters/player/karl/combat_pixel/karl_heal.png"
+const ASSET_KARL_SHIELD: String = "res://assets/characters/player/karl/combat_pixel/karl_shield.png"
 
 # Colors
 const COLOR_ACCENT_CYAN: Color = Color(0.25, 0.85, 0.98, 1.0)
@@ -56,6 +63,29 @@ const COLOR_CARD_BG: Color = Color(0.08, 0.10, 0.16, 0.95)
 const COLOR_CARD_BORDER: Color = Color(0.30, 0.42, 0.58, 0.60)
 const COLOR_CARD_SELECTED_BORDER: Color = Color(1.0, 0.85, 0.30, 0.95)
 const COLOR_TEXT_MUTED: Color = Color(0.75, 0.82, 0.90, 0.85)
+
+# Karl Combat States
+enum KarlState { IDLE, CAST, HIT, HEAL, SHIELD }
+var current_karl_state: KarlState = KarlState.IDLE
+var karl_textures: Dictionary = {}
+var karl_sprite_rect: TextureRect = null
+var karl_vfx_container: Control = null
+var karl_state_tween: Tween = null
+
+# Baseline offsets for exact 650.0 ground alignment
+# In 1254px source, bottom non-transparent pixel offsets:
+# idle: 26px -> 4.5px at 220px scale
+# cast: 0px -> 0.0px
+# hit: 26px -> 4.5px
+# heal: 0px -> 0.0px
+# shield: 16px -> 2.8px
+const KARL_BASELINE_OFFSETS: Dictionary = {
+	KarlState.IDLE: 4.5,
+	KarlState.CAST: 0.0,
+	KarlState.HIT: 4.5,
+	KarlState.HEAL: 0.0,
+	KarlState.SHIELD: 2.8,
+}
 
 # State
 var selected_card_idx: int = 0
@@ -174,16 +204,29 @@ func _ready() -> void:
 	custom_minimum_size = Vector2(1280, 720)
 	clip_contents = true
 
+	_load_karl_textures()
 	_build_scene()
 	_update_card_selection()
 	_update_hover_detail(selected_card_idx)
 	_update_question_view()
 
 	# Trigger initial demonstration floating combat status feedback
-	_spawn_floating_feedback(Vector2(140, 520), "+8 GIÁP", COLOR_ACCENT_CYAN)
-	_spawn_floating_feedback(Vector2(150, 480), "+15 HP", COLOR_ACCENT_GREEN)
+	_spawn_floating_feedback(Vector2(180, 410), "+8 GIÁP", COLOR_ACCENT_CYAN)
+	_spawn_floating_feedback(Vector2(180, 380), "+15 HP", COLOR_ACCENT_GREEN)
 	_spawn_floating_feedback(Vector2(1040, 240), "-10 HP", COLOR_ACCENT_RED)
 	_spawn_floating_feedback(Vector2(1040, 210), "CRITICAL!", COLOR_ACCENT_GOLD)
+
+func _load_karl_textures() -> void:
+	if ResourceLoader.exists(ASSET_KARL_IDLE):
+		karl_textures[KarlState.IDLE] = load(ASSET_KARL_IDLE)
+	if ResourceLoader.exists(ASSET_KARL_CAST):
+		karl_textures[KarlState.CAST] = load(ASSET_KARL_CAST)
+	if ResourceLoader.exists(ASSET_KARL_HIT):
+		karl_textures[KarlState.HIT] = load(ASSET_KARL_HIT)
+	if ResourceLoader.exists(ASSET_KARL_HEAL):
+		karl_textures[KarlState.HEAL] = load(ASSET_KARL_HEAL)
+	if ResourceLoader.exists(ASSET_KARL_SHIELD):
+		karl_textures[KarlState.SHIELD] = load(ASSET_KARL_SHIELD)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.pressed or event.echo:
@@ -206,6 +249,16 @@ func _unhandled_input(event: InputEvent) -> void:
 			reset_lab()
 		KEY_D:
 			toggle_debug_overlay()
+		KEY_I:
+			trigger_idle_state()
+		KEY_C:
+			trigger_cast_effect()
+		KEY_H:
+			trigger_hit_effect()
+		KEY_E:
+			trigger_heal_effect()
+		KEY_S:
+			trigger_shield_effect()
 
 # Getters for Verification
 func get_center_interaction_x() -> float:
@@ -247,11 +300,46 @@ func get_boss_position() -> Vector2:
 func get_boss_size() -> Vector2:
 	return Vector2(BOSS_WIDTH, BOSS_HEIGHT)
 
+func get_karl_position() -> Vector2:
+	if karl_battlefield_entity == null:
+		return Vector2.ZERO
+	return karl_battlefield_entity.position
+
+func get_karl_size() -> Vector2:
+	if karl_battlefield_entity == null:
+		return Vector2.ZERO
+	return karl_battlefield_entity.size
+
+func get_karl_baseline() -> float:
+	if karl_battlefield_entity == null:
+		return 0.0
+	return karl_battlefield_entity.position.y + karl_battlefield_entity.size.y
+
+func get_karl_state() -> int:
+	return current_karl_state
+
+func get_karl_texture_path() -> String:
+	match current_karl_state:
+		KarlState.IDLE: return ASSET_KARL_IDLE
+		KarlState.CAST: return ASSET_KARL_CAST
+		KarlState.HIT: return ASSET_KARL_HIT
+		KarlState.HEAL: return ASSET_KARL_HEAL
+		KarlState.SHIELD: return ASSET_KARL_SHIELD
+	return ""
+
+func is_karl_standee_present() -> bool:
+	if karl_battlefield_entity == null:
+		return false
+	for child in karl_battlefield_entity.find_children("*", "TextureRect", true, false):
+		var tr = child as TextureRect
+		if tr.texture != null and "karl_portrait" in tr.texture.resource_path:
+			return true
+	return false
+
 func is_combat_feed_present() -> bool:
 	return false
 
 func has_permanent_card_stats() -> bool:
-	# Verifies that card shells have no permanent number labels printed under them
 	for panel in card_panels:
 		for child in panel.find_children("*", "Label", true, false):
 			var lbl = child as Label
@@ -271,6 +359,15 @@ func select_card(idx: int) -> void:
 	_update_card_selection()
 	_update_hover_detail(selected_card_idx)
 	_update_cta_button_text()
+
+	# Trigger Karl state preview based on card
+	var card_id: String = cards_data[idx]["id"]
+	if card_id == "strike":
+		trigger_cast_effect()
+	elif card_id == "defend":
+		trigger_shield_effect()
+	elif card_id == "heal":
+		trigger_heal_effect()
 
 func cycle_question() -> void:
 	current_question_idx = (current_question_idx + 1) % questions_data.size()
@@ -294,6 +391,7 @@ func reset_lab() -> void:
 	selected_answer_idx = 0
 	current_question_idx = 0
 	hint_shown = false
+	trigger_idle_state()
 	_update_card_selection()
 	_update_hover_detail(0)
 	_update_question_view()
@@ -304,6 +402,186 @@ func toggle_debug_overlay() -> void:
 	if debug_overlay != null:
 		debug_overlay.visible = debug_mode
 
+func set_karl_state(state: KarlState) -> void:
+	current_karl_state = state
+	if karl_sprite_rect == null:
+		return
+	if karl_textures.has(state):
+		karl_sprite_rect.texture = karl_textures[state]
+	var y_offset: float = KARL_BASELINE_OFFSETS.get(state, 0.0)
+	karl_sprite_rect.position = Vector2(0.0, y_offset)
+	karl_sprite_rect.modulate = Color(1.0, 1.0, 1.0, 1.0)
+
+func trigger_idle_state() -> void:
+	if karl_state_tween != null and karl_state_tween.is_valid():
+		karl_state_tween.kill()
+	set_karl_state(KarlState.IDLE)
+
+func trigger_cast_effect() -> void:
+	if karl_state_tween != null and karl_state_tween.is_valid():
+		karl_state_tween.kill()
+	set_karl_state(KarlState.CAST)
+
+	# Light cyan magic pulse near casting hand (Karl faces right, hand around (160, 85))
+	_spawn_cast_hand_spark()
+
+	# STOCHAS receives floating -10 HP
+	_spawn_floating_feedback(Vector2(1040, 240), "-10 HP", COLOR_ACCENT_RED)
+	_spawn_floating_feedback(Vector2(1040, 210), "CRITICAL!", COLOR_ACCENT_GOLD)
+
+	# Auto-return to IDLE after 0.9s
+	karl_state_tween = create_tween()
+	karl_state_tween.tween_interval(0.9)
+	karl_state_tween.tween_callback(func(): set_karl_state(KarlState.IDLE))
+
+func trigger_shield_effect() -> void:
+	if karl_state_tween != null and karl_state_tween.is_valid():
+		karl_state_tween.kill()
+	set_karl_state(KarlState.SHIELD)
+
+	# Floating +8 GIÁP above Karl
+	_spawn_floating_feedback(Vector2(180, 410), "+8 GIÁP", COLOR_ACCENT_CYAN)
+
+	# Cyan/blue arcane barrier pulse around Karl
+	_spawn_barrier_pulse()
+
+	# Auto-return to IDLE after 1.1s
+	karl_state_tween = create_tween()
+	karl_state_tween.tween_interval(1.1)
+	karl_state_tween.tween_callback(func(): set_karl_state(KarlState.IDLE))
+
+func trigger_heal_effect() -> void:
+	if karl_state_tween != null and karl_state_tween.is_valid():
+		karl_state_tween.kill()
+	set_karl_state(KarlState.HEAL)
+
+	# Floating +15 HP above Karl
+	_spawn_floating_feedback(Vector2(180, 410), "+15 HP", COLOR_ACCENT_GREEN)
+
+	# Green/emerald aura pulse around Karl
+	_spawn_emerald_pulse()
+
+	# Auto-return to IDLE after 1.2s
+	karl_state_tween = create_tween()
+	karl_state_tween.tween_interval(1.2)
+	karl_state_tween.tween_callback(func(): set_karl_state(KarlState.IDLE))
+
+func trigger_hit_effect() -> void:
+	if karl_state_tween != null and karl_state_tween.is_valid():
+		karl_state_tween.kill()
+	set_karl_state(KarlState.HIT)
+
+	# Floating -10 HP above Karl
+	_spawn_floating_feedback(Vector2(180, 410), "-10 HP", COLOR_ACCENT_RED)
+
+	# Brief red flash / impact pulse
+	_spawn_hit_pulse()
+
+	# Auto-return to IDLE after 0.7s
+	karl_state_tween = create_tween()
+	karl_state_tween.tween_interval(0.7)
+	karl_state_tween.tween_callback(func(): set_karl_state(KarlState.IDLE))
+
+func _spawn_cast_hand_spark() -> void:
+	if karl_vfx_container == null:
+		return
+	var spark: Panel = Panel.new()
+	spark.position = Vector2(160, 85)
+	spark.size = Vector2(24, 24)
+	spark.pivot_offset = Vector2(12, 12)
+	var s_box: StyleBoxFlat = StyleBoxFlat.new()
+	s_box.bg_color = Color(0.40, 0.90, 1.0, 0.85)
+	s_box.border_width_left = 2
+	s_box.border_width_top = 2
+	s_box.border_width_right = 2
+	s_box.border_width_bottom = 2
+	s_box.border_color = Color(1.0, 1.0, 1.0, 0.95)
+	s_box.corner_radius_top_left = 12
+	s_box.corner_radius_top_right = 12
+	s_box.corner_radius_bottom_right = 12
+	s_box.corner_radius_bottom_left = 12
+	s_box.shadow_color = Color(0.2, 0.85, 1.0, 0.7)
+	s_box.shadow_size = 12
+	spark.add_theme_stylebox_override("panel", s_box)
+	karl_vfx_container.add_child(spark)
+
+	var tw: Tween = create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(spark, "scale", Vector2(1.8, 1.8), 0.5)
+	tw.tween_property(spark, "modulate:a", 0.0, 0.5)
+	tw.chain().tween_callback(spark.queue_free)
+
+func _spawn_barrier_pulse() -> void:
+	if karl_vfx_container == null:
+		return
+	var barrier: Panel = Panel.new()
+	barrier.position = Vector2(10, 10)
+	barrier.size = Vector2(200, 200)
+	barrier.pivot_offset = Vector2(100, 100)
+	var b_box: StyleBoxFlat = StyleBoxFlat.new()
+	b_box.bg_color = Color(0.12, 0.45, 0.75, 0.20)
+	b_box.border_width_left = 3
+	b_box.border_width_top = 3
+	b_box.border_width_right = 3
+	b_box.border_width_bottom = 3
+	b_box.border_color = Color(0.30, 0.85, 1.0, 0.85)
+	b_box.corner_radius_top_left = 100
+	b_box.corner_radius_top_right = 100
+	b_box.corner_radius_bottom_right = 100
+	b_box.corner_radius_bottom_left = 100
+	b_box.shadow_color = Color(0.20, 0.80, 1.0, 0.55)
+	b_box.shadow_size = 14
+	barrier.add_theme_stylebox_override("panel", b_box)
+	karl_vfx_container.add_child(barrier)
+
+	barrier.scale = Vector2(0.85, 0.85)
+	var tw: Tween = create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(barrier, "scale", Vector2(1.15, 1.15), 1.0)
+	tw.tween_property(barrier, "modulate:a", 0.0, 1.0)
+	tw.chain().tween_callback(barrier.queue_free)
+
+func _spawn_emerald_pulse() -> void:
+	if karl_vfx_container == null:
+		return
+	var aura: Panel = Panel.new()
+	aura.position = Vector2(15, 10)
+	aura.size = Vector2(190, 200)
+	aura.pivot_offset = Vector2(95, 100)
+	var a_box: StyleBoxFlat = StyleBoxFlat.new()
+	a_box.bg_color = Color(0.15, 0.65, 0.35, 0.22)
+	a_box.border_width_left = 3
+	a_box.border_width_top = 3
+	a_box.border_width_right = 3
+	a_box.border_width_bottom = 3
+	a_box.border_color = Color(0.35, 0.95, 0.55, 0.85)
+	a_box.corner_radius_top_left = 95
+	a_box.corner_radius_top_right = 95
+	a_box.corner_radius_bottom_right = 95
+	a_box.corner_radius_bottom_left = 95
+	a_box.shadow_color = Color(0.25, 0.90, 0.50, 0.55)
+	a_box.shadow_size = 14
+	aura.add_theme_stylebox_override("panel", a_box)
+	karl_vfx_container.add_child(aura)
+
+	var tw: Tween = create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(aura, "position:y", aura.position.y - 25.0, 1.1)
+	tw.tween_property(aura, "scale", Vector2(1.10, 1.10), 1.1)
+	tw.tween_property(aura, "modulate:a", 0.0, 1.1)
+	tw.chain().tween_callback(aura.queue_free)
+
+func _spawn_hit_pulse() -> void:
+	if karl_sprite_rect == null:
+		return
+	karl_sprite_rect.modulate = Color(2.0, 0.4, 0.4, 1.0)
+	var tw: Tween = create_tween()
+	tw.tween_property(karl_sprite_rect, "position:x", -6.0, 0.06)
+	tw.tween_property(karl_sprite_rect, "position:x", 5.0, 0.06)
+	tw.tween_property(karl_sprite_rect, "position:x", -3.0, 0.06)
+	tw.tween_property(karl_sprite_rect, "position:x", 0.0, 0.06)
+	tw.parallel().tween_property(karl_sprite_rect, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.55)
+
 func _build_scene() -> void:
 	# 1. Background
 	_build_background()
@@ -311,7 +589,7 @@ func _build_scene() -> void:
 	# 2. STOCHAS Battlefield Entity (Right 0px, Bottom 70px)
 	_build_boss_render()
 
-	# 3. Karl Battlefield Entity (Left 70px, Bottom 75px)
+	# 3. Karl Battlefield Entity (Left 70px, Bottom 70px, 220x220px)
 	_build_karl_battlefield_entity()
 
 	# 4. Top HUDs (Karl Top-Left, Stochas Top-Right)
@@ -369,44 +647,47 @@ func _build_boss_render() -> void:
 	add_child(boss_rect)
 
 func _build_karl_battlefield_entity() -> void:
-	# Left 70px, Bottom 75px, 140x180px
+	# Left 70px, Bottom 70px, 220x220px (Ground baseline = 650px)
 	karl_battlefield_entity = Control.new()
 	karl_battlefield_entity.name = "KarlBattlefieldEntity"
 	karl_battlefield_entity.position = Vector2(KARL_ENTITY_LEFT, 720.0 - KARL_ENTITY_BOTTOM - KARL_ENTITY_HEIGHT)
 	karl_battlefield_entity.size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
+	karl_battlefield_entity.custom_minimum_size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
 	add_child(karl_battlefield_entity)
 
-	# Framed pedestal standee representing Karl on the battlefield
-	var pedestal: PanelContainer = PanelContainer.new()
-	pedestal.custom_minimum_size = Vector2(130, 160)
-	pedestal.position = Vector2(5, 10)
-	var ped_box: StyleBoxFlat = _create_glass_box(Color(0.06, 0.10, 0.18, 0.75), COLOR_ACCENT_CYAN, 12)
-	ped_box.border_width_left = 2
-	ped_box.border_width_top = 2
-	ped_box.border_width_right = 2
-	ped_box.border_width_bottom = 2
-	ped_box.shadow_color = Color(0.15, 0.75, 1.0, 0.35)
-	ped_box.shadow_size = 10
-	pedestal.add_theme_stylebox_override("panel", ped_box)
-	karl_battlefield_entity.add_child(pedestal)
+	# Ground shadow under Karl's feet to anchor naturally in misty forest
+	var shadow: Panel = Panel.new()
+	shadow.name = "GroundShadow"
+	shadow.position = Vector2(30, 204)
+	shadow.custom_minimum_size = Vector2(160, 18)
+	shadow.size = Vector2(160, 18)
+	var sbox: StyleBoxFlat = StyleBoxFlat.new()
+	sbox.bg_color = Color(0.01, 0.02, 0.05, 0.55)
+	sbox.corner_radius_top_left = 9
+	sbox.corner_radius_top_right = 9
+	sbox.corner_radius_bottom_right = 9
+	sbox.corner_radius_bottom_left = 9
+	shadow.add_theme_stylebox_override("panel", sbox)
+	karl_battlefield_entity.add_child(shadow)
 
-	var port: TextureRect = TextureRect.new()
-	port.custom_minimum_size = Vector2(118, 140)
-	port.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	port.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	if ResourceLoader.exists(ASSET_KARL):
-		port.texture = load(ASSET_KARL)
-	pedestal.add_child(port)
+	# Dedicated VFX container behind/around sprite
+	karl_vfx_container = Control.new()
+	karl_vfx_container.name = "KarlVFXContainer"
+	karl_vfx_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	karl_vfx_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	karl_battlefield_entity.add_child(karl_vfx_container)
 
-	# Small hero tag underneath standee
-	var tag: Label = Label.new()
-	tag.text = "KARL"
-	tag.position = Vector2(0, 162)
-	tag.custom_minimum_size = Vector2(140, 18)
-	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tag.add_theme_font_size_override("font_size", 10)
-	tag.add_theme_color_override("font_color", COLOR_ACCENT_CYAN)
-	karl_battlefield_entity.add_child(tag)
+	# Native pixel character TextureRect (no rectangular frame, no portrait standee)
+	karl_sprite_rect = TextureRect.new()
+	karl_sprite_rect.name = "KarlSpriteRect"
+	karl_sprite_rect.size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
+	karl_sprite_rect.custom_minimum_size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
+	karl_sprite_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	karl_sprite_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	karl_battlefield_entity.add_child(karl_sprite_rect)
+
+	# Initialize IDLE state
+	set_karl_state(KarlState.IDLE)
 
 func _build_top_huds() -> void:
 	# Karl HUD: Left 24px, Top 20px, 260x68px
@@ -434,8 +715,8 @@ func _build_top_huds() -> void:
 	karl_portrait_rect.custom_minimum_size = Vector2(46, 46)
 	karl_portrait_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	karl_portrait_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	if ResourceLoader.exists(ASSET_KARL):
-		karl_portrait_rect.texture = load(ASSET_KARL)
+	if ResourceLoader.exists(ASSET_KARL_PORTRAIT):
+		karl_portrait_rect.texture = load(ASSET_KARL_PORTRAIT)
 	port_frame.add_child(karl_portrait_rect)
 
 	var karl_vbox: VBoxContainer = VBoxContainer.new()
@@ -543,7 +824,7 @@ func _build_question_module() -> void:
 	round_lbl.add_theme_color_override("font_color", COLOR_ACCENT_GOLD)
 	header_hbox.add_child(round_lbl)
 
-	# 2. Question Prompt (compact, readable, no oversized black box)
+	# 2. Question Prompt (compact, readable)
 	question_prompt_label = Label.new()
 	question_prompt_label.custom_minimum_size = Vector2(612, 38)
 	question_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -602,9 +883,9 @@ func _build_question_module() -> void:
 	cta_button.pressed.connect(_on_cta_pressed)
 	action_hbox.add_child(cta_button)
 
-	# 5. Combat rule subtext
+	# 5. Combat rule subtext + Shortcuts guide
 	helper_label = Label.new()
-	helper_label.text = "Quy tắc: Đúng -> Thi triển chiêu thức. Sai -> STOCHAS phản đòn 10 DMG."
+	helper_label.text = "Quy tắc: Đúng -> Thi triển chiêu thức. Sai -> STOCHAS phản đòn 10 DMG. | Phím: [1-4] Thẻ, [I/C/H/E/S] Karl, [D] Debug"
 	helper_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	helper_label.add_theme_font_size_override("font_size", 9)
 	helper_label.add_theme_color_override("font_color", COLOR_TEXT_MUTED)
@@ -741,6 +1022,22 @@ func _build_debug_overlay() -> void:
 	axis_lbl.add_theme_font_size_override("font_size", 9)
 	axis_lbl.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2, 0.9))
 	debug_overlay.add_child(axis_lbl)
+
+	# Karl entity outline
+	var k_outline: ReferenceRect = ReferenceRect.new()
+	k_outline.position = Vector2(KARL_ENTITY_LEFT, 720.0 - KARL_ENTITY_BOTTOM - KARL_ENTITY_HEIGHT)
+	k_outline.size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
+	k_outline.border_color = Color(0.2, 0.7, 1.0, 0.9)
+	k_outline.border_width = 1.5
+	k_outline.editor_only = false
+	debug_overlay.add_child(k_outline)
+
+	var k_lbl: Label = Label.new()
+	k_lbl.text = "Karl 220x220 (Left: 70, Bottom: 70, Base: 650)"
+	k_lbl.position = Vector2(KARL_ENTITY_LEFT, 720.0 - KARL_ENTITY_BOTTOM - KARL_ENTITY_HEIGHT - 16)
+	k_lbl.add_theme_font_size_override("font_size", 9)
+	k_lbl.add_theme_color_override("font_color", Color(0.2, 0.7, 1.0, 0.9))
+	debug_overlay.add_child(k_lbl)
 
 	# Question outline
 	var q_outline: ReferenceRect = ReferenceRect.new()
@@ -882,16 +1179,13 @@ func _on_cta_pressed() -> void:
 
 	if is_correct:
 		if card["id"] == "strike":
-			_spawn_floating_feedback(Vector2(1040, 240), "-10 HP", COLOR_ACCENT_RED)
-			_spawn_floating_feedback(Vector2(1040, 210), "CRITICAL!", COLOR_ACCENT_GOLD)
+			trigger_cast_effect()
 		elif card["id"] == "defend":
-			_spawn_floating_feedback(Vector2(140, 500), "+8 GIÁP", COLOR_ACCENT_CYAN)
-			_spawn_floating_feedback(Vector2(140, 470), "SHIELD!", COLOR_ACCENT_CYAN)
+			trigger_shield_effect()
 		elif card["id"] == "heal":
-			_spawn_floating_feedback(Vector2(140, 500), "+15 HP", COLOR_ACCENT_GREEN)
-			_spawn_floating_feedback(Vector2(140, 470), "HEAL!", COLOR_ACCENT_GREEN)
+			trigger_heal_effect()
 	else:
-		_spawn_floating_feedback(Vector2(140, 500), "-10 HP", COLOR_ACCENT_RED)
+		trigger_hit_effect()
 		_spawn_floating_feedback(Vector2(1040, 240), "PHẢN ĐÒN!", COLOR_ACCENT_RED)
 
 func _spawn_floating_feedback(pos: Vector2, text: String, color: Color) -> void:
