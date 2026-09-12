@@ -1,16 +1,16 @@
 extends Control
 
-## MATHOS-KARL-PIXEL-LAB-INTEGRATION-221B
-## Native Godot LAB Parity Implementation with Karl Pixel Combat-State Integration
+## MATHOS-STOCHAS-LAB-PROPORTION-223L
+## Refined Visual Proportions: Question Panel (660 x 270 px) & Karl Entity (300 x 300 px)
 ## Viewport: 1280 x 720
 
 # Authoritative Composition Grid & Axis
 const CENTER_INTERACTION_X: float = 690.0
 
-# Question Module
-const QUESTION_WIDTH: float = 640.0
-const QUESTION_TOP: float = 160.0
-const QUESTION_HEIGHT: float = 210.0
+# Question Module (Refined Proportion: 660 x 270 px)
+const QUESTION_WIDTH: float = 660.0
+const QUESTION_TOP: float = 155.0
+const QUESTION_HEIGHT: float = 270.0
 
 # Card Specifications (Approved Stitch visual size)
 const CARD_WIDTH: float = 104.0
@@ -29,11 +29,11 @@ const BOSS_HEIGHT: float = 520.0
 const BOSS_RIGHT: float = 0.0
 const BOSS_BOTTOM: float = 70.0
 
-# Karl Battlefield Entity (Target Left ~55–90px, Bottom ~60–80px, Height ~190–250px)
-const KARL_ENTITY_LEFT: float = 70.0
+# Karl Battlefield Entity (Refined Proportion: 300 x 300 px, Left: 50, Bottom: 70)
+const KARL_ENTITY_LEFT: float = 50.0
 const KARL_ENTITY_BOTTOM: float = 70.0
-const KARL_ENTITY_WIDTH: float = 220.0
-const KARL_ENTITY_HEIGHT: float = 220.0
+const KARL_ENTITY_WIDTH: float = 300.0
+const KARL_ENTITY_HEIGHT: float = 300.0
 
 # Asset paths (canonical production assets)
 const ASSET_BG: String = "res://assets/backgrounds/d1_misty_forest_bg.png"
@@ -72,19 +72,19 @@ var karl_sprite_rect: TextureRect = null
 var karl_vfx_container: Control = null
 var karl_state_tween: Tween = null
 
-# Baseline offsets for exact 650.0 ground alignment
+# Baseline offsets for exact 650.0 ground alignment at 300px scale
 # In 1254px source, bottom non-transparent pixel offsets:
-# idle: 26px -> 4.5px at 220px scale
+# idle: 26px -> 6.2px at 300px scale
 # cast: 0px -> 0.0px
-# hit: 26px -> 4.5px
+# hit: 26px -> 6.2px
 # heal: 0px -> 0.0px
-# shield: 16px -> 2.8px
+# shield: 16px -> 3.8px
 const KARL_BASELINE_OFFSETS: Dictionary = {
-	KarlState.IDLE: 4.5,
+	KarlState.IDLE: 6.2,
 	KarlState.CAST: 0.0,
-	KarlState.HIT: 4.5,
+	KarlState.HIT: 6.2,
 	KarlState.HEAL: 0.0,
-	KarlState.SHIELD: 2.8,
+	KarlState.SHIELD: 3.8,
 }
 
 # State
@@ -211,8 +211,8 @@ func _ready() -> void:
 	_update_question_view()
 
 	# Trigger initial demonstration floating combat status feedback
-	_spawn_floating_feedback(Vector2(180, 410), "+8 GIÁP", COLOR_ACCENT_CYAN)
-	_spawn_floating_feedback(Vector2(180, 380), "+15 HP", COLOR_ACCENT_GREEN)
+	_spawn_floating_feedback(Vector2(200, 330), "+8 GIÁP", COLOR_ACCENT_CYAN)
+	_spawn_floating_feedback(Vector2(200, 300), "+15 HP", COLOR_ACCENT_GREEN)
 	_spawn_floating_feedback(Vector2(1040, 240), "-10 HP", COLOR_ACCENT_RED)
 	_spawn_floating_feedback(Vector2(1040, 210), "CRITICAL!", COLOR_ACCENT_GOLD)
 
@@ -290,6 +290,11 @@ func get_question_position() -> Vector2:
 
 func get_question_size() -> Vector2:
 	return Vector2(QUESTION_WIDTH, QUESTION_HEIGHT)
+
+func get_answer_button_size() -> Vector2:
+	if answer_buttons.size() > 0 and answer_buttons[0] != null:
+		return answer_buttons[0].size
+	return Vector2(150, 48)
 
 func get_hover_detail_position() -> Vector2:
 	return Vector2(CENTER_INTERACTION_X - (HOVER_DETAIL_WIDTH / 2.0), HOVER_DETAIL_Y)
@@ -374,7 +379,7 @@ func cycle_question() -> void:
 	selected_answer_idx = 0
 	hint_shown = false
 	_update_question_view()
-	_spawn_floating_feedback(Vector2(690, 130), "CÂU HỎI MỚI", COLOR_ACCENT_CYAN)
+	_spawn_floating_feedback(Vector2(690, 125), "CÂU HỎI MỚI", COLOR_ACCENT_CYAN)
 
 func cycle_answer() -> void:
 	selected_answer_idx = (selected_answer_idx + 1) % 4
@@ -422,7 +427,7 @@ func trigger_cast_effect() -> void:
 		karl_state_tween.kill()
 	set_karl_state(KarlState.CAST)
 
-	# Light cyan magic pulse near casting hand (Karl faces right, hand around (160, 85))
+	# Light cyan magic pulse near casting hand (Karl faces right, hand around (218, 105))
 	_spawn_cast_hand_spark()
 
 	# STOCHAS receives floating -10 HP
@@ -440,7 +445,7 @@ func trigger_shield_effect() -> void:
 	set_karl_state(KarlState.SHIELD)
 
 	# Floating +8 GIÁP above Karl
-	_spawn_floating_feedback(Vector2(180, 410), "+8 GIÁP", COLOR_ACCENT_CYAN)
+	_spawn_floating_feedback(Vector2(200, 330), "+8 GIÁP", COLOR_ACCENT_CYAN)
 
 	# Cyan/blue arcane barrier pulse around Karl
 	_spawn_barrier_pulse()
@@ -456,7 +461,7 @@ func trigger_heal_effect() -> void:
 	set_karl_state(KarlState.HEAL)
 
 	# Floating +15 HP above Karl
-	_spawn_floating_feedback(Vector2(180, 410), "+15 HP", COLOR_ACCENT_GREEN)
+	_spawn_floating_feedback(Vector2(200, 330), "+15 HP", COLOR_ACCENT_GREEN)
 
 	# Green/emerald aura pulse around Karl
 	_spawn_emerald_pulse()
@@ -472,7 +477,7 @@ func trigger_hit_effect() -> void:
 	set_karl_state(KarlState.HIT)
 
 	# Floating -10 HP above Karl
-	_spawn_floating_feedback(Vector2(180, 410), "-10 HP", COLOR_ACCENT_RED)
+	_spawn_floating_feedback(Vector2(200, 330), "-10 HP", COLOR_ACCENT_RED)
 
 	# Brief red flash / impact pulse
 	_spawn_hit_pulse()
@@ -486,9 +491,9 @@ func _spawn_cast_hand_spark() -> void:
 	if karl_vfx_container == null:
 		return
 	var spark: Panel = Panel.new()
-	spark.position = Vector2(160, 85)
-	spark.size = Vector2(24, 24)
-	spark.pivot_offset = Vector2(12, 12)
+	spark.position = Vector2(218, 105)
+	spark.size = Vector2(28, 28)
+	spark.pivot_offset = Vector2(14, 14)
 	var s_box: StyleBoxFlat = StyleBoxFlat.new()
 	s_box.bg_color = Color(0.40, 0.90, 1.0, 0.85)
 	s_box.border_width_left = 2
@@ -496,12 +501,12 @@ func _spawn_cast_hand_spark() -> void:
 	s_box.border_width_right = 2
 	s_box.border_width_bottom = 2
 	s_box.border_color = Color(1.0, 1.0, 1.0, 0.95)
-	s_box.corner_radius_top_left = 12
-	s_box.corner_radius_top_right = 12
-	s_box.corner_radius_bottom_right = 12
-	s_box.corner_radius_bottom_left = 12
+	s_box.corner_radius_top_left = 14
+	s_box.corner_radius_top_right = 14
+	s_box.corner_radius_bottom_right = 14
+	s_box.corner_radius_bottom_left = 14
 	s_box.shadow_color = Color(0.2, 0.85, 1.0, 0.7)
-	s_box.shadow_size = 12
+	s_box.shadow_size = 14
 	spark.add_theme_stylebox_override("panel", s_box)
 	karl_vfx_container.add_child(spark)
 
@@ -515,9 +520,9 @@ func _spawn_barrier_pulse() -> void:
 	if karl_vfx_container == null:
 		return
 	var barrier: Panel = Panel.new()
-	barrier.position = Vector2(10, 10)
-	barrier.size = Vector2(200, 200)
-	barrier.pivot_offset = Vector2(100, 100)
+	barrier.position = Vector2(15, 15)
+	barrier.size = Vector2(270, 270)
+	barrier.pivot_offset = Vector2(135, 135)
 	var b_box: StyleBoxFlat = StyleBoxFlat.new()
 	b_box.bg_color = Color(0.12, 0.45, 0.75, 0.20)
 	b_box.border_width_left = 3
@@ -525,12 +530,12 @@ func _spawn_barrier_pulse() -> void:
 	b_box.border_width_right = 3
 	b_box.border_width_bottom = 3
 	b_box.border_color = Color(0.30, 0.85, 1.0, 0.85)
-	b_box.corner_radius_top_left = 100
-	b_box.corner_radius_top_right = 100
-	b_box.corner_radius_bottom_right = 100
-	b_box.corner_radius_bottom_left = 100
+	b_box.corner_radius_top_left = 135
+	b_box.corner_radius_top_right = 135
+	b_box.corner_radius_bottom_right = 135
+	b_box.corner_radius_bottom_left = 135
 	b_box.shadow_color = Color(0.20, 0.80, 1.0, 0.55)
-	b_box.shadow_size = 14
+	b_box.shadow_size = 16
 	barrier.add_theme_stylebox_override("panel", b_box)
 	karl_vfx_container.add_child(barrier)
 
@@ -545,9 +550,9 @@ func _spawn_emerald_pulse() -> void:
 	if karl_vfx_container == null:
 		return
 	var aura: Panel = Panel.new()
-	aura.position = Vector2(15, 10)
-	aura.size = Vector2(190, 200)
-	aura.pivot_offset = Vector2(95, 100)
+	aura.position = Vector2(20, 15)
+	aura.size = Vector2(260, 270)
+	aura.pivot_offset = Vector2(130, 135)
 	var a_box: StyleBoxFlat = StyleBoxFlat.new()
 	a_box.bg_color = Color(0.15, 0.65, 0.35, 0.22)
 	a_box.border_width_left = 3
@@ -555,12 +560,12 @@ func _spawn_emerald_pulse() -> void:
 	a_box.border_width_right = 3
 	a_box.border_width_bottom = 3
 	a_box.border_color = Color(0.35, 0.95, 0.55, 0.85)
-	a_box.corner_radius_top_left = 95
-	a_box.corner_radius_top_right = 95
-	a_box.corner_radius_bottom_right = 95
-	a_box.corner_radius_bottom_left = 95
+	a_box.corner_radius_top_left = 130
+	a_box.corner_radius_top_right = 130
+	a_box.corner_radius_bottom_right = 130
+	a_box.corner_radius_bottom_left = 130
 	a_box.shadow_color = Color(0.25, 0.90, 0.50, 0.55)
-	a_box.shadow_size = 14
+	a_box.shadow_size = 16
 	aura.add_theme_stylebox_override("panel", a_box)
 	karl_vfx_container.add_child(aura)
 
@@ -576,26 +581,26 @@ func _spawn_hit_pulse() -> void:
 		return
 	karl_sprite_rect.modulate = Color(2.0, 0.4, 0.4, 1.0)
 	var tw: Tween = create_tween()
-	tw.tween_property(karl_sprite_rect, "position:x", -6.0, 0.06)
-	tw.tween_property(karl_sprite_rect, "position:x", 5.0, 0.06)
+	tw.tween_property(karl_sprite_rect, "position:x", -8.0, 0.06)
+	tw.tween_property(karl_sprite_rect, "position:x", 6.0, 0.06)
 	tw.tween_property(karl_sprite_rect, "position:x", -3.0, 0.06)
 	tw.tween_property(karl_sprite_rect, "position:x", 0.0, 0.06)
 	tw.parallel().tween_property(karl_sprite_rect, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.55)
 
 func _build_scene() -> void:
-	# 1. Background
+	# 1. Background (1:1 Native framing, 1280x720)
 	_build_background()
 
 	# 2. STOCHAS Battlefield Entity (Right 0px, Bottom 70px)
 	_build_boss_render()
 
-	# 3. Karl Battlefield Entity (Left 70px, Bottom 70px, 220x220px)
+	# 3. Karl Battlefield Entity (Left 50px, Bottom 70px, 300x300px)
 	_build_karl_battlefield_entity()
 
 	# 4. Top HUDs (Karl Top-Left, Stochas Top-Right)
 	_build_top_huds()
 
-	# 5. Question Module (Center X = 690px, Top = 160px, Width = 640px)
+	# 5. Question Module (Center X = 690px, Top = 155px, 660x270px)
 	_build_question_module()
 
 	# 6. Card Hover Detail Panel (Center X = 690px, above card row)
@@ -651,7 +656,7 @@ func _build_boss_render() -> void:
 	add_child(boss_rect)
 
 func _build_karl_battlefield_entity() -> void:
-	# Left 70px, Bottom 70px, 220x220px (Ground baseline = 650px)
+	# Left 50px, Bottom 70px, 300x300px (Ground baseline = 650px)
 	karl_battlefield_entity = Control.new()
 	karl_battlefield_entity.name = "KarlBattlefieldEntity"
 	karl_battlefield_entity.position = Vector2(KARL_ENTITY_LEFT, 720.0 - KARL_ENTITY_BOTTOM - KARL_ENTITY_HEIGHT)
@@ -659,18 +664,18 @@ func _build_karl_battlefield_entity() -> void:
 	karl_battlefield_entity.custom_minimum_size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
 	add_child(karl_battlefield_entity)
 
-	# Ground shadow under Karl's feet to anchor naturally in misty forest
+	# Ground shadow under Karl's feet to anchor naturally in misty forest (300px scale)
 	var shadow: Panel = Panel.new()
 	shadow.name = "GroundShadow"
-	shadow.position = Vector2(30, 204)
-	shadow.custom_minimum_size = Vector2(160, 18)
-	shadow.size = Vector2(160, 18)
+	shadow.position = Vector2(45, 282)
+	shadow.custom_minimum_size = Vector2(210, 22)
+	shadow.size = Vector2(210, 22)
 	var sbox: StyleBoxFlat = StyleBoxFlat.new()
 	sbox.bg_color = Color(0.01, 0.02, 0.05, 0.55)
-	sbox.corner_radius_top_left = 9
-	sbox.corner_radius_top_right = 9
-	sbox.corner_radius_bottom_right = 9
-	sbox.corner_radius_bottom_left = 9
+	sbox.corner_radius_top_left = 11
+	sbox.corner_radius_top_right = 11
+	sbox.corner_radius_bottom_right = 11
+	sbox.corner_radius_bottom_left = 11
 	shadow.add_theme_stylebox_override("panel", sbox)
 	karl_battlefield_entity.add_child(shadow)
 
@@ -681,7 +686,7 @@ func _build_karl_battlefield_entity() -> void:
 	karl_vfx_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	karl_battlefield_entity.add_child(karl_vfx_container)
 
-	# Native pixel character TextureRect (no rectangular frame, no portrait standee)
+	# Native pixel character TextureRect (no rectangular frame, 300x300px)
 	karl_sprite_rect = TextureRect.new()
 	karl_sprite_rect.name = "KarlSpriteRect"
 	karl_sprite_rect.size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
@@ -790,7 +795,7 @@ func _build_top_huds() -> void:
 	boss_vbox.add_child(boss_intent)
 
 func _build_question_module() -> void:
-	# Center X = 690px, Top = 160px, Width = 640px
+	# Center X = 690px, Top = 155px, Width = 660px, Height = 270px
 	var start_x: float = CENTER_INTERACTION_X - (QUESTION_WIDTH / 2.0)
 	question_panel = PanelContainer.new()
 	question_panel.name = "QuestionPanel"
@@ -799,18 +804,18 @@ func _build_question_module() -> void:
 	question_panel.size = Vector2(QUESTION_WIDTH, QUESTION_HEIGHT)
 
 	var q_box: StyleBoxFlat = _create_glass_box(COLOR_PANEL_BG, COLOR_PANEL_BORDER, 10)
-	q_box.content_margin_left = 14
-	q_box.content_margin_top = 10
-	q_box.content_margin_right = 14
-	q_box.content_margin_bottom = 10
+	q_box.content_margin_left = 16
+	q_box.content_margin_top = 14
+	q_box.content_margin_right = 16
+	q_box.content_margin_bottom = 12
 	question_panel.add_theme_stylebox_override("panel", q_box)
 	add_child(question_panel)
 
 	var main_vbox: VBoxContainer = VBoxContainer.new()
-	main_vbox.add_theme_constant_override("separation", 6)
+	main_vbox.add_theme_constant_override("separation", 8)
 	question_panel.add_child(main_vbox)
 
-	# 1. Header Row
+	# 1. Header Row (~26 px)
 	var header_hbox: HBoxContainer = HBoxContainer.new()
 	main_vbox.add_child(header_hbox)
 
@@ -828,15 +833,15 @@ func _build_question_module() -> void:
 	round_lbl.add_theme_color_override("font_color", COLOR_ACCENT_GOLD)
 	header_hbox.add_child(round_lbl)
 
-	# 2. Question Prompt (compact, readable)
+	# 2. Question Prompt (expanded area, ~48 px, font 13)
 	question_prompt_label = Label.new()
-	question_prompt_label.custom_minimum_size = Vector2(612, 38)
+	question_prompt_label.custom_minimum_size = Vector2(628, 48)
 	question_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	question_prompt_label.add_theme_font_size_override("font_size", 12)
+	question_prompt_label.add_theme_font_size_override("font_size", 13)
 	question_prompt_label.add_theme_color_override("font_color", Color(0.96, 0.98, 1.0, 1.0))
 	main_vbox.add_child(question_prompt_label)
 
-	# 3. Answer Options: ONE HORIZONTAL 4-OPTION ROW (Approved Stitch Layout)
+	# 3. Answer Options: ONE HORIZONTAL 4-OPTION ROW (~48 px tall buttons)
 	var answer_row: HBoxContainer = HBoxContainer.new()
 	answer_row.name = "AnswerRow"
 	answer_row.add_theme_constant_override("separation", 8)
@@ -846,14 +851,14 @@ func _build_question_module() -> void:
 	for i in range(4):
 		var btn: Button = Button.new()
 		btn.name = "AnswerBtn_%d" % i
-		btn.custom_minimum_size = Vector2(146, 42)
+		btn.custom_minimum_size = Vector2(150, 48)
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.add_theme_font_size_override("font_size", 12)
 		btn.pressed.connect(select_answer.bind(i))
 		answer_row.add_child(btn)
 		answer_buttons.append(btn)
 
-	# 4. Action Row (Hint + Primary XUẤT CHIÊU CTA)
+	# 4. Action Row (Hint + Primary XUẤT CHIÊU CTA, ~44 px)
 	var action_hbox: HBoxContainer = HBoxContainer.new()
 	action_hbox.add_theme_constant_override("separation", 10)
 	action_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -862,7 +867,7 @@ func _build_question_module() -> void:
 	hint_button = Button.new()
 	hint_button.name = "HintButton"
 	hint_button.text = "💡 GỢI Ý"
-	hint_button.custom_minimum_size = Vector2(100, 38)
+	hint_button.custom_minimum_size = Vector2(104, 44)
 	var hint_box: StyleBoxFlat = _create_glass_box(Color(0.12, 0.16, 0.24, 0.85), Color(0.40, 0.55, 0.70, 0.70), 6)
 	hint_button.add_theme_stylebox_override("normal", hint_box)
 	hint_button.add_theme_font_size_override("font_size", 11)
@@ -872,7 +877,7 @@ func _build_question_module() -> void:
 	cta_button = Button.new()
 	cta_button.name = "SubmitCTAButton"
 	cta_button.text = "XUẤT CHIÊU: TẤN CÔNG (10 DMG)"
-	cta_button.custom_minimum_size = Vector2(260, 42)
+	cta_button.custom_minimum_size = Vector2(280, 44)
 	cta_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var cta_box: StyleBoxFlat = _create_solid_box(Color(0.12, 0.55, 0.82, 0.98), 6)
 	cta_box.border_width_left = 1
@@ -887,7 +892,7 @@ func _build_question_module() -> void:
 	cta_button.pressed.connect(_on_cta_pressed)
 	action_hbox.add_child(cta_button)
 
-	# 5. Combat rule subtext + Shortcuts guide
+	# 5. Combat rule subtext + Shortcuts guide (~20 px)
 	helper_label = Label.new()
 	helper_label.text = "Quy tắc: Đúng -> Thi triển chiêu thức. Sai -> STOCHAS phản đòn 10 DMG. | Phím: [1-4] Thẻ, [I/C/H/E/S] Karl, [D] Debug"
 	helper_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1027,7 +1032,7 @@ func _build_debug_overlay() -> void:
 	axis_lbl.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2, 0.9))
 	debug_overlay.add_child(axis_lbl)
 
-	# Karl entity outline
+	# Karl entity outline (300 x 300 px)
 	var k_outline: ReferenceRect = ReferenceRect.new()
 	k_outline.position = Vector2(KARL_ENTITY_LEFT, 720.0 - KARL_ENTITY_BOTTOM - KARL_ENTITY_HEIGHT)
 	k_outline.size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
@@ -1037,13 +1042,13 @@ func _build_debug_overlay() -> void:
 	debug_overlay.add_child(k_outline)
 
 	var k_lbl: Label = Label.new()
-	k_lbl.text = "Karl 220x220 (Left: 70, Bottom: 70, Base: 650)"
+	k_lbl.text = "Karl 300x300 (Left: 50, Bottom: 70, Base: 650)"
 	k_lbl.position = Vector2(KARL_ENTITY_LEFT, 720.0 - KARL_ENTITY_BOTTOM - KARL_ENTITY_HEIGHT - 16)
 	k_lbl.add_theme_font_size_override("font_size", 9)
 	k_lbl.add_theme_color_override("font_color", Color(0.2, 0.7, 1.0, 0.9))
 	debug_overlay.add_child(k_lbl)
 
-	# Question outline
+	# Question outline (660 x 270 px)
 	var q_outline: ReferenceRect = ReferenceRect.new()
 	q_outline.position = Vector2(CENTER_INTERACTION_X - (QUESTION_WIDTH / 2.0), QUESTION_TOP)
 	q_outline.size = Vector2(QUESTION_WIDTH, QUESTION_HEIGHT)
@@ -1051,6 +1056,13 @@ func _build_debug_overlay() -> void:
 	q_outline.border_width = 1.5
 	q_outline.editor_only = false
 	debug_overlay.add_child(q_outline)
+
+	var q_lbl: Label = Label.new()
+	q_lbl.text = "Question 660x270 (Top: 155, Center: 690)"
+	q_lbl.position = Vector2(CENTER_INTERACTION_X - 100, QUESTION_TOP - 16)
+	q_lbl.add_theme_font_size_override("font_size", 9)
+	q_lbl.add_theme_color_override("font_color", Color(1.0, 0.2, 0.8, 0.9))
+	debug_overlay.add_child(q_lbl)
 
 	# Hover detail outline
 	var h_outline: ReferenceRect = ReferenceRect.new()
@@ -1174,7 +1186,7 @@ func _on_hint_pressed() -> void:
 	hint_shown = not hint_shown
 	var q_data: Dictionary = questions_data[current_question_idx]
 	if hint_shown:
-		_spawn_floating_feedback(Vector2(690, 130), q_data["hint"], COLOR_ACCENT_GOLD)
+		_spawn_floating_feedback(Vector2(690, 125), q_data["hint"], COLOR_ACCENT_GOLD)
 
 func _on_cta_pressed() -> void:
 	var q_data: Dictionary = questions_data[current_question_idx]

@@ -3,83 +3,103 @@
 > Canonical recovery note for Agent3. This file must be updated every time Agent3 receives a prompt, and updated again before sending a report if state changed.
 
 ## 1. CURRENT TASK
-- TASK_ID: MATHOS-STOCHAS-LAB-BACKGROUND-FRAMING-222L
-- TITLE: LAB background framing correction only
+- TASK_ID: MATHOS-STOCHAS-LAB-PROPORTION-223L
+- TITLE: LAB-only proportion refinement
 - FROM: User / Human Visual Lab
 - PRIORITY: P0 / HUMAN VISUAL LAB
-- BASE: a6124b81b0e1b1ae3fedbc339822f0412d531156
+- BASE: 080d7a1ef58be9a296e67c7326aeea07a6384baa
 - STATUS: DONE
-- PROMPT_RECEIVED_AT: 2026-09-13T03:26:08+07:00
-- UPDATED_AT: 2026-09-13T03:32:00+07:00
+- PROMPT_RECEIVED_AT: 2026-09-13T03:53:02+07:00
+- UPDATED_AT: 2026-09-13T04:02:00+07:00
 
 ## 2. WORKSPACE / GIT
 - PROJECT: Mathos
 - WORKTREE: D:\Mathos_Worktrees\MATHOS-STORY-PARITY-FIX-185
 - BRANCH: task/mathos-story-parity-fix-185
-- START_HEAD: a6124b81b0e1b1ae3fedbc339822f0412d531156
-- CURRENT_HEAD: a6124b81b0e1b1ae3fedbc339822f0412d531156
-- CANONICAL_BASE: a6124b81b0e1b1ae3fedbc339822f0412d531156
+- START_HEAD: 080d7a1ef58be9a296e67c7326aeea07a6384baa
+- CURRENT_HEAD: 7b6f3758fc043e18162633dfe196f38e0b060891
+- FINAL_HEAD: 7b6f3758fc043e18162633dfe196f38e0b060891
+- CANONICAL_BASE: 080d7a1ef58be9a296e67c7326aeea07a6384baa
 - PRODUCTION_SOURCE_CHANGED: NO (0 production files modified)
 
 ## 3. EXACT PROMPT / INTENT SUMMARY
 - Intent:
-  - Correct LAB background TextureRect framing to show more of the original forest environment (`d1_misty_forest_bg.png`).
-  - Eliminate aggressive 2x zoom/crop caused by `offset_right = 1280` and `offset_bottom = 720` on `PRESET_FULL_RECT` Control node.
-  - Source Asset: `res://assets/backgrounds/d1_misty_forest_bg.png` (Dimensions: 1280 x 720 px).
-  - Target Visual Framing:
-    - More arch/tree structure visible on left.
-    - More ground/depth visible.
-    - Spacious forest clearing.
-    - Karl & STOCHAS positioned cleanly with zero overlap.
-    - No black bars, zero distortion.
+  - Refine two main visual proportions in LAB based on human feedback:
+    1. QUESTION PANEL: Enlarged from 640x210 px to 660x270 px (Center X = 690 px, Top = 155 px). Utilized added height with larger prompt area (628x48 px, font 13), taller answer buttons (150x48 px), taller action buttons (44 px), and clean margins (16, 14, 16, 12).
+    2. KARL BATTLEFIELD SPRITE: Enlarged from 220x220 px to 300x300 px (Left = 50 px, Bottom = 70 px). Maintained 57.7% ratio to STOCHAS (520 px). Preserved common ground baseline at 650.0 px across all 5 states (idle, cast, hit, heal, shield) using calibrated per-state offsets.
+  - Preserve:
+    - 1:1 background framing from Task 222L (1280x720, KEEP_ASPECT_COVERED)
+    - STOCHAS size (480 x 520 px) & position (Right: 0, Bottom: 70)
+    - Top HUDs (Karl at 20,16 size 260x72; Boss at 1000,16 size 260x72)
+    - Card design, size (104 x 158 px), gap (14 px), row alignment at Center X = 690 px
+    - Hover detail panel at Center X = 690 px, Y = 486 px
+    - Settings button, floating feedback, locked combat values (10 / +8 / +15 / -10)
   - STRICTLY PROHIBITED:
-    - DO NOT modify production combat UI (`src/ui/combat/`, `src/ui/question/`, `src/ui/stage/`).
-    - DO NOT scale Karl or STOCHAS.
-    - DO NOT edit or generate images.
+    - DO NOT modify production files (`src/ui/combat/`, `src/ui/question/`, `src/ui/stage/`).
+    - DO NOT generate, edit, or crop images.
     - DO NOT push.
 
-## 4. AUDIT & TEXTURERECT SETTINGS
-- SOURCE_BACKGROUND: `res://assets/backgrounds/d1_misty_forest_bg.png`
-- SOURCE_DIMENSIONS: `1280 x 720 px`
-- OLD_TEXTURE_RECT_SETTINGS:
-  - Anchors: `PRESET_FULL_RECT` (anchor_left=0, anchor_top=0, anchor_right=1.0, anchor_bottom=1.0)
-  - Offsets: `offset_left=0, offset_top=0, offset_right=1280, offset_bottom=720`
-  - Calculated Node Size: `2560 x 1440 px` (2.0x oversizing over 1280x720 viewport)
-  - Expand Mode: `EXPAND_IGNORE_SIZE` (1)
-  - Stretch Mode: `STRETCH_KEEP_ASPECT_COVERED` (6)
-  - Effective Display Zoom / Scale: `2.0x` (200% zoom, 50% outer crop)
-- NEW_TEXTURE_RECT_SETTINGS:
-  - Anchors: `PRESET_FULL_RECT` (anchor_left=0, anchor_top=0, anchor_right=1.0, anchor_bottom=1.0)
-  - Offsets: `offset_left=0, offset_top=0, offset_right=0, offset_bottom=0`
-  - Calculated Node Size: `1280 x 720 px` (1:1 100% viewport match)
-  - Expand Mode: `EXPAND_IGNORE_SIZE` (1)
-  - Stretch Mode: `STRETCH_KEEP_ASPECT_COVERED` (6)
-  - Effective Display Zoom / Scale: `1.0x` (100% native uncropped presentation)
-- BACKGROUND_SCALE_CHANGE: `2.0x -> 1.0x` (50% reduction in display scale, restoring 100% 1:1 scale)
-- BACKGROUND_CROP_CHANGE: `50% cropped -> 0% cropped` (100% of original forest image content visible)
+## 4. LAB ARTIFACTS & FILES
+- LAB FILES MODIFIED:
+  - `res://labs/stochas_combat_ui/stochas_combat_ui_lab.gd`
+  - `res://labs/stochas_combat_ui/run_lab_headless.gd`
+  - `res://labs/stochas_combat_ui/stochas_combat_ui_lab_clean.png`
+  - `res://labs/stochas_combat_ui/stochas_combat_ui_lab_debug.png`
 
-## 5. ACCEPTANCE GATES STATUS (MATHOS-STOCHAS-LAB-BACKGROUND-FRAMING-222L)
-- GATE 1 (Background visibly less zoomed): PASS (1.0x vs 2.0x scale)
-- GATE 2 (More forest environment visible): PASS (full arch, trees, path depth visible)
-- GATE 3 (No major distortion): PASS (1:1 aspect preserved)
-- GATE 4 (No black borders): PASS (0 black borders)
-- GATE 5 (Karl/Stochas/question/cards unchanged): PASS (all positions & sizes preserved)
-- GATE 6 (Production files unchanged): PASS (0 production files modified)
-- GATE 7 (No image generation/editing): PASS (source PNG used unedited)
+## 5. EXACT MEASUREMENTS & LAYOUT
+- Canvas Size: 1280 x 720 px
+- Interaction Axis: Center X = 690.0 px
+- Background: 1280 x 720 px, EXPAND_IGNORE_SIZE, STRETCH_KEEP_ASPECT_COVERED
+- Top HUDs: Bottom at Y = 88.0 px
+- Question Panel:
+  - Size: 660.0 x 270.0 px (Position: 360.0, 155.0)
+  - Center X: 690.0 px
+  - Top Clearance to HUD: 67.0 px (155.0 - 88.0)
+  - Bottom Clearance to Hover: 61.0 px (486.0 - 425.0)
+  - Prompt Area: 628.0 x 48.0 px, font size 13
+  - Answer Buttons: 4 buttons, 150.0 x 48.0 px min size (layout: 151.0 x 48.0 px), gap 8 px
+  - Action Row: Hint button 104.0 x 44.0 px, CTA button 280.0 x 44.0 px
+  - Helper Label: 20.0 px height, font size 10
+  - Content Margins: Left 16, Top 14, Right 16, Bottom 12
+- Karl Battlefield Entity:
+  - Size: 300.0 x 300.0 px (Position: 50.0, 350.0)
+  - Left: 50.0 px, Bottom: 70.0 px
+  - Ground Baseline: 650.0 px (350.0 + 300.0)
+  - Ground Shadow: 210.0 x 22.0 px at local (45.0, 282.0)
+  - Barrier VFX: 270.0 x 270.0 px
+  - Emerald Aura: 260.0 x 270.0 px
+  - Casting Spark: 28.0 x 28.0 px at local (218.0, 105.0)
+  - Floating Feedback: Centered at (200.0, 330.0)
+  - Clearance to Question Panel: 10.0 px container clearance, ~23.9 px visible pixel clearance
+  - Proportion to STOCHAS (520 px): 57.7%
+  - Calibrated baseline offsets: IDLE (+6.2px), CAST (0.0px), HIT (+6.2px), HEAL (0.0px), SHIELD (+3.8px)
+- STOCHAS Boss Entity:
+  - Size: 480.0 x 520.0 px (Position: 800.0, 130.0)
+  - Right: 0.0 px, Bottom: 70.0 px
+- Hover Detail:
+  - Size: 590.0 x 42.0 px, Y = 486.0 px, Center X = 690.0 px
+- Card Row:
+  - 4 cards, each 104.0 x 158.0 px, gap 14 px, Center X = 690.0 px, Y = 542.0 px
 
-## 6. RUNTIME LAUNCH COMMAND
-- Windowed Interactive:
-  `& "D:\Tools\Godot\4.7.1\Godot_v4.7.1-stable_win64.exe" --path "D:\Mathos_Worktrees\MATHOS-STORY-PARITY-FIX-185" "res://labs/stochas_combat_ui/stochas_combat_ui_lab.tscn"`
-- Headless Automated Verification:
-  `& "D:\Tools\Godot\4.7.1\Godot_v4.7.1-stable_win64_console.exe" --path "D:\Mathos_Worktrees\MATHOS-STORY-PARITY-FIX-185" -s res://labs/stochas_combat_ui/run_lab_headless.gd`
+## 6. ACCEPTANCE GATES STATUS (MATHOS-STOCHAS-LAB-PROPORTION-223L)
+- GATE 1 (Question panel visibly taller than 210 px): PASS (270 px)
+- GATE 2 (Question panel target ~255–285 px high): PASS (270 px)
+- GATE 3 (Added height used by real content, not empty space): PASS (prompt 48px, answers 48px, CTA 44px)
+- GATE 4 (Question still centered at X≈690): PASS (690.0 px exact)
+- GATE 5 (Question does not overlap HUDs): PASS (67.0 px clearance)
+- GATE 6 (Question does not collide with hover/card row): PASS (61.0 px clearance)
+- GATE 7 (Karl materially larger than 220 px): PASS (300 x 300 px)
+- GATE 8 (Karl target ~280–320 px visual height): PASS (300 px)
+- GATE 9 (All Karl states use consistent scale/baseline): PASS (all 5 states aligned to baseline 650.0 px)
+- GATE 10 (Karl remains smaller than STOCHAS): PASS (300 px vs 520 px, ratio 57.7%)
+- GATE 11 (Background framing remains exactly as Task 222L): PASS (1280x720, KEEP_ASPECT_COVERED)
+- GATE 12 (Cards unchanged): PASS (104x158 px, gap 14 px, centered at 690 px)
+- GATE 13 (Production unchanged): PASS (0 production files modified)
+- GATE 14 (No image generation/editing): PASS (no external tools or edits)
 
-## 7. BLOCKERS & NEXT ACTION
-- BLOCKERS: None.
-- NEXT ACTION: Present complete report for Human Review with verdict `READY_FOR_BACKGROUND_HUMAN_REVIEW`.
-
-## 8. RECENT PROMPT LOG
-### Prompt entry 48
-- RECEIVED_AT: 2026-09-13T03:26:08+07:00
-- TASK_ID: MATHOS-STOCHAS-LAB-BACKGROUND-FRAMING-222L
-- ONE_LINE_INTENT: Correct LAB background TextureRect offsets from 1280/720 to 0/0 to eliminate 2x zoom/crop and restore full 1:1 forest framing.
-- RESULT / CURRENT_STATE: DONE (All 7 verification gates passed, ready for human review)
+## 7. RECENT PROMPT LOG
+### Prompt entry 49
+- RECEIVED_AT: 2026-09-13T03:53:02+07:00
+- TASK_ID: MATHOS-STOCHAS-LAB-PROPORTION-223L
+- ONE_LINE_INTENT: Refine Question panel height to 660x270 px with expanded internal spacing and increase Karl battlefield sprite to 300x300 px while preserving baseline and Stitch layout.
+- RESULT / CURRENT_STATE: DONE (All 14 automated gates PASSED)

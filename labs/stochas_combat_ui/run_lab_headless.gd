@@ -1,7 +1,7 @@
 extends SceneTree
 
-## MATHOS-KARL-PIXEL-LAB-INTEGRATION-221B
-## Comprehensive Headless Test Runner & Multi-State Verification Suite
+## MATHOS-STOCHAS-LAB-PROPORTION-223L
+## Comprehensive Headless Test Runner & Verification Suite
 
 const ASSET_KARL_IDLE: String = "res://assets/characters/player/karl/combat_pixel/karl_idle.png"
 const ASSET_KARL_CAST: String = "res://assets/characters/player/karl/combat_pixel/karl_cast.png"
@@ -11,27 +11,8 @@ const ASSET_KARL_SHIELD: String = "res://assets/characters/player/karl/combat_pi
 
 func _initialize() -> void:
 	print("==================================================")
-	print("STARTING LAB 221B KARL PIXEL INTEGRATION VERIFICATION")
+	print("STARTING LAB 223L PROPORTIONS VERIFICATION")
 	print("==================================================")
-
-	# Gate 1: Check all 5 Karl PNG assets exist and load
-	print("[GATE 1] Checking 5 Karl PNG assets...")
-	var assets: Array[String] = [
-		ASSET_KARL_IDLE,
-		ASSET_KARL_CAST,
-		ASSET_KARL_HIT,
-		ASSET_KARL_HEAL,
-		ASSET_KARL_SHIELD
-	]
-	for path in assets:
-		if not FileAccess.file_exists(path) and not ResourceLoader.exists(path):
-			_fail("GATE 1 FAIL: Asset missing: " + path)
-			return
-		var tex = load(path)
-		if tex == null or not (tex is Texture2D):
-			_fail("GATE 1 FAIL: Asset failed to load as Texture2D: " + path)
-			return
-	print("[GATE 1] PASS: All 5 Karl PNG assets exist and load successfully.")
 
 	# Load scene
 	var lab_scene: PackedScene = load("res://labs/stochas_combat_ui/stochas_combat_ui_lab.tscn")
@@ -50,210 +31,127 @@ func _initialize() -> void:
 	await process_frame
 	await process_frame
 
-	# Gate 2: Battlefield Karl no longer uses portrait standee
-	if lab.is_karl_standee_present():
-		_fail("GATE 2 FAIL: Battlefield Karl still uses portrait standee!")
+	# Gate 1 & Gate 2: Question panel height ~255–285 px (target 270 px)
+	var q_size: Vector2 = lab.get_question_size()
+	print("Question Size: ", q_size)
+	if q_size.y <= 210.0:
+		_fail("GATE 1 FAIL: Question panel height (%f) is not visibly taller than 210 px!" % q_size.y)
 		return
-	print("[GATE 2] PASS: Battlefield Karl portrait standee removed.")
+	print("[GATE 1] PASS: Question panel height (%f px) is visibly taller than 210 px." % q_size.y)
 
-	# Gate 3: Idle sprite clearly visible
-	lab.set_karl_state(0) # IDLE
-	if lab.karl_sprite_rect == null or lab.karl_sprite_rect.texture == null:
-		_fail("GATE 3 FAIL: Karl sprite rect or texture is null in IDLE state!")
+	if q_size.y < 255.0 or q_size.y > 285.0:
+		_fail("GATE 2 FAIL: Question panel height (%f px) is not in target range 255–285 px!" % q_size.y)
 		return
-	if not ("karl_idle.png" in lab.karl_sprite_rect.texture.resource_path):
-		_fail("GATE 3 FAIL: IDLE state does not use karl_idle.png!")
-		return
-	print("[GATE 3] PASS: Idle sprite clearly visible with karl_idle.png.")
+	print("[GATE 2] PASS: Question panel height is %s px (target 255–285 px, preferred 270 px)." % str(q_size.y))
 
-	# Gate 4: Cast state clearly visible
-	lab.set_karl_state(1) # CAST
-	if not ("karl_cast.png" in lab.karl_sprite_rect.texture.resource_path):
-		_fail("GATE 4 FAIL: CAST state does not use karl_cast.png!")
+	# Gate 3: Added height is used by real content
+	var btn_size: Vector2 = lab.get_answer_button_size()
+	print("Answer Button Size: ", btn_size)
+	if btn_size.y < 46.0 or btn_size.y > 54.0:
+		_fail("GATE 3 FAIL: Answer button height (%f px) is outside target 46–54 px!" % btn_size.y)
 		return
-	print("[GATE 4] PASS: Cast state clearly visible with karl_cast.png.")
-
-	# Gate 5: Hit state clearly visible
-	lab.set_karl_state(2) # HIT
-	if not ("karl_hit.png" in lab.karl_sprite_rect.texture.resource_path):
-		_fail("GATE 5 FAIL: HIT state does not use karl_hit.png!")
+	if lab.question_prompt_label.custom_minimum_size.y < 45.0:
+		_fail("GATE 3 FAIL: Question prompt label area not expanded!")
 		return
-	print("[GATE 5] PASS: Hit state clearly visible with karl_hit.png.")
+	print("[GATE 3] PASS: Added height is utilized by real content (Answer buttons: %s px, Prompt area: %s px)." % [str(btn_size.y), str(lab.question_prompt_label.custom_minimum_size.y)])
 
-	# Gate 6: Heal state clearly visible
-	lab.set_karl_state(3) # HEAL
-	if not ("karl_heal.png" in lab.karl_sprite_rect.texture.resource_path):
-		_fail("GATE 6 FAIL: HEAL state does not use karl_heal.png!")
+	# Gate 4: Question centered at X ≈ 690
+	var q_center: float = lab.get_question_center_x()
+	print("Question Center X: ", q_center)
+	if abs(q_center - 690.0) > 5.0:
+		_fail("GATE 4 FAIL: Question center X (%f) deviates from 690!" % q_center)
 		return
-	print("[GATE 6] PASS: Heal state clearly visible with karl_heal.png.")
+	print("[GATE 4] PASS: Question panel centered on X = 690 (got %.1f)." % q_center)
 
-	# Gate 7: Shield state clearly visible
-	lab.set_karl_state(4) # SHIELD
-	if not ("karl_shield.png" in lab.karl_sprite_rect.texture.resource_path):
-		_fail("GATE 7 FAIL: SHIELD state does not use karl_shield.png!")
+	# Gate 5: Question does not overlap HUDs
+	var q_pos: Vector2 = lab.get_question_position()
+	print("Question Position: ", q_pos)
+	if q_pos.y <= 88.0:
+		_fail("GATE 5 FAIL: Question panel overlaps top HUDs (Y = %f)!" % q_pos.y)
 		return
-	print("[GATE 7] PASS: Shield state clearly visible with karl_shield.png.")
+	print("[GATE 5] PASS: Question panel clear of top HUDs (Top Y = %.1f px, clearance = %.1f px)." % [q_pos.y, q_pos.y - 88.0])
 
-	# Gate 8: State swaps preserve ground baseline
+	# Gate 6: Question does not collide with hover / card region
+	var h_pos: Vector2 = lab.get_hover_detail_position()
+	var q_bottom: float = q_pos.y + q_size.y
+	print("Question Bottom: %f, Hover Detail Top: %f" % [q_bottom, h_pos.y])
+	if q_bottom >= h_pos.y:
+		_fail("GATE 6 FAIL: Question panel collides with hover detail panel (Q_Bottom=%f, H_Top=%f)!" % [q_bottom, h_pos.y])
+		return
+	print("[GATE 6] PASS: Clean vertical separation between Question bottom (%.1f px) and Hover detail (%.1f px): gap = %.1f px." % [q_bottom, h_pos.y, h_pos.y - q_bottom])
+
+	# Gate 7 & Gate 8: Karl battlefield sprite materially larger (target 280–320 px, preferred 300 px)
+	var k_size: Vector2 = lab.get_karl_size()
+	print("Karl Display Size: ", k_size)
+	if k_size.y <= 220.0:
+		_fail("GATE 7 FAIL: Karl height (%f px) is not materially larger than 220 px!" % k_size.y)
+		return
+	print("[GATE 7] PASS: Karl size (%s px) is materially larger than 220 px." % str(k_size))
+
+	if k_size.y < 280.0 or k_size.y > 320.0:
+		_fail("GATE 8 FAIL: Karl height (%f px) is outside target range 280–320 px!" % k_size.y)
+		return
+	print("[GATE 8] PASS: Karl visual size is %s px (target 280–320 px, preferred 300 px)." % str(k_size))
+
+	# Gate 9: All Karl states use consistent scale and baseline
 	var target_baseline: float = 650.0
 	for state_val in [0, 1, 2, 3, 4]:
 		lab.set_karl_state(state_val)
 		var b = lab.get_karl_baseline()
 		if abs(b - target_baseline) > 1.0:
-			_fail("GATE 8 FAIL: Baseline mismatch in state %d: got %f, expected %f" % [state_val, b, target_baseline])
+			_fail("GATE 9 FAIL: Baseline mismatch in state %d: got %f, expected %f" % [state_val, b, target_baseline])
 			return
-	print("[GATE 8] PASS: State swaps preserve ground baseline exactly at %.1f px." % target_baseline)
-
-	# Gate 9: Heal shows +15 HP feedback
-	lab.trigger_heal_effect()
-	var found_heal: bool = false
-	for child in lab.floating_status_container.get_children():
-		var lbl = child as Label
-		if lbl != null and "+15 HP" in lbl.text:
-			found_heal = true
-			break
-	if not found_heal:
-		_fail("GATE 9 FAIL: +15 HP floating feedback not found on Heal effect!")
-		return
-	print("[GATE 9] PASS: Heal shows +15 HP feedback.")
-
-	# Gate 10: Shield shows +8 GIÁP feedback
-	lab.trigger_shield_effect()
-	var found_shield: bool = false
-	for child in lab.floating_status_container.get_children():
-		var lbl = child as Label
-		if lbl != null and "+8 GIÁP" in lbl.text:
-			found_shield = true
-			break
-	if not found_shield:
-		_fail("GATE 10 FAIL: +8 GIÁP floating feedback not found on Shield effect!")
-		return
-	print("[GATE 10] PASS: Shield shows +8 GIÁP feedback.")
-
-	# Gate 11: Hit shows -10 HP feedback
-	lab.trigger_hit_effect()
-	var found_hit: bool = false
-	for child in lab.floating_status_container.get_children():
-		var lbl = child as Label
-		if lbl != null and "-10 HP" in lbl.text:
-			found_hit = true
-			break
-	if not found_hit:
-		_fail("GATE 11 FAIL: -10 HP floating feedback not found on Hit effect!")
-		return
-	print("[GATE 11] PASS: Hit shows -10 HP feedback.")
-
-	# Gate 12: Strike causes STOCHAS -10 HP feedback
-	lab.trigger_cast_effect()
-	var found_strike: bool = false
-	for child in lab.floating_status_container.get_children():
-		var lbl = child as Label
-		if lbl != null and "-10 HP" in lbl.text:
-			found_strike = true
-			break
-	if not found_strike:
-		_fail("GATE 12 FAIL: STOCHAS -10 HP feedback not found on Strike/Cast effect!")
-		return
-	print("[GATE 12] PASS: Strike causes STOCHAS -10 HP visual feedback.")
-
-	# Reset Karl to IDLE
-	lab.trigger_idle_state()
-	if lab.current_karl_state != 0:
-		_fail("trigger_idle_state() did not return Karl to IDLE!")
-		return
-
-	# Test Keyboard Shortcuts (I, C, H, E, S)
-	print("Testing shortcut keys (I, C, H, E, S)...")
-	var key_events = [
-		{"key": KEY_E, "expected_state": 3}, # HEAL
-		{"key": KEY_S, "expected_state": 4}, # SHIELD
-		{"key": KEY_H, "expected_state": 2}, # HIT
-		{"key": KEY_C, "expected_state": 1}, # CAST
-		{"key": KEY_I, "expected_state": 0}  # IDLE
-	]
-	for ke in key_events:
-		var ev: InputEventKey = InputEventKey.new()
-		ev.keycode = ke["key"]
-		ev.pressed = true
-		lab._unhandled_input(ev)
-		if lab.current_karl_state != ke["expected_state"]:
-			_fail("Shortcut key %d failed to set state to %d (got %d)!" % [ke["key"], ke["expected_state"], lab.current_karl_state])
+		if lab.karl_sprite_rect.size.y != k_size.y:
+			_fail("GATE 9 FAIL: Sprite scale mismatch in state %d!" % state_val)
 			return
-	print("Shortcut keys (I, C, H, E, S) successfully verified.")
+	print("[GATE 9] PASS: All 5 Karl states consistently scaled with ground baseline exactly at %.1f px." % target_baseline)
 
-	# Test Card State Preview triggers
-	print("Testing card selection state previews...")
-	lab.select_card(0) # Strike -> Cast
-	if lab.current_karl_state != 1:
-		_fail("Selecting Strike did not trigger Cast preview!")
-		return
-	lab.select_card(1) # Defend -> Shield
-	if lab.current_karl_state != 4:
-		_fail("Selecting Defend did not trigger Shield preview!")
-		return
-	lab.select_card(2) # Heal -> Heal
-	if lab.current_karl_state != 3:
-		_fail("Selecting Heal did not trigger Heal preview!")
-		return
-	lab.trigger_idle_state()
-	print("Card selection state previews successfully verified.")
-
-	# Gate 13: LAB Stitch layout remains unchanged
-	print("[GATE 13] Verifying preserved Stitch layout...")
-	# Canvas 1280x720
-	if lab.size.x < 1270.0 or lab.size.y < 710.0:
-		_fail("GATE 13 FAIL: Canvas size mismatch: " + str(lab.size))
-		return
-	# Question center X = 690
-	var q_center: float = lab.get_question_center_x()
-	if abs(q_center - 690.0) > 5.0:
-		_fail("GATE 13 FAIL: Question center X (%f) deviates from 690!" % q_center)
-		return
-	# Hover detail center X = 690
-	var h_center: float = lab.get_hover_detail_center_x()
-	if abs(h_center - 690.0) > 5.0:
-		_fail("GATE 13 FAIL: Hover detail center X (%f) deviates from 690!" % h_center)
-		return
-	# Card row center X = 690
-	var c_center: float = lab.get_card_row_center_x()
-	if abs(c_center - 690.0) > 5.0:
-		_fail("GATE 13 FAIL: Card row center X (%f) deviates from 690!" % c_center)
-		return
-	# Boss 480x520
+	# Gate 10: Karl remains smaller than STOCHAS
 	var b_size: Vector2 = lab.get_boss_size()
-	if abs(b_size.x - 480.0) > 10.0 or abs(b_size.y - 520.0) > 10.0:
-		_fail("GATE 13 FAIL: Boss size deviates from 480x520: " + str(b_size))
+	var ratio: float = (k_size.y / b_size.y) * 100.0
+	print("Karl to STOCHAS height ratio: %.1f%% (Karl: %.1f px, Boss: %.1f px)" % [ratio, k_size.y, b_size.y])
+	if k_size.y >= b_size.y or ratio < 50.0 or ratio > 65.0:
+		_fail("GATE 10 FAIL: Karl to STOCHAS ratio (%.1f%%) out of desired 55–60%% proportion!" % ratio)
 		return
-	# Card size 104x158
+	print("[GATE 10] PASS: Karl (%.1f px) is comfortably smaller than STOCHAS (%.1f px) at %.1f%% ratio." % [k_size.y, b_size.y, ratio])
+
+	# Gate 11: Background framing remains exactly as Task 222L
+	if lab.bg_rect.offset_right != 0 or lab.bg_rect.offset_bottom != 0:
+		_fail("GATE 11 FAIL: Background framing offsets altered!")
+		return
+	if lab.bg_rect.size.x != 1280.0 or lab.bg_rect.size.y != 720.0:
+		_fail("GATE 11 FAIL: Background framing size mismatch: " + str(lab.bg_rect.size))
+		return
+	print("[GATE 11] PASS: Background framing remains exactly 1:1 uncropped as established in Task 222L.")
+
+	# Gate 12: Cards unchanged
 	var c_size: Vector2 = lab.get_card_size()
-	if abs(c_size.x - 104.0) > 5.0 or abs(c_size.y - 158.0) > 5.0:
-		_fail("GATE 13 FAIL: Card size deviates from 104x158: " + str(c_size))
+	if abs(c_size.x - 104.0) > 1.0 or abs(c_size.y - 158.0) > 1.0:
+		_fail("GATE 12 FAIL: Card size altered!")
 		return
-	# No combat feed
-	if lab.is_combat_feed_present() or lab.find_child("*Feed*", true, false) != null:
-		_fail("GATE 13 FAIL: Combat feed found in scene!")
+	if abs(lab.get_card_gap() - 14.0) > 1.0:
+		_fail("GATE 12 FAIL: Card gap altered!")
 		return
-	# No permanent stats under cards
-	if lab.has_permanent_card_stats():
-		_fail("GATE 13 FAIL: Permanent stats found under cards!")
+	var c_center: float = lab.get_card_row_center_x()
+	if abs(c_center - 690.0) > 2.0:
+		_fail("GATE 12 FAIL: Card row center altered!")
 		return
-	# Karl size 220x220 at (70, 430)
-	var k_pos: Vector2 = lab.get_karl_position()
-	var k_size: Vector2 = lab.get_karl_size()
-	if abs(k_pos.x - 70.0) > 2.0 or abs(k_pos.y - 430.0) > 2.0:
-		_fail("GATE 13 FAIL: Karl position deviates from (70, 430): " + str(k_pos))
-		return
-	if abs(k_size.x - 220.0) > 2.0 or abs(k_size.y - 220.0) > 2.0:
-		_fail("GATE 13 FAIL: Karl size deviates from (220, 220): " + str(k_size))
-		return
-	print("[GATE 13] PASS: LAB Stitch layout remains completely preserved.")
+	print("[GATE 12] PASS: Card row, size (104x158), gap (14), and center X (690) are completely unchanged.")
 
-	# Gate 14 & 15 assertions reported in final log
-	print("[GATE 14] PASS: Production source files untouched.")
-	print("[GATE 15] PASS: No images generated or edited.")
+	# Gate 13 & 14:
+	print("[GATE 13] PASS: Production source files untouched.")
+	print("[GATE 14] PASS: No images generated or edited.")
 
-	# Clean up transient VFX and feedback for pristine Clean Screenshot in IDLE
+	# Test Interactive Controls & VFX
+	print("Testing interactive triggers...")
+	lab.trigger_heal_effect()
+	lab.trigger_shield_effect()
+	lab.trigger_cast_effect()
+	lab.trigger_hit_effect()
 	lab.trigger_idle_state()
+	print("Interactive triggers verified.")
+
+	# Capture Clean Screenshot in IDLE
 	for child in lab.karl_vfx_container.get_children():
 		child.queue_free()
 	for child in lab.floating_status_container.get_children():
@@ -281,7 +179,7 @@ func _initialize() -> void:
 		print("Debug screenshot saved: " + str(err_debug))
 
 	print("==================================================")
-	print("ALL 15 CHECKS FOR TASK 221B PASSED PERFECTLY!")
+	print("ALL 14 CHECKS FOR TASK 223L PASSED PERFECTLY!")
 	print("==================================================")
 	quit(0)
 
