@@ -619,8 +619,8 @@ func _build_background() -> void:
 	bg_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg_rect.offset_left = 0
 	bg_rect.offset_top = 0
-	bg_rect.offset_right = 1280
-	bg_rect.offset_bottom = 720
+	bg_rect.offset_right = 0
+	bg_rect.offset_bottom = 0
 	bg_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	if ResourceLoader.exists(ASSET_BG):
@@ -631,6 +631,10 @@ func _build_background() -> void:
 	var dark_overlay: ColorRect = ColorRect.new()
 	dark_overlay.name = "AtmosphereOverlay"
 	dark_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dark_overlay.offset_left = 0
+	dark_overlay.offset_top = 0
+	dark_overlay.offset_right = 0
+	dark_overlay.offset_bottom = 0
 	dark_overlay.color = Color(0.02, 0.04, 0.08, 0.32)
 	add_child(dark_overlay)
 
