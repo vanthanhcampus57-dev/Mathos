@@ -446,11 +446,26 @@ func reset_lab() -> void:
 	_update_question_view()
 	_spawn_floating_feedback(Vector2(690, 460), "ĐÃ RESET LAB", COLOR_ACCENT_GOLD)
 
-func clear_shield() -> void:
+func set_shield(new_val: int) -> void:
+	var old_val: int = current_shield
+	var clamped_val: int = max(0, new_val)
+	if old_val > 0 and clamped_val <= 0:
+		break_shield()
+	else:
+		current_shield = clamped_val
+		_update_shield_hud()
+		_update_persistent_shield_visual()
+
+func break_shield() -> void:
+	if current_shield <= 0 and (karl_persistent_barrier == null or not karl_persistent_barrier.visible):
+		return
 	current_shield = 0
 	_update_shield_hud()
-	_update_persistent_shield_visual()
-	_spawn_floating_feedback(Vector2(200, 330), "GIÁP = 0", COLOR_ACCENT_GOLD)
+	_trigger_shield_break_vfx()
+
+func clear_shield() -> void:
+	if current_shield > 0:
+		set_shield(0)
 
 func get_current_shield() -> int:
 	return current_shield
@@ -698,6 +713,113 @@ func _update_persistent_shield_visual() -> void:
 		karl_persistent_barrier.visible = false
 		karl_persistent_barrier.scale = Vector2.ONE
 		karl_persistent_barrier.modulate.a = 1.0
+
+func _trigger_shield_break_vfx() -> void:
+	if karl_persistent_barrier == null:
+		return
+
+	if karl_persistent_barrier_tween != null and karl_persistent_barrier_tween.is_valid():
+		karl_persistent_barrier_tween.kill()
+		karl_persistent_barrier_tween = null
+
+	_spawn_floating_feedback(Vector2(200, 330), "VỠ KHIÊN!", COLOR_ACCENT_GOLD)
+
+	var break_tw: Tween = create_tween()
+
+	# Phase 1 (0.12s): Bright white/cyan flash & scale expansion
+	break_tw.tween_property(karl_persistent_barrier, "scale", Vector2(1.08, 1.08), 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	break_tw.parallel().tween_property(karl_persistent_barrier, "modulate", Color(2.5, 2.5, 3.0, 1.0), 0.12)
+
+	# Phase 2 (0.24s): Distortion contraction + fragment burst + shockwave
+	break_tw.tween_callback(func():
+		_spawn_shield_break_shards()
+		_spawn_shockwave_ring()
+	)
+	break_tw.tween_property(karl_persistent_barrier, "scale", Vector2(0.82, 0.82), 0.24).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	break_tw.parallel().tween_property(karl_persistent_barrier, "modulate", Color(0.40, 0.85, 1.0, 0.80), 0.24)
+
+	# Phase 3 (0.24s): Complete fade out
+	break_tw.tween_property(karl_persistent_barrier, "modulate:a", 0.0, 0.24).set_ease(Tween.EASE_OUT)
+
+	# Clean up on finish (0.60s total)
+	break_tw.tween_callback(func():
+		karl_persistent_barrier.visible = false
+		karl_persistent_barrier.scale = Vector2.ONE
+		karl_persistent_barrier.modulate = Color.WHITE
+	)
+
+func _spawn_shield_break_shards() -> void:
+	if karl_vfx_container == null:
+		return
+	var center_pos: Vector2 = Vector2(150, 150)
+	var shard_count: int = 8
+
+	for i in range(shard_count):
+		var angle: float = (i / float(shard_count)) * TAU + randf_range(-0.2, 0.2)
+		var dir: Vector2 = Vector2(cos(angle), sin(angle))
+		var dist: float = randf_range(70.0, 110.0)
+
+		var shard: Panel = Panel.new()
+		shard.position = center_pos + dir * 20.0
+		shard.size = Vector2(randf_range(8, 14), randf_range(8, 14))
+		shard.pivot_offset = shard.size * 0.5
+		shard.rotation_degrees = randf_range(0.0, 360.0)
+		shard.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+		var s_box: StyleBoxFlat = StyleBoxFlat.new()
+		s_box.bg_color = Color(0.60, 0.90, 1.0, 0.90)
+		s_box.border_width_left = 1
+		s_box.border_width_top = 1
+		s_box.border_width_right = 1
+		s_box.border_width_bottom = 1
+		s_box.border_color = Color(1.0, 1.0, 1.0, 0.95)
+		s_box.corner_radius_top_left = 2
+		s_box.corner_radius_top_right = 2
+		s_box.corner_radius_bottom_right = 2
+		s_box.corner_radius_bottom_left = 2
+		s_box.shadow_color = Color(0.30, 0.85, 1.0, 0.60)
+		s_box.shadow_size = 6
+		shard.add_theme_stylebox_override("panel", s_box)
+		karl_vfx_container.add_child(shard)
+
+		var target_pos: Vector2 = center_pos + dir * dist
+		var tw: Tween = create_tween().set_parallel(true)
+		tw.tween_property(shard, "position", target_pos, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.tween_property(shard, "rotation_degrees", shard.rotation_degrees + randf_range(-180.0, 180.0), 0.45)
+		tw.tween_property(shard, "scale", Vector2(0.2, 0.2), 0.45).set_ease(Tween.EASE_IN)
+		tw.tween_property(shard, "modulate:a", 0.0, 0.45).set_ease(Tween.EASE_IN)
+		tw.chain().tween_callback(shard.queue_free)
+
+func _spawn_shockwave_ring() -> void:
+	if karl_vfx_container == null:
+		return
+	var ring: Panel = Panel.new()
+	ring.position = Vector2(15, 15)
+	ring.size = Vector2(270, 270)
+	ring.pivot_offset = Vector2(135, 135)
+	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var r_box: StyleBoxFlat = StyleBoxFlat.new()
+	r_box.bg_color = Color.TRANSPARENT
+	r_box.border_width_left = 3
+	r_box.border_width_top = 3
+	r_box.border_width_right = 3
+	r_box.border_width_bottom = 3
+	r_box.border_color = Color(0.70, 0.95, 1.0, 0.95)
+	r_box.corner_radius_top_left = 135
+	r_box.corner_radius_top_right = 135
+	r_box.corner_radius_bottom_right = 135
+	r_box.corner_radius_bottom_left = 135
+	r_box.shadow_color = Color(0.40, 0.90, 1.0, 0.70)
+	r_box.shadow_size = 12
+	ring.add_theme_stylebox_override("panel", r_box)
+	karl_vfx_container.add_child(ring)
+
+	ring.scale = Vector2(0.85, 0.85)
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(ring, "scale", Vector2(1.25, 1.25), 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(ring, "modulate:a", 0.0, 0.40).set_ease(Tween.EASE_IN)
+	tw.chain().tween_callback(ring.queue_free)
 
 # =========================================================================
 # STOCHAS BOSS STATE ANIMATIONS (Tween & Control VFX Architecture)
