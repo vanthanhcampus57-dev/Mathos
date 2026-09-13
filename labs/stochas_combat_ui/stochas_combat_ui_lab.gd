@@ -71,6 +71,10 @@ var karl_textures: Dictionary = {}
 var karl_sprite_rect: TextureRect = null
 var karl_vfx_container: Control = null
 var karl_state_tween: Tween = null
+var current_shield: int = 0
+var karl_persistent_barrier: Panel = null
+var karl_persistent_barrier_tween: Tween = null
+var karl_hp_sub_label: Label = null
 
 # Boss Combat States
 enum BossState { IDLE, CAST, HIT, STUN, ENRAGED }
@@ -273,6 +277,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			trigger_heal_effect()
 		KEY_S:
 			trigger_shield_effect()
+		KEY_K:
+			clear_shield()
 		KEY_B:
 			trigger_boss_idle()
 		KEY_V:
@@ -429,6 +435,9 @@ func reset_lab() -> void:
 	current_question_idx = 0
 	hint_shown = false
 	is_boss_enraged = false
+	current_shield = 0
+	_update_shield_hud()
+	_update_persistent_shield_visual()
 	_apply_enraged_visuals()
 	trigger_idle_state()
 	trigger_boss_idle()
@@ -436,6 +445,20 @@ func reset_lab() -> void:
 	_update_hover_detail(0)
 	_update_question_view()
 	_spawn_floating_feedback(Vector2(690, 460), "ĐÃ RESET LAB", COLOR_ACCENT_GOLD)
+
+func clear_shield() -> void:
+	current_shield = 0
+	_update_shield_hud()
+	_update_persistent_shield_visual()
+	_spawn_floating_feedback(Vector2(200, 330), "GIÁP = 0", COLOR_ACCENT_GOLD)
+
+func get_current_shield() -> int:
+	return current_shield
+
+func is_persistent_barrier_visible() -> bool:
+	if karl_persistent_barrier == null:
+		return false
+	return karl_persistent_barrier.visible
 
 func toggle_debug_overlay() -> void:
 	debug_mode = not debug_mode
@@ -478,13 +501,18 @@ func trigger_shield_effect() -> void:
 		karl_state_tween.kill()
 	set_karl_state(KarlState.SHIELD)
 
+	# Persistent combat state: Shield +8
+	current_shield += 8
+	_update_shield_hud()
+	_update_persistent_shield_visual()
+
 	# Floating +8 GIÁP above Karl
 	_spawn_floating_feedback(Vector2(200, 330), "+8 GIÁP", COLOR_ACCENT_CYAN)
 
 	# Cyan/blue arcane barrier pulse around Karl
 	_spawn_barrier_pulse()
 
-	# Auto-return to IDLE after 1.1s
+	# Auto-return to IDLE after 1.1s (persistent barrier remains while current_shield > 0)
 	karl_state_tween = create_tween()
 	karl_state_tween.tween_interval(1.1)
 	karl_state_tween.tween_callback(func(): set_karl_state(KarlState.IDLE))
@@ -620,6 +648,56 @@ func _spawn_hit_pulse() -> void:
 	tw.tween_property(karl_sprite_rect, "position:x", -3.0, 0.06)
 	tw.tween_property(karl_sprite_rect, "position:x", 0.0, 0.06)
 	tw.parallel().tween_property(karl_sprite_rect, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.55)
+
+func _build_persistent_barrier() -> void:
+	if karl_vfx_container == null:
+		return
+	karl_persistent_barrier = Panel.new()
+	karl_persistent_barrier.name = "KarlPersistentBarrier"
+	karl_persistent_barrier.position = Vector2(15, 15)
+	karl_persistent_barrier.size = Vector2(270, 270)
+	karl_persistent_barrier.pivot_offset = Vector2(135, 135)
+	karl_persistent_barrier.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	karl_persistent_barrier.visible = false
+
+	var b_box: StyleBoxFlat = StyleBoxFlat.new()
+	b_box.bg_color = Color(0.08, 0.40, 0.70, 0.14)
+	b_box.border_width_left = 2
+	b_box.border_width_top = 2
+	b_box.border_width_right = 2
+	b_box.border_width_bottom = 2
+	b_box.border_color = Color(0.30, 0.85, 1.0, 0.70)
+	b_box.corner_radius_top_left = 135
+	b_box.corner_radius_top_right = 135
+	b_box.corner_radius_bottom_right = 135
+	b_box.corner_radius_bottom_left = 135
+	b_box.shadow_color = Color(0.20, 0.80, 1.0, 0.45)
+	b_box.shadow_size = 14
+	karl_persistent_barrier.add_theme_stylebox_override("panel", b_box)
+	karl_vfx_container.add_child(karl_persistent_barrier)
+
+func _update_shield_hud() -> void:
+	if karl_hp_sub_label != null:
+		karl_hp_sub_label.text = "HP: 100 / 100   •   GIÁP: %d" % current_shield
+
+func _update_persistent_shield_visual() -> void:
+	if karl_persistent_barrier == null:
+		return
+	if current_shield > 0:
+		karl_persistent_barrier.visible = true
+		if karl_persistent_barrier_tween == null or not karl_persistent_barrier_tween.is_valid():
+			karl_persistent_barrier_tween = create_tween().set_loops()
+			karl_persistent_barrier_tween.tween_property(karl_persistent_barrier, "scale", Vector2(1.04, 1.04), 1.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			karl_persistent_barrier_tween.parallel().tween_property(karl_persistent_barrier, "modulate:a", 1.0, 1.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			karl_persistent_barrier_tween.tween_property(karl_persistent_barrier, "scale", Vector2(1.00, 1.00), 1.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			karl_persistent_barrier_tween.parallel().tween_property(karl_persistent_barrier, "modulate:a", 0.65, 1.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	else:
+		if karl_persistent_barrier_tween != null and karl_persistent_barrier_tween.is_valid():
+			karl_persistent_barrier_tween.kill()
+			karl_persistent_barrier_tween = null
+		karl_persistent_barrier.visible = false
+		karl_persistent_barrier.scale = Vector2.ONE
+		karl_persistent_barrier.modulate.a = 1.0
 
 # =========================================================================
 # STOCHAS BOSS STATE ANIMATIONS (Tween & Control VFX Architecture)
@@ -1057,6 +1135,9 @@ func _build_karl_battlefield_entity() -> void:
 	karl_vfx_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	karl_battlefield_entity.add_child(karl_vfx_container)
 
+	# Build persistent shield barrier node
+	_build_persistent_barrier()
+
 	# Native pixel character TextureRect (no rectangular frame, 300x300px)
 	karl_sprite_rect = TextureRect.new()
 	karl_sprite_rect.name = "KarlSpriteRect"
@@ -1121,11 +1202,12 @@ func _build_top_huds() -> void:
 	hp_bar.add_theme_stylebox_override("fill", hp_fill)
 	karl_vbox.add_child(hp_bar)
 
-	var hp_sub: Label = Label.new()
-	hp_sub.text = "HP: 100 / 100   •   GIÁP: 0"
-	hp_sub.add_theme_font_size_override("font_size", 9)
-	hp_sub.add_theme_color_override("font_color", COLOR_TEXT_MUTED)
-	karl_vbox.add_child(hp_sub)
+	karl_hp_sub_label = Label.new()
+	karl_hp_sub_label.name = "KarlHPSubLabel"
+	karl_hp_sub_label.text = "HP: 100 / 100   •   GIÁP: 0"
+	karl_hp_sub_label.add_theme_font_size_override("font_size", 9)
+	karl_hp_sub_label.add_theme_color_override("font_color", COLOR_TEXT_MUTED)
+	karl_vbox.add_child(karl_hp_sub_label)
 
 	# Stochas Boss HUD: Right 24px, Top 20px, 300x68px
 	boss_hud = PanelContainer.new()
@@ -1265,7 +1347,7 @@ func _build_question_module() -> void:
 
 	# 5. Combat rule subtext + Shortcuts guide (~20 px)
 	helper_label = Label.new()
-	helper_label.text = "Quy tắc: Đúng -> Thi triển chiêu thức. Sai -> STOCHAS phản đòn 10 DMG. | Phím: [1-4] Thẻ, [I/C/H/E/S] Karl, [B/V/N/M/L] Boss, [D] Debug"
+	helper_label.text = "Quy tắc: Đúng -> Thi triển chiêu thức. Sai -> STOCHAS phản đòn 10 DMG. | Phím: [1-4] Thẻ, [I/C/H/E/S/K] Karl (K: Clear Giáp), [B/V/N/M/L] Boss, [D] Debug"
 	helper_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	helper_label.add_theme_font_size_override("font_size", 9)
 	helper_label.add_theme_color_override("font_color", COLOR_TEXT_MUTED)
