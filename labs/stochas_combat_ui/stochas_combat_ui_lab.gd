@@ -6,11 +6,17 @@ extends Control
 
 # Authoritative Composition Grid & Axis
 const CENTER_INTERACTION_X: float = 690.0
+const QUESTION_CENTER_X: float = 640.0
 
-# Question Module (Refined Proportion: 660 x 270 px)
-const QUESTION_WIDTH: float = 660.0
+# Question Module (Refined Compact Proportion: 610 x 240 px, Center X = 640.0)
+const QUESTION_WIDTH: float = 610.0
 const QUESTION_TOP: float = 155.0
-const QUESTION_HEIGHT: float = 270.0
+const QUESTION_HEIGHT: float = 240.0
+
+# Question Combat Mode
+const QUESTION_COMBAT_ALPHA: float = 0.22
+const QUESTION_FADE_OUT_DURATION: float = 0.20
+const QUESTION_FADE_IN_DURATION: float = 0.24
 
 # Card Specifications (Approved Stitch visual size)
 const CARD_WIDTH: float = 104.0
@@ -71,10 +77,14 @@ var karl_textures: Dictionary = {}
 var karl_sprite_rect: TextureRect = null
 var karl_vfx_container: Control = null
 var karl_state_tween: Tween = null
+var current_karl_hp: int = 100
+var max_karl_hp: int = 100
 var current_shield: int = 0
 var karl_persistent_barrier: Panel = null
 var karl_persistent_barrier_tween: Tween = null
 var karl_hp_sub_label: Label = null
+var combat_resolving: bool = false
+var question_fade_tween: Tween = null
 
 # Boss Combat States
 enum BossState { IDLE, CAST, HIT, STUN, ENRAGED }
@@ -250,6 +260,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
 
+	if combat_resolving and event.keycode != KEY_D and event.keycode != KEY_R:
+		return
+
 	match event.keycode:
 		KEY_1:
 			select_card(0)
@@ -295,9 +308,27 @@ func get_center_interaction_x() -> float:
 	return CENTER_INTERACTION_X
 
 func get_question_center_x() -> float:
+	return QUESTION_CENTER_X
+
+func get_boss_head_clearance() -> float:
+	var q_pos: Vector2 = get_question_position()
+	var q_sz: Vector2 = get_question_size()
+	var question_right_x: float = q_pos.x + q_sz.x
+	return 1040.0 - question_right_x
+
+func get_current_karl_hp() -> int:
+	return current_karl_hp
+
+func get_max_karl_hp() -> int:
+	return max_karl_hp
+
+func is_combat_resolving() -> bool:
+	return combat_resolving
+
+func get_question_alpha() -> float:
 	if question_panel == null:
-		return 0.0
-	return question_panel.position.x + (question_panel.size.x / 2.0)
+		return 1.0
+	return question_panel.modulate.a
 
 func get_hover_detail_center_x() -> float:
 	if hover_detail_panel == null:
@@ -316,15 +347,19 @@ func get_card_gap() -> float:
 	return CARD_GAP
 
 func get_question_position() -> Vector2:
-	return Vector2(CENTER_INTERACTION_X - (QUESTION_WIDTH / 2.0), QUESTION_TOP)
+	if question_panel == null:
+		return Vector2(QUESTION_CENTER_X - (QUESTION_WIDTH / 2.0), QUESTION_TOP)
+	return question_panel.position
 
 func get_question_size() -> Vector2:
-	return Vector2(QUESTION_WIDTH, QUESTION_HEIGHT)
+	if question_panel == null:
+		return Vector2(QUESTION_WIDTH, QUESTION_HEIGHT)
+	return question_panel.size
 
 func get_answer_button_size() -> Vector2:
 	if answer_buttons.size() > 0 and answer_buttons[0] != null:
 		return answer_buttons[0].size
-	return Vector2(150, 48)
+	return Vector2(138, 44)
 
 func get_hover_detail_position() -> Vector2:
 	return Vector2(CENTER_INTERACTION_X - (HOVER_DETAIL_WIDTH / 2.0), HOVER_DETAIL_Y)
@@ -395,7 +430,7 @@ func has_permanent_card_stats() -> bool:
 	return false
 
 func select_card(idx: int) -> void:
-	if idx < 0 or idx >= cards_data.size():
+	if combat_resolving or idx < 0 or idx >= cards_data.size():
 		return
 	selected_card_idx = idx
 	hovered_card_idx = idx
@@ -406,6 +441,8 @@ func select_card(idx: int) -> void:
 		_spawn_floating_feedback(Vector2(690, 460), "CHƯA KÍCH HOẠT", COLOR_ACCENT_PURPLE)
 
 func cycle_question() -> void:
+	if combat_resolving:
+		return
 	current_question_idx = (current_question_idx + 1) % questions_data.size()
 	selected_answer_idx = -1
 	has_selected_answer = false
@@ -414,6 +451,8 @@ func cycle_question() -> void:
 	_spawn_floating_feedback(Vector2(690, 125), "CÂU HỎI MỚI", COLOR_ACCENT_CYAN)
 
 func cycle_answer() -> void:
+	if combat_resolving:
+		return
 	if not has_selected_answer:
 		selected_answer_idx = 0
 		has_selected_answer = true
@@ -422,10 +461,11 @@ func cycle_answer() -> void:
 	_update_answer_selection()
 
 func select_answer(idx: int) -> void:
-	if idx >= 0 and idx < 4:
-		selected_answer_idx = idx
-		has_selected_answer = true
-		_update_answer_selection()
+	if combat_resolving or idx < 0 or idx >= 4:
+		return
+	selected_answer_idx = idx
+	has_selected_answer = true
+	_update_answer_selection()
 
 func reset_lab() -> void:
 	selected_card_idx = 0
@@ -435,7 +475,15 @@ func reset_lab() -> void:
 	current_question_idx = 0
 	hint_shown = false
 	is_boss_enraged = false
+	current_karl_hp = 100
 	current_shield = 0
+	combat_resolving = false
+	if question_fade_tween != null and question_fade_tween.is_valid():
+		question_fade_tween.kill()
+		question_fade_tween = null
+	if question_panel != null:
+		question_panel.modulate.a = 1.0
+	_set_question_input_enabled(true)
 	_update_shield_hud()
 	_update_persistent_shield_visual()
 	_apply_enraged_visuals()
@@ -496,6 +544,11 @@ func trigger_idle_state() -> void:
 	set_karl_state(KarlState.IDLE)
 
 func trigger_cast_effect() -> void:
+	if combat_resolving:
+		return
+	combat_resolving = true
+	fade_question_for_combat()
+
 	if karl_state_tween != null and karl_state_tween.is_valid():
 		karl_state_tween.kill()
 	set_karl_state(KarlState.CAST)
@@ -506,12 +559,21 @@ func trigger_cast_effect() -> void:
 	# STOCHAS receives hit animation with recoil, red flash, and floating -10 HP
 	trigger_boss_hit()
 
-	# Auto-return to IDLE after 0.9s
+	# Auto-return to IDLE after 0.9s and restore question
 	karl_state_tween = create_tween()
 	karl_state_tween.tween_interval(0.9)
-	karl_state_tween.tween_callback(func(): set_karl_state(KarlState.IDLE))
+	karl_state_tween.tween_callback(func():
+		set_karl_state(KarlState.IDLE)
+		combat_resolving = false
+		restore_question_after_combat()
+	)
 
 func trigger_shield_effect() -> void:
+	if combat_resolving:
+		return
+	combat_resolving = true
+	fade_question_for_combat()
+
 	if karl_state_tween != null and karl_state_tween.is_valid():
 		karl_state_tween.kill()
 	set_karl_state(KarlState.SHIELD)
@@ -530,12 +592,24 @@ func trigger_shield_effect() -> void:
 	# Auto-return to IDLE after 1.1s (persistent barrier remains while current_shield > 0)
 	karl_state_tween = create_tween()
 	karl_state_tween.tween_interval(1.1)
-	karl_state_tween.tween_callback(func(): set_karl_state(KarlState.IDLE))
+	karl_state_tween.tween_callback(func():
+		set_karl_state(KarlState.IDLE)
+		combat_resolving = false
+		restore_question_after_combat()
+	)
 
 func trigger_heal_effect() -> void:
+	if combat_resolving:
+		return
+	combat_resolving = true
+	fade_question_for_combat()
+
 	if karl_state_tween != null and karl_state_tween.is_valid():
 		karl_state_tween.kill()
 	set_karl_state(KarlState.HEAL)
+
+	current_karl_hp = min(max_karl_hp, current_karl_hp + 15)
+	_update_shield_hud()
 
 	# Floating +15 HP above Karl
 	_spawn_floating_feedback(Vector2(200, 330), "+15 HP", COLOR_ACCENT_GREEN)
@@ -546,23 +620,42 @@ func trigger_heal_effect() -> void:
 	# Auto-return to IDLE after 1.2s
 	karl_state_tween = create_tween()
 	karl_state_tween.tween_interval(1.2)
-	karl_state_tween.tween_callback(func(): set_karl_state(KarlState.IDLE))
+	karl_state_tween.tween_callback(func():
+		set_karl_state(KarlState.IDLE)
+		combat_resolving = false
+		restore_question_after_combat()
+	)
 
-func trigger_hit_effect() -> void:
+func apply_damage_to_karl(amount: int) -> void:
+	var incoming: int = max(0, amount)
+	var absorbed: int = 0
+
+	if current_shield > 0:
+		absorbed = min(current_shield, incoming)
+		var new_shield: int = current_shield - absorbed
+		incoming -= absorbed
+		_spawn_floating_feedback(Vector2(200, 300), "-%d GIÁP" % absorbed, COLOR_ACCENT_CYAN)
+		set_shield(new_shield)
+
+	if incoming > 0:
+		current_karl_hp = max(0, current_karl_hp - incoming)
+		_update_shield_hud()
+		_spawn_floating_feedback(Vector2(200, 360 if absorbed > 0 else 330), "-%d HP" % incoming, COLOR_ACCENT_RED)
+		_play_karl_hit_animation()
+	else:
+		_spawn_barrier_pulse()
+
+func _play_karl_hit_animation() -> void:
 	if karl_state_tween != null and karl_state_tween.is_valid():
 		karl_state_tween.kill()
 	set_karl_state(KarlState.HIT)
-
-	# Floating -10 HP above Karl
-	_spawn_floating_feedback(Vector2(200, 330), "-10 HP", COLOR_ACCENT_RED)
-
-	# Brief red flash / impact pulse
 	_spawn_hit_pulse()
-
-	# Auto-return to IDLE after 0.7s
 	karl_state_tween = create_tween()
 	karl_state_tween.tween_interval(0.7)
 	karl_state_tween.tween_callback(func(): set_karl_state(KarlState.IDLE))
+
+func trigger_hit_effect() -> void:
+	apply_damage_to_karl(10)
 
 func _spawn_cast_hand_spark() -> void:
 	if karl_vfx_container == null:
@@ -693,7 +786,36 @@ func _build_persistent_barrier() -> void:
 
 func _update_shield_hud() -> void:
 	if karl_hp_sub_label != null:
-		karl_hp_sub_label.text = "HP: 100 / 100   •   GIÁP: %d" % current_shield
+		karl_hp_sub_label.text = "HP: %d / %d   •   GIÁP: %d" % [current_karl_hp, max_karl_hp, current_shield]
+
+func fade_question_for_combat() -> void:
+	if question_panel == null:
+		return
+	_set_question_input_enabled(false)
+	if question_fade_tween != null and question_fade_tween.is_valid():
+		question_fade_tween.kill()
+	question_fade_tween = create_tween()
+	question_fade_tween.tween_property(question_panel, "modulate:a", QUESTION_COMBAT_ALPHA, QUESTION_FADE_OUT_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+func restore_question_after_combat() -> void:
+	if question_panel == null:
+		return
+	if question_fade_tween != null and question_fade_tween.is_valid():
+		question_fade_tween.kill()
+	question_fade_tween = create_tween()
+	question_fade_tween.tween_property(question_panel, "modulate:a", 1.0, QUESTION_FADE_IN_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	question_fade_tween.tween_callback(func():
+		_set_question_input_enabled(true)
+	)
+
+func _set_question_input_enabled(enabled: bool) -> void:
+	for btn in answer_buttons:
+		if btn != null:
+			btn.disabled = not enabled
+	if hint_button != null:
+		hint_button.disabled = not enabled
+	if cta_button != null:
+		cta_button.disabled = not enabled
 
 func _update_persistent_shield_visual() -> void:
 	if karl_persistent_barrier == null:
@@ -880,6 +1002,10 @@ func trigger_boss_cast() -> void:
 	# State priority check: STUN blocks casting
 	if current_boss_state == BossState.STUN:
 		return
+	if combat_resolving:
+		return
+	combat_resolving = true
+	fade_question_for_combat()
 
 	_pause_boss_idle()
 	current_boss_state = BossState.CAST
@@ -903,10 +1029,10 @@ func trigger_boss_cast() -> void:
 	boss_action_tween.parallel().tween_property(boss_rect, "scale", Vector2(1.04, 1.04), 0.18)
 	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", -1.2, 0.18)
 
-	# Fire arcane projectile & trigger Karl HIT & -10 HP
+	# Fire arcane projectile & apply damage to Karl (Shield -> HP)
 	boss_action_tween.tween_callback(func():
 		_fire_boss_arcane_projectile()
-		trigger_hit_effect()
+		apply_damage_to_karl(10)
 	)
 
 	# Hold impact (0.12s)
@@ -921,8 +1047,15 @@ func trigger_boss_cast() -> void:
 		var end_alpha: float = 0.50 if not is_boss_enraged else 0.70
 		boss_action_tween.parallel().tween_property(boss_aura_rect, "modulate:a", end_alpha, 0.30)
 
-	# Resume IDLE
-	boss_action_tween.tween_callback(_start_boss_idle_loop)
+	# Wait for Karl hit / shield break to finish before restoring question
+	boss_action_tween.tween_interval(0.35)
+
+	# Resume IDLE and restore Question
+	boss_action_tween.tween_callback(func():
+		_start_boss_idle_loop()
+		combat_resolving = false
+		restore_question_after_combat()
+	)
 
 func trigger_boss_hit() -> void:
 	# State priority check: If stunned, hit flashes without breaking stun
@@ -971,6 +1104,11 @@ func _flash_stunned_hit() -> void:
 		tw.tween_property(boss_rect, "modulate", Color(0.65, 0.70, 0.85, 0.90), 0.25)
 
 func trigger_boss_stun() -> void:
+	if combat_resolving:
+		return
+	combat_resolving = true
+	fade_question_for_combat()
+
 	_pause_boss_idle()
 	current_boss_state = BossState.STUN
 
@@ -1008,6 +1146,8 @@ func trigger_boss_stun() -> void:
 		if boss_stun_overlay != null:
 			boss_stun_overlay.visible = false
 		_start_boss_idle_loop()
+		combat_resolving = false
+		restore_question_after_combat()
 	)
 
 func toggle_boss_enraged() -> void:
@@ -1314,9 +1454,10 @@ func _build_top_huds() -> void:
 	karl_vbox.add_child(karl_name)
 
 	var hp_bar: ProgressBar = ProgressBar.new()
+	hp_bar.name = "KarlHPBar"
 	hp_bar.custom_minimum_size = Vector2(170, 14)
 	hp_bar.max_value = 100.0
-	hp_bar.value = 100.0
+	hp_bar.value = current_karl_hp
 	hp_bar.show_percentage = false
 	var hp_bg: StyleBoxFlat = _create_solid_box(Color(0.12, 0.15, 0.22, 0.9), 3)
 	var hp_fill: StyleBoxFlat = _create_solid_box(Color(0.20, 0.78, 0.42, 1.0), 3)
@@ -1326,7 +1467,7 @@ func _build_top_huds() -> void:
 
 	karl_hp_sub_label = Label.new()
 	karl_hp_sub_label.name = "KarlHPSubLabel"
-	karl_hp_sub_label.text = "HP: 100 / 100   •   GIÁP: 0"
+	karl_hp_sub_label.text = "HP: %d / %d   •   GIÁP: %d" % [current_karl_hp, max_karl_hp, current_shield]
 	karl_hp_sub_label.add_theme_font_size_override("font_size", 9)
 	karl_hp_sub_label.add_theme_color_override("font_color", COLOR_TEXT_MUTED)
 	karl_vbox.add_child(karl_hp_sub_label)
@@ -1370,34 +1511,34 @@ func _build_top_huds() -> void:
 	boss_vbox.add_child(boss_intent)
 
 func _build_question_module() -> void:
-	# Center X = 690px, Top = 155px, Width = 660px, Height = 270px
-	var start_x: float = CENTER_INTERACTION_X - (QUESTION_WIDTH / 2.0)
+	# Center X = 640px, Top = 155px, Width = 610px, Height = 240px
+	var start_x: float = QUESTION_CENTER_X - (QUESTION_WIDTH / 2.0)
 	question_panel = PanelContainer.new()
 	question_panel.name = "QuestionPanel"
 	question_panel.position = Vector2(start_x, QUESTION_TOP)
 	question_panel.custom_minimum_size = Vector2(QUESTION_WIDTH, QUESTION_HEIGHT)
 	question_panel.size = Vector2(QUESTION_WIDTH, QUESTION_HEIGHT)
 
-	var q_box: StyleBoxFlat = _create_glass_box(COLOR_PANEL_BG, COLOR_PANEL_BORDER, 10)
-	q_box.content_margin_left = 16
-	q_box.content_margin_top = 14
-	q_box.content_margin_right = 16
-	q_box.content_margin_bottom = 12
+	var q_box: StyleBoxFlat = _create_glass_box(COLOR_PANEL_BG, COLOR_PANEL_BORDER, 8)
+	q_box.content_margin_left = 14
+	q_box.content_margin_top = 10
+	q_box.content_margin_right = 14
+	q_box.content_margin_bottom = 8
 	question_panel.add_theme_stylebox_override("panel", q_box)
 	add_child(question_panel)
 
 	var main_vbox: VBoxContainer = VBoxContainer.new()
-	main_vbox.add_theme_constant_override("separation", 8)
+	main_vbox.add_theme_constant_override("separation", 6)
 	question_panel.add_child(main_vbox)
 
-	# 1. Header Row (~26 px)
+	# 1. Header Row (~24 px)
 	var header_hbox: HBoxContainer = HBoxContainer.new()
 	main_vbox.add_child(header_hbox)
 
 	question_stage_label = Label.new()
 	question_stage_label.text = "ARCANE CHALLENGE • CÂU HỎI 1 / 3"
 	question_stage_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	question_stage_label.add_theme_font_size_override("font_size", 11)
+	question_stage_label.add_theme_font_size_override("font_size", 10)
 	question_stage_label.add_theme_color_override("font_color", COLOR_ACCENT_CYAN)
 	header_hbox.add_child(question_stage_label)
 
@@ -1408,41 +1549,41 @@ func _build_question_module() -> void:
 	round_lbl.add_theme_color_override("font_color", COLOR_ACCENT_GOLD)
 	header_hbox.add_child(round_lbl)
 
-	# 2. Question Prompt (expanded area, ~48 px, font 13)
+	# 2. Question Prompt (~44 px, font 12)
 	question_prompt_label = Label.new()
-	question_prompt_label.custom_minimum_size = Vector2(628, 48)
+	question_prompt_label.custom_minimum_size = Vector2(580, 44)
 	question_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	question_prompt_label.add_theme_font_size_override("font_size", 13)
+	question_prompt_label.add_theme_font_size_override("font_size", 12)
 	question_prompt_label.add_theme_color_override("font_color", Color(0.96, 0.98, 1.0, 1.0))
 	main_vbox.add_child(question_prompt_label)
 
-	# 3. Answer Options: ONE HORIZONTAL 4-OPTION ROW (~48 px tall buttons)
+	# 3. Answer Options: ONE HORIZONTAL 4-OPTION ROW (~44 px tall buttons)
 	var answer_row: HBoxContainer = HBoxContainer.new()
 	answer_row.name = "AnswerRow"
-	answer_row.add_theme_constant_override("separation", 8)
+	answer_row.add_theme_constant_override("separation", 6)
 	main_vbox.add_child(answer_row)
 
 	answer_buttons.clear()
 	for i in range(4):
 		var btn: Button = Button.new()
 		btn.name = "AnswerBtn_%d" % i
-		btn.custom_minimum_size = Vector2(150, 48)
+		btn.custom_minimum_size = Vector2(138, 44)
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		btn.add_theme_font_size_override("font_size", 12)
+		btn.add_theme_font_size_override("font_size", 11)
 		btn.pressed.connect(select_answer.bind(i))
 		answer_row.add_child(btn)
 		answer_buttons.append(btn)
 
-	# 4. Action Row (Hint + Primary XUẤT CHIÊU CTA, ~44 px)
+	# 4. Action Row (Hint + Primary XUẤT CHIÊU CTA, ~42 px)
 	var action_hbox: HBoxContainer = HBoxContainer.new()
-	action_hbox.add_theme_constant_override("separation", 10)
+	action_hbox.add_theme_constant_override("separation", 8)
 	action_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	main_vbox.add_child(action_hbox)
 
 	hint_button = Button.new()
 	hint_button.name = "HintButton"
 	hint_button.text = "💡 GỢI Ý"
-	hint_button.custom_minimum_size = Vector2(104, 44)
+	hint_button.custom_minimum_size = Vector2(96, 42)
 	var hint_box: StyleBoxFlat = _create_glass_box(Color(0.12, 0.16, 0.24, 0.85), Color(0.40, 0.55, 0.70, 0.70), 6)
 	hint_button.add_theme_stylebox_override("normal", hint_box)
 	hint_button.add_theme_font_size_override("font_size", 11)
@@ -1452,7 +1593,7 @@ func _build_question_module() -> void:
 	cta_button = Button.new()
 	cta_button.name = "SubmitCTAButton"
 	cta_button.text = "XUẤT CHIÊU: TẤN CÔNG (10 DMG)"
-	cta_button.custom_minimum_size = Vector2(280, 44)
+	cta_button.custom_minimum_size = Vector2(260, 42)
 	cta_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var cta_box: StyleBoxFlat = _create_solid_box(Color(0.12, 0.55, 0.82, 0.98), 6)
 	cta_box.border_width_left = 1
@@ -1467,10 +1608,12 @@ func _build_question_module() -> void:
 	cta_button.pressed.connect(_on_cta_pressed)
 	action_hbox.add_child(cta_button)
 
-	# 5. Combat rule subtext + Shortcuts guide (~20 px)
+	# 5. Combat rule subtext + Shortcuts guide (~16 px)
 	helper_label = Label.new()
-	helper_label.text = "Quy tắc: Đúng -> Thi triển chiêu thức. Sai -> STOCHAS phản đòn 10 DMG. | Phím: [1-4] Thẻ, [I/C/H/E/S/K] Karl (K: Clear Giáp), [B/V/N/M/L] Boss, [D] Debug"
+	helper_label.text = "Quy tắc: Đúng -> Xuất chiêu. Sai -> STOCHAS phản đòn (Khiên -> HP). | [1-4] Thẻ, [I/C/H/E/S/K] Karl, [B/V/N/M/L] Boss"
 	helper_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	helper_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	helper_label.custom_minimum_size = Vector2(580, 16)
 	helper_label.add_theme_font_size_override("font_size", 9)
 	helper_label.add_theme_color_override("font_color", COLOR_TEXT_MUTED)
 	main_vbox.add_child(helper_label)
@@ -1623,9 +1766,9 @@ func _build_debug_overlay() -> void:
 	k_lbl.add_theme_color_override("font_color", Color(0.2, 0.7, 1.0, 0.9))
 	debug_overlay.add_child(k_lbl)
 
-	# Question outline (660 x 270 px)
+	# Question outline (610 x 240 px)
 	var q_outline: ReferenceRect = ReferenceRect.new()
-	q_outline.position = Vector2(CENTER_INTERACTION_X - (QUESTION_WIDTH / 2.0), QUESTION_TOP)
+	q_outline.position = Vector2(QUESTION_CENTER_X - (QUESTION_WIDTH / 2.0), QUESTION_TOP)
 	q_outline.size = Vector2(QUESTION_WIDTH, QUESTION_HEIGHT)
 	q_outline.border_color = Color(1.0, 0.2, 0.8, 0.9)
 	q_outline.border_width = 1.5
@@ -1633,8 +1776,8 @@ func _build_debug_overlay() -> void:
 	debug_overlay.add_child(q_outline)
 
 	var q_lbl: Label = Label.new()
-	q_lbl.text = "Question 660x270 (Top: 155, Center: 690)"
-	q_lbl.position = Vector2(CENTER_INTERACTION_X - 100, QUESTION_TOP - 16)
+	q_lbl.text = "Question 610x240 (Top: 155, Center: 640)"
+	q_lbl.position = Vector2(QUESTION_CENTER_X - 100, QUESTION_TOP - 16)
 	q_lbl.add_theme_font_size_override("font_size", 9)
 	q_lbl.add_theme_color_override("font_color", Color(1.0, 0.2, 0.8, 0.9))
 	debug_overlay.add_child(q_lbl)
@@ -1780,6 +1923,8 @@ func _on_hint_pressed() -> void:
 		_spawn_floating_feedback(Vector2(690, 125), q_data["hint"], COLOR_ACCENT_GOLD)
 
 func _on_cta_pressed() -> void:
+	if combat_resolving:
+		return
 	if not has_selected_answer or selected_answer_idx < 0:
 		_spawn_floating_feedback(Vector2(690, 410), "Chọn đáp án trước", COLOR_ACCENT_GOLD)
 		return
