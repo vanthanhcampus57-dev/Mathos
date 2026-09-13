@@ -109,7 +109,8 @@ const KARL_BASELINE_OFFSETS: Dictionary = {
 # State
 var selected_card_idx: int = 0
 var hovered_card_idx: int = 0
-var selected_answer_idx: int = 0
+var selected_answer_idx: int = -1
+var has_selected_answer: bool = false
 var current_question_idx: int = 0
 var debug_mode: bool = false
 var hint_shown: bool = false
@@ -228,12 +229,6 @@ func _ready() -> void:
 	_update_card_selection()
 	_update_hover_detail(selected_card_idx)
 	_update_question_view()
-
-	# Trigger initial demonstration floating combat status feedback
-	_spawn_floating_feedback(Vector2(200, 330), "+8 GIÁP", COLOR_ACCENT_CYAN)
-	_spawn_floating_feedback(Vector2(200, 300), "+15 HP", COLOR_ACCENT_GREEN)
-	_spawn_floating_feedback(Vector2(1040, 240), "-10 HP", COLOR_ACCENT_RED)
-	_spawn_floating_feedback(Vector2(1040, 210), "CRITICAL!", COLOR_ACCENT_GOLD)
 
 func _load_karl_textures() -> void:
 	if ResourceLoader.exists(ASSET_KARL_IDLE):
@@ -396,44 +391,41 @@ func has_permanent_card_stats() -> bool:
 func select_card(idx: int) -> void:
 	if idx < 0 or idx >= cards_data.size():
 		return
-	if cards_data[idx]["disabled"]:
-		_spawn_floating_feedback(Vector2(690, 460), "CHƯA KÍCH HOẠT (CẦN 3 MP)", COLOR_ACCENT_PURPLE)
-		return
 	selected_card_idx = idx
 	hovered_card_idx = idx
 	_update_card_selection()
 	_update_hover_detail(selected_card_idx)
 	_update_cta_button_text()
-
-	# Trigger Karl state preview based on card
-	var card_id: String = cards_data[idx]["id"]
-	if card_id == "strike":
-		trigger_cast_effect()
-	elif card_id == "defend":
-		trigger_shield_effect()
-	elif card_id == "heal":
-		trigger_heal_effect()
+	if cards_data[idx]["disabled"]:
+		_spawn_floating_feedback(Vector2(690, 460), "CHƯA KÍCH HOẠT", COLOR_ACCENT_PURPLE)
 
 func cycle_question() -> void:
 	current_question_idx = (current_question_idx + 1) % questions_data.size()
-	selected_answer_idx = 0
+	selected_answer_idx = -1
+	has_selected_answer = false
 	hint_shown = false
 	_update_question_view()
 	_spawn_floating_feedback(Vector2(690, 125), "CÂU HỎI MỚI", COLOR_ACCENT_CYAN)
 
 func cycle_answer() -> void:
-	selected_answer_idx = (selected_answer_idx + 1) % 4
+	if not has_selected_answer:
+		selected_answer_idx = 0
+		has_selected_answer = true
+	else:
+		selected_answer_idx = (selected_answer_idx + 1) % 4
 	_update_answer_selection()
 
 func select_answer(idx: int) -> void:
 	if idx >= 0 and idx < 4:
 		selected_answer_idx = idx
+		has_selected_answer = true
 		_update_answer_selection()
 
 func reset_lab() -> void:
 	selected_card_idx = 0
 	hovered_card_idx = 0
-	selected_answer_idx = 0
+	selected_answer_idx = -1
+	has_selected_answer = false
 	current_question_idx = 0
 	hint_shown = false
 	is_boss_enraged = false
@@ -1538,7 +1530,7 @@ func _update_question_view() -> void:
 func _update_answer_selection() -> void:
 	for i in range(answer_buttons.size()):
 		var btn: Button = answer_buttons[i]
-		var is_selected: bool = (i == selected_answer_idx)
+		var is_selected: bool = (has_selected_answer and i == selected_answer_idx)
 
 		var btn_style: StyleBoxFlat = StyleBoxFlat.new()
 		btn_style.corner_radius_top_left = 6
@@ -1584,9 +1576,17 @@ func _on_hint_pressed() -> void:
 		_spawn_floating_feedback(Vector2(690, 125), q_data["hint"], COLOR_ACCENT_GOLD)
 
 func _on_cta_pressed() -> void:
+	if not has_selected_answer or selected_answer_idx < 0:
+		_spawn_floating_feedback(Vector2(690, 410), "Chọn đáp án trước", COLOR_ACCENT_GOLD)
+		return
+
+	var card: Dictionary = cards_data[selected_card_idx]
+	if card.get("disabled", false):
+		_spawn_floating_feedback(Vector2(690, 460), "CHƯA KÍCH HOẠT", COLOR_ACCENT_PURPLE)
+		return
+
 	var q_data: Dictionary = questions_data[current_question_idx]
 	var is_correct: bool = (selected_answer_idx == q_data["correct"])
-	var card: Dictionary = cards_data[selected_card_idx]
 
 	if is_correct:
 		if card["id"] == "strike":
@@ -1597,7 +1597,6 @@ func _on_cta_pressed() -> void:
 			trigger_heal_effect()
 	else:
 		trigger_boss_cast()
-		_spawn_floating_feedback(Vector2(1040, 240), "PHẢN ĐÒN!", COLOR_ACCENT_RED)
 
 func _spawn_floating_feedback(pos: Vector2, text: String, color: Color) -> void:
 	if floating_status_container == null:

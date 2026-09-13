@@ -3,23 +3,23 @@
 > Canonical recovery note for Agent3. This file must be updated every time Agent3 receives a prompt, and updated again before sending a report if state changed.
 
 ## 1. CURRENT TASK
-- TASK_ID: MATHOS-STOCHAS-BOSS-STATE-ANIMATION-LAB-224L
-- TITLE: LAB-only STOCHAS boss state animation integration
-- FROM: User / Human Visual Lab
-- PRIORITY: P0 / HUMAN VISUAL LAB
-- BASE: ec2b967b9bf556c698dda9e209c7d1c306e42b74
+- TASK_ID: MATHOS-STOCHAS-LAB-COMBAT-TIMING-FIX-225L
+- TITLE: LAB-only interaction timing fix
+- FROM: User / LAB Gameplay Flow Correction
+- PRIORITY: P0 / LAB GAMEPLAY FLOW CORRECTION
+- BASE: 8daf880244c8673c88fd373e12f922618be26f44
 - STATUS: DONE
-- PROMPT_RECEIVED_AT: 2026-09-13T08:25:43+07:00
-- UPDATED_AT: 2026-09-13T08:33:00+07:00
+- PROMPT_RECEIVED_AT: 2026-09-13T08:47:00+07:00
+- UPDATED_AT: 2026-09-13T08:48:45+07:00
 
 ## 2. WORKSPACE / GIT
 - PROJECT: Mathos
 - WORKTREE: D:\Mathos_Worktrees\MATHOS-STORY-PARITY-FIX-185
 - BRANCH: task/mathos-story-parity-fix-185
-- START_HEAD: ec2b967b9bf556c698dda9e209c7d1c306e42b74
-- CURRENT_HEAD: 071d4909a58c383d74f9cbf9aba01f027eb90961
-- FINAL_HEAD: 071d4909a58c383d74f9cbf9aba01f027eb90961
-- CANONICAL_BASE: ec2b967b9bf556c698dda9e209c7d1c306e42b74
+- START_HEAD: 8daf880244c8673c88fd373e12f922618be26f44
+- CURRENT_HEAD: ca9979dafd68807c1b6648c9473e42443a7b9a99
+- FINAL_HEAD: ca9979dafd68807c1b6648c9473e42443a7b9a99
+- CANONICAL_BASE: 8daf880244c8673c88fd373e12f922618be26f44
 - PRODUCTION_SOURCE_CHANGED: NO (0 production files modified)
 
 ## 3. EXACT PROMPT / INTENT SUMMARY
@@ -88,21 +88,20 @@
 - State Priority: STUN > HIT > CAST > ENRAGED > IDLE (zero tween fighting, clean resume)
 - Position Drift: 0.0 px (all tweens explicitly anchor to BOSS_BASE_POS)
 
-## 6. ACCEPTANCE GATES STATUS (MATHOS-STOCHAS-BOSS-STATE-ANIMATION-LAB-224L)
-- GATE 1 (Idle/stand animation visibly loops and remains subtle): PASS (3.2s loop, 6px float, 0.8% scale)
-- GATE 2 (Boss does not feel like a static PNG): PASS (ground shadow, pulsing aura, floating animation)
-- GATE 3 (Cast/attack animation clearly reads as attack): PASS (anticipation, staff spark, lunge -28px, projectile, Karl HIT)
-- GATE 4 (Boss HIT state has readable recoil + flash): PASS (recoil +16px, rotation kick -1.5 deg, red flash modulate)
-- GATE 5 (STUN state clearly communicates boss is disabled): PASS (stagger, dizzy sway, 3 golden head stars, CHOÁNG)
-- GATE 6 (Idle animation pauses during stun/hit/cast): PASS (idle tween cleanly paused/killed during transient states)
-- GATE 7 (State transitions return cleanly to idle): PASS (smooth return callback to idle loop)
-- GATE 8 (STOCHAS position does not permanently drift): PASS (base position exactly 800, 130, scale 1.0, rot 0.0)
-- GATE 9 (STRIKE preview causes STOCHAS -10 HP visual feedback): PASS (Karl CAST -> STOCHAS HIT & -10 HP)
-- GATE 10 (Wrong-answer preview causes STOCHAS attack -> Karl -10 HP): PASS (STOCHAS CAST -> Karl HIT & -10 HP)
-- GATE 11 (Karl existing 5 states remain functional): PASS (IDLE, CAST, HIT, HEAL, SHIELD; baseline 650.0 px)
+## 6. ACCEPTANCE GATES STATUS (MATHOS-STOCHAS-LAB-COMBAT-TIMING-FIX-225L)
+- GATE 1 (Initial state clean: has_selected_answer = false, answer_idx = -1, IDLE states): PASS
+- GATE 2 (Card selection updates visual highlight, hover detail, and CTA text ONLY; 0 animation): PASS
+- GATE 3 (Answer selection updates choice button highlight ONLY; 0 animation): PASS
+- GATE 4 (CTA press without answer selected displays floating warning "Chọn đáp án trước", 0 animation): PASS
+- GATE 5 (CTA press on disabled card PROBABILITY shows "CHƯA KÍCH HOẠT", 0 animation): PASS
+- GATE 6 (Correct answer + STRIKE card triggers Karl CAST -> STOCHAS HIT & -10 HP near STOCHAS): PASS
+- GATE 7 (Correct answer + DEFEND card triggers Karl SHIELD & +8 GIÁP barrier VFX): PASS
+- GATE 8 (Correct answer + HEAL card triggers Karl HEAL & +15 HP emerald aura VFX): PASS
+- GATE 9 (Wrong answer triggers STOCHAS CAST counter-attack -> Karl HIT & -10 HP near Karl; card does not execute): PASS
+- GATE 10 (Manual debug hotkeys [I/C/H/E/S/B/V/N/M/L/D] remain fully functional): PASS
+- GATE 11 (All 5 Karl states baseline alignment preserved at 650.0 px): PASS
 - GATE 12 (Question/card/background layout unchanged): PASS (Question 660x270 at 690/155, Karl 300x300, cards 104x158)
-- GATE 13 (Production unchanged): PASS (0 production files modified)
-- GATE 14 (No image generated/edited): PASS (canonical stochas_boss.png animated natively)
+- GATE 13 (Production source untouched & 0 images generated/edited): PASS (0 production files modified)
 
 ## 7. RECENT PROMPT LOG
 ### Prompt entry 49
@@ -116,3 +115,10 @@
 - TASK_ID: MATHOS-STOCHAS-BOSS-STATE-ANIMATION-LAB-224L
 - ONE_LINE_INTENT: Integrate native Godot Tweens and state animations for STOCHAS (Idle, Cast, Hit, Stun, Enraged) and preview combat chain in LAB.
 - RESULT / CURRENT_STATE: DONE (All 14 automated gates PASSED)
+
+### Prompt entry 51
+- RECEIVED_AT: 2026-09-13T08:47:00+07:00
+- TASK_ID: MATHOS-STOCHAS-LAB-COMBAT-TIMING-FIX-225L
+- ONE_LINE_INTENT: Decouple card selection from immediate attack triggers, enforce answer selection check on CTA press, and lock combat execution timing chain.
+- RESULT / CURRENT_STATE: DONE (All 13 automated gates PASSED)
+
