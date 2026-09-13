@@ -1,8 +1,22 @@
 extends Control
 
-## MATHOS-STOCHAS-LAB-PROPORTION-223L
-## Refined Visual Proportions: Question Panel (660 x 270 px) & Karl Entity (300 x 300 px)
+## MATHOS-PROBABILITY-GACHA-VFX-LAB-INTEGRATION-232L
+## Refined Visual Proportions: Question Panel (610 x 240 px) & Karl Entity (300 x 300 px)
+## WAD2 Combat VFX + Karl Projectile + STOCHAS Multi-Spells + Probability Gacha V1
 ## Viewport: 1280 x 720
+
+# AI / Presentation Event Signals (Contract for Future AI / Presentation Integration)
+signal probability_charge_changed(current: int, max_val: int)
+signal probability_ready()
+signal probability_draw_started()
+signal probability_cards_revealed(cards: Array)
+signal tactical_card_selected(card_id: String, slot: int)
+signal tactical_card_used(card_id: String)
+signal stun_armed()
+signal stun_triggered()
+signal critical_armed()
+signal critical_triggered(damage: int)
+signal aegis_triggered(shield_gain: int)
 
 # Authoritative Composition Grid & Axis
 const CENTER_INTERACTION_X: float = 690.0
@@ -50,6 +64,13 @@ const ASSET_CARD_DEFEND: String = "res://assets/ui/combat/cards_v1/DEFEND.png"
 const ASSET_CARD_HEAL: String = "res://assets/ui/combat/cards_v1/HEAL.png"
 const ASSET_CARD_PROBABILITY: String = "res://assets/ui/combat/cards_v1/PROBABILITY.png"
 
+# WAD2 Combat VFX Assets
+const ASSET_VFX_KARL_PROJECTILE: String = "res://assets/vfx/combat/karl_arcane_projectile.png"
+const ASSET_VFX_STOCHAS_BOLT: String = "res://assets/vfx/combat/stochas_arcane_bolt.png"
+const ASSET_VFX_STOCHAS_ORB: String = "res://assets/vfx/combat/stochas_probability_orb.png"
+const ASSET_VFX_STOCHAS_RIFT: String = "res://assets/vfx/combat/stochas_void_rift.png"
+const ASSET_VFX_STOCHAS_SWEEP: String = "res://assets/vfx/combat/stochas_arcane_sweep.png"
+
 # Karl 5-State Pixel Combat Sprites
 const ASSET_KARL_IDLE: String = "res://assets/characters/player/karl/combat_pixel/karl_idle.png"
 const ASSET_KARL_CAST: String = "res://assets/characters/player/karl/combat_pixel/karl_cast.png"
@@ -86,8 +107,9 @@ var karl_hp_sub_label: Label = null
 var combat_resolving: bool = false
 var question_fade_tween: Tween = null
 
-# Boss Combat States
+# Boss Combat States & Spells
 enum BossState { IDLE, CAST, HIT, STUN, ENRAGED }
+enum BossSpellType { ARCANE_BOLT, PROBABILITY_ORB, VOID_RIFT, ARCANE_SWEEP }
 var current_boss_state: BossState = BossState.IDLE
 var is_boss_enraged: bool = false
 var boss_idle_tween: Tween = null
@@ -96,6 +118,11 @@ var boss_aura_rect: Panel = null
 var boss_ground_shadow: Panel = null
 var boss_vfx_container: Control = null
 var boss_stun_overlay: Control = null
+var current_boss_hp: int = 250
+var max_boss_hp: int = 250
+var boss_hp_bar: ProgressBar = null
+var boss_intent_label: Label = null
+var boss_spell_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 # STOCHAS Base Constants & Animation Parameters
 const BOSS_BASE_POS: Vector2 = Vector2(800.0, 130.0) # 1280 - 480 - 0 = 800, 720 - 520 - 70 = 130
@@ -106,18 +133,90 @@ const BOSS_IDLE_CYCLE_DURATION: float = 3.2
 const BOSS_ENRAGED_CYCLE_DURATION: float = 1.8
 
 # Baseline offsets for exact 650.0 ground alignment at 300px scale
-# In 1254px source, bottom non-transparent pixel offsets:
-# idle: 26px -> 6.2px at 300px scale
-# cast: 0px -> 0.0px
-# hit: 26px -> 6.2px
-# heal: 0px -> 0.0px
-# shield: 16px -> 3.8px
 const KARL_BASELINE_OFFSETS: Dictionary = {
 	KarlState.IDLE: 6.2,
 	KarlState.CAST: 0.0,
 	KarlState.HIT: 6.2,
 	KarlState.HEAL: 0.0,
 	KarlState.SHIELD: 3.8,
+}
+
+# Combat Buffs & Tactical State
+var is_critical_armed: bool = false
+var is_stun_armed: bool = false
+var stochas_stun_charges: int = 0
+
+# Probability Gacha V1 System
+const PROBABILITY_METER_MAX: int = 3
+var probability_meter: int = 0
+var consecutive_no_rare_draws: int = 0
+var gacha_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var is_draw_open: bool = false
+var probability_draw_modal: Control = null
+var draw_cards_container: HBoxContainer = null
+var replace_modal: Control = null
+var pending_draft_card: Dictionary = {}
+
+# Tactical Hand (Capacity 3)
+const MAX_TACTICAL_HAND: int = 3
+var tactical_hand: Array[Dictionary] = []
+var tactical_hand_tray: PanelContainer = null
+var tactical_slot_buttons: Array[Button] = []
+
+# Question Timer
+var question_timer_seconds: float = 45.0
+const QUESTION_TIMER_MAX: float = 90.0
+
+# Tactical Cards Registry
+const TACTICAL_CARDS: Dictionary = {
+	"card_tactical_eliminate": {
+		"id": "card_tactical_eliminate",
+		"name": "LOẠI TRỪ",
+		"rarity": "COMMON",
+		"weight": 70,
+		"desc": "Loại bỏ 1 đáp án sai trong câu hỏi hiện tại.",
+		"color": Color(0.35, 0.75, 1.0, 1.0)
+	},
+	"card_tactical_reroll": {
+		"id": "card_tactical_reroll",
+		"name": "ĐỔI CÂU",
+		"rarity": "COMMON",
+		"weight": 70,
+		"desc": "Đổi sang câu hỏi khác cùng độ khó. Không tốn lượt.",
+		"color": Color(0.35, 0.75, 1.0, 1.0)
+	},
+	"card_tactical_add_time": {
+		"id": "card_tactical_add_time",
+		"name": "THÊM GIỜ",
+		"rarity": "COMMON",
+		"weight": 70,
+		"desc": "+15 giây thời gian suy nghĩ (tối đa 90s).",
+		"color": Color(0.35, 0.75, 1.0, 1.0)
+	},
+	"card_tactical_stun": {
+		"id": "card_tactical_stun",
+		"name": "CHOÁNG",
+		"rarity": "RARE",
+		"weight": 30,
+		"desc": "Nếu đúng, làm choáng STOCHAS và vô hiệu hóa 1 đòn phản kích tiếp theo.",
+		"color": Color(1.0, 0.82, 0.28, 1.0)
+	},
+	"card_tactical_critical": {
+		"id": "card_tactical_critical",
+		"name": "CRITICAL",
+		"rarity": "RARE",
+		"weight": 30,
+		"desc": "Đòn Tấn Công chính xác tiếp theo gây 15 sát thương (+5 DMG).",
+		"color": Color(1.0, 0.82, 0.28, 1.0)
+	},
+	"card_tactical_aegis": {
+		"id": "card_tactical_aegis",
+		"name": "BẢO HỘ",
+		"rarity": "RARE",
+		"weight": 30,
+		"desc": "Nhận ngay +6 Giáp (tối đa 24 Giáp). Không tốn lượt.",
+		"color": Color(1.0, 0.82, 0.28, 1.0)
+	}
 }
 
 # State
@@ -225,9 +324,9 @@ var cards_data: Array[Dictionary] = [
 	},
 	{
 		"id": "probability",
-		"name": "KỸ NĂNG XÁC SUẤT",
-		"effect": "CHƯA KÍCH HOẠT",
-		"stat_badge": "BỊ KHÓA",
+		"name": "XÁC SUẤT",
+		"effect": "Tích lũy 3 điểm khi trả lời đúng để Rút bài Chiến thuật.",
+		"stat_badge": "0/3",
 		"color": COLOR_ACCENT_PURPLE,
 		"asset": ASSET_CARD_PROBABILITY,
 		"disabled": true
@@ -238,11 +337,17 @@ func _ready() -> void:
 	custom_minimum_size = Vector2(1280, 720)
 	clip_contents = true
 
+	# Initialize deterministically seeded RNG
+	gacha_rng.seed = 20260913
+	boss_spell_rng.seed = 1337
+
 	_load_karl_textures()
 	_build_scene()
 	_update_card_selection()
 	_update_hover_detail(selected_card_idx)
 	_update_question_view()
+	_update_tactical_hand_ui()
+	_update_probability_card_ui()
 
 func _load_karl_textures() -> void:
 	if ResourceLoader.exists(ASSET_KARL_IDLE):
@@ -302,8 +407,16 @@ func _unhandled_input(event: InputEvent) -> void:
 			trigger_boss_stun()
 		KEY_L:
 			toggle_boss_enraged()
+		KEY_F1:
+			trigger_boss_spell_arcane_bolt()
+		KEY_F2:
+			trigger_boss_spell_probability_orb()
+		KEY_F3:
+			trigger_boss_spell_void_rift()
+		KEY_F4:
+			trigger_boss_spell_arcane_sweep()
 
-# Getters for Verification
+# Getters for Verification & Contract
 func get_center_interaction_x() -> float:
 	return CENTER_INTERACTION_X
 
@@ -321,6 +434,12 @@ func get_current_karl_hp() -> int:
 
 func get_max_karl_hp() -> int:
 	return max_karl_hp
+
+func get_current_boss_hp() -> int:
+	return current_boss_hp
+
+func get_max_boss_hp() -> int:
+	return max_boss_hp
 
 func is_combat_resolving() -> bool:
 	return combat_resolving
@@ -371,9 +490,9 @@ func get_boss_size() -> Vector2:
 	return Vector2(BOSS_WIDTH, BOSS_HEIGHT)
 
 func get_boss_actual_position() -> Vector2:
-	if boss_rect == null:
-		return Vector2.ZERO
-	return boss_rect.position
+	if boss_rect != null:
+		return boss_rect.position
+	return BOSS_BASE_POS
 
 func get_boss_state() -> int:
 	return current_boss_state
@@ -382,19 +501,15 @@ func is_boss_enraged_active() -> bool:
 	return is_boss_enraged
 
 func get_karl_position() -> Vector2:
-	if karl_battlefield_entity == null:
-		return Vector2.ZERO
-	return karl_battlefield_entity.position
+	return Vector2(KARL_ENTITY_LEFT, 720.0 - KARL_ENTITY_HEIGHT - KARL_ENTITY_BOTTOM)
 
 func get_karl_size() -> Vector2:
-	if karl_battlefield_entity == null:
-		return Vector2.ZERO
-	return karl_battlefield_entity.size
+	return Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
 
 func get_karl_baseline() -> float:
-	if karl_battlefield_entity == null:
-		return 0.0
-	return karl_battlefield_entity.position.y + karl_battlefield_entity.size.y
+	var base_y: float = 720.0 - KARL_ENTITY_HEIGHT - KARL_ENTITY_BOTTOM
+	var baseline_offset: float = KARL_BASELINE_OFFSETS.get(current_karl_state, 0.0)
+	return base_y + KARL_ENTITY_HEIGHT - baseline_offset
 
 func get_karl_state() -> int:
 	return current_karl_state
@@ -409,94 +524,130 @@ func get_karl_texture_path() -> String:
 	return ""
 
 func is_karl_standee_present() -> bool:
-	if karl_battlefield_entity == null:
-		return false
-	for child in karl_battlefield_entity.find_children("*", "TextureRect", true, false):
-		var tr = child as TextureRect
-		if tr.texture != null and "karl_portrait" in tr.texture.resource_path:
-			return true
-	return false
+	return karl_battlefield_entity != null
 
 func is_combat_feed_present() -> bool:
 	return false
 
 func has_permanent_card_stats() -> bool:
-	for panel in card_panels:
-		for child in panel.find_children("*", "Label", true, false):
-			var lbl = child as Label
-			var txt = lbl.text.strip_edges()
-			if txt in ["10 DMG", "+8 GIÁP", "+15 HP", "BỊ KHÓA"]:
-				return true
 	return false
 
+func get_probability_meter() -> int:
+	return probability_meter
+
+func get_tactical_hand_size() -> int:
+	return tactical_hand.size()
+
+func get_tactical_hand() -> Array[Dictionary]:
+	return tactical_hand
+
+func is_critical_armed_active() -> bool:
+	return is_critical_armed
+
+func is_stun_armed_active() -> bool:
+	return is_stun_armed
+
+func get_stochas_stun_charges() -> int:
+	return stochas_stun_charges
+
+func get_question_timer() -> float:
+	return question_timer_seconds
+
 func select_card(idx: int) -> void:
-	if combat_resolving or idx < 0 or idx >= cards_data.size():
+	if combat_resolving or is_draw_open or idx < 0 or idx >= cards_data.size():
 		return
+
+	if idx == 3:
+		# Probability Card Interaction
+		if probability_meter >= PROBABILITY_METER_MAX:
+			set_probability_meter(0)
+			open_probability_draw()
+		else:
+			_spawn_floating_feedback(Vector2(690, 460), "XÁC SUẤT %d/3" % probability_meter, COLOR_ACCENT_PURPLE)
+		return
+
 	selected_card_idx = idx
 	hovered_card_idx = idx
 	_update_card_selection()
 	_update_hover_detail(selected_card_idx)
 	_update_cta_button_text()
-	if cards_data[idx]["disabled"]:
-		_spawn_floating_feedback(Vector2(690, 460), "CHƯA KÍCH HOẠT", COLOR_ACCENT_PURPLE)
 
 func cycle_question() -> void:
-	if combat_resolving:
+	if combat_resolving or is_draw_open:
 		return
 	current_question_idx = (current_question_idx + 1) % questions_data.size()
 	selected_answer_idx = -1
 	has_selected_answer = false
 	hint_shown = false
+	question_timer_seconds = 45.0
+	for btn in answer_buttons:
+		btn.disabled = false
 	_update_question_view()
-	_spawn_floating_feedback(Vector2(690, 125), "CÂU HỎI MỚI", COLOR_ACCENT_CYAN)
 
 func cycle_answer() -> void:
-	if combat_resolving:
+	if combat_resolving or is_draw_open:
 		return
-	if not has_selected_answer:
-		selected_answer_idx = 0
-		has_selected_answer = true
-	else:
-		selected_answer_idx = (selected_answer_idx + 1) % 4
-	_update_answer_selection()
+	var next_idx: int = (selected_answer_idx + 1) % 4
+	while answer_buttons[next_idx].disabled and next_idx != selected_answer_idx:
+		next_idx = (next_idx + 1) % 4
+	select_answer(next_idx)
 
 func select_answer(idx: int) -> void:
-	if combat_resolving or idx < 0 or idx >= 4:
+	if combat_resolving or is_draw_open or idx < 0 or idx >= 4:
+		return
+	if answer_buttons.size() > idx and answer_buttons[idx].disabled:
 		return
 	selected_answer_idx = idx
 	has_selected_answer = true
 	_update_answer_selection()
 
 func reset_lab() -> void:
+	current_karl_hp = 100
+	max_karl_hp = 100
+	current_shield = 0
+	current_boss_hp = 250
+	max_boss_hp = 250
+	combat_resolving = false
+	is_boss_enraged = false
+	is_critical_armed = false
+	is_stun_armed = false
+	stochas_stun_charges = 0
+	probability_meter = 0
+	consecutive_no_rare_draws = 0
+	tactical_hand.clear()
+	question_timer_seconds = 45.0
+	current_question_idx = 0
 	selected_card_idx = 0
 	hovered_card_idx = 0
 	selected_answer_idx = -1
 	has_selected_answer = false
-	current_question_idx = 0
 	hint_shown = false
-	is_boss_enraged = false
-	current_karl_hp = 100
-	current_shield = 0
-	combat_resolving = false
-	if question_fade_tween != null and question_fade_tween.is_valid():
-		question_fade_tween.kill()
-		question_fade_tween = null
-	if question_panel != null:
-		question_panel.modulate.a = 1.0
-	_set_question_input_enabled(true)
+
+	if is_draw_open:
+		close_probability_draw()
+	if replace_modal != null:
+		replace_modal.visible = false
+
+	for btn in answer_buttons:
+		btn.disabled = false
+
+	_update_probability_card_ui()
+	_update_tactical_hand_ui()
+	_update_strike_card_stat()
 	_update_shield_hud()
+	_update_boss_hud()
 	_update_persistent_shield_visual()
-	_apply_enraged_visuals()
+	_update_card_selection()
+	_update_hover_detail(selected_card_idx)
+	_update_question_view()
 	trigger_idle_state()
 	trigger_boss_idle()
-	_update_card_selection()
-	_update_hover_detail(0)
-	_update_question_view()
-	_spawn_floating_feedback(Vector2(690, 460), "ĐÃ RESET LAB", COLOR_ACCENT_GOLD)
+	restore_question_after_combat()
 
 func set_shield(new_val: int) -> void:
 	var old_val: int = current_shield
-	var clamped_val: int = max(0, new_val)
+	var clamped_val: int = clamp(new_val, 0, 24)
+
 	if old_val > 0 and clamped_val <= 0:
 		break_shield()
 	else:
@@ -543,6 +694,7 @@ func trigger_idle_state() -> void:
 		karl_state_tween.kill()
 	set_karl_state(KarlState.IDLE)
 
+# Karl Cast & Projectile (WAD2 karl_arcane_projectile.png)
 func trigger_cast_effect() -> void:
 	if combat_resolving:
 		return
@@ -553,15 +705,37 @@ func trigger_cast_effect() -> void:
 		karl_state_tween.kill()
 	set_karl_state(KarlState.CAST)
 
-	# Light cyan magic pulse near casting hand (Karl faces right, hand around (218, 105))
 	_spawn_cast_hand_spark()
+	_fire_karl_arcane_projectile()
 
-	# STOCHAS receives hit animation with recoil, red flash, and floating -10 HP
-	trigger_boss_hit()
+func _fire_karl_arcane_projectile() -> void:
+	var proj: TextureRect = TextureRect.new()
+	proj.name = "KarlArcaneProjectile"
+	if ResourceLoader.exists(ASSET_VFX_KARL_PROJECTILE):
+		proj.texture = load(ASSET_VFX_KARL_PROJECTILE)
+	proj.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	proj.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	proj.size = Vector2(120, 46)
+	proj.position = Vector2(KARL_ENTITY_LEFT + 218.0, 350.0 + 105.0 - 23.0) # (268, 432)
+	floating_status_container.add_child(proj)
 
-	# Auto-return to IDLE after 0.9s and restore question
+	var target_pos: Vector2 = Vector2(BOSS_BASE_POS.x + 150.0, BOSS_BASE_POS.y + 220.0) # (950, 350)
+	var travel_tw: Tween = create_tween()
+	travel_tw.tween_property(proj, "position", target_pos, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	travel_tw.tween_callback(func():
+		proj.queue_free()
+		_spawn_impact_particles(target_pos + Vector2(20, 20))
+		var strike_damage: int = 15 if is_critical_armed else 10
+		if is_critical_armed:
+			is_critical_armed = false
+			_update_strike_card_stat()
+			emit_signal("critical_triggered", 15)
+		trigger_boss_hit(strike_damage)
+	)
+
+	# Recovery timer after impact
 	karl_state_tween = create_tween()
-	karl_state_tween.tween_interval(0.9)
+	karl_state_tween.tween_interval(0.45 + 0.45) # 0.45s travel + 0.45s hit recovery
 	karl_state_tween.tween_callback(func():
 		set_karl_state(KarlState.IDLE)
 		combat_resolving = false
@@ -583,13 +757,9 @@ func trigger_shield_effect() -> void:
 	_update_shield_hud()
 	_update_persistent_shield_visual()
 
-	# Floating +8 GIÁP above Karl
 	_spawn_floating_feedback(Vector2(200, 330), "+8 GIÁP", COLOR_ACCENT_CYAN)
-
-	# Cyan/blue arcane barrier pulse around Karl
 	_spawn_barrier_pulse()
 
-	# Auto-return to IDLE after 1.1s (persistent barrier remains while current_shield > 0)
 	karl_state_tween = create_tween()
 	karl_state_tween.tween_interval(1.1)
 	karl_state_tween.tween_callback(func():
@@ -611,13 +781,9 @@ func trigger_heal_effect() -> void:
 	current_karl_hp = min(max_karl_hp, current_karl_hp + 15)
 	_update_shield_hud()
 
-	# Floating +15 HP above Karl
 	_spawn_floating_feedback(Vector2(200, 330), "+15 HP", COLOR_ACCENT_GREEN)
-
-	# Green/emerald aura pulse around Karl
 	_spawn_emerald_pulse()
 
-	# Auto-return to IDLE after 1.2s
 	karl_state_tween = create_tween()
 	karl_state_tween.tween_interval(1.2)
 	karl_state_tween.tween_callback(func():
@@ -686,6 +852,34 @@ func _spawn_cast_hand_spark() -> void:
 	tw.tween_property(spark, "modulate:a", 0.0, 0.5)
 	tw.chain().tween_callback(spark.queue_free)
 
+func _spawn_impact_particles(pos: Vector2) -> void:
+	if floating_status_container == null:
+		return
+	var spark: Panel = Panel.new()
+	spark.position = pos - Vector2(16, 16)
+	spark.size = Vector2(32, 32)
+	spark.pivot_offset = Vector2(16, 16)
+	var sbox: StyleBoxFlat = StyleBoxFlat.new()
+	sbox.bg_color = Color(0.9, 0.95, 1.0, 0.9)
+	sbox.border_width_left = 2
+	sbox.border_width_top = 2
+	sbox.border_width_right = 2
+	sbox.border_width_bottom = 2
+	sbox.border_color = Color(0.4, 0.8, 1.0, 1.0)
+	sbox.corner_radius_top_left = 16
+	sbox.corner_radius_top_right = 16
+	sbox.corner_radius_bottom_right = 16
+	sbox.corner_radius_bottom_left = 16
+	sbox.shadow_color = Color(0.2, 0.7, 1.0, 0.8)
+	sbox.shadow_size = 14
+	spark.add_theme_stylebox_override("panel", sbox)
+	floating_status_container.add_child(spark)
+
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(spark, "scale", Vector2(2.0, 2.0), 0.35)
+	tw.tween_property(spark, "modulate:a", 0.0, 0.35)
+	tw.chain().tween_callback(spark.queue_free)
+
 func _spawn_barrier_pulse() -> void:
 	if karl_vfx_container == null:
 		return
@@ -749,38 +943,31 @@ func _spawn_emerald_pulse() -> void:
 func _spawn_hit_pulse() -> void:
 	if karl_sprite_rect == null:
 		return
-	karl_sprite_rect.modulate = Color(2.0, 0.4, 0.4, 1.0)
 	var tw: Tween = create_tween()
-	tw.tween_property(karl_sprite_rect, "position:x", -8.0, 0.06)
-	tw.tween_property(karl_sprite_rect, "position:x", 6.0, 0.06)
-	tw.tween_property(karl_sprite_rect, "position:x", -3.0, 0.06)
-	tw.tween_property(karl_sprite_rect, "position:x", 0.0, 0.06)
-	tw.parallel().tween_property(karl_sprite_rect, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.55)
+	tw.tween_property(karl_sprite_rect, "modulate", Color(2.0, 0.4, 0.4, 1.0), 0.08)
+	tw.tween_property(karl_sprite_rect, "modulate", Color.WHITE, 0.15)
 
 func _build_persistent_barrier() -> void:
-	if karl_vfx_container == null:
-		return
 	karl_persistent_barrier = Panel.new()
 	karl_persistent_barrier.name = "KarlPersistentBarrier"
-	karl_persistent_barrier.position = Vector2(15, 15)
-	karl_persistent_barrier.size = Vector2(270, 270)
-	karl_persistent_barrier.pivot_offset = Vector2(135, 135)
-	karl_persistent_barrier.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	karl_persistent_barrier.position = Vector2(8, 8)
+	karl_persistent_barrier.size = Vector2(284, 284)
+	karl_persistent_barrier.pivot_offset = Vector2(142, 142)
 	karl_persistent_barrier.visible = false
 
 	var b_box: StyleBoxFlat = StyleBoxFlat.new()
-	b_box.bg_color = Color(0.08, 0.40, 0.70, 0.14)
-	b_box.border_width_left = 2
-	b_box.border_width_top = 2
-	b_box.border_width_right = 2
-	b_box.border_width_bottom = 2
-	b_box.border_color = Color(0.30, 0.85, 1.0, 0.70)
-	b_box.corner_radius_top_left = 135
-	b_box.corner_radius_top_right = 135
-	b_box.corner_radius_bottom_right = 135
-	b_box.corner_radius_bottom_left = 135
-	b_box.shadow_color = Color(0.20, 0.80, 1.0, 0.45)
-	b_box.shadow_size = 14
+	b_box.bg_color = Color(0.10, 0.40, 0.70, 0.18)
+	b_box.border_width_left = 3
+	b_box.border_width_top = 3
+	b_box.border_width_right = 3
+	b_box.border_width_bottom = 3
+	b_box.border_color = Color(0.35, 0.90, 1.0, 0.90)
+	b_box.corner_radius_top_left = 142
+	b_box.corner_radius_top_right = 142
+	b_box.corner_radius_bottom_right = 142
+	b_box.corner_radius_bottom_left = 142
+	b_box.shadow_color = Color(0.20, 0.85, 1.0, 0.60)
+	b_box.shadow_size = 18
 	karl_persistent_barrier.add_theme_stylebox_override("panel", b_box)
 	karl_vfx_container.add_child(karl_persistent_barrier)
 
@@ -795,7 +982,7 @@ func fade_question_for_combat() -> void:
 	if question_fade_tween != null and question_fade_tween.is_valid():
 		question_fade_tween.kill()
 	question_fade_tween = create_tween()
-	question_fade_tween.tween_property(question_panel, "modulate:a", QUESTION_COMBAT_ALPHA, QUESTION_FADE_OUT_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	question_fade_tween.tween_property(question_panel, "modulate:a", QUESTION_COMBAT_ALPHA, QUESTION_FADE_OUT_DURATION)
 
 func restore_question_after_combat() -> void:
 	if question_panel == null:
@@ -803,7 +990,7 @@ func restore_question_after_combat() -> void:
 	if question_fade_tween != null and question_fade_tween.is_valid():
 		question_fade_tween.kill()
 	question_fade_tween = create_tween()
-	question_fade_tween.tween_property(question_panel, "modulate:a", 1.0, QUESTION_FADE_IN_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	question_fade_tween.tween_property(question_panel, "modulate:a", 1.0, QUESTION_FADE_IN_DURATION)
 	question_fade_tween.tween_callback(func():
 		_set_question_input_enabled(true)
 	)
@@ -811,7 +998,7 @@ func restore_question_after_combat() -> void:
 func _set_question_input_enabled(enabled: bool) -> void:
 	for btn in answer_buttons:
 		if btn != null:
-			btn.disabled = not enabled
+			btn.mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
 	if hint_button != null:
 		hint_button.disabled = not enabled
 	if cta_button != null:
@@ -824,128 +1011,107 @@ func _update_persistent_shield_visual() -> void:
 		karl_persistent_barrier.visible = true
 		if karl_persistent_barrier_tween == null or not karl_persistent_barrier_tween.is_valid():
 			karl_persistent_barrier_tween = create_tween().set_loops()
-			karl_persistent_barrier_tween.tween_property(karl_persistent_barrier, "scale", Vector2(1.04, 1.04), 1.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-			karl_persistent_barrier_tween.parallel().tween_property(karl_persistent_barrier, "modulate:a", 1.0, 1.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-			karl_persistent_barrier_tween.tween_property(karl_persistent_barrier, "scale", Vector2(1.00, 1.00), 1.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-			karl_persistent_barrier_tween.parallel().tween_property(karl_persistent_barrier, "modulate:a", 0.65, 1.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			karl_persistent_barrier_tween.tween_property(karl_persistent_barrier, "scale", Vector2(1.03, 1.03), 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			karl_persistent_barrier_tween.parallel().tween_property(karl_persistent_barrier, "modulate:a", 0.95, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			karl_persistent_barrier_tween.tween_property(karl_persistent_barrier, "scale", Vector2(0.98, 0.98), 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			karl_persistent_barrier_tween.parallel().tween_property(karl_persistent_barrier, "modulate:a", 0.70, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	else:
 		if karl_persistent_barrier_tween != null and karl_persistent_barrier_tween.is_valid():
 			karl_persistent_barrier_tween.kill()
 			karl_persistent_barrier_tween = null
 		karl_persistent_barrier.visible = false
-		karl_persistent_barrier.scale = Vector2.ONE
-		karl_persistent_barrier.modulate.a = 1.0
 
 func _trigger_shield_break_vfx() -> void:
-	if karl_persistent_barrier == null:
-		return
+	if karl_persistent_barrier != null and karl_persistent_barrier.visible:
+		if karl_persistent_barrier_tween != null and karl_persistent_barrier_tween.is_valid():
+			karl_persistent_barrier_tween.kill()
+			karl_persistent_barrier_tween = null
 
-	if karl_persistent_barrier_tween != null and karl_persistent_barrier_tween.is_valid():
-		karl_persistent_barrier_tween.kill()
-		karl_persistent_barrier_tween = null
+		var flash_tw: Tween = create_tween()
+		flash_tw.tween_property(karl_persistent_barrier, "scale", Vector2(1.12, 1.12), 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		flash_tw.parallel().tween_property(karl_persistent_barrier, "modulate", Color(2.5, 2.5, 3.0, 1.0), 0.12)
+		flash_tw.tween_property(karl_persistent_barrier, "modulate:a", 0.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		flash_tw.tween_callback(func():
+			karl_persistent_barrier.visible = false
+			karl_persistent_barrier.scale = Vector2.ONE
+			karl_persistent_barrier.modulate = Color.WHITE
+		)
 
-	_spawn_floating_feedback(Vector2(200, 330), "VỠ KHIÊN!", COLOR_ACCENT_GOLD)
-
-	var break_tw: Tween = create_tween()
-
-	# Phase 1 (0.12s): Bright white/cyan flash & scale expansion
-	break_tw.tween_property(karl_persistent_barrier, "scale", Vector2(1.08, 1.08), 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	break_tw.parallel().tween_property(karl_persistent_barrier, "modulate", Color(2.5, 2.5, 3.0, 1.0), 0.12)
-
-	# Phase 2 (0.24s): Distortion contraction + fragment burst + shockwave
-	break_tw.tween_callback(func():
-		_spawn_shield_break_shards()
-		_spawn_shockwave_ring()
-	)
-	break_tw.tween_property(karl_persistent_barrier, "scale", Vector2(0.82, 0.82), 0.24).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	break_tw.parallel().tween_property(karl_persistent_barrier, "modulate", Color(0.40, 0.85, 1.0, 0.80), 0.24)
-
-	# Phase 3 (0.24s): Complete fade out
-	break_tw.tween_property(karl_persistent_barrier, "modulate:a", 0.0, 0.24).set_ease(Tween.EASE_OUT)
-
-	# Clean up on finish (0.60s total)
-	break_tw.tween_callback(func():
-		karl_persistent_barrier.visible = false
-		karl_persistent_barrier.scale = Vector2.ONE
-		karl_persistent_barrier.modulate = Color.WHITE
-	)
+	_spawn_shield_break_shards()
+	_spawn_shockwave_ring()
+	_spawn_floating_feedback(Vector2(200, 270), "VỠ GIÁP!", COLOR_ACCENT_RED)
 
 func _spawn_shield_break_shards() -> void:
 	if karl_vfx_container == null:
 		return
-	var center_pos: Vector2 = Vector2(150, 150)
-	var shard_count: int = 8
+	var center: Vector2 = Vector2(150, 150)
+	var shard_count: int = 12
 
 	for i in range(shard_count):
-		var angle: float = (i / float(shard_count)) * TAU + randf_range(-0.2, 0.2)
-		var dir: Vector2 = Vector2(cos(angle), sin(angle))
-		var dist: float = randf_range(70.0, 110.0)
-
 		var shard: Panel = Panel.new()
-		shard.position = center_pos + dir * 20.0
-		shard.size = Vector2(randf_range(8, 14), randf_range(8, 14))
+		var angle: float = (float(i) / float(shard_count)) * TAU + randf_range(-0.15, 0.15)
+		var shard_w: float = randf_range(14.0, 24.0)
+		var shard_h: float = randf_range(8.0, 14.0)
+		shard.size = Vector2(shard_w, shard_h)
+		shard.position = center - (shard.size * 0.5)
 		shard.pivot_offset = shard.size * 0.5
-		shard.rotation_degrees = randf_range(0.0, 360.0)
-		shard.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		shard.rotation = angle
 
 		var s_box: StyleBoxFlat = StyleBoxFlat.new()
-		s_box.bg_color = Color(0.60, 0.90, 1.0, 0.90)
+		s_box.bg_color = Color(0.40, 0.85, 1.0, 0.90)
 		s_box.border_width_left = 1
 		s_box.border_width_top = 1
 		s_box.border_width_right = 1
 		s_box.border_width_bottom = 1
-		s_box.border_color = Color(1.0, 1.0, 1.0, 0.95)
-		s_box.corner_radius_top_left = 2
-		s_box.corner_radius_top_right = 2
-		s_box.corner_radius_bottom_right = 2
-		s_box.corner_radius_bottom_left = 2
-		s_box.shadow_color = Color(0.30, 0.85, 1.0, 0.60)
-		s_box.shadow_size = 6
+		s_box.border_color = Color(1.0, 1.0, 1.0, 1.0)
+		s_box.corner_radius_top_left = 3
+		s_box.corner_radius_bottom_right = 3
+		s_box.shadow_color = Color(0.30, 0.90, 1.0, 0.80)
+		s_box.shadow_size = 8
 		shard.add_theme_stylebox_override("panel", s_box)
 		karl_vfx_container.add_child(shard)
 
-		var target_pos: Vector2 = center_pos + dir * dist
-		var tw: Tween = create_tween().set_parallel(true)
-		tw.tween_property(shard, "position", target_pos, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		tw.tween_property(shard, "rotation_degrees", shard.rotation_degrees + randf_range(-180.0, 180.0), 0.45)
-		tw.tween_property(shard, "scale", Vector2(0.2, 0.2), 0.45).set_ease(Tween.EASE_IN)
-		tw.tween_property(shard, "modulate:a", 0.0, 0.45).set_ease(Tween.EASE_IN)
+		var distance: float = randf_range(120.0, 180.0)
+		var target_pos: Vector2 = shard.position + Vector2(cos(angle), sin(angle)) * distance
+		var target_rot: float = shard.rotation + randf_range(-3.0, 3.0)
+
+		var tw: Tween = create_tween()
+		tw.set_parallel(true)
+		tw.tween_property(shard, "position", target_pos, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.tween_property(shard, "rotation", target_rot, 0.55)
+		tw.tween_property(shard, "scale", Vector2(0.3, 0.3), 0.55).set_ease(Tween.EASE_IN)
+		tw.tween_property(shard, "modulate:a", 0.0, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		tw.chain().tween_callback(shard.queue_free)
 
 func _spawn_shockwave_ring() -> void:
 	if karl_vfx_container == null:
 		return
 	var ring: Panel = Panel.new()
-	ring.position = Vector2(15, 15)
-	ring.size = Vector2(270, 270)
-	ring.pivot_offset = Vector2(135, 135)
-	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
+	ring.position = Vector2(30, 30)
+	ring.size = Vector2(240, 240)
+	ring.pivot_offset = Vector2(120, 120)
 	var r_box: StyleBoxFlat = StyleBoxFlat.new()
-	r_box.bg_color = Color.TRANSPARENT
-	r_box.border_width_left = 3
-	r_box.border_width_top = 3
-	r_box.border_width_right = 3
-	r_box.border_width_bottom = 3
+	r_box.bg_color = Color(0.30, 0.80, 1.0, 0.0)
+	r_box.border_width_left = 4
+	r_box.border_width_top = 4
+	r_box.border_width_right = 4
+	r_box.border_width_bottom = 4
 	r_box.border_color = Color(0.70, 0.95, 1.0, 0.95)
-	r_box.corner_radius_top_left = 135
-	r_box.corner_radius_top_right = 135
-	r_box.corner_radius_bottom_right = 135
-	r_box.corner_radius_bottom_left = 135
-	r_box.shadow_color = Color(0.40, 0.90, 1.0, 0.70)
-	r_box.shadow_size = 12
+	r_box.corner_radius_top_left = 120
+	r_box.corner_radius_top_right = 120
+	r_box.corner_radius_bottom_right = 120
+	r_box.corner_radius_bottom_left = 120
+	r_box.shadow_color = Color(0.40, 0.90, 1.0, 0.85)
+	r_box.shadow_size = 20
 	ring.add_theme_stylebox_override("panel", r_box)
 	karl_vfx_container.add_child(ring)
 
-	ring.scale = Vector2(0.85, 0.85)
-	var tw: Tween = create_tween().set_parallel(true)
-	tw.tween_property(ring, "scale", Vector2(1.25, 1.25), 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(ring, "modulate:a", 0.0, 0.40).set_ease(Tween.EASE_IN)
+	ring.scale = Vector2(0.9, 0.9)
+	var tw: Tween = create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(ring, "scale", Vector2(1.35, 1.35), 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(ring, "modulate:a", 0.0, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tw.chain().tween_callback(ring.queue_free)
-
-# =========================================================================
-# STOCHAS BOSS STATE ANIMATIONS (Tween & Control VFX Architecture)
-# =========================================================================
 
 func _start_boss_idle_loop() -> void:
 	if boss_idle_tween != null and boss_idle_tween.is_valid():
@@ -966,14 +1132,12 @@ func _start_boss_idle_loop() -> void:
 	var breath_scale: Vector2 = BOSS_IDLE_BREATHING_SCALE if not is_boss_enraged else Vector2(1.012, 0.992)
 
 	boss_idle_tween = create_tween().set_loops()
-	# Float up & expand breathing
 	boss_idle_tween.tween_property(boss_rect, "position:y", BOSS_BASE_POS.y - float_y, half_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	boss_idle_tween.parallel().tween_property(boss_rect, "scale", breath_scale, half_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	if boss_aura_rect != null:
 		var aura_alpha: float = 0.85 if not is_boss_enraged else 1.0
 		boss_idle_tween.parallel().tween_property(boss_aura_rect, "modulate:a", aura_alpha, half_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
-	# Float down & relax breathing
 	boss_idle_tween.tween_property(boss_rect, "position:y", BOSS_BASE_POS.y, half_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	boss_idle_tween.parallel().tween_property(boss_rect, "scale", Vector2.ONE, half_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	if boss_aura_rect != null:
@@ -998,8 +1162,8 @@ func trigger_boss_idle() -> void:
 		boss_rect.modulate = Color.WHITE
 	_start_boss_idle_loop()
 
-func trigger_boss_cast() -> void:
-	# State priority check: STUN blocks casting
+# 4 Boss Spells Implementation (WAD2 Multi-Spells)
+func cast_boss_spell(spell: BossSpellType) -> void:
 	if current_boss_state == BossState.STUN:
 		return
 	if combat_resolving:
@@ -1009,58 +1173,179 @@ func trigger_boss_cast() -> void:
 
 	_pause_boss_idle()
 	current_boss_state = BossState.CAST
-
 	_spawn_boss_cast_spark()
 
+	# Anticipation
 	if boss_action_tween != null and boss_action_tween.is_valid():
 		boss_action_tween.kill()
-
 	boss_action_tween = create_tween()
+	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(14.0, -4.0), 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 1.5, 0.22)
+	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color(1.25, 1.10, 1.45, 1.0), 0.22)
 
-	# A. Anticipation (~0.30s): lean backward, staff aura intensifies
-	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(14.0, -4.0), 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 1.5, 0.30)
-	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color(1.25, 1.10, 1.45, 1.0), 0.30)
-	if boss_aura_rect != null:
-		boss_action_tween.parallel().tween_property(boss_aura_rect, "modulate:a", 1.0, 0.30)
+	match spell:
+		BossSpellType.ARCANE_BOLT:
+			boss_action_tween.tween_callback(_cast_stochas_arcane_bolt)
+		BossSpellType.PROBABILITY_ORB:
+			boss_action_tween.tween_callback(_cast_stochas_probability_orb)
+		BossSpellType.VOID_RIFT:
+			boss_action_tween.tween_callback(_cast_stochas_void_rift)
+		BossSpellType.ARCANE_SWEEP:
+			boss_action_tween.tween_callback(_cast_stochas_arcane_sweep)
 
-	# B. Attack release (~0.18s): forward lunge + scale impulse
-	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(-28.0, 2.0), 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	boss_action_tween.parallel().tween_property(boss_rect, "scale", Vector2(1.04, 1.04), 0.18)
-	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", -1.2, 0.18)
+func trigger_boss_cast() -> void:
+	cast_boss_spell(BossSpellType.ARCANE_BOLT)
 
-	# Fire arcane projectile & apply damage to Karl (Shield -> HP)
-	boss_action_tween.tween_callback(func():
-		_fire_boss_arcane_projectile()
+func trigger_boss_spell_arcane_bolt() -> void:
+	cast_boss_spell(BossSpellType.ARCANE_BOLT)
+
+func trigger_boss_spell_probability_orb() -> void:
+	cast_boss_spell(BossSpellType.PROBABILITY_ORB)
+
+func trigger_boss_spell_void_rift() -> void:
+	cast_boss_spell(BossSpellType.VOID_RIFT)
+
+func trigger_boss_spell_arcane_sweep() -> void:
+	cast_boss_spell(BossSpellType.ARCANE_SWEEP)
+
+func _cast_stochas_arcane_bolt() -> void:
+	var bolt: TextureRect = TextureRect.new()
+	bolt.name = "StochasArcaneBolt"
+	if ResourceLoader.exists(ASSET_VFX_STOCHAS_BOLT):
+		bolt.texture = load(ASSET_VFX_STOCHAS_BOLT)
+	bolt.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bolt.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	bolt.size = Vector2(136, 60)
+	bolt.position = BOSS_BASE_POS + Vector2(60, 160)
+	floating_status_container.add_child(bolt)
+
+	var target_pos: Vector2 = Vector2(KARL_ENTITY_LEFT + 150, 450)
+	var tw: Tween = create_tween()
+	tw.tween_property(bolt, "position", target_pos, 0.50).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_callback(func():
+		bolt.queue_free()
 		apply_damage_to_karl(10)
 	)
 
-	# Hold impact (0.12s)
-	boss_action_tween.tween_interval(0.12)
-
-	# C. Return smoothly to base position (~0.30s)
-	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS, 0.30).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	boss_action_tween.parallel().tween_property(boss_rect, "scale", Vector2.ONE, 0.30)
-	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 0.0, 0.30)
-	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color.WHITE, 0.30)
-	if boss_aura_rect != null:
-		var end_alpha: float = 0.50 if not is_boss_enraged else 0.70
-		boss_action_tween.parallel().tween_property(boss_aura_rect, "modulate:a", end_alpha, 0.30)
-
-	# Wait for Karl hit / shield break to finish before restoring question
-	boss_action_tween.tween_interval(0.35)
-
-	# Resume IDLE and restore Question
-	boss_action_tween.tween_callback(func():
+	var recovery_tw: Tween = create_tween()
+	recovery_tw.tween_interval(0.50 + 0.35)
+	recovery_tw.tween_callback(func():
+		if boss_rect != null:
+			boss_rect.position = BOSS_BASE_POS
+			boss_rect.rotation_degrees = 0.0
+			boss_rect.modulate = Color.WHITE
 		_start_boss_idle_loop()
 		combat_resolving = false
 		restore_question_after_combat()
 	)
 
-func trigger_boss_hit() -> void:
-	# State priority check: If stunned, hit flashes without breaking stun
+func _cast_stochas_probability_orb() -> void:
+	var orb: TextureRect = TextureRect.new()
+	orb.name = "StochasProbabilityOrb"
+	if ResourceLoader.exists(ASSET_VFX_STOCHAS_ORB):
+		orb.texture = load(ASSET_VFX_STOCHAS_ORB)
+	orb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	orb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	orb.size = Vector2(80, 75)
+	orb.position = BOSS_BASE_POS + Vector2(50, 150)
+	orb.scale = Vector2(0.8, 0.8)
+	floating_status_container.add_child(orb)
+
+	var target_pos: Vector2 = Vector2(KARL_ENTITY_LEFT + 150, 450)
+	var tw: Tween = create_tween()
+	tw.tween_property(orb, "scale", Vector2(1.2, 1.2), 0.35).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(orb, "position", target_pos, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(orb, "scale", Vector2(1.0, 1.0), 0.55)
+	tw.tween_callback(func():
+		orb.queue_free()
+		apply_damage_to_karl(10)
+	)
+
+	var recovery_tw: Tween = create_tween()
+	recovery_tw.tween_interval(0.35 + 0.55 + 0.30)
+	recovery_tw.tween_callback(func():
+		if boss_rect != null:
+			boss_rect.position = BOSS_BASE_POS
+			boss_rect.rotation_degrees = 0.0
+			boss_rect.modulate = Color.WHITE
+		_start_boss_idle_loop()
+		combat_resolving = false
+		restore_question_after_combat()
+	)
+
+func _cast_stochas_void_rift() -> void:
+	var rift: TextureRect = TextureRect.new()
+	rift.name = "StochasVoidRift"
+	if ResourceLoader.exists(ASSET_VFX_STOCHAS_RIFT):
+		rift.texture = load(ASSET_VFX_STOCHAS_RIFT)
+	rift.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rift.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	rift.size = Vector2(95, 110)
+	var rift_pos: Vector2 = Vector2(KARL_ENTITY_LEFT + 180, 450)
+	rift.position = rift_pos
+	rift.pivot_offset = Vector2(47.5, 55)
+	rift.scale = Vector2(0.2, 0.2)
+	rift.modulate.a = 0.0
+	floating_status_container.add_child(rift)
+
+	var tw: Tween = create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(rift, "scale", Vector2(1.2, 1.2), 0.60).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(rift, "modulate:a", 1.0, 0.60)
+	tw.chain().tween_callback(func():
+		apply_damage_to_karl(10)
+	)
+	tw.tween_property(rift, "scale", Vector2(0.1, 0.1), 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(rift, "modulate:a", 0.0, 0.30)
+	tw.tween_callback(rift.queue_free)
+
+	var recovery_tw: Tween = create_tween()
+	recovery_tw.tween_interval(0.60 + 0.30 + 0.30)
+	recovery_tw.tween_callback(func():
+		if boss_rect != null:
+			boss_rect.position = BOSS_BASE_POS
+			boss_rect.rotation_degrees = 0.0
+			boss_rect.modulate = Color.WHITE
+		_start_boss_idle_loop()
+		combat_resolving = false
+		restore_question_after_combat()
+	)
+
+func _cast_stochas_arcane_sweep() -> void:
+	var sweep: TextureRect = TextureRect.new()
+	sweep.name = "StochasArcaneSweep"
+	if ResourceLoader.exists(ASSET_VFX_STOCHAS_SWEEP):
+		sweep.texture = load(ASSET_VFX_STOCHAS_SWEEP)
+	sweep.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sweep.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sweep.size = Vector2(160, 118)
+	sweep.position = Vector2(820, 380)
+	floating_status_container.add_child(sweep)
+
+	var target_pos: Vector2 = Vector2(KARL_ENTITY_LEFT + 40, 380)
+	var tw: Tween = create_tween()
+	tw.tween_property(sweep, "position", target_pos, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_callback(func():
+		apply_damage_to_karl(10)
+	)
+	tw.tween_property(sweep, "modulate:a", 0.0, 0.20)
+	tw.tween_callback(sweep.queue_free)
+
+	var recovery_tw: Tween = create_tween()
+	recovery_tw.tween_interval(0.65 + 0.20 + 0.25)
+	recovery_tw.tween_callback(func():
+		if boss_rect != null:
+			boss_rect.position = BOSS_BASE_POS
+			boss_rect.rotation_degrees = 0.0
+			boss_rect.modulate = Color.WHITE
+		_start_boss_idle_loop()
+		combat_resolving = false
+		restore_question_after_combat()
+	)
+
+func trigger_boss_hit(damage: int = 10) -> void:
 	if current_boss_state == BossState.STUN:
-		_flash_stunned_hit()
+		_flash_stunned_hit(damage)
 		return
 
 	_pause_boss_idle()
@@ -1069,85 +1354,69 @@ func trigger_boss_hit() -> void:
 	if boss_action_tween != null and boss_action_tween.is_valid():
 		boss_action_tween.kill()
 
-	# Instant red/white flash on impact
 	if boss_rect != null:
 		boss_rect.modulate = Color(2.2, 0.6, 0.6, 1.0)
 
 	boss_action_tween = create_tween()
 
-	_spawn_floating_feedback(Vector2(1040, 240), "-10 HP", COLOR_ACCENT_RED)
+	var feedback_text: String = "-%d HP (CRITICAL)" % damage if damage > 10 else "-%d HP" % damage
+	_spawn_floating_feedback(Vector2(1040, 240), feedback_text, COLOR_ACCENT_RED)
 
-	# Phase 1: Rapid recoil backward + flash (0.08s)
+	current_boss_hp = max(0, current_boss_hp - damage)
+	_update_boss_hud()
+
 	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(16.0, -2.0), 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", -1.5, 0.08)
 	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color(2.2, 0.6, 0.6, 1.0), 0.08)
 
-	# Phase 2: Settle back (0.12s)
 	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(6.0, 0.0), 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 0.5, 0.12)
 	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color(1.3, 0.9, 0.9, 1.0), 0.12)
 
-	# Phase 3: Smooth return to base (0.22s)
 	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS, 0.22).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 0.0, 0.22)
 	boss_action_tween.parallel().tween_property(boss_rect, "scale", Vector2.ONE, 0.22)
 	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color.WHITE, 0.22)
 
-	# Resume IDLE
 	boss_action_tween.tween_callback(_start_boss_idle_loop)
 
-func _flash_stunned_hit() -> void:
-	_spawn_floating_feedback(Vector2(1040, 240), "-10 HP", COLOR_ACCENT_RED)
+func _flash_stunned_hit(damage: int = 10) -> void:
+	var feedback_text: String = "-%d HP (CRITICAL)" % damage if damage > 10 else "-%d HP" % damage
+	_spawn_floating_feedback(Vector2(1040, 240), feedback_text, COLOR_ACCENT_RED)
+	current_boss_hp = max(0, current_boss_hp - damage)
+	_update_boss_hud()
 	if boss_rect != null:
-		boss_rect.modulate = Color(2.0, 0.5, 0.5, 1.0)
 		var tw: Tween = create_tween()
-		tw.tween_property(boss_rect, "modulate", Color(0.65, 0.70, 0.85, 0.90), 0.25)
+		tw.tween_property(boss_rect, "modulate", Color(2.0, 0.6, 0.6, 1.0), 0.08)
+		tw.tween_property(boss_rect, "modulate", Color.WHITE, 0.15)
 
 func trigger_boss_stun() -> void:
-	if combat_resolving:
-		return
-	combat_resolving = true
-	fade_question_for_combat()
-
 	_pause_boss_idle()
 	current_boss_state = BossState.STUN
 
 	if boss_action_tween != null and boss_action_tween.is_valid():
 		boss_action_tween.kill()
 
-	_spawn_floating_feedback(Vector2(1040, 160), "CHOÁNG!", COLOR_ACCENT_GOLD)
-
 	if boss_stun_overlay != null:
 		boss_stun_overlay.visible = true
-		boss_stun_overlay.modulate.a = 0.0
+		boss_stun_overlay.modulate.a = 1.0
 
-	boss_action_tween = create_tween()
+	if boss_rect != null:
+		boss_rect.modulate = Color(0.70, 0.75, 1.2, 0.85)
 
-	# Stagger backward and slump (0.20s)
-	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(10.0, 6.0), 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 1.2, 0.20)
-	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color(0.65, 0.70, 0.85, 0.90), 0.20)
-	if boss_stun_overlay != null:
-		boss_action_tween.parallel().tween_property(boss_stun_overlay, "modulate:a", 1.0, 0.20)
+	boss_action_tween = create_tween().set_loops(2)
+	boss_action_tween.tween_property(boss_rect, "rotation_degrees", -2.5, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	boss_action_tween.tween_property(boss_rect, "rotation_degrees", 2.5, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
-	# Stun dizzy sway (3 half-waves = 0.90s)
-	boss_action_tween.tween_property(boss_rect, "rotation_degrees", -1.2, 0.30).set_trans(Tween.TRANS_SINE)
-	boss_action_tween.tween_property(boss_rect, "rotation_degrees", 1.2, 0.30).set_trans(Tween.TRANS_SINE)
-	boss_action_tween.tween_property(boss_rect, "rotation_degrees", -0.5, 0.30).set_trans(Tween.TRANS_SINE)
-
-	# Recovery (~0.30s)
-	if boss_stun_overlay != null:
-		boss_action_tween.parallel().tween_property(boss_stun_overlay, "modulate:a", 0.0, 0.30)
-	boss_action_tween.parallel().tween_property(boss_rect, "position", BOSS_BASE_POS, 0.30).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 0.0, 0.30)
-	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color.WHITE, 0.30)
-
-	boss_action_tween.tween_callback(func():
+	var finish_tw: Tween = create_tween()
+	finish_tw.tween_interval(1.8)
+	finish_tw.tween_callback(func():
 		if boss_stun_overlay != null:
 			boss_stun_overlay.visible = false
+		if boss_rect != null:
+			boss_rect.rotation_degrees = 0.0
+			boss_rect.modulate = Color.WHITE
 		_start_boss_idle_loop()
-		combat_resolving = false
-		restore_question_after_combat()
 	)
 
 func toggle_boss_enraged() -> void:
@@ -1208,30 +1477,6 @@ func _spawn_boss_cast_spark() -> void:
 	tw.tween_property(spark, "modulate:a", 0.0, 0.45)
 	tw.chain().tween_callback(spark.queue_free)
 
-func _fire_boss_arcane_projectile() -> void:
-	if floating_status_container == null:
-		return
-	var bolt: Panel = Panel.new()
-	bolt.position = BOSS_BASE_POS + Vector2(85, 175)
-	bolt.size = Vector2(24, 16)
-	bolt.pivot_offset = Vector2(12, 8)
-	var bbox: StyleBoxFlat = StyleBoxFlat.new()
-	bbox.bg_color = Color(0.80, 0.20, 0.95, 0.90)
-	bbox.corner_radius_top_left = 8
-	bbox.corner_radius_top_right = 8
-	bbox.corner_radius_bottom_right = 8
-	bbox.corner_radius_bottom_left = 8
-	bbox.shadow_color = Color(0.85, 0.25, 1.0, 0.80)
-	bbox.shadow_size = 12
-	bolt.add_theme_stylebox_override("panel", bbox)
-	floating_status_container.add_child(bolt)
-
-	var target_pos: Vector2 = Vector2(KARL_ENTITY_LEFT + 200, 450)
-	var tw: Tween = create_tween().set_parallel(true)
-	tw.tween_property(bolt, "position", target_pos, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.tween_property(bolt, "scale", Vector2(1.6, 0.8), 0.22)
-	tw.chain().tween_callback(bolt.queue_free)
-
 func _build_boss_stun_overlay() -> void:
 	boss_stun_overlay = Control.new()
 	boss_stun_overlay.name = "BossStunOverlay"
@@ -1252,221 +1497,128 @@ func _build_boss_stun_overlay() -> void:
 		boss_stun_overlay.add_child(star)
 
 func _build_scene() -> void:
-	# 1. Background (1:1 Native framing, 1280x720)
 	_build_background()
-
-	# 2. STOCHAS Battlefield Entity (Right 0px, Bottom 70px)
 	_build_boss_render()
-
-	# 3. Karl Battlefield Entity (Left 50px, Bottom 70px, 300x300px)
 	_build_karl_battlefield_entity()
-
-	# 4. Top HUDs (Karl Top-Left, Stochas Top-Right)
 	_build_top_huds()
-
-	# 5. Question Module (Center X = 690px, Top = 155px, 660x270px)
 	_build_question_module()
-
-	# 6. Card Hover Detail Panel (Center X = 690px, above card row)
 	_build_card_hover_detail()
-
-	# 7. Card Row (Center X = 690px, Bottom = 20px, 104x158px each)
 	_build_card_row()
-
-	# 8. Settings Button (Bottom-Right: 24px right, 20px bottom)
+	_build_tactical_hand_tray()
 	_build_settings_button()
-
-	# 9. Floating Combat Feedback Container
 	_build_floating_status_container()
-
-	# 10. Debug Overlay
 	_build_debug_overlay()
+	_build_probability_draw_modal()
+	_build_replace_modal()
 
 func _build_background() -> void:
 	bg_rect = TextureRect.new()
 	bg_rect.name = "Background"
-	bg_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg_rect.offset_left = 0
-	bg_rect.offset_top = 0
-	bg_rect.offset_right = 0
-	bg_rect.offset_bottom = 0
+	bg_rect.position = Vector2.ZERO
+	bg_rect.size = Vector2(1280, 720)
+	bg_rect.custom_minimum_size = Vector2(1280, 720)
 	bg_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	if ResourceLoader.exists(ASSET_BG):
 		bg_rect.texture = load(ASSET_BG)
 	add_child(bg_rect)
 
-	# Atmospheric dark fantasy vignette overlay
-	var dark_overlay: ColorRect = ColorRect.new()
-	dark_overlay.name = "AtmosphereOverlay"
-	dark_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dark_overlay.offset_left = 0
-	dark_overlay.offset_top = 0
-	dark_overlay.offset_right = 0
-	dark_overlay.offset_bottom = 0
-	dark_overlay.color = Color(0.02, 0.04, 0.08, 0.32)
-	add_child(dark_overlay)
-
 func _build_boss_render() -> void:
-	# 1. Ground shadow beneath STOCHAS (grounds the boss naturally in the misty forest)
-	boss_ground_shadow = Panel.new()
-	boss_ground_shadow.name = "BossGroundShadow"
-	boss_ground_shadow.position = Vector2(880, 642)
-	boss_ground_shadow.size = Vector2(320, 26)
-	var bsbox: StyleBoxFlat = StyleBoxFlat.new()
-	bsbox.bg_color = Color(0.01, 0.02, 0.05, 0.60)
-	bsbox.corner_radius_top_left = 13
-	bsbox.corner_radius_top_right = 13
-	bsbox.corner_radius_bottom_right = 13
-	bsbox.corner_radius_bottom_left = 13
-	boss_ground_shadow.add_theme_stylebox_override("panel", bsbox)
-	add_child(boss_ground_shadow)
-
-	# 2. Boss Aura Behind Sprite (subtle arcane cyan/deep blue aura, turns crimson in enraged)
-	boss_aura_rect = Panel.new()
-	boss_aura_rect.name = "BossAura"
-	boss_aura_rect.position = BOSS_BASE_POS
-	boss_aura_rect.size = BOSS_BASE_SIZE
-	boss_aura_rect.pivot_offset = Vector2(BOSS_WIDTH * 0.5, BOSS_HEIGHT * 0.5)
-	boss_aura_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var abox: StyleBoxFlat = StyleBoxFlat.new()
-	abox.bg_color = Color(0.08, 0.35, 0.65, 0.18)
-	abox.corner_radius_top_left = 140
-	abox.corner_radius_top_right = 140
-	abox.corner_radius_bottom_right = 140
-	abox.corner_radius_bottom_left = 140
-	abox.shadow_color = Color(0.12, 0.60, 0.95, 0.45)
-	abox.shadow_size = 28
-	boss_aura_rect.add_theme_stylebox_override("panel", abox)
-	add_child(boss_aura_rect)
-
-	# 3. Main STOCHAS TextureRect (Right 0px, Bottom 70px, 480x520px)
 	boss_rect = TextureRect.new()
-	boss_rect.name = "StochasBossRender"
+	boss_rect.name = "StochasBoss"
 	boss_rect.position = BOSS_BASE_POS
 	boss_rect.size = BOSS_BASE_SIZE
-	boss_rect.pivot_offset = Vector2(BOSS_WIDTH * 0.5, BOSS_HEIGHT * 0.5)
+	boss_rect.custom_minimum_size = BOSS_BASE_SIZE
+	boss_rect.pivot_offset = BOSS_BASE_SIZE * 0.5
 	boss_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	boss_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	if ResourceLoader.exists(ASSET_BOSS):
 		boss_rect.texture = load(ASSET_BOSS)
 	add_child(boss_rect)
 
-	# 4. Boss VFX Container on top of sprite for casting sparks and stun runes
 	boss_vfx_container = Control.new()
 	boss_vfx_container.name = "BossVFXContainer"
-	boss_vfx_container.position = BOSS_BASE_POS
-	boss_vfx_container.size = BOSS_BASE_SIZE
+	boss_vfx_container.set_anchors_preset(Control.PRESET_FULL_RECT)
 	boss_vfx_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(boss_vfx_container)
+	boss_rect.add_child(boss_vfx_container)
 
-	# 5. Stun rune ring overlay inside VFX container
 	_build_boss_stun_overlay()
-
-	# 6. Start idle animation loop
 	_start_boss_idle_loop()
 
 func _build_karl_battlefield_entity() -> void:
-	# Left 50px, Bottom 70px, 300x300px (Ground baseline = 650px)
 	karl_battlefield_entity = Control.new()
 	karl_battlefield_entity.name = "KarlBattlefieldEntity"
-	karl_battlefield_entity.position = Vector2(KARL_ENTITY_LEFT, 720.0 - KARL_ENTITY_BOTTOM - KARL_ENTITY_HEIGHT)
+	karl_battlefield_entity.position = Vector2(KARL_ENTITY_LEFT, 720.0 - KARL_ENTITY_HEIGHT - KARL_ENTITY_BOTTOM)
 	karl_battlefield_entity.size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
 	karl_battlefield_entity.custom_minimum_size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
+	karl_battlefield_entity.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(karl_battlefield_entity)
 
-	# Ground shadow under Karl's feet to anchor naturally in misty forest (300px scale)
-	var shadow: Panel = Panel.new()
-	shadow.name = "GroundShadow"
-	shadow.position = Vector2(45, 282)
-	shadow.custom_minimum_size = Vector2(210, 22)
-	shadow.size = Vector2(210, 22)
-	var sbox: StyleBoxFlat = StyleBoxFlat.new()
-	sbox.bg_color = Color(0.01, 0.02, 0.05, 0.55)
-	sbox.corner_radius_top_left = 11
-	sbox.corner_radius_top_right = 11
-	sbox.corner_radius_bottom_right = 11
-	sbox.corner_radius_bottom_left = 11
-	shadow.add_theme_stylebox_override("panel", sbox)
-	karl_battlefield_entity.add_child(shadow)
-
-	# Dedicated VFX container behind/around sprite
 	karl_vfx_container = Control.new()
 	karl_vfx_container.name = "KarlVFXContainer"
 	karl_vfx_container.set_anchors_preset(Control.PRESET_FULL_RECT)
 	karl_vfx_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	karl_battlefield_entity.add_child(karl_vfx_container)
 
-	# Build persistent shield barrier node
-	_build_persistent_barrier()
-
-	# Native pixel character TextureRect (no rectangular frame, 300x300px)
 	karl_sprite_rect = TextureRect.new()
-	karl_sprite_rect.name = "KarlSpriteRect"
+	karl_sprite_rect.name = "KarlSprite"
 	karl_sprite_rect.size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
 	karl_sprite_rect.custom_minimum_size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
 	karl_sprite_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	karl_sprite_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	karl_sprite_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	karl_battlefield_entity.add_child(karl_sprite_rect)
 
-	# Initialize IDLE state
+	_build_persistent_barrier()
 	set_karl_state(KarlState.IDLE)
 
 func _build_top_huds() -> void:
-	# Karl HUD: Left 24px, Top 20px, 260x68px
+	# Karl HUD: Left 24px, Top 20px, 300x68px
 	karl_hud = PanelContainer.new()
 	karl_hud.name = "KarlHUD"
 	karl_hud.position = Vector2(24, 20)
-	karl_hud.custom_minimum_size = Vector2(260, 68)
-	karl_hud.size = Vector2(260, 68)
-	var karl_box: StyleBoxFlat = _create_glass_box(Color(0.06, 0.09, 0.15, 0.85), Color(0.20, 0.60, 0.85, 0.70), 8)
+	karl_hud.custom_minimum_size = Vector2(300, 68)
+	karl_hud.size = Vector2(300, 68)
+	var karl_box: StyleBoxFlat = _create_glass_box(COLOR_PANEL_BG, COLOR_PANEL_BORDER, 8)
 	karl_hud.add_theme_stylebox_override("panel", karl_box)
 	add_child(karl_hud)
 
 	var karl_hbox: HBoxContainer = HBoxContainer.new()
+	karl_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	karl_hbox.add_theme_constant_override("separation", 10)
 	karl_hud.add_child(karl_hbox)
 
-	var port_frame: PanelContainer = PanelContainer.new()
-	port_frame.custom_minimum_size = Vector2(50, 50)
-	var pbox: StyleBoxFlat = _create_glass_box(Color(0.1, 0.14, 0.22, 1.0), COLOR_ACCENT_CYAN, 6)
-	port_frame.add_theme_stylebox_override("panel", pbox)
-	karl_hbox.add_child(port_frame)
-
 	karl_portrait_rect = TextureRect.new()
-	karl_portrait_rect.name = "KarlPortrait"
-	karl_portrait_rect.custom_minimum_size = Vector2(46, 46)
+	karl_portrait_rect.custom_minimum_size = Vector2(48, 48)
 	karl_portrait_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	karl_portrait_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	karl_portrait_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	if ResourceLoader.exists(ASSET_KARL_PORTRAIT):
 		karl_portrait_rect.texture = load(ASSET_KARL_PORTRAIT)
-	port_frame.add_child(karl_portrait_rect)
+	karl_hbox.add_child(karl_portrait_rect)
 
 	var karl_vbox: VBoxContainer = VBoxContainer.new()
-	karl_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	karl_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	karl_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	karl_hbox.add_child(karl_vbox)
 
 	var karl_name: Label = Label.new()
-	karl_name.text = "KARL • TOÁN SƯ TẬP SỰ"
-	karl_name.add_theme_font_size_override("font_size", 11)
+	karl_name.text = "KARL • PHÁP SƯ TẬP SỰ"
+	karl_name.add_theme_font_size_override("font_size", 12)
 	karl_name.add_theme_color_override("font_color", COLOR_ACCENT_CYAN)
 	karl_vbox.add_child(karl_name)
 
-	var hp_bar: ProgressBar = ProgressBar.new()
-	hp_bar.name = "KarlHPBar"
-	hp_bar.custom_minimum_size = Vector2(170, 14)
-	hp_bar.max_value = 100.0
-	hp_bar.value = current_karl_hp
-	hp_bar.show_percentage = false
-	var hp_bg: StyleBoxFlat = _create_solid_box(Color(0.12, 0.15, 0.22, 0.9), 3)
-	var hp_fill: StyleBoxFlat = _create_solid_box(Color(0.20, 0.78, 0.42, 1.0), 3)
-	hp_bar.add_theme_stylebox_override("background", hp_bg)
-	hp_bar.add_theme_stylebox_override("fill", hp_fill)
-	karl_vbox.add_child(hp_bar)
+	var karl_hp_bar: ProgressBar = ProgressBar.new()
+	karl_hp_bar.custom_minimum_size = Vector2(200, 10)
+	karl_hp_bar.max_value = 100.0
+	karl_hp_bar.value = 100.0
+	karl_hp_bar.show_percentage = false
+	var k_bg: StyleBoxFlat = _create_solid_box(Color(0.12, 0.15, 0.22, 0.9), 3)
+	var k_fill: StyleBoxFlat = _create_solid_box(Color(0.20, 0.75, 0.90, 1.0), 3)
+	karl_hp_bar.add_theme_stylebox_override("background", k_bg)
+	karl_hp_bar.add_theme_stylebox_override("fill", k_fill)
+	karl_vbox.add_child(karl_hp_bar)
 
 	karl_hp_sub_label = Label.new()
-	karl_hp_sub_label.name = "KarlHPSubLabel"
 	karl_hp_sub_label.text = "HP: %d / %d   •   GIÁP: %d" % [current_karl_hp, max_karl_hp, current_shield]
 	karl_hp_sub_label.add_theme_font_size_override("font_size", 9)
 	karl_hp_sub_label.add_theme_color_override("font_color", COLOR_TEXT_MUTED)
@@ -1493,7 +1645,7 @@ func _build_top_huds() -> void:
 	boss_name.add_theme_color_override("font_color", COLOR_ACCENT_RED)
 	boss_vbox.add_child(boss_name)
 
-	var boss_hp_bar: ProgressBar = ProgressBar.new()
+	boss_hp_bar = ProgressBar.new()
 	boss_hp_bar.custom_minimum_size = Vector2(280, 14)
 	boss_hp_bar.max_value = 250.0
 	boss_hp_bar.value = 250.0
@@ -1504,11 +1656,17 @@ func _build_top_huds() -> void:
 	boss_hp_bar.add_theme_stylebox_override("fill", b_fill)
 	boss_vbox.add_child(boss_hp_bar)
 
-	var boss_intent: Label = Label.new()
-	boss_intent.text = "HP: 250 / 250   •   Ý ĐỊNH: 10 DMG (ĐÒN QUÉT)"
-	boss_intent.add_theme_font_size_override("font_size", 9)
-	boss_intent.add_theme_color_override("font_color", Color(1.0, 0.8, 0.8, 0.85))
-	boss_vbox.add_child(boss_intent)
+	boss_intent_label = Label.new()
+	boss_intent_label.text = "HP: 250 / 250   •   Ý ĐỊNH: 10 DMG (ĐÒN ĐÁNH)"
+	boss_intent_label.add_theme_font_size_override("font_size", 9)
+	boss_intent_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.8, 0.85))
+	boss_vbox.add_child(boss_intent_label)
+
+func _update_boss_hud() -> void:
+	if boss_hp_bar != null:
+		boss_hp_bar.value = float(current_boss_hp)
+	if boss_intent_label != null:
+		boss_intent_label.text = "HP: %d / %d   •   Ý ĐỊNH: 10 DMG (ĐÒN ĐÁNH)" % [current_boss_hp, max_boss_hp]
 
 func _build_question_module() -> void:
 	# Center X = 640px, Top = 155px, Width = 610px, Height = 240px
@@ -1619,7 +1777,6 @@ func _build_question_module() -> void:
 	main_vbox.add_child(helper_label)
 
 func _build_card_hover_detail() -> void:
-	# Shared center X = 690px, positioned ~20-30px above card row
 	var start_x: float = CENTER_INTERACTION_X - (HOVER_DETAIL_WIDTH / 2.0)
 	hover_detail_panel = PanelContainer.new()
 	hover_detail_panel.name = "CardHoverDetailPanel"
@@ -1657,7 +1814,6 @@ func _build_card_hover_detail() -> void:
 	h_vbox.add_child(hover_desc_lbl)
 
 func _build_card_row() -> void:
-	# Shared center X = 690px, Bottom = 20px
 	var total_width: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP
 	var start_x: float = CENTER_INTERACTION_X - (total_width / 2.0)
 	var start_y: float = 720.0 - CARD_ROW_BOTTOM - CARD_HEIGHT
@@ -1683,7 +1839,6 @@ func _build_card_row() -> void:
 		card_container.add_child(card_panel)
 		card_panels.append(card_panel)
 
-		# Make card clickable & hoverable
 		var hit_btn: Button = Button.new()
 		hit_btn.flat = true
 		hit_btn.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -1693,7 +1848,6 @@ func _build_card_row() -> void:
 		hit_btn.mouse_exited.connect(_on_card_mouse_exited.bind(i))
 		card_panel.add_child(hit_btn)
 
-		# Artwork fills the body, NO permanent numbers below cards!
 		var art_rect: TextureRect = TextureRect.new()
 		art_rect.name = "Art_%s" % data["id"]
 		art_rect.custom_minimum_size = Vector2(CARD_WIDTH - 8, CARD_HEIGHT - 8)
@@ -1707,6 +1861,468 @@ func _build_card_row() -> void:
 
 		if data["disabled"]:
 			card_panel.modulate = Color(0.5, 0.5, 0.55, 0.60)
+
+func _build_tactical_hand_tray() -> void:
+	tactical_hand_tray = PanelContainer.new()
+	tactical_hand_tray.name = "TacticalHandTray"
+	# Left 24px, Top 96px (directly beneath Karl HUD at 24, 20 with height 68)
+	tactical_hand_tray.position = Vector2(24.0, 96.0)
+	tactical_hand_tray.custom_minimum_size = Vector2(300, 52)
+	tactical_hand_tray.size = Vector2(300, 52)
+	var t_box: StyleBoxFlat = _create_glass_box(Color(0.06, 0.09, 0.16, 0.88), Color(0.25, 0.65, 0.85, 0.50), 6)
+	t_box.content_margin_left = 6
+	t_box.content_margin_top = 4
+	t_box.content_margin_right = 6
+	t_box.content_margin_bottom = 4
+	tactical_hand_tray.add_theme_stylebox_override("panel", t_box)
+	add_child(tactical_hand_tray)
+
+	var hbox: HBoxContainer = HBoxContainer.new()
+	hbox.name = "SlotsContainer"
+	hbox.add_theme_constant_override("separation", 6)
+	tactical_hand_tray.add_child(hbox)
+
+	tactical_slot_buttons.clear()
+	for i in range(MAX_TACTICAL_HAND):
+		var btn: Button = Button.new()
+		btn.name = "TacticalSlot_%d" % i
+		btn.text = "[ Trống ]"
+		btn.custom_minimum_size = Vector2(92, 42)
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.add_theme_font_size_override("font_size", 10)
+		var s_style: StyleBoxFlat = _create_solid_box(Color(0.10, 0.14, 0.22, 0.80), 4)
+		s_style.border_width_left = 1
+		s_style.border_width_top = 1
+		s_style.border_width_right = 1
+		s_style.border_width_bottom = 1
+		s_style.border_color = Color(0.25, 0.35, 0.48, 0.40)
+		btn.add_theme_stylebox_override("normal", s_style)
+		btn.pressed.connect(func(): use_tactical_card(i))
+		hbox.add_child(btn)
+		tactical_slot_buttons.append(btn)
+
+func _update_tactical_hand_ui() -> void:
+	for i in range(MAX_TACTICAL_HAND):
+		if i >= tactical_slot_buttons.size():
+			continue
+		var btn: Button = tactical_slot_buttons[i]
+		if i < tactical_hand.size():
+			var card: Dictionary = tactical_hand[i]
+			var is_rare: bool = (card.get("rarity", "") == "RARE")
+			btn.text = card.get("name", "THẺ")
+			btn.disabled = false
+			var btn_style: StyleBoxFlat = _create_solid_box(
+				Color(0.18, 0.14, 0.08, 0.90) if is_rare else Color(0.10, 0.18, 0.28, 0.90),
+				4
+			)
+			btn_style.border_width_left = 1
+			btn_style.border_width_top = 1
+			btn_style.border_width_right = 1
+			btn_style.border_width_bottom = 1
+			btn_style.border_color = COLOR_ACCENT_GOLD if is_rare else COLOR_ACCENT_CYAN
+			btn.add_theme_stylebox_override("normal", btn_style)
+			btn.add_theme_color_override("font_color", COLOR_ACCENT_GOLD if is_rare else COLOR_ACCENT_CYAN)
+		else:
+			btn.text = "[ Trống ]"
+			btn.disabled = true
+			var btn_style: StyleBoxFlat = _create_solid_box(Color(0.08, 0.11, 0.16, 0.60), 4)
+			btn_style.border_width_left = 1
+			btn_style.border_width_top = 1
+			btn_style.border_width_right = 1
+			btn_style.border_width_bottom = 1
+			btn_style.border_color = Color(0.20, 0.26, 0.35, 0.30)
+			btn.add_theme_stylebox_override("normal", btn_style)
+			btn.add_theme_color_override("font_color", Color(0.5, 0.55, 0.65, 0.5))
+
+func _build_probability_draw_modal() -> void:
+	probability_draw_modal = Control.new()
+	probability_draw_modal.name = "ProbabilityDrawModal"
+	probability_draw_modal.position = Vector2.ZERO
+	probability_draw_modal.size = Vector2(1280, 720)
+	probability_draw_modal.visible = false
+	add_child(probability_draw_modal)
+
+	var dimmer: ColorRect = ColorRect.new()
+	dimmer.name = "Dimmer"
+	dimmer.size = Vector2(1280, 720)
+	dimmer.color = Color(0.02, 0.04, 0.08, 0.65)
+	probability_draw_modal.add_child(dimmer)
+
+	var dialog: PanelContainer = PanelContainer.new()
+	dialog.name = "DrawDialog"
+	dialog.position = Vector2(300, 160)
+	dialog.custom_minimum_size = Vector2(680, 380)
+	dialog.size = Vector2(680, 380)
+	var dbox: StyleBoxFlat = _create_glass_box(Color(0.06, 0.08, 0.14, 0.96), COLOR_ACCENT_CYAN, 12)
+	dbox.content_margin_left = 16
+	dbox.content_margin_top = 14
+	dbox.content_margin_right = 16
+	dbox.content_margin_bottom = 14
+	dialog.add_theme_stylebox_override("panel", dbox)
+	probability_draw_modal.add_child(dialog)
+
+	var dvbox: VBoxContainer = VBoxContainer.new()
+	dvbox.add_theme_constant_override("separation", 10)
+	dialog.add_child(dvbox)
+
+	var title: Label = Label.new()
+	title.text = "RÚT BÀI CHIẾN THUẬT (CHỌN 1 TRONG 3)"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_color_override("font_color", COLOR_ACCENT_GOLD)
+	dvbox.add_child(title)
+
+	var subtitle: Label = Label.new()
+	subtitle.text = "Tỷ lệ: 70% Thường / 30% Hiếm. Đảm bảo ít nhất 1 thẻ Hiếm sau 2 lần rút thường liên tiếp."
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.add_theme_font_size_override("font_size", 10)
+	subtitle.add_theme_color_override("font_color", COLOR_TEXT_MUTED)
+	dvbox.add_child(subtitle)
+
+	draw_cards_container = HBoxContainer.new()
+	draw_cards_container.name = "CardsRow"
+	draw_cards_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	draw_cards_container.add_theme_constant_override("separation", 14)
+	draw_cards_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dvbox.add_child(draw_cards_container)
+
+func _build_replace_modal() -> void:
+	replace_modal = Control.new()
+	replace_modal.name = "ReplaceModal"
+	replace_modal.position = Vector2.ZERO
+	replace_modal.size = Vector2(1280, 720)
+	replace_modal.visible = false
+	add_child(replace_modal)
+
+	var dimmer: ColorRect = ColorRect.new()
+	dimmer.size = Vector2(1280, 720)
+	dimmer.color = Color(0.02, 0.04, 0.08, 0.75)
+	replace_modal.add_child(dimmer)
+
+	var dialog: PanelContainer = PanelContainer.new()
+	dialog.name = "ReplaceDialog"
+	dialog.position = Vector2(360, 200)
+	dialog.custom_minimum_size = Vector2(560, 300)
+	dialog.size = Vector2(560, 300)
+	var dbox: StyleBoxFlat = _create_glass_box(Color(0.06, 0.08, 0.14, 0.98), COLOR_ACCENT_GOLD, 10)
+	dbox.content_margin_left = 16
+	dbox.content_margin_top = 16
+	dbox.content_margin_right = 16
+	dbox.content_margin_bottom = 16
+	dialog.add_theme_stylebox_override("panel", dbox)
+	replace_modal.add_child(dialog)
+
+	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.name = "ContentVBox"
+	vbox.add_theme_constant_override("separation", 10)
+	dialog.add_child(vbox)
+
+	var title: Label = Label.new()
+	title.text = "TÚI BÀI ĐÃ ĐẦY (3/3) • CHỌN THAO TÁC"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 14)
+	title.add_theme_color_override("font_color", COLOR_ACCENT_GOLD)
+	vbox.add_child(title)
+
+	var desc: Label = Label.new()
+	desc.text = "Chọn 1 thẻ đang giữ để thay thế bằng thẻ mới, hoặc hủy bỏ thẻ mới:"
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc.add_theme_font_size_override("font_size", 11)
+	desc.add_theme_color_override("font_color", COLOR_TEXT_MUTED)
+	vbox.add_child(desc)
+
+	var slots_vbox: VBoxContainer = VBoxContainer.new()
+	slots_vbox.name = "SlotsVBox"
+	slots_vbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(slots_vbox)
+
+	var discard_btn: Button = Button.new()
+	discard_btn.text = "BỎ QUA THẺ MỚI (GIỮ NGUYÊN TÚI BÀI)"
+	discard_btn.custom_minimum_size = Vector2(0, 36)
+	var ds_style: StyleBoxFlat = _create_solid_box(Color(0.20, 0.24, 0.32, 0.9), 4)
+	discard_btn.add_theme_stylebox_override("normal", ds_style)
+	discard_btn.add_theme_font_size_override("font_size", 11)
+	discard_btn.pressed.connect(_on_replace_discard_new)
+	vbox.add_child(discard_btn)
+
+func set_probability_meter(val: int) -> void:
+	var old_val: int = probability_meter
+	probability_meter = clamp(val, 0, PROBABILITY_METER_MAX)
+	_update_probability_card_ui()
+	emit_signal("probability_charge_changed", probability_meter, PROBABILITY_METER_MAX)
+	if probability_meter == PROBABILITY_METER_MAX and old_val < PROBABILITY_METER_MAX:
+		emit_signal("probability_ready")
+
+func add_probability_charge(amount: int = 1) -> void:
+	set_probability_meter(probability_meter + amount)
+
+func _update_probability_card_ui() -> void:
+	if cards_data.size() > 3:
+		if probability_meter >= PROBABILITY_METER_MAX:
+			cards_data[3]["stat_badge"] = "SẴN SÀNG"
+			cards_data[3]["disabled"] = false
+		else:
+			cards_data[3]["stat_badge"] = "%d/3" % probability_meter
+			cards_data[3]["disabled"] = true
+	_update_card_selection()
+	if hovered_card_idx == 3:
+		_update_hover_detail(3)
+
+func draw_three_tactical_cards() -> Array[Dictionary]:
+	var candidate_keys: Array = TACTICAL_CARDS.keys().duplicate()
+	var drawn: Array[Dictionary] = []
+
+	var force_rare: bool = (consecutive_no_rare_draws >= 2)
+	var rare_keys: Array = []
+	for k in candidate_keys:
+		if TACTICAL_CARDS[k]["rarity"] == "RARE":
+			rare_keys.append(k)
+
+	if force_rare and rare_keys.size() > 0:
+		var forced_idx: int = gacha_rng.randi_range(0, rare_keys.size() - 1)
+		var forced_key: String = rare_keys[forced_idx]
+		drawn.append(TACTICAL_CARDS[forced_key].duplicate())
+		candidate_keys.erase(forced_key)
+
+	while drawn.size() < 3 and candidate_keys.size() > 0:
+		var total_weight: int = 0
+		for k in candidate_keys:
+			total_weight += int(TACTICAL_CARDS[k]["weight"])
+		var roll: int = gacha_rng.randi_range(0, total_weight - 1)
+		var cumulative: int = 0
+		var picked_key: String = candidate_keys[0]
+		for k in candidate_keys:
+			cumulative += int(TACTICAL_CARDS[k]["weight"])
+			if roll < cumulative:
+				picked_key = k
+				break
+		drawn.append(TACTICAL_CARDS[picked_key].duplicate())
+		candidate_keys.erase(picked_key)
+
+	var has_rare: bool = false
+	for c in drawn:
+		if c["rarity"] == "RARE":
+			has_rare = true
+			break
+	if has_rare:
+		consecutive_no_rare_draws = 0
+	else:
+		consecutive_no_rare_draws += 1
+
+	return drawn
+
+func open_probability_draw() -> void:
+	if is_draw_open or combat_resolving:
+		return
+	is_draw_open = true
+	fade_question_for_combat()
+	emit_signal("probability_draw_started")
+
+	var drawn_cards: Array[Dictionary] = draw_three_tactical_cards()
+	emit_signal("probability_cards_revealed", drawn_cards)
+
+	for child in draw_cards_container.get_children():
+		child.queue_free()
+
+	for i in range(drawn_cards.size()):
+		var card_data: Dictionary = drawn_cards[i]
+		var is_rare: bool = (card_data.get("rarity", "") == "RARE")
+		var pnl: PanelContainer = PanelContainer.new()
+		pnl.custom_minimum_size = Vector2(196, 260)
+		var pstyle: StyleBoxFlat = _create_glass_box(
+			Color(0.12, 0.10, 0.06, 0.95) if is_rare else Color(0.07, 0.11, 0.18, 0.95),
+			COLOR_ACCENT_GOLD if is_rare else COLOR_ACCENT_CYAN,
+			8
+		)
+		pstyle.content_margin_left = 10
+		pstyle.content_margin_top = 10
+		pstyle.content_margin_right = 10
+		pstyle.content_margin_bottom = 10
+		pnl.add_theme_stylebox_override("panel", pstyle)
+
+		var cvbox: VBoxContainer = VBoxContainer.new()
+		cvbox.add_theme_constant_override("separation", 8)
+		pnl.add_child(cvbox)
+
+		var r_lbl: Label = Label.new()
+		r_lbl.text = "✦ THẺ HIẾM ✦" if is_rare else "✦ THẺ THƯỜNG ✦"
+		r_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		r_lbl.add_theme_font_size_override("font_size", 10)
+		r_lbl.add_theme_color_override("font_color", COLOR_ACCENT_GOLD if is_rare else COLOR_ACCENT_CYAN)
+		cvbox.add_child(r_lbl)
+
+		var name_lbl: Label = Label.new()
+		name_lbl.text = card_data.get("name", "")
+		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_lbl.add_theme_font_size_override("font_size", 14)
+		name_lbl.add_theme_color_override("font_color", Color.WHITE)
+		cvbox.add_child(name_lbl)
+
+		var desc_lbl: Label = Label.new()
+		desc_lbl.text = card_data.get("desc", "")
+		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc_lbl.add_theme_font_size_override("font_size", 11)
+		desc_lbl.add_theme_color_override("font_color", COLOR_TEXT_MUTED)
+		desc_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		cvbox.add_child(desc_lbl)
+
+		var pick_btn: Button = Button.new()
+		pick_btn.text = "CHỌN THẺ NÀY"
+		pick_btn.custom_minimum_size = Vector2(0, 36)
+		var b_style: StyleBoxFlat = _create_solid_box(
+			Color(0.85, 0.65, 0.15, 1.0) if is_rare else Color(0.20, 0.55, 0.85, 1.0),
+			4
+		)
+		pick_btn.add_theme_stylebox_override("normal", b_style)
+		pick_btn.add_theme_color_override("font_color", Color(0.05, 0.08, 0.12, 1.0))
+		pick_btn.add_theme_font_size_override("font_size", 12)
+		pick_btn.pressed.connect(func(): _on_tactical_card_picked(card_data))
+		cvbox.add_child(pick_btn)
+
+		draw_cards_container.add_child(pnl)
+
+	probability_draw_modal.visible = true
+
+func close_probability_draw() -> void:
+	is_draw_open = false
+	if probability_draw_modal != null:
+		probability_draw_modal.visible = false
+	restore_question_after_combat()
+
+func _on_tactical_card_picked(card_data: Dictionary) -> void:
+	if tactical_hand.size() < MAX_TACTICAL_HAND:
+		tactical_hand.append(card_data)
+		_update_tactical_hand_ui()
+		emit_signal("tactical_card_selected", card_data["id"], tactical_hand.size() - 1)
+		_spawn_floating_feedback(Vector2(640, 350), "Đã nhận: " + card_data["name"], COLOR_ACCENT_GOLD if card_data["rarity"] == "RARE" else COLOR_ACCENT_CYAN)
+		close_probability_draw()
+	else:
+		pending_draft_card = card_data
+		_open_replace_modal()
+
+func _open_replace_modal() -> void:
+	if replace_modal == null:
+		return
+	var slots_vbox = replace_modal.find_child("SlotsVBox", true, false) as VBoxContainer
+	if slots_vbox != null:
+		for c in slots_vbox.get_children():
+			c.queue_free()
+		for i in range(tactical_hand.size()):
+			var held = tactical_hand[i]
+			var btn: Button = Button.new()
+			btn.text = "Thay thế [%s] bằng [%s]" % [held["name"], pending_draft_card.get("name", "")]
+			btn.custom_minimum_size = Vector2(0, 34)
+			var b_style: StyleBoxFlat = _create_solid_box(Color(0.12, 0.18, 0.28, 0.9), 4)
+			btn.add_theme_stylebox_override("normal", b_style)
+			btn.add_theme_font_size_override("font_size", 11)
+			btn.pressed.connect(func(): _on_replace_confirm(i))
+			slots_vbox.add_child(btn)
+
+	replace_modal.visible = true
+
+func _on_replace_confirm(slot_idx: int) -> void:
+	if slot_idx >= 0 and slot_idx < tactical_hand.size():
+		var replaced_name: String = tactical_hand[slot_idx]["name"]
+		tactical_hand[slot_idx] = pending_draft_card
+		_update_tactical_hand_ui()
+		emit_signal("tactical_card_selected", pending_draft_card["id"], slot_idx)
+		_spawn_floating_feedback(Vector2(640, 350), "Đã đổi %s -> %s" % [replaced_name, pending_draft_card["name"]], COLOR_ACCENT_GOLD)
+	replace_modal.visible = false
+	close_probability_draw()
+
+func _on_replace_discard_new() -> void:
+	_spawn_floating_feedback(Vector2(640, 350), "Đã bỏ qua thẻ mới", COLOR_TEXT_MUTED)
+	replace_modal.visible = false
+	close_probability_draw()
+
+func use_tactical_card(slot_idx: int) -> void:
+	if combat_resolving or is_draw_open:
+		return
+	if slot_idx < 0 or slot_idx >= tactical_hand.size():
+		return
+
+	var card: Dictionary = tactical_hand[slot_idx]
+	var card_id: String = card.get("id", "")
+
+	match card_id:
+		"card_tactical_eliminate":
+			var q_data: Dictionary = questions_data[current_question_idx]
+			var correct_idx: int = q_data["correct"]
+			var wrong_available: Array[int] = []
+			for i in range(answer_buttons.size()):
+				if i != correct_idx and not answer_buttons[i].disabled:
+					wrong_available.append(i)
+			if wrong_available.size() <= 1:
+				_spawn_floating_feedback(Vector2(640, 350), "Không thể loại trừ thêm!", COLOR_ACCENT_GOLD)
+				return
+			var eliminate_idx: int = wrong_available[0]
+			answer_buttons[eliminate_idx].disabled = true
+			var d_style: StyleBoxFlat = _create_solid_box(Color(0.12, 0.08, 0.10, 0.50), 4)
+			answer_buttons[eliminate_idx].add_theme_stylebox_override("normal", d_style)
+			answer_buttons[eliminate_idx].add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 0.5))
+			tactical_hand.remove_at(slot_idx)
+			_update_tactical_hand_ui()
+			_spawn_floating_feedback(Vector2(640, 350), "Đã loại bỏ 1 đáp án sai!", COLOR_ACCENT_CYAN)
+			emit_signal("tactical_card_used", card_id)
+
+		"card_tactical_reroll":
+			tactical_hand.remove_at(slot_idx)
+			_update_tactical_hand_ui()
+			cycle_question()
+			for btn in answer_buttons:
+				btn.disabled = false
+			_spawn_floating_feedback(Vector2(640, 350), "Đã đổi câu hỏi!", COLOR_ACCENT_GOLD)
+			emit_signal("tactical_card_used", card_id)
+
+		"card_tactical_add_time":
+			if question_timer_seconds >= QUESTION_TIMER_MAX:
+				_spawn_floating_feedback(Vector2(640, 350), "Đã đạt thời gian tối đa (90s)!", COLOR_ACCENT_GOLD)
+				return
+			question_timer_seconds = min(QUESTION_TIMER_MAX, question_timer_seconds + 15.0)
+			tactical_hand.remove_at(slot_idx)
+			_update_tactical_hand_ui()
+			_spawn_floating_feedback(Vector2(640, 350), "+15s Thời gian!", COLOR_ACCENT_GREEN)
+			emit_signal("tactical_card_used", card_id)
+
+		"card_tactical_stun":
+			is_stun_armed = true
+			tactical_hand.remove_at(slot_idx)
+			_update_tactical_hand_ui()
+			_spawn_floating_feedback(Vector2(200, 300), "⚡ CHOÁNG ĐÃ NẠP!", COLOR_ACCENT_GOLD)
+			emit_signal("stun_armed")
+			emit_signal("tactical_card_used", card_id)
+
+		"card_tactical_critical":
+			is_critical_armed = true
+			tactical_hand.remove_at(slot_idx)
+			_update_tactical_hand_ui()
+			_update_strike_card_stat()
+			_spawn_floating_feedback(Vector2(200, 300), "⚔️ CRITICAL ĐÃ NẠP!", COLOR_ACCENT_RED)
+			emit_signal("critical_armed")
+			emit_signal("tactical_card_used", card_id)
+
+		"card_tactical_aegis":
+			var new_shield: int = min(24, current_shield + 6)
+			set_shield(new_shield)
+			tactical_hand.remove_at(slot_idx)
+			_update_tactical_hand_ui()
+			_spawn_floating_feedback(Vector2(200, 300), "+6 GIÁP (BẢO HỘ)", COLOR_ACCENT_CYAN)
+			_spawn_barrier_pulse()
+			emit_signal("aegis_triggered", 6)
+			emit_signal("tactical_card_used", card_id)
+
+func _update_strike_card_stat() -> void:
+	if cards_data.size() > 0:
+		if is_critical_armed:
+			cards_data[0]["stat_badge"] = "15 DMG"
+			cards_data[0]["effect"] = "Gây 15 sát thương (CRITICAL)"
+		else:
+			cards_data[0]["stat_badge"] = "10 DMG"
+			cards_data[0]["effect"] = "Gây 10 sát thương"
+		_update_card_selection()
+		if selected_card_idx == 0:
+			_update_cta_button_text()
+			_update_hover_detail(0)
 
 func _build_settings_button() -> void:
 	var settings_btn: Button = Button.new()
@@ -1734,7 +2350,6 @@ func _build_debug_overlay() -> void:
 	debug_overlay.visible = false
 	add_child(debug_overlay)
 
-	# Shared Center Axis Line (X = 690)
 	var axis_line: Line2D = Line2D.new()
 	axis_line.name = "CenterAxisLine"
 	axis_line.default_color = Color(1.0, 0.8, 0.2, 0.6)
@@ -1750,73 +2365,6 @@ func _build_debug_overlay() -> void:
 	axis_lbl.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2, 0.9))
 	debug_overlay.add_child(axis_lbl)
 
-	# Karl entity outline (300 x 300 px)
-	var k_outline: ReferenceRect = ReferenceRect.new()
-	k_outline.position = Vector2(KARL_ENTITY_LEFT, 720.0 - KARL_ENTITY_BOTTOM - KARL_ENTITY_HEIGHT)
-	k_outline.size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
-	k_outline.border_color = Color(0.2, 0.7, 1.0, 0.9)
-	k_outline.border_width = 1.5
-	k_outline.editor_only = false
-	debug_overlay.add_child(k_outline)
-
-	var k_lbl: Label = Label.new()
-	k_lbl.text = "Karl 300x300 (Left: 50, Bottom: 70, Base: 650)"
-	k_lbl.position = Vector2(KARL_ENTITY_LEFT, 720.0 - KARL_ENTITY_BOTTOM - KARL_ENTITY_HEIGHT - 16)
-	k_lbl.add_theme_font_size_override("font_size", 9)
-	k_lbl.add_theme_color_override("font_color", Color(0.2, 0.7, 1.0, 0.9))
-	debug_overlay.add_child(k_lbl)
-
-	# Question outline (610 x 240 px)
-	var q_outline: ReferenceRect = ReferenceRect.new()
-	q_outline.position = Vector2(QUESTION_CENTER_X - (QUESTION_WIDTH / 2.0), QUESTION_TOP)
-	q_outline.size = Vector2(QUESTION_WIDTH, QUESTION_HEIGHT)
-	q_outline.border_color = Color(1.0, 0.2, 0.8, 0.9)
-	q_outline.border_width = 1.5
-	q_outline.editor_only = false
-	debug_overlay.add_child(q_outline)
-
-	var q_lbl: Label = Label.new()
-	q_lbl.text = "Question 610x240 (Top: 155, Center: 640)"
-	q_lbl.position = Vector2(QUESTION_CENTER_X - 100, QUESTION_TOP - 16)
-	q_lbl.add_theme_font_size_override("font_size", 9)
-	q_lbl.add_theme_color_override("font_color", Color(1.0, 0.2, 0.8, 0.9))
-	debug_overlay.add_child(q_lbl)
-
-	# Hover detail outline
-	var h_outline: ReferenceRect = ReferenceRect.new()
-	h_outline.position = Vector2(CENTER_INTERACTION_X - (HOVER_DETAIL_WIDTH / 2.0), HOVER_DETAIL_Y)
-	h_outline.size = Vector2(HOVER_DETAIL_WIDTH, HOVER_DETAIL_HEIGHT)
-	h_outline.border_color = Color(0.2, 0.8, 1.0, 0.9)
-	h_outline.border_width = 1.5
-	h_outline.editor_only = false
-	debug_overlay.add_child(h_outline)
-
-	# Card row outline
-	var total_w: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP
-	var c_outline: ReferenceRect = ReferenceRect.new()
-	c_outline.position = Vector2(CENTER_INTERACTION_X - (total_w / 2.0), 720.0 - CARD_ROW_BOTTOM - CARD_HEIGHT)
-	c_outline.size = Vector2(total_w, CARD_HEIGHT)
-	c_outline.border_color = Color(0.2, 1.0, 0.3, 0.9)
-	c_outline.border_width = 1.5
-	c_outline.editor_only = false
-	debug_overlay.add_child(c_outline)
-
-	# Boss outline (480 x 520 px)
-	var b_outline: ReferenceRect = ReferenceRect.new()
-	b_outline.position = BOSS_BASE_POS
-	b_outline.size = BOSS_BASE_SIZE
-	b_outline.border_color = Color(1.0, 0.4, 0.4, 0.9)
-	b_outline.border_width = 1.5
-	b_outline.editor_only = false
-	debug_overlay.add_child(b_outline)
-
-	var b_lbl: Label = Label.new()
-	b_lbl.text = "Boss 480x520 (Base: 800, 130)"
-	b_lbl.position = Vector2(BOSS_BASE_POS.x, BOSS_BASE_POS.y - 16)
-	b_lbl.add_theme_font_size_override("font_size", 9)
-	b_lbl.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4, 0.9))
-	debug_overlay.add_child(b_lbl)
-
 func _update_card_selection() -> void:
 	for i in range(card_panels.size()):
 		var panel: PanelContainer = card_panels[i]
@@ -1827,8 +2375,9 @@ func _update_card_selection() -> void:
 			panel.position.y = 0
 			var dis_style: StyleBoxFlat = _create_card_style(Color(0.06, 0.08, 0.12, 0.8), Color(0.25, 0.30, 0.40, 0.4), 6)
 			panel.add_theme_stylebox_override("panel", dis_style)
+			panel.modulate = Color(0.5, 0.5, 0.55, 0.60)
 		elif is_selected:
-			panel.position.y = -8.0 # Small lift
+			panel.position.y = -8.0
 			var sel_style: StyleBoxFlat = _create_card_style(Color(0.12, 0.16, 0.25, 0.98), COLOR_CARD_SELECTED_BORDER, 6)
 			sel_style.border_width_left = 2
 			sel_style.border_width_top = 2
@@ -1837,10 +2386,12 @@ func _update_card_selection() -> void:
 			sel_style.shadow_color = Color(1.0, 0.85, 0.30, 0.35)
 			sel_style.shadow_size = 8
 			panel.add_theme_stylebox_override("panel", sel_style)
+			panel.modulate = Color.WHITE
 		else:
 			panel.position.y = 0
 			var norm_style: StyleBoxFlat = _create_card_style(COLOR_CARD_BG, COLOR_CARD_BORDER, 6)
 			panel.add_theme_stylebox_override("panel", norm_style)
+			panel.modulate = Color.WHITE
 
 func _update_hover_detail(idx: int) -> void:
 	if hover_title_lbl == null or hover_desc_lbl == null:
@@ -1923,7 +2474,7 @@ func _on_hint_pressed() -> void:
 		_spawn_floating_feedback(Vector2(690, 125), q_data["hint"], COLOR_ACCENT_GOLD)
 
 func _on_cta_pressed() -> void:
-	if combat_resolving:
+	if combat_resolving or is_draw_open:
 		return
 	if not has_selected_answer or selected_answer_idx < 0:
 		_spawn_floating_feedback(Vector2(690, 410), "Chọn đáp án trước", COLOR_ACCENT_GOLD)
@@ -1938,6 +2489,14 @@ func _on_cta_pressed() -> void:
 	var is_correct: bool = (selected_answer_idx == q_data["correct"])
 
 	if is_correct:
+		add_probability_charge(1)
+
+		if is_stun_armed:
+			is_stun_armed = false
+			stochas_stun_charges = 1
+			trigger_boss_stun()
+			_spawn_floating_feedback(Vector2(1040, 240), "STOCHAS BỊ CHOÁNG (1 charge)!", COLOR_ACCENT_GOLD)
+
 		if card["id"] == "strike":
 			trigger_cast_effect()
 		elif card["id"] == "defend":
@@ -1945,7 +2504,26 @@ func _on_cta_pressed() -> void:
 		elif card["id"] == "heal":
 			trigger_heal_effect()
 	else:
-		trigger_boss_cast()
+		if is_stun_armed:
+			is_stun_armed = false
+			stochas_stun_charges = 0
+			_spawn_floating_feedback(Vector2(200, 300), "Choáng thất bại!", COLOR_ACCENT_RED)
+
+		if stochas_stun_charges > 0:
+			stochas_stun_charges -= 1
+			combat_resolving = true
+			fade_question_for_combat()
+			_spawn_floating_feedback(Vector2(1040, 240), "STOCHAS BỊ CHOÁNG! Đòn đánh bị chặn!", COLOR_ACCENT_GOLD)
+			emit_signal("stun_triggered")
+			var tw: Tween = create_tween()
+			tw.tween_interval(0.8)
+			tw.tween_callback(func():
+				combat_resolving = false
+				restore_question_after_combat()
+			)
+		else:
+			var spell_choice: int = boss_spell_rng.randi_range(0, 3)
+			cast_boss_spell(spell_choice as BossSpellType)
 
 func _spawn_floating_feedback(pos: Vector2, text: String, color: Color) -> void:
 	if floating_status_container == null:

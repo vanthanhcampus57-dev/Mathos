@@ -3,83 +3,110 @@
 > Canonical recovery note for Agent3. This file must be updated every time Agent3 receives a prompt, and updated again before sending a report if state changed.
 
 ## 1. CURRENT TASK
-- TASK_ID: MATHOS-SHIELD-DAMAGE-QUESTION-PRESENTATION-228L
-- TITLE: LAB combat-state + animation presentation correction
-- FROM: User / HUMAN COMBAT LAB
+- TASK_ID: MATHOS-PROBABILITY-GACHA-VFX-LAB-INTEGRATION-232L
+- TITLE: WAD2 asset intake + Probability Gacha V1 + Karl projectile + STOCHAS multi-spell LAB integration
+- FROM: User / P0 HUMAN COMBAT LAB
 - PRIORITY: P0 / HUMAN COMBAT LAB
-- BASE: 851865a552be488917e6c286e7290588e8e60660
-- STATUS: DONE
-- PROMPT_RECEIVED_AT: 2026-09-13T12:19:59+07:00
-- UPDATED_AT: 2026-09-13T12:26:00+07:00
+- BASE: eb9767df49b8bbe638031b49a4605e856c084ab5
+- STATUS: READY_FOR_REVIEW
+- PROMPT_RECEIVED_AT: 2026-09-13T14:07:31+07:00
+- UPDATED_AT: 2026-09-13T14:19:15+07:00
 
 ## 2. WORKSPACE / GIT
 - PROJECT: Mathos
 - WORKTREE: D:\Mathos_Worktrees\MATHOS-STORY-PARITY-FIX-185
 - BRANCH: task/mathos-story-parity-fix-185
-- START_HEAD: 851865a552be488917e6c286e7290588e8e60660
-- CURRENT_HEAD: 16a0a698a8ed03d9a3d5d3190fd36f2273ff02b2
-- FINAL_HEAD: 16a0a698a8ed03d9a3d5d3190fd36f2273ff02b2
-- CANONICAL_BASE: 851865a552be488917e6c286e7290588e8e60660
-- PRODUCTION_SOURCE_CHANGED: NO (0 production files modified)
+- START_HEAD: eb9767df49b8bbe638031b49a4605e856c084ab5
+- CURRENT_HEAD: 6598b9a8391f71947f1f4613763edb95069f12f4
+- FINAL_HEAD: 6598b9a8391f71947f1f4613763edb95069f12f4
+- CANONICAL_BASE: eb9767df49b8bbe638031b49a4605e856c084ab5
+- PRODUCTION_SOURCE_CHANGED: NO (LAB only: res://labs/stochas_combat_ui/ and res://assets/vfx/combat/)
 
-## 3. EXACT PROMPT / INTENT SUMMARY
-- Intent:
-  - Part A (Real Shield Damage Flow): Incoming boss damage (10) resolves against Shield first, then HP overflow. Centralized via `apply_damage_to_karl(amount)`: if shield > 0, absorbs up to shield amount, decreases shield via `set_shield()`, triggers `break_shield()` if depleted, overflow damage hits Karl HP and Karl enters HIT state. Floating feedback reflects shield loss and/or HP loss and "VỠ KHIÊN!".
-  - Part B (Question Combat Mode): During combat animation execution (Karl STRIKE, DEFEND, HEAL, STOCHAS CAST/attack, STOCHAS HIT, shield break, STUN), fade Question panel to ~0.22 alpha (duration 0.20s) and disable inputs (anti-double input `combat_resolving = true`). Restore opacity (1.0) and inputs after the full chained sequence completes.
-  - Part C (Question Panel Layout Refinement): Reduce Question panel from 660x270 to compact 610x240 px, shift left to center X=640.0 (pos: 335, 155) so it has 95 px clearance from STOCHAS head center (eliminating overlap with STOCHAS head/staff/silhouette). Internal composition adjusted compactly.
-  - STRICTLY PROHIBITED:
-    - DO NOT modify production (`src/ui/combat/`, `src/ui/question/`, `src/ui/stage/`).
-    - DO NOT generate, edit, or crop any images (no PNG edits).
-    - DO NOT change Card layout (104x158 at center X=690), Karl layout (300x300 at 50/70), STOCHAS layout (480x520 at right 0 bottom 70), background, or locked card values.
-    - DO NOT implement Adaptive AI or push.
+## 3. ASSET INTAKE & VALIDATION
+- ZIP Source: `C:\Users\Admin\Downloads\MATHOS_WAD2_229C_COMBAT_VFX_FINAL.zip` (Found: YES)
+- Staging Location: `D:\Mathos\Agent recovery\WAD2 Packages\MATHOS_WAD2_229C_COMBAT_VFX_FINAL.zip` (Untouched copy, 1,174,491 bytes)
+- Project Deployed Assets (`res://assets/vfx/combat/`):
+  1. `karl_arcane_projectile.png` (608x231, RGBA, SHA256: `cb4f5b2bdc7ea860618e44541fdecf4e87dd08fcd3618c471108315ff7f1ddb2`)
+  2. `stochas_arcane_bolt.png` (679x300, RGBA, SHA256: `3b340ac92b0b1c7a5272f82030c163c49caef6f4de12613e9dc674d5ed1fb80f`)
+  3. `stochas_probability_orb.png` (419x390, RGBA, SHA256: `a65db32a39f846e57636bdb7be14aa2b59c47d1466dfab7df5c7d2e27530ba23`)
+  4. `stochas_void_rift.png` (475x547, RGBA, SHA256: `0c4f0a49b2934b1ddf40ddea3f568cf577e7161db5ed259c83a07d71a753537e`)
+  5. `stochas_arcane_sweep.png` (546x402, RGBA, SHA256: `6e03b20119fda2e37d849e3b7361fd51764e625e3249fcdc583c83b02d06a563`)
+- Asset Validation: PASS (Exactly 5 PNGs + MANIFEST.md, alpha channel present on all 5, 0 hash conflicts, 0 images generated/edited).
 
-## 4. LAB ARTIFACTS & FILES
-- LAB FILES MODIFIED:
-  - `res://labs/stochas_combat_ui/stochas_combat_ui_lab.gd`
-  - `res://labs/stochas_combat_ui/run_lab_headless.gd`
+## 4. ARCHITECTURE & IMPLEMENTATION DETAILS
 
-## 5. SHIELD DAMAGE FLOW, HP/SHIELD MATH & QUESTION ANIMATION
-- Shield damage resolution order: SHIELD -> HP overflow.
-- Centralized damage API: `apply_damage_to_karl(amount: int)`
-- Case A (Shield 0, incoming 10): HP 90, Shield 0, floating "-10 HP", Karl enters HIT state.
-- Case B (Shield 8, incoming 10): Shield absorbs 8, auto-break VFX + "VỠ KHIÊN!", HP 98 (-2 HP overflow), Karl enters HIT state.
-- Case C (Shield 16, incoming 10): Shield absorbs 10 -> Shield 6, HP 100, barrier remains active, no break, Karl stays IDLE.
-- Case D (Shield 24, incoming 10): Shield absorbs 10 -> Shield 14, HP 100, barrier remains active, no break.
-- Case E (Chained combat presentation): Question fades to alpha 0.22 (0.20s fade out) on skill start; input locked (`combat_resolving = true`) blocking cards, answers, CTA; restores to alpha 1.0 (0.24s fade in) and unlocks inputs once full sequence completes.
-- Layout measurements:
-  - Question size: 610 x 240 px (reduced from 660 x 270 px)
-  - Question position: Vector2(335, 155)
-  - Question center X: 640.0 px
-  - Clearance from STOCHAS head center: 95.0 px
-- Launch command: `& "D:\Tools\Godot\4.7.1\Godot_v4.7.1-stable_win64_console.exe" --headless -s labs/stochas_combat_ui/run_lab_headless.gd`
-- Blockers: None
-- Next Action: Standby for human visual review of shield damage and question presentation.
+### 4.1 Karl Arcane Projectile
+- Origin: Karl casting hand at `Vector2(268, 432)` (`karl_arcane_projectile.png`).
+- Travel: Left-to-right toward STOCHAS `Vector2(950, 350)` over `0.45s` (`TRANS_QUAD`, `EASE_IN`).
+- Impact: Native particle spark spawns at impact point, STOCHAS executes HIT reaction with recoil and floating damage text.
+- Damage: Exactly 10 base damage; if `is_critical_armed == true`, deals exactly 15 damage and resets critical flag. Damage is applied strictly on impact.
+- Recovery: Karl returns to IDLE and question restores alpha after hit animation concludes (~0.90s total).
 
-## 6. ACCEPTANCE GATES STATUS (MATHOS-SHIELD-DAMAGE-QUESTION-PRESENTATION-228L)
-- GATE 1 (Boss damage checks Shield before HP): PASS
-- GATE 2 (Shield 8 + incoming 10 -> Shield 0, HP -2): PASS
-- GATE 3 (Shield break automatically triggers on depletion): PASS
-- GATE 4 (No [K] required for combat shield break): PASS
-- GATE 5 (Shield 16 + incoming 10 -> Shield 6, HP unchanged): PASS
-- GATE 6 (Barrier remains when Shield > 0): PASS
-- GATE 7 (Barrier breaks only when Shield reaches 0): PASS
-- GATE 8 (HUD HP/GIÁP updates correctly): PASS
-- GATE 9 (Question fades/hides during Karl skill animation): PASS
-- GATE 10 (Question fades/hides during STOCHAS attack): PASS
-- GATE 11 (Question remains faded for full chained sequence): PASS
-- GATE 12 (Input locked while combat_resolving=true): PASS
-- GATE 13 (Question restores after sequence completes): PASS
-- GATE 14 (Question panel reduced from 660x270): PASS (610 x 240 px)
-- GATE 15 (Question no longer covers STOCHAS head): PASS (95 px clearance)
-- GATE 16 (Cards unchanged): PASS (104x158, gap 14, center X=690)
-- GATE 17 (Karl/STOCHAS sizes unchanged): PASS (Karl 300x300, STOCHAS 480x520)
-- GATE 18 (Background unchanged): PASS (1280x720 1:1 framing)
-- GATE 19 (Production unchanged): PASS (0 production files modified)
-- GATE 20 (No image generated/edited): PASS (0 images generated or edited)
+### 4.2 STOCHAS Multi-Spells
+- 4 Presentation Spells:
+  - Arcane Bolt (`stochas_arcane_bolt.png`): Travels right-to-left in `0.50s` to Karl.
+  - Probability Orb (`stochas_probability_orb.png`): Pulses/orbits near boss for `0.35s`, arcs to Karl in `0.55s`.
+  - Void Rift (`stochas_void_rift.png`): Opens on battlefield ground near Karl `Vector2(220, 470)`, expands over `0.60s`, detonates, collapses in `0.30s`.
+  - Arcane Sweep (`stochas_arcane_sweep.png`): Manifests wide crescent, sweeps right-to-left in `0.65s`, fades out in `0.20s`.
+- Damage Integration: All 4 spells route strictly to `apply_damage_to_karl(10)`.
+- Shield-First Resolution: Shield absorbs incoming damage first, triggers automatic shield-break VFX if depleted, overflows remainder to HP.
+- Question Combat Fade: Question panel remains faded at `modulate:a = 0.22` with inputs locked for the entire duration of all spell animations.
+- Selection: Deterministic seeded RNG `boss_spell_rng.randi_range(0, 3)` selects spell on wrong answer.
+- Debug Hotkeys: F1 (Arcane Bolt), F2 (Probability Orb), F3 (Void Rift), F4 (Arcane Sweep).
 
-## 7. RECENT PROMPT LOG
-### Prompt entry 54
-- RECEIVED_AT: 2026-09-13T12:19:59+07:00
-- TASK_ID: MATHOS-SHIELD-DAMAGE-QUESTION-PRESENTATION-228L
-- ONE_LINE_INTENT: Correct shield damage flow (Shield first -> HP overflow), question combat fade (~0.22 alpha during execution) with input lock, and refine question panel size/position (610x240, shifted left) to eliminate STOCHAS head overlap.
-- RESULT / CURRENT_STATE: DONE (All 20 automated gates PASSED)
+### 4.3 Probability Meter & Gacha V1 Engine
+- Meter: Capacity 3 charges (`0/3` to `3/3`). Answering correctly grants `+1` charge; wrong answer grants `+0`; tactical question reroll grants `+0`.
+- Card 4 Indicator: Displays `0/3`, `1/3`, `2/3`, or `SẴN SÀNG` (READY). Clicking before ready shows feedback `XÁC SUẤT X/3` without consuming action.
+- Draw Overlay: Native centered modal dialog (`680x380`). Fades question behind it. Presents 3 mutually distinct cards ($Card_1 \neq Card_2 \neq Card_3$).
+- Weighted Odds: 70% Common / 30% Rare.
+- Pity Engine: If 2 consecutive draws show zero Rare cards, the 3rd draw guarantees at least 1 Rare card in slot 1.
+- Draw Resolution: Consumes 3 charges (`3 -> 0`). Normal turn is NOT consumed.
+
+### 4.4 Tactical Hand & The Six Cards
+- Tactical Hand Tray: Clean UI container at `Vector2(24, 96)` (below Karl HUD at `(24, 20)`, size `(300, 52)`), capacity 3 cards.
+- Full Hand Overflow: Invokes Replace/Discard modal allowing player to replace any of the 3 held cards or discard the new card.
+- Six Cards:
+  1. `LOẠI TRỪ` (COMMON): Eliminates 1 incorrect option button; never eliminates correct option; prevents elimination if only 2 choices remain.
+  2. `ĐỔI CÂU` (COMMON): Fetches clean replacement question with timer reset; 0 boss retaliation, 0 damage, 0 meter gain.
+  3. `THÊM GIỜ` (COMMON): Grants +15.0s to question timer; respects 90.0s cap.
+  4. `CHOÁNG` (RARE): Arms stun for active question. If answered correctly, boss enters STUN state and receives 1 stun charge that cancels the NEXT boss retaliation. If answered incorrectly, card is lost with 0 stun and boss retaliates normally.
+  5. `CRITICAL` (RARE): Arms next successful STRIKE for 15 total damage (+5 bonus). Persists through DEFEND, HEAL, and failed Strike attempts.
+  6. `BẢO HỘ` (RARE): Instantly grants +6 Shield via `set_shield()`; enforces 24 max shield cap; does not consume turn.
+
+### 4.5 AI Event Signals
+Exposed on `stochas_combat_ui_lab.gd`:
+- `probability_charge_changed(current: int, max_val: int)`
+- `probability_ready()`
+- `probability_draw_started()`
+- `probability_cards_revealed(cards: Array)`
+- `tactical_card_selected(card_id: String, slot: int)`
+- `tactical_card_used(card_id: String)`
+- `stun_armed()`
+- `stun_triggered()`
+- `critical_armed()`
+- `critical_triggered(damage: int)`
+- `aegis_triggered(shield_gain: int)`
+
+## 5. TEST EVIDENCE & VERIFICATION
+- Test Runner: `labs/stochas_combat_ui/run_lab_headless.gd`
+- Command: `& "D:\Tools\Godot\4.7.1\Godot_v4.7.1-stable_win64_console.exe" --headless -s labs/stochas_combat_ui/run_lab_headless.gd`
+- Results:
+  - Asset Intake: A1 (PASS), A2 (PASS), A3-A5 (PASS)
+  - Karl Projectile: K1 (PASS), K2 (PASS), K3 (PASS), K4 (PASS), K5 (PASS)
+  - Boss Spells: B1 (PASS), B2 (PASS), B3 (PASS), B4 (PASS), B5 (PASS), B6 (PASS), B7 (PASS)
+  - Probability System: P1 (PASS), P2 (PASS), P3 (PASS), P4 (PASS), P5 (PASS), P6-P8 (PASS), P9 (PASS), P10 (PASS)
+  - Tactical Cards: T1 (PASS), T2 (PASS), T3 (PASS), T4 (PASS), T5 (PASS), T6 (PASS), T7 (PASS), T8 (PASS), T9 (PASS), T10 (PASS), T11 (PASS), T12 (PASS)
+  - Regression Gates: R1-R3 (PASS), R4 (PASS), R5 (PASS), R6 (PASS), R7 (PASS), R8 (PASS), R9 (PASS), R10 (PASS)
+  - Total Checks: 49/49 PASSED (Exit code 0).
+
+## 6. RECENT PROMPT LOG
+### Prompt entry 56
+- RECEIVED_AT: 2026-09-13T14:07:31+07:00
+- TASK_ID: MATHOS-PROBABILITY-GACHA-VFX-LAB-INTEGRATION-232L
+- ONE_LINE_INTENT: WAD2 asset intake + Probability Gacha V1 + Karl projectile + STOCHAS multi-spell LAB integration.
+- RESULT / CURRENT_STATE: READY_FOR_REVIEW (All 49 test gates passing, final HEAD committed locally).
+
+## 7. NEXT ACTION
+- Await human visual review and verification of Probability Gacha and Combat VFX in LAB:
+  `& "D:\Tools\Godot\4.7.1\Godot_v4.7.1-stable_win64_console.exe" --path . labs/stochas_combat_ui/stochas_combat_ui_lab.tscn`
+- Do not push to remote repository.
