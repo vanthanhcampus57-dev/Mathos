@@ -72,6 +72,25 @@ var karl_sprite_rect: TextureRect = null
 var karl_vfx_container: Control = null
 var karl_state_tween: Tween = null
 
+# Boss Combat States
+enum BossState { IDLE, CAST, HIT, STUN, ENRAGED }
+var current_boss_state: BossState = BossState.IDLE
+var is_boss_enraged: bool = false
+var boss_idle_tween: Tween = null
+var boss_action_tween: Tween = null
+var boss_aura_rect: Panel = null
+var boss_ground_shadow: Panel = null
+var boss_vfx_container: Control = null
+var boss_stun_overlay: Control = null
+
+# STOCHAS Base Constants & Animation Parameters
+const BOSS_BASE_POS: Vector2 = Vector2(800.0, 130.0) # 1280 - 480 - 0 = 800, 720 - 520 - 70 = 130
+const BOSS_BASE_SIZE: Vector2 = Vector2(480.0, 520.0)
+const BOSS_IDLE_FLOAT_OFFSET: float = 6.0
+const BOSS_IDLE_BREATHING_SCALE: Vector2 = Vector2(1.008, 0.995)
+const BOSS_IDLE_CYCLE_DURATION: float = 3.2
+const BOSS_ENRAGED_CYCLE_DURATION: float = 1.8
+
 # Baseline offsets for exact 650.0 ground alignment at 300px scale
 # In 1254px source, bottom non-transparent pixel offsets:
 # idle: 26px -> 6.2px at 300px scale
@@ -259,6 +278,16 @@ func _unhandled_input(event: InputEvent) -> void:
 			trigger_heal_effect()
 		KEY_S:
 			trigger_shield_effect()
+		KEY_B:
+			trigger_boss_idle()
+		KEY_V:
+			trigger_boss_cast()
+		KEY_N:
+			trigger_boss_hit()
+		KEY_M:
+			trigger_boss_stun()
+		KEY_L:
+			toggle_boss_enraged()
 
 # Getters for Verification
 func get_center_interaction_x() -> float:
@@ -304,6 +333,17 @@ func get_boss_position() -> Vector2:
 
 func get_boss_size() -> Vector2:
 	return Vector2(BOSS_WIDTH, BOSS_HEIGHT)
+
+func get_boss_actual_position() -> Vector2:
+	if boss_rect == null:
+		return Vector2.ZERO
+	return boss_rect.position
+
+func get_boss_state() -> int:
+	return current_boss_state
+
+func is_boss_enraged_active() -> bool:
+	return is_boss_enraged
 
 func get_karl_position() -> Vector2:
 	if karl_battlefield_entity == null:
@@ -396,7 +436,10 @@ func reset_lab() -> void:
 	selected_answer_idx = 0
 	current_question_idx = 0
 	hint_shown = false
+	is_boss_enraged = false
+	_apply_enraged_visuals()
 	trigger_idle_state()
+	trigger_boss_idle()
 	_update_card_selection()
 	_update_hover_detail(0)
 	_update_question_view()
@@ -430,9 +473,8 @@ func trigger_cast_effect() -> void:
 	# Light cyan magic pulse near casting hand (Karl faces right, hand around (218, 105))
 	_spawn_cast_hand_spark()
 
-	# STOCHAS receives floating -10 HP
-	_spawn_floating_feedback(Vector2(1040, 240), "-10 HP", COLOR_ACCENT_RED)
-	_spawn_floating_feedback(Vector2(1040, 210), "CRITICAL!", COLOR_ACCENT_GOLD)
+	# STOCHAS receives hit animation with recoil, red flash, and floating -10 HP
+	trigger_boss_hit()
 
 	# Auto-return to IDLE after 0.9s
 	karl_state_tween = create_tween()
@@ -587,6 +629,296 @@ func _spawn_hit_pulse() -> void:
 	tw.tween_property(karl_sprite_rect, "position:x", 0.0, 0.06)
 	tw.parallel().tween_property(karl_sprite_rect, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.55)
 
+# =========================================================================
+# STOCHAS BOSS STATE ANIMATIONS (Tween & Control VFX Architecture)
+# =========================================================================
+
+func _start_boss_idle_loop() -> void:
+	if boss_idle_tween != null and boss_idle_tween.is_valid():
+		boss_idle_tween.kill()
+
+	if boss_rect == null:
+		return
+
+	boss_rect.position = BOSS_BASE_POS
+	boss_rect.scale = Vector2.ONE
+	boss_rect.rotation = 0.0
+
+	current_boss_state = BossState.ENRAGED if is_boss_enraged else BossState.IDLE
+
+	var duration: float = BOSS_ENRAGED_CYCLE_DURATION if is_boss_enraged else BOSS_IDLE_CYCLE_DURATION
+	var half_dur: float = duration * 0.5
+	var float_y: float = BOSS_IDLE_FLOAT_OFFSET if not is_boss_enraged else (BOSS_IDLE_FLOAT_OFFSET * 1.25)
+	var breath_scale: Vector2 = BOSS_IDLE_BREATHING_SCALE if not is_boss_enraged else Vector2(1.012, 0.992)
+
+	boss_idle_tween = create_tween().set_loops()
+	# Float up & expand breathing
+	boss_idle_tween.tween_property(boss_rect, "position:y", BOSS_BASE_POS.y - float_y, half_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	boss_idle_tween.parallel().tween_property(boss_rect, "scale", breath_scale, half_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	if boss_aura_rect != null:
+		var aura_alpha: float = 0.85 if not is_boss_enraged else 1.0
+		boss_idle_tween.parallel().tween_property(boss_aura_rect, "modulate:a", aura_alpha, half_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+	# Float down & relax breathing
+	boss_idle_tween.tween_property(boss_rect, "position:y", BOSS_BASE_POS.y, half_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	boss_idle_tween.parallel().tween_property(boss_rect, "scale", Vector2.ONE, half_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	if boss_aura_rect != null:
+		var aura_alpha_min: float = 0.40 if not is_boss_enraged else 0.60
+		boss_idle_tween.parallel().tween_property(boss_aura_rect, "modulate:a", aura_alpha_min, half_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+func _pause_boss_idle() -> void:
+	if boss_idle_tween != null and boss_idle_tween.is_valid():
+		boss_idle_tween.kill()
+		boss_idle_tween = null
+
+func trigger_boss_idle() -> void:
+	if boss_action_tween != null and boss_action_tween.is_valid():
+		boss_action_tween.kill()
+		boss_action_tween = null
+	if boss_stun_overlay != null:
+		boss_stun_overlay.visible = false
+	if boss_rect != null:
+		boss_rect.position = BOSS_BASE_POS
+		boss_rect.scale = Vector2.ONE
+		boss_rect.rotation = 0.0
+		boss_rect.modulate = Color.WHITE
+	_start_boss_idle_loop()
+
+func trigger_boss_cast() -> void:
+	# State priority check: STUN blocks casting
+	if current_boss_state == BossState.STUN:
+		return
+
+	_pause_boss_idle()
+	current_boss_state = BossState.CAST
+
+	_spawn_boss_cast_spark()
+
+	if boss_action_tween != null and boss_action_tween.is_valid():
+		boss_action_tween.kill()
+
+	boss_action_tween = create_tween()
+
+	# A. Anticipation (~0.30s): lean backward, staff aura intensifies
+	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(14.0, -4.0), 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 1.5, 0.30)
+	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color(1.25, 1.10, 1.45, 1.0), 0.30)
+	if boss_aura_rect != null:
+		boss_action_tween.parallel().tween_property(boss_aura_rect, "modulate:a", 1.0, 0.30)
+
+	# B. Attack release (~0.18s): forward lunge + scale impulse
+	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(-28.0, 2.0), 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	boss_action_tween.parallel().tween_property(boss_rect, "scale", Vector2(1.04, 1.04), 0.18)
+	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", -1.2, 0.18)
+
+	# Fire arcane projectile & trigger Karl HIT & -10 HP
+	boss_action_tween.tween_callback(func():
+		_fire_boss_arcane_projectile()
+		trigger_hit_effect()
+	)
+
+	# Hold impact (0.12s)
+	boss_action_tween.tween_interval(0.12)
+
+	# C. Return smoothly to base position (~0.30s)
+	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS, 0.30).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	boss_action_tween.parallel().tween_property(boss_rect, "scale", Vector2.ONE, 0.30)
+	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 0.0, 0.30)
+	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color.WHITE, 0.30)
+	if boss_aura_rect != null:
+		var end_alpha: float = 0.50 if not is_boss_enraged else 0.70
+		boss_action_tween.parallel().tween_property(boss_aura_rect, "modulate:a", end_alpha, 0.30)
+
+	# Resume IDLE
+	boss_action_tween.tween_callback(_start_boss_idle_loop)
+
+func trigger_boss_hit() -> void:
+	# State priority check: If stunned, hit flashes without breaking stun
+	if current_boss_state == BossState.STUN:
+		_flash_stunned_hit()
+		return
+
+	_pause_boss_idle()
+	current_boss_state = BossState.HIT
+
+	if boss_action_tween != null and boss_action_tween.is_valid():
+		boss_action_tween.kill()
+
+	# Instant red/white flash on impact
+	if boss_rect != null:
+		boss_rect.modulate = Color(2.2, 0.6, 0.6, 1.0)
+
+	boss_action_tween = create_tween()
+
+	_spawn_floating_feedback(Vector2(1040, 240), "-10 HP", COLOR_ACCENT_RED)
+
+	# Phase 1: Rapid recoil backward + flash (0.08s)
+	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(16.0, -2.0), 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", -1.5, 0.08)
+	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color(2.2, 0.6, 0.6, 1.0), 0.08)
+
+	# Phase 2: Settle back (0.12s)
+	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(6.0, 0.0), 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 0.5, 0.12)
+	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color(1.3, 0.9, 0.9, 1.0), 0.12)
+
+	# Phase 3: Smooth return to base (0.22s)
+	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS, 0.22).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 0.0, 0.22)
+	boss_action_tween.parallel().tween_property(boss_rect, "scale", Vector2.ONE, 0.22)
+	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color.WHITE, 0.22)
+
+	# Resume IDLE
+	boss_action_tween.tween_callback(_start_boss_idle_loop)
+
+func _flash_stunned_hit() -> void:
+	_spawn_floating_feedback(Vector2(1040, 240), "-10 HP", COLOR_ACCENT_RED)
+	if boss_rect != null:
+		boss_rect.modulate = Color(2.0, 0.5, 0.5, 1.0)
+		var tw: Tween = create_tween()
+		tw.tween_property(boss_rect, "modulate", Color(0.65, 0.70, 0.85, 0.90), 0.25)
+
+func trigger_boss_stun() -> void:
+	_pause_boss_idle()
+	current_boss_state = BossState.STUN
+
+	if boss_action_tween != null and boss_action_tween.is_valid():
+		boss_action_tween.kill()
+
+	_spawn_floating_feedback(Vector2(1040, 160), "CHOÁNG!", COLOR_ACCENT_GOLD)
+
+	if boss_stun_overlay != null:
+		boss_stun_overlay.visible = true
+		boss_stun_overlay.modulate.a = 0.0
+
+	boss_action_tween = create_tween()
+
+	# Stagger backward and slump (0.20s)
+	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(10.0, 6.0), 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 1.2, 0.20)
+	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color(0.65, 0.70, 0.85, 0.90), 0.20)
+	if boss_stun_overlay != null:
+		boss_action_tween.parallel().tween_property(boss_stun_overlay, "modulate:a", 1.0, 0.20)
+
+	# Stun dizzy sway (3 half-waves = 0.90s)
+	boss_action_tween.tween_property(boss_rect, "rotation_degrees", -1.2, 0.30).set_trans(Tween.TRANS_SINE)
+	boss_action_tween.tween_property(boss_rect, "rotation_degrees", 1.2, 0.30).set_trans(Tween.TRANS_SINE)
+	boss_action_tween.tween_property(boss_rect, "rotation_degrees", -0.5, 0.30).set_trans(Tween.TRANS_SINE)
+
+	# Recovery (~0.30s)
+	if boss_stun_overlay != null:
+		boss_action_tween.parallel().tween_property(boss_stun_overlay, "modulate:a", 0.0, 0.30)
+	boss_action_tween.parallel().tween_property(boss_rect, "position", BOSS_BASE_POS, 0.30).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 0.0, 0.30)
+	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color.WHITE, 0.30)
+
+	boss_action_tween.tween_callback(func():
+		if boss_stun_overlay != null:
+			boss_stun_overlay.visible = false
+		_start_boss_idle_loop()
+	)
+
+func toggle_boss_enraged() -> void:
+	is_boss_enraged = not is_boss_enraged
+	_apply_enraged_visuals()
+	if current_boss_state == BossState.IDLE or current_boss_state == BossState.ENRAGED:
+		_start_boss_idle_loop()
+	_spawn_floating_feedback(Vector2(1040, 240), "CUỒNG NỘ: " + ("BẬT" if is_boss_enraged else "TẮT"), COLOR_ACCENT_RED if is_boss_enraged else COLOR_ACCENT_CYAN)
+
+func _apply_enraged_visuals() -> void:
+	if boss_aura_rect != null:
+		var abox: StyleBoxFlat = boss_aura_rect.get_theme_stylebox("panel") as StyleBoxFlat
+		if abox != null:
+			if is_boss_enraged:
+				abox.bg_color = Color(0.75, 0.12, 0.25, 0.25)
+				abox.shadow_color = Color(0.95, 0.20, 0.35, 0.65)
+			else:
+				abox.bg_color = Color(0.08, 0.35, 0.65, 0.18)
+				abox.shadow_color = Color(0.12, 0.60, 0.95, 0.45)
+
+	if boss_hud != null:
+		var hbox: StyleBoxFlat = boss_hud.get_theme_stylebox("panel") as StyleBoxFlat
+		if hbox != null:
+			if is_boss_enraged:
+				hbox.border_color = Color(1.0, 0.20, 0.25, 0.95)
+				hbox.shadow_color = Color(0.90, 0.15, 0.25, 0.45)
+				hbox.shadow_size = 12
+			else:
+				hbox.border_color = Color(0.95, 0.30, 0.35, 0.75)
+				hbox.shadow_color = Color(0.0, 0.0, 0.0, 0.35)
+				hbox.shadow_size = 6
+
+func _spawn_boss_cast_spark() -> void:
+	if boss_vfx_container == null:
+		return
+	var spark: Panel = Panel.new()
+	spark.position = Vector2(85, 175)
+	spark.size = Vector2(36, 36)
+	spark.pivot_offset = Vector2(18, 18)
+	var sbox: StyleBoxFlat = StyleBoxFlat.new()
+	sbox.bg_color = Color(0.65, 0.25, 0.95, 0.85)
+	sbox.border_width_left = 2
+	sbox.border_width_top = 2
+	sbox.border_width_right = 2
+	sbox.border_width_bottom = 2
+	sbox.border_color = Color(1.0, 0.85, 1.0, 0.95)
+	sbox.corner_radius_top_left = 18
+	sbox.corner_radius_top_right = 18
+	sbox.corner_radius_bottom_right = 18
+	sbox.corner_radius_bottom_left = 18
+	sbox.shadow_color = Color(0.70, 0.30, 1.0, 0.75)
+	sbox.shadow_size = 18
+	spark.add_theme_stylebox_override("panel", sbox)
+	boss_vfx_container.add_child(spark)
+
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(spark, "scale", Vector2(1.9, 1.9), 0.45)
+	tw.tween_property(spark, "modulate:a", 0.0, 0.45)
+	tw.chain().tween_callback(spark.queue_free)
+
+func _fire_boss_arcane_projectile() -> void:
+	if floating_status_container == null:
+		return
+	var bolt: Panel = Panel.new()
+	bolt.position = BOSS_BASE_POS + Vector2(85, 175)
+	bolt.size = Vector2(24, 16)
+	bolt.pivot_offset = Vector2(12, 8)
+	var bbox: StyleBoxFlat = StyleBoxFlat.new()
+	bbox.bg_color = Color(0.80, 0.20, 0.95, 0.90)
+	bbox.corner_radius_top_left = 8
+	bbox.corner_radius_top_right = 8
+	bbox.corner_radius_bottom_right = 8
+	bbox.corner_radius_bottom_left = 8
+	bbox.shadow_color = Color(0.85, 0.25, 1.0, 0.80)
+	bbox.shadow_size = 12
+	bolt.add_theme_stylebox_override("panel", bbox)
+	floating_status_container.add_child(bolt)
+
+	var target_pos: Vector2 = Vector2(KARL_ENTITY_LEFT + 200, 450)
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(bolt, "position", target_pos, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(bolt, "scale", Vector2(1.6, 0.8), 0.22)
+	tw.chain().tween_callback(bolt.queue_free)
+
+func _build_boss_stun_overlay() -> void:
+	boss_stun_overlay = Control.new()
+	boss_stun_overlay.name = "BossStunOverlay"
+	boss_stun_overlay.position = Vector2(240, 60)
+	boss_stun_overlay.visible = false
+	boss_vfx_container.add_child(boss_stun_overlay)
+
+	for i in range(3):
+		var star: Label = Label.new()
+		star.name = "StunStar_%d" % i
+		star.text = "✦"
+		star.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		star.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		star.custom_minimum_size = Vector2(24, 24)
+		star.position = Vector2(-36 + i * 28, -12)
+		star.add_theme_font_size_override("font_size", 18)
+		star.add_theme_color_override("font_color", COLOR_ACCENT_GOLD)
+		boss_stun_overlay.add_child(star)
+
 func _build_scene() -> void:
 	# 1. Background (1:1 Native framing, 1280x720)
 	_build_background()
@@ -644,16 +976,63 @@ func _build_background() -> void:
 	add_child(dark_overlay)
 
 func _build_boss_render() -> void:
-	# Right 0px, Bottom 70px, 480x520px
+	# 1. Ground shadow beneath STOCHAS (grounds the boss naturally in the misty forest)
+	boss_ground_shadow = Panel.new()
+	boss_ground_shadow.name = "BossGroundShadow"
+	boss_ground_shadow.position = Vector2(880, 642)
+	boss_ground_shadow.size = Vector2(320, 26)
+	var bsbox: StyleBoxFlat = StyleBoxFlat.new()
+	bsbox.bg_color = Color(0.01, 0.02, 0.05, 0.60)
+	bsbox.corner_radius_top_left = 13
+	bsbox.corner_radius_top_right = 13
+	bsbox.corner_radius_bottom_right = 13
+	bsbox.corner_radius_bottom_left = 13
+	boss_ground_shadow.add_theme_stylebox_override("panel", bsbox)
+	add_child(boss_ground_shadow)
+
+	# 2. Boss Aura Behind Sprite (subtle arcane cyan/deep blue aura, turns crimson in enraged)
+	boss_aura_rect = Panel.new()
+	boss_aura_rect.name = "BossAura"
+	boss_aura_rect.position = BOSS_BASE_POS
+	boss_aura_rect.size = BOSS_BASE_SIZE
+	boss_aura_rect.pivot_offset = Vector2(BOSS_WIDTH * 0.5, BOSS_HEIGHT * 0.5)
+	boss_aura_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var abox: StyleBoxFlat = StyleBoxFlat.new()
+	abox.bg_color = Color(0.08, 0.35, 0.65, 0.18)
+	abox.corner_radius_top_left = 140
+	abox.corner_radius_top_right = 140
+	abox.corner_radius_bottom_right = 140
+	abox.corner_radius_bottom_left = 140
+	abox.shadow_color = Color(0.12, 0.60, 0.95, 0.45)
+	abox.shadow_size = 28
+	boss_aura_rect.add_theme_stylebox_override("panel", abox)
+	add_child(boss_aura_rect)
+
+	# 3. Main STOCHAS TextureRect (Right 0px, Bottom 70px, 480x520px)
 	boss_rect = TextureRect.new()
 	boss_rect.name = "StochasBossRender"
-	boss_rect.position = Vector2(1280.0 - BOSS_WIDTH - BOSS_RIGHT, 720.0 - BOSS_HEIGHT - BOSS_BOTTOM)
-	boss_rect.size = Vector2(BOSS_WIDTH, BOSS_HEIGHT)
+	boss_rect.position = BOSS_BASE_POS
+	boss_rect.size = BOSS_BASE_SIZE
+	boss_rect.pivot_offset = Vector2(BOSS_WIDTH * 0.5, BOSS_HEIGHT * 0.5)
 	boss_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	boss_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	if ResourceLoader.exists(ASSET_BOSS):
 		boss_rect.texture = load(ASSET_BOSS)
 	add_child(boss_rect)
+
+	# 4. Boss VFX Container on top of sprite for casting sparks and stun runes
+	boss_vfx_container = Control.new()
+	boss_vfx_container.name = "BossVFXContainer"
+	boss_vfx_container.position = BOSS_BASE_POS
+	boss_vfx_container.size = BOSS_BASE_SIZE
+	boss_vfx_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(boss_vfx_container)
+
+	# 5. Stun rune ring overlay inside VFX container
+	_build_boss_stun_overlay()
+
+	# 6. Start idle animation loop
+	_start_boss_idle_loop()
 
 func _build_karl_battlefield_entity() -> void:
 	# Left 50px, Bottom 70px, 300x300px (Ground baseline = 650px)
@@ -894,7 +1273,7 @@ func _build_question_module() -> void:
 
 	# 5. Combat rule subtext + Shortcuts guide (~20 px)
 	helper_label = Label.new()
-	helper_label.text = "Quy tắc: Đúng -> Thi triển chiêu thức. Sai -> STOCHAS phản đòn 10 DMG. | Phím: [1-4] Thẻ, [I/C/H/E/S] Karl, [D] Debug"
+	helper_label.text = "Quy tắc: Đúng -> Thi triển chiêu thức. Sai -> STOCHAS phản đòn 10 DMG. | Phím: [1-4] Thẻ, [I/C/H/E/S] Karl, [B/V/N/M/L] Boss, [D] Debug"
 	helper_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	helper_label.add_theme_font_size_override("font_size", 9)
 	helper_label.add_theme_color_override("font_color", COLOR_TEXT_MUTED)
@@ -1083,6 +1462,22 @@ func _build_debug_overlay() -> void:
 	c_outline.editor_only = false
 	debug_overlay.add_child(c_outline)
 
+	# Boss outline (480 x 520 px)
+	var b_outline: ReferenceRect = ReferenceRect.new()
+	b_outline.position = BOSS_BASE_POS
+	b_outline.size = BOSS_BASE_SIZE
+	b_outline.border_color = Color(1.0, 0.4, 0.4, 0.9)
+	b_outline.border_width = 1.5
+	b_outline.editor_only = false
+	debug_overlay.add_child(b_outline)
+
+	var b_lbl: Label = Label.new()
+	b_lbl.text = "Boss 480x520 (Base: 800, 130)"
+	b_lbl.position = Vector2(BOSS_BASE_POS.x, BOSS_BASE_POS.y - 16)
+	b_lbl.add_theme_font_size_override("font_size", 9)
+	b_lbl.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4, 0.9))
+	debug_overlay.add_child(b_lbl)
+
 func _update_card_selection() -> void:
 	for i in range(card_panels.size()):
 		var panel: PanelContainer = card_panels[i]
@@ -1201,7 +1596,7 @@ func _on_cta_pressed() -> void:
 		elif card["id"] == "heal":
 			trigger_heal_effect()
 	else:
-		trigger_hit_effect()
+		trigger_boss_cast()
 		_spawn_floating_feedback(Vector2(1040, 240), "PHẢN ĐÒN!", COLOR_ACCENT_RED)
 
 func _spawn_floating_feedback(pos: Vector2, text: String, color: Color) -> void:
