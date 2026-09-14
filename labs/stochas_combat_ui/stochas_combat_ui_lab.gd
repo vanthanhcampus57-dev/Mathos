@@ -92,7 +92,8 @@ const COLOR_CARD_SELECTED_BORDER: Color = Color(1.0, 0.85, 0.30, 0.95)
 const COLOR_TEXT_MUTED: Color = Color(0.75, 0.82, 0.90, 0.85)
 
 # Karl Combat States
-enum KarlState { IDLE, CAST, HIT, HEAL, SHIELD }
+enum KarlState { IDLE, CAST, HIT, HEAL, SHIELD, DODGE, SKILL_CAST }
+const STRIKE_CAST = KarlState.CAST
 var current_karl_state: KarlState = KarlState.IDLE
 var karl_textures: Dictionary = {}
 var karl_sprite_rect: TextureRect = null
@@ -108,8 +109,69 @@ var combat_resolving: bool = false
 var question_fade_tween: Tween = null
 
 # Boss Combat States & Spells
-enum BossState { IDLE, CAST, HIT, STUN, ENRAGED }
-enum BossSpellType { ARCANE_BOLT, PROBABILITY_ORB, VOID_RIFT, ARCANE_SWEEP }
+enum BossState {
+	IDLE,
+	CAST,
+	HIT,
+	STUN,
+	ENRAGED,
+	CAST_BOLT,
+	CAST_ORB,
+	CAST_RIFT,
+	CAST_SWEEP,
+	ULTIMATE_CHARGE,
+	ULTIMATE_RELEASE
+}
+enum BossSpellType { ARCANE_BOLT, PROBABILITY_ORB, VOID_RIFT, ARCANE_SWEEP, CHAOS_VERDICT_ULTIMATE }
+
+const BOSS_SPELL_DAMAGE: Dictionary = {
+	BossSpellType.ARCANE_BOLT: 8,
+	BossSpellType.PROBABILITY_ORB: 10,
+	BossSpellType.VOID_RIFT: 12,
+	BossSpellType.ARCANE_SWEEP: 14,
+	BossSpellType.CHAOS_VERDICT_ULTIMATE: 24
+}
+
+# Future Asset Hooks (Contract Placeholders)
+const ASSET_KARL_DODGE_SEQUENCE: String = "res://assets/characters/player/karl/combat_pixel/karl_dodge_sequence.png"
+const ASSET_KARL_SKILL_CAST_SEQUENCE: String = "res://assets/characters/player/karl/combat_pixel/karl_skill_cast_sequence.png"
+const ASSET_KARL_CARD_HAND_CURSOR: String = "res://assets/ui/combat/karl_card_hand_cursor.png"
+const ASSET_STOCHAS_ULTIMATE_SEQUENCE: String = "res://assets/characters/bosses/dungeon_1/stochas_ultimate_sequence.png"
+const ASSET_TACTICAL_ATLAS: String = "res://assets/ui/combat/tactical_cards_v1_atlas.png"
+
+const TACTICAL_ATLAS_REGIONS: Dictionary = {
+	"LOAI_TRU": Rect2(0, 0, 104, 158),
+	"DOI_CAU": Rect2(104, 0, 104, 158),
+	"THEM_GIO": Rect2(208, 0, 104, 158),
+	"CHOANG": Rect2(312, 0, 104, 158),
+	"CRITICAL": Rect2(416, 0, 104, 158),
+	"BAO_HO": Rect2(520, 0, 104, 158)
+}
+const TACTICAL_CARD_ATLAS_MAP: Dictionary = {
+	"card_tactical_eliminate": "LOAI_TRU",
+	"card_tactical_reroll": "DOI_CAU",
+	"card_tactical_add_time": "THEM_GIO",
+	"card_tactical_stun": "CHOANG",
+	"card_tactical_critical": "CRITICAL",
+	"card_tactical_aegis": "BAO_HO"
+}
+
+# Boss Ultimate Parameters
+const BOSS_ULTIMATE_METER_MAX: int = 4
+const ULTIMATE_CHARGE_DURATION: float = 2.4
+const ULTIMATE_CHALLENGE_DURATION: float = 8.0
+
+var boss_ultimate_meter: int = 0
+var is_ultimate_queued: bool = false
+var is_ultimate_charge_active: bool = false
+var is_ultimate_challenge_active: bool = false
+var ultimate_timer: float = 8.0
+var ultimate_telegraph_panel: Control = null
+var ultimate_dim_overlay: ColorRect = null
+var is_tactical_pick_mode: bool = false
+var hand_cursor_node: Control = null
+var card_row_container: HBoxContainer = null
+
 var current_boss_state: BossState = BossState.IDLE
 var is_boss_enraged: bool = false
 var boss_idle_tween: Tween = null
@@ -139,6 +201,8 @@ const KARL_BASELINE_OFFSETS: Dictionary = {
 	KarlState.HIT: 6.2,
 	KarlState.HEAL: 0.0,
 	KarlState.SHIELD: 3.8,
+	KarlState.DODGE: 6.2,
+	KarlState.SKILL_CAST: 0.0,
 }
 
 # Combat Buffs & Tactical State
@@ -361,6 +425,18 @@ func _load_karl_textures() -> void:
 	if ResourceLoader.exists(ASSET_KARL_SHIELD):
 		karl_textures[KarlState.SHIELD] = load(ASSET_KARL_SHIELD)
 
+func _process(delta: float) -> void:
+	if is_ultimate_challenge_active and not combat_resolving:
+		ultimate_timer -= delta
+		if helper_label != null:
+			helper_label.text = "THỜI GIAN CÒN LẠI: %.1fs  •  PHÁ GIẢI TRƯỚC KHI HẾT GIỜ!" % max(0.0, ultimate_timer)
+		if ultimate_timer <= 0.0:
+			trigger_ultimate_failure(true)
+
+func _input(event: InputEvent) -> void:
+	if is_tactical_pick_mode and hand_cursor_node != null and event is InputEventMouseMotion:
+		hand_cursor_node.position = event.position + Vector2(16, 16)
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
@@ -415,6 +491,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			trigger_boss_spell_void_rift()
 		KEY_F4:
 			trigger_boss_spell_arcane_sweep()
+		KEY_F5:
+			trigger_boss_ultimate_charge()
+		KEY_F6:
+			set_ultimate_meter(3)
+		KEY_F7:
+			simulate_ultimate_success()
+		KEY_F8:
+			simulate_ultimate_failure()
 
 # Getters for Verification & Contract
 func get_center_interaction_x() -> float:
@@ -443,6 +527,39 @@ func get_max_boss_hp() -> int:
 
 func is_combat_resolving() -> bool:
 	return combat_resolving
+
+func get_boss_ultimate_meter() -> int:
+	return boss_ultimate_meter
+
+func get_boss_ultimate_meter_max() -> int:
+	return BOSS_ULTIMATE_METER_MAX
+
+func get_ultimate_timer() -> float:
+	return ultimate_timer
+
+func is_ultimate_active() -> bool:
+	return is_ultimate_charge_active or is_ultimate_challenge_active
+
+func is_ultimate_challenge() -> bool:
+	return is_ultimate_challenge_active
+
+func get_boss_spell_damage(spell: BossSpellType) -> int:
+	return BOSS_SPELL_DAMAGE.get(spell, 10)
+
+func has_karl_dodge_asset() -> bool:
+	return ResourceLoader.exists(ASSET_KARL_DODGE_SEQUENCE)
+
+func has_karl_skill_cast_asset() -> bool:
+	return ResourceLoader.exists(ASSET_KARL_SKILL_CAST_SEQUENCE)
+
+func has_karl_hand_cursor_asset() -> bool:
+	return ResourceLoader.exists(ASSET_KARL_CARD_HAND_CURSOR)
+
+func has_stochas_ultimate_asset() -> bool:
+	return ResourceLoader.exists(ASSET_STOCHAS_ULTIMATE_SEQUENCE)
+
+func has_tactical_card_atlas() -> bool:
+	return ResourceLoader.exists(ASSET_TACTICAL_ATLAS)
 
 func get_question_alpha() -> float:
 	if question_panel == null:
@@ -561,7 +678,7 @@ func select_card(idx: int) -> void:
 		# Probability Card Interaction
 		if probability_meter >= PROBABILITY_METER_MAX:
 			set_probability_meter(0)
-			open_probability_draw()
+			trigger_probability_draw_sequence()
 		else:
 			_spawn_floating_feedback(Vector2(690, 460), "XÁC SUẤT %d/3" % probability_meter, COLOR_ACCENT_PURPLE)
 		return
@@ -614,6 +731,21 @@ func reset_lab() -> void:
 	stochas_stun_charges = 0
 	probability_meter = 0
 	consecutive_no_rare_draws = 0
+	boss_ultimate_meter = 0
+	is_ultimate_queued = false
+	is_ultimate_charge_active = false
+	is_ultimate_challenge_active = false
+	ultimate_timer = 8.0
+	is_tactical_pick_mode = false
+	if ultimate_telegraph_panel != null:
+		ultimate_telegraph_panel.visible = false
+	if ultimate_dim_overlay != null:
+		ultimate_dim_overlay.visible = false
+	if hand_cursor_node != null:
+		hand_cursor_node.visible = false
+	if card_row_container != null:
+		card_row_container.visible = true
+		card_row_container.modulate.a = 1.0
 	tactical_hand.clear()
 	question_timer_seconds = 45.0
 	current_question_idx = 0
@@ -683,11 +815,82 @@ func set_karl_state(state: KarlState) -> void:
 	current_karl_state = state
 	if karl_sprite_rect == null:
 		return
-	if karl_textures.has(state):
+	if state == KarlState.DODGE:
+		if has_karl_dodge_asset():
+			karl_sprite_rect.texture = load(ASSET_KARL_DODGE_SEQUENCE)
+		elif karl_textures.has(KarlState.IDLE):
+			karl_sprite_rect.texture = karl_textures[KarlState.IDLE]
+	elif state == KarlState.SKILL_CAST:
+		if has_karl_skill_cast_asset():
+			karl_sprite_rect.texture = load(ASSET_KARL_SKILL_CAST_SEQUENCE)
+		elif karl_textures.has(KarlState.CAST):
+			karl_sprite_rect.texture = karl_textures[KarlState.CAST]
+		elif karl_textures.has(KarlState.IDLE):
+			karl_sprite_rect.texture = karl_textures[KarlState.IDLE]
+	elif karl_textures.has(state):
 		karl_sprite_rect.texture = karl_textures[state]
 	var y_offset: float = KARL_BASELINE_OFFSETS.get(state, 0.0)
 	karl_sprite_rect.position = Vector2(0.0, y_offset)
 	karl_sprite_rect.modulate = Color(1.0, 1.0, 1.0, 1.0)
+
+func play_karl_dodge() -> void:
+	set_karl_state(KarlState.DODGE)
+	if karl_state_tween != null and karl_state_tween.is_valid():
+		karl_state_tween.kill()
+
+	var base_entity_pos: Vector2 = Vector2(KARL_ENTITY_LEFT, 720.0 - KARL_ENTITY_HEIGHT - KARL_ENTITY_BOTTOM)
+	if floating_status_container != null and karl_sprite_rect != null and karl_sprite_rect.texture != null:
+		var ghost: TextureRect = TextureRect.new()
+		ghost.texture = karl_sprite_rect.texture
+		ghost.size = karl_sprite_rect.size
+		ghost.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ghost.position = base_entity_pos
+		ghost.modulate = Color(0.25, 0.85, 1.0, 0.55)
+		floating_status_container.add_child(ghost)
+		var g_tw: Tween = create_tween()
+		g_tw.tween_property(ghost, "modulate:a", 0.0, 0.45)
+		g_tw.tween_callback(ghost.queue_free)
+
+	karl_state_tween = create_tween()
+	karl_state_tween.tween_property(karl_battlefield_entity, "position:x", base_entity_pos.x - 50.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	karl_state_tween.parallel().tween_property(karl_battlefield_entity, "scale", Vector2(0.85, 1.15), 0.18)
+	karl_state_tween.tween_interval(0.22)
+	karl_state_tween.tween_property(karl_battlefield_entity, "position:x", base_entity_pos.x, 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	karl_state_tween.parallel().tween_property(karl_battlefield_entity, "scale", Vector2.ONE, 0.25)
+	karl_state_tween.tween_callback(func():
+		set_karl_state(KarlState.IDLE)
+		if karl_battlefield_entity != null:
+			karl_battlefield_entity.position = base_entity_pos
+			karl_battlefield_entity.scale = Vector2.ONE
+	)
+
+func play_karl_skill_cast(is_utility: bool = false) -> void:
+	set_karl_state(KarlState.SKILL_CAST)
+	if karl_state_tween != null and karl_state_tween.is_valid():
+		karl_state_tween.kill()
+
+	_spawn_cast_hand_spark()
+
+	var duration: float = 0.30 if is_utility else 0.50
+	karl_state_tween = create_tween()
+	karl_state_tween.set_parallel(true)
+	karl_state_tween.tween_property(karl_battlefield_entity, "scale", Vector2(1.05, 1.05), duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	karl_state_tween.tween_property(karl_battlefield_entity, "modulate", Color(1.2, 1.3, 1.5, 1.0), duration * 0.5)
+	karl_state_tween.chain().tween_property(karl_battlefield_entity, "scale", Vector2.ONE, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	karl_state_tween.parallel().tween_property(karl_battlefield_entity, "modulate", Color.WHITE, duration * 0.5)
+	karl_state_tween.chain().tween_callback(func():
+		set_karl_state(KarlState.IDLE)
+		if karl_battlefield_entity != null:
+			karl_battlefield_entity.scale = Vector2.ONE
+			karl_battlefield_entity.modulate = Color.WHITE
+	)
+
+func trigger_probability_draw_sequence() -> void:
+	play_karl_skill_cast(false)
+	fade_question_for_combat()
+	var tw: Tween = create_tween()
+	tw.tween_interval(0.50)
+	tw.tween_callback(open_probability_draw)
 
 func trigger_idle_state() -> void:
 	if karl_state_tween != null and karl_state_tween.is_valid():
@@ -985,6 +1188,10 @@ func fade_question_for_combat() -> void:
 	question_fade_tween.tween_property(question_panel, "modulate:a", QUESTION_COMBAT_ALPHA, QUESTION_FADE_OUT_DURATION)
 
 func restore_question_after_combat() -> void:
+	if is_ultimate_queued:
+		is_ultimate_queued = false
+		trigger_boss_ultimate_charge()
+		return
 	if question_panel == null:
 		return
 	if question_fade_tween != null and question_fade_tween.is_valid():
@@ -1162,6 +1369,30 @@ func trigger_boss_idle() -> void:
 		boss_rect.modulate = Color.WHITE
 	_start_boss_idle_loop()
 
+func set_boss_state(new_state: BossState) -> void:
+	current_boss_state = new_state
+
+func select_boss_spell_weighted() -> BossSpellType:
+	var roll: int = boss_spell_rng.randi_range(0, 99)
+	if is_boss_enraged:
+		if roll < 15:
+			return BossSpellType.ARCANE_BOLT
+		elif roll < 40:
+			return BossSpellType.PROBABILITY_ORB
+		elif roll < 70:
+			return BossSpellType.VOID_RIFT
+		else:
+			return BossSpellType.ARCANE_SWEEP
+	else:
+		if roll < 40:
+			return BossSpellType.ARCANE_BOLT
+		elif roll < 70:
+			return BossSpellType.PROBABILITY_ORB
+		elif roll < 90:
+			return BossSpellType.VOID_RIFT
+		else:
+			return BossSpellType.ARCANE_SWEEP
+
 # 4 Boss Spells Implementation (WAD2 Multi-Spells)
 func cast_boss_spell(spell: BossSpellType) -> void:
 	if current_boss_state == BossState.STUN:
@@ -1172,25 +1403,48 @@ func cast_boss_spell(spell: BossSpellType) -> void:
 	fade_question_for_combat()
 
 	_pause_boss_idle()
-	current_boss_state = BossState.CAST
 	_spawn_boss_cast_spark()
 
-	# Anticipation
 	if boss_action_tween != null and boss_action_tween.is_valid():
 		boss_action_tween.kill()
 	boss_action_tween = create_tween()
-	boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(14.0, -4.0), 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 1.5, 0.22)
-	boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color(1.25, 1.10, 1.45, 1.0), 0.22)
 
 	match spell:
 		BossSpellType.ARCANE_BOLT:
+			set_boss_state(BossState.CAST_BOLT)
+			boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(8.0, -2.0), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			boss_action_tween.parallel().tween_property(boss_rect, "scale", Vector2(1.02, 0.98), 0.15)
+			boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(-20.0, 2.0), 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", -2.0, 0.18)
+			boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color(1.3, 1.8, 2.0, 1.0), 0.18)
+			boss_action_tween.tween_property(boss_rect, "modulate", Color.WHITE, 0.15)
 			boss_action_tween.tween_callback(_cast_stochas_arcane_bolt)
+
 		BossSpellType.PROBABILITY_ORB:
+			set_boss_state(BossState.CAST_ORB)
+			boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(12.0, -12.0), 0.35).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+			boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 2.5, 0.35)
+			boss_action_tween.parallel().tween_property(boss_rect, "scale", Vector2(0.98, 1.05), 0.35)
+			boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color(1.5, 1.4, 0.8, 1.0), 0.35)
+			boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(-10.0, 0.0), 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+			boss_action_tween.parallel().tween_property(boss_rect, "scale", Vector2(1.04, 0.98), 0.25)
 			boss_action_tween.tween_callback(_cast_stochas_probability_orb)
+
 		BossSpellType.VOID_RIFT:
+			set_boss_state(BossState.CAST_RIFT)
+			boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(5.0, -10.0), 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", -3.5, 0.30)
+			boss_action_tween.parallel().tween_property(boss_rect, "modulate", Color(0.9, 0.7, 1.3, 1.0), 0.30)
 			boss_action_tween.tween_callback(_cast_stochas_void_rift)
+
 		BossSpellType.ARCANE_SWEEP:
+			set_boss_state(BossState.CAST_SWEEP)
+			boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(20.0, -5.0), 0.30).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+			boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", 5.0, 0.30)
+			boss_action_tween.parallel().tween_property(boss_rect, "scale", Vector2(1.08, 0.95), 0.30)
+			boss_action_tween.tween_property(boss_rect, "position", BOSS_BASE_POS + Vector2(-25.0, 5.0), 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			boss_action_tween.parallel().tween_property(boss_rect, "rotation_degrees", -4.5, 0.35)
+			boss_action_tween.parallel().tween_property(boss_rect, "scale", Vector2(0.96, 1.04), 0.35)
 			boss_action_tween.tween_callback(_cast_stochas_arcane_sweep)
 
 func trigger_boss_cast() -> void:
@@ -1224,7 +1478,7 @@ func _cast_stochas_arcane_bolt() -> void:
 	tw.tween_property(bolt, "position", target_pos, 0.50).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tw.tween_callback(func():
 		bolt.queue_free()
-		apply_damage_to_karl(10)
+		apply_damage_to_karl(8)
 	)
 
 	var recovery_tw: Tween = create_tween()
@@ -1233,7 +1487,9 @@ func _cast_stochas_arcane_bolt() -> void:
 		if boss_rect != null:
 			boss_rect.position = BOSS_BASE_POS
 			boss_rect.rotation_degrees = 0.0
+			boss_rect.scale = Vector2.ONE
 			boss_rect.modulate = Color.WHITE
+		set_boss_state(BossState.ENRAGED if is_boss_enraged else BossState.IDLE)
 		_start_boss_idle_loop()
 		combat_resolving = false
 		restore_question_after_combat()
@@ -1267,7 +1523,9 @@ func _cast_stochas_probability_orb() -> void:
 		if boss_rect != null:
 			boss_rect.position = BOSS_BASE_POS
 			boss_rect.rotation_degrees = 0.0
+			boss_rect.scale = Vector2.ONE
 			boss_rect.modulate = Color.WHITE
+		set_boss_state(BossState.ENRAGED if is_boss_enraged else BossState.IDLE)
 		_start_boss_idle_loop()
 		combat_resolving = false
 		restore_question_after_combat()
@@ -1293,7 +1551,7 @@ func _cast_stochas_void_rift() -> void:
 	tw.tween_property(rift, "scale", Vector2(1.2, 1.2), 0.60).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_property(rift, "modulate:a", 1.0, 0.60)
 	tw.chain().tween_callback(func():
-		apply_damage_to_karl(10)
+		apply_damage_to_karl(12)
 	)
 	tw.tween_property(rift, "scale", Vector2(0.1, 0.1), 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tw.parallel().tween_property(rift, "modulate:a", 0.0, 0.30)
@@ -1305,7 +1563,9 @@ func _cast_stochas_void_rift() -> void:
 		if boss_rect != null:
 			boss_rect.position = BOSS_BASE_POS
 			boss_rect.rotation_degrees = 0.0
+			boss_rect.scale = Vector2.ONE
 			boss_rect.modulate = Color.WHITE
+		set_boss_state(BossState.ENRAGED if is_boss_enraged else BossState.IDLE)
 		_start_boss_idle_loop()
 		combat_resolving = false
 		restore_question_after_combat()
@@ -1326,7 +1586,7 @@ func _cast_stochas_arcane_sweep() -> void:
 	var tw: Tween = create_tween()
 	tw.tween_property(sweep, "position", target_pos, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tw.tween_callback(func():
-		apply_damage_to_karl(10)
+		apply_damage_to_karl(14)
 	)
 	tw.tween_property(sweep, "modulate:a", 0.0, 0.20)
 	tw.tween_callback(sweep.queue_free)
@@ -1337,6 +1597,7 @@ func _cast_stochas_arcane_sweep() -> void:
 		if boss_rect != null:
 			boss_rect.position = BOSS_BASE_POS
 			boss_rect.rotation_degrees = 0.0
+			boss_rect.scale = Vector2.ONE
 			boss_rect.modulate = Color.WHITE
 		_start_boss_idle_loop()
 		combat_resolving = false
@@ -1666,7 +1927,7 @@ func _update_boss_hud() -> void:
 	if boss_hp_bar != null:
 		boss_hp_bar.value = float(current_boss_hp)
 	if boss_intent_label != null:
-		boss_intent_label.text = "HP: %d / %d   •   Ý ĐỊNH: 10 DMG (ĐÒN ĐÁNH)" % [current_boss_hp, max_boss_hp]
+		boss_intent_label.text = "HP: %d / %d   •   ĐẠI PHÉP: %d/4   •   Ý ĐỊNH: BIẾN ĐỔI" % [current_boss_hp, max_boss_hp, boss_ultimate_meter]
 
 func _build_question_module() -> void:
 	# Center X = 640px, Top = 155px, Width = 610px, Height = 240px
@@ -1823,6 +2084,7 @@ func _build_card_row() -> void:
 	card_container.position = Vector2(start_x, start_y)
 	card_container.add_theme_constant_override("separation", int(CARD_GAP))
 	add_child(card_container)
+	card_row_container = card_container
 
 	card_panels.clear()
 	card_art_rects.clear()
@@ -1960,6 +2222,28 @@ func _build_probability_draw_modal() -> void:
 	dbox.content_margin_bottom = 14
 	dialog.add_theme_stylebox_override("panel", dbox)
 	probability_draw_modal.add_child(dialog)
+
+	hand_cursor_node = Panel.new()
+	hand_cursor_node.name = "HandCursorNode"
+	hand_cursor_node.size = Vector2(24, 24)
+	hand_cursor_node.pivot_offset = Vector2(12, 12)
+	hand_cursor_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hand_cursor_node.visible = false
+	var c_box: StyleBoxFlat = StyleBoxFlat.new()
+	c_box.bg_color = Color(0.25, 0.85, 1.0, 0.75)
+	c_box.border_width_left = 2
+	c_box.border_width_top = 2
+	c_box.border_width_right = 2
+	c_box.border_width_bottom = 2
+	c_box.border_color = Color(1.0, 1.0, 1.0, 0.95)
+	c_box.corner_radius_top_left = 12
+	c_box.corner_radius_top_right = 12
+	c_box.corner_radius_bottom_right = 12
+	c_box.corner_radius_bottom_left = 12
+	c_box.shadow_color = Color(0.2, 0.85, 1.0, 0.7)
+	c_box.shadow_size = 10
+	hand_cursor_node.add_theme_stylebox_override("panel", c_box)
+	probability_draw_modal.add_child(hand_cursor_node)
 
 	var dvbox: VBoxContainer = VBoxContainer.new()
 	dvbox.add_theme_constant_override("separation", 10)
@@ -2111,10 +2395,245 @@ func draw_three_tactical_cards() -> Array[Dictionary]:
 
 	return drawn
 
+
+func set_ultimate_meter(val: int) -> void:
+	boss_ultimate_meter = clamp(val, 0, BOSS_ULTIMATE_METER_MAX)
+	_update_boss_hud()
+
+func increment_ultimate_meter() -> void:
+	if is_ultimate_challenge_active or is_ultimate_charge_active:
+		return
+	boss_ultimate_meter += 1
+	if boss_ultimate_meter >= BOSS_ULTIMATE_METER_MAX:
+		boss_ultimate_meter = 0
+		is_ultimate_queued = true
+	_update_boss_hud()
+
+func trigger_boss_ultimate_charge() -> void:
+	if is_ultimate_charge_active or is_ultimate_challenge_active:
+		return
+	is_ultimate_charge_active = true
+	combat_resolving = true
+	set_boss_state(BossState.ULTIMATE_CHARGE)
+	_pause_boss_idle()
+
+	_set_question_input_enabled(false)
+	if question_panel != null:
+		question_panel.visible = false
+	if card_row_container != null:
+		card_row_container.visible = false
+	if tactical_hand_tray != null:
+		tactical_hand_tray.visible = false
+
+	if ultimate_dim_overlay == null:
+		ultimate_dim_overlay = ColorRect.new()
+		ultimate_dim_overlay.name = "UltimateDimOverlay"
+		ultimate_dim_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+		ultimate_dim_overlay.color = Color(0.04, 0.02, 0.08, 0.50)
+		ultimate_dim_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(ultimate_dim_overlay)
+	ultimate_dim_overlay.visible = true
+	ultimate_dim_overlay.modulate.a = 0.0
+
+	if ultimate_telegraph_panel == null:
+		ultimate_telegraph_panel = Control.new()
+		ultimate_telegraph_panel.name = "UltimateTelegraphPanel"
+		ultimate_telegraph_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+		ultimate_telegraph_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(ultimate_telegraph_panel)
+
+		var banner_vbox: VBoxContainer = VBoxContainer.new()
+		banner_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		banner_vbox.position = Vector2(400, 220)
+		banner_vbox.custom_minimum_size = Vector2(480, 100)
+		banner_vbox.add_theme_constant_override("separation", 4)
+		ultimate_telegraph_panel.add_child(banner_vbox)
+
+		var t1: Label = Label.new()
+		t1.text = "STOCHAS"
+		t1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		t1.add_theme_font_size_override("font_size", 14)
+		t1.add_theme_color_override("font_color", COLOR_ACCENT_RED)
+		banner_vbox.add_child(t1)
+
+		var t2: Label = Label.new()
+		t2.text = "CHAOS VERDICT"
+		t2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		t2.add_theme_font_size_override("font_size", 24)
+		t2.add_theme_color_override("font_color", COLOR_ACCENT_PURPLE)
+		banner_vbox.add_child(t2)
+
+		var t3: Label = Label.new()
+		t3.text = "ĐẠI PHÉP ĐANG ĐƯỢC NIỆM"
+		t3.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		t3.add_theme_font_size_override("font_size", 12)
+		t3.add_theme_color_override("font_color", COLOR_ACCENT_CYAN)
+		banner_vbox.add_child(t3)
+
+	ultimate_telegraph_panel.visible = true
+	ultimate_telegraph_panel.modulate.a = 0.0
+
+	if boss_action_tween != null and boss_action_tween.is_valid():
+		boss_action_tween.kill()
+	boss_action_tween = create_tween()
+	boss_action_tween.set_parallel(true)
+	boss_action_tween.tween_property(ultimate_dim_overlay, "modulate:a", 1.0, 0.40)
+	boss_action_tween.tween_property(ultimate_telegraph_panel, "modulate:a", 1.0, 0.40)
+	boss_action_tween.tween_property(boss_rect, "position", Vector2(730.0, 120.0), 0.60).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	boss_action_tween.tween_property(boss_rect, "scale", Vector2(1.10, 1.10), 0.60).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	boss_action_tween.tween_property(boss_rect, "modulate", Color(1.4, 0.9, 1.6, 1.0), 0.60)
+
+	var hold_tw: Tween = create_tween()
+	hold_tw.tween_interval(ULTIMATE_CHARGE_DURATION)
+	hold_tw.tween_callback(func():
+		if ultimate_telegraph_panel != null:
+			ultimate_telegraph_panel.visible = false
+		if ultimate_dim_overlay != null:
+			ultimate_dim_overlay.visible = false
+		is_ultimate_charge_active = false
+		trigger_boss_ultimate_challenge()
+	)
+
+func trigger_boss_ultimate_challenge() -> void:
+	is_ultimate_challenge_active = true
+	combat_resolving = false
+	ultimate_timer = ULTIMATE_CHALLENGE_DURATION
+
+	if question_panel != null:
+		question_panel.visible = true
+		question_panel.modulate.a = 1.0
+	if tactical_hand_tray != null:
+		tactical_hand_tray.visible = true
+		tactical_hand_tray.modulate.a = 1.0
+
+	if question_stage_label != null:
+		question_stage_label.text = "CHAOS VERDICT • THỬ THÁCH ĐẠI PHÉP"
+	if question_prompt_label != null:
+		question_prompt_label.text = "Giải mã ma trận xác suất: Chọn biểu thức đúng để hoá giải nguồn năng lượng hỗn mang!"
+
+	var choices: Array = [
+		{"code": "A", "val": "P(A) + P(Ā) = 1", "sub": "Biến cố đối"},
+		{"code": "B", "val": "P(A) + P(B) > 1", "sub": "Không chuẩn"},
+		{"code": "C", "val": "P(Ω) = 0", "sub": "Sai quy tắc"},
+		{"code": "D", "val": "P(∅) = 1", "sub": "Biến cố rỗng"}
+	]
+	for i in range(answer_buttons.size()):
+		if i < choices.size():
+			answer_buttons[i].visible = true
+			answer_buttons[i].disabled = false
+			answer_buttons[i].text = "%s. %s" % [choices[i]["code"], choices[i]["val"]]
+			answer_buttons[i].add_theme_color_override("font_color", Color.WHITE)
+			var n_style: StyleBoxFlat = _create_glass_box(COLOR_CARD_BG, COLOR_CARD_BORDER, 4)
+			answer_buttons[i].add_theme_stylebox_override("normal", n_style)
+		else:
+			answer_buttons[i].visible = false
+
+	selected_answer_idx = -1
+	has_selected_answer = false
+	if cta_button != null:
+		cta_button.text = "PHÁ GIẢI ĐẠI PHÉP"
+		cta_button.disabled = false
+	if helper_label != null:
+		helper_label.text = "THỜI GIAN: 8.0s  •  PHÁ GIẢI TRƯỚC KHI HẾT GIỜ!"
+
+	_set_question_input_enabled(true)
+
+func trigger_ultimate_success() -> void:
+	if not is_ultimate_challenge_active and not is_ultimate_charge_active:
+		return
+	is_ultimate_challenge_active = false
+	is_ultimate_charge_active = false
+	combat_resolving = true
+	_set_question_input_enabled(false)
+	if question_panel != null:
+		question_panel.visible = false
+
+	play_karl_dodge()
+	set_boss_state(BossState.ULTIMATE_RELEASE)
+
+	_spawn_floating_feedback(Vector2(200, 320), "MISS / NÉ!", COLOR_ACCENT_GOLD)
+
+	var rel_tw: Tween = create_tween()
+	rel_tw.tween_interval(0.75)
+	rel_tw.tween_callback(func():
+		if boss_rect != null:
+			boss_rect.position = BOSS_BASE_POS
+			boss_rect.scale = Vector2.ONE
+			boss_rect.rotation_degrees = 0.0
+			boss_rect.modulate = Color.WHITE
+		set_boss_state(BossState.ENRAGED if is_boss_enraged else BossState.IDLE)
+		_start_boss_idle_loop()
+		combat_resolving = false
+		_restore_normal_ui_after_ultimate()
+	)
+
+func trigger_ultimate_failure(is_timeout: bool = false) -> void:
+	if not is_ultimate_challenge_active and not is_ultimate_charge_active:
+		return
+	is_ultimate_challenge_active = false
+	is_ultimate_charge_active = false
+	combat_resolving = true
+	_set_question_input_enabled(false)
+	if question_panel != null:
+		question_panel.visible = false
+
+	set_boss_state(BossState.ULTIMATE_RELEASE)
+	apply_damage_to_karl(24)
+
+	if is_timeout:
+		_spawn_floating_feedback(Vector2(200, 270), "HẾT GIỜ! ĐẠI PHÉP GIÁNG LÂM!", COLOR_ACCENT_RED)
+	else:
+		_spawn_floating_feedback(Vector2(200, 270), "PHÁ GIẢI THẤT BẠI! -24 DMG", COLOR_ACCENT_RED)
+
+	var rel_tw: Tween = create_tween()
+	rel_tw.tween_interval(0.85)
+	rel_tw.tween_callback(func():
+		if boss_rect != null:
+			boss_rect.position = BOSS_BASE_POS
+			boss_rect.scale = Vector2.ONE
+			boss_rect.rotation_degrees = 0.0
+			boss_rect.modulate = Color.WHITE
+		set_boss_state(BossState.ENRAGED if is_boss_enraged else BossState.IDLE)
+		_start_boss_idle_loop()
+		combat_resolving = false
+		_restore_normal_ui_after_ultimate()
+	)
+
+func simulate_ultimate_success() -> void:
+	trigger_ultimate_success()
+
+func simulate_ultimate_failure() -> void:
+	trigger_ultimate_failure(false)
+
+func _restore_normal_ui_after_ultimate() -> void:
+	if question_panel != null:
+		question_panel.visible = true
+		question_panel.modulate.a = 1.0
+		question_panel.position = Vector2(QUESTION_CENTER_X - (QUESTION_WIDTH / 2.0), QUESTION_TOP)
+		question_panel.size = Vector2(QUESTION_WIDTH, QUESTION_HEIGHT)
+	if card_row_container != null:
+		card_row_container.visible = true
+		card_row_container.modulate.a = 1.0
+	if tactical_hand_tray != null:
+		tactical_hand_tray.visible = true
+		tactical_hand_tray.modulate.a = 1.0
+	current_question_idx = (current_question_idx + 1) % questions_data.size()
+	selected_answer_idx = -1
+	has_selected_answer = false
+	_update_question_view()
+	_update_card_selection()
+	_update_hover_detail(selected_card_idx)
+	_update_cta_button_text()
+	_set_question_input_enabled(true)
+
 func open_probability_draw() -> void:
 	if is_draw_open or combat_resolving:
 		return
 	is_draw_open = true
+	is_tactical_pick_mode = true
+	if hand_cursor_node != null:
+		hand_cursor_node.visible = true
+		hand_cursor_node.position = Vector2(640, 360)
 	fade_question_for_combat()
 	emit_signal("probability_draw_started")
 
@@ -2176,7 +2695,22 @@ func open_probability_draw() -> void:
 		pick_btn.add_theme_stylebox_override("normal", b_style)
 		pick_btn.add_theme_color_override("font_color", Color(0.05, 0.08, 0.12, 1.0))
 		pick_btn.add_theme_font_size_override("font_size", 12)
-		pick_btn.pressed.connect(func(): _on_tactical_card_picked(card_data))
+		pnl.mouse_entered.connect(func():
+			var h_tw: Tween = create_tween()
+			h_tw.tween_property(pnl, "position:y", pnl.position.y - 12.0, 0.12)
+		)
+		pnl.mouse_exited.connect(func():
+			var h_tw: Tween = create_tween()
+			h_tw.tween_property(pnl, "position:y", pnl.position.y + 12.0, 0.12)
+		)
+
+		pick_btn.pressed.connect(func():
+			if hand_cursor_node != null:
+				var c_tw: Tween = create_tween()
+				c_tw.tween_property(hand_cursor_node, "scale", Vector2(0.85, 0.85), 0.10)
+				c_tw.tween_property(hand_cursor_node, "scale", Vector2.ONE, 0.10)
+			_on_tactical_card_picked(card_data)
+		)
 		cvbox.add_child(pick_btn)
 
 		draw_cards_container.add_child(pnl)
@@ -2185,6 +2719,9 @@ func open_probability_draw() -> void:
 
 func close_probability_draw() -> void:
 	is_draw_open = false
+	is_tactical_pick_mode = false
+	if hand_cursor_node != null:
+		hand_cursor_node.visible = false
 	if probability_draw_modal != null:
 		probability_draw_modal.visible = false
 	restore_question_after_combat()
@@ -2244,8 +2781,77 @@ func use_tactical_card(slot_idx: int) -> void:
 	var card: Dictionary = tactical_hand[slot_idx]
 	var card_id: String = card.get("id", "")
 
+	if is_ultimate_challenge_active:
+		match card_id:
+			"card_tactical_eliminate":
+				play_karl_skill_cast(true)
+				var wrong_avail: Array[int] = []
+				for i in range(1, 4):
+					if not answer_buttons[i].disabled:
+						wrong_avail.append(i)
+				if wrong_avail.size() <= 1:
+					_spawn_floating_feedback(Vector2(640, 350), "Không thể loại trừ thêm!", COLOR_ACCENT_GOLD)
+					return
+				var elim_idx: int = wrong_avail[0]
+				answer_buttons[elim_idx].disabled = true
+				var d_style: StyleBoxFlat = _create_solid_box(Color(0.12, 0.08, 0.10, 0.50), 4)
+				answer_buttons[elim_idx].add_theme_stylebox_override("normal", d_style)
+				answer_buttons[elim_idx].add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 0.5))
+				tactical_hand.remove_at(slot_idx)
+				_update_tactical_hand_ui()
+				_spawn_floating_feedback(Vector2(640, 350), "Đã loại bỏ 1 đáp án sai!", COLOR_ACCENT_CYAN)
+				emit_signal("tactical_card_used", card_id)
+				return
+
+			"card_tactical_add_time":
+				play_karl_skill_cast(true)
+				ultimate_timer = min(12.0, ultimate_timer + 3.0)
+				tactical_hand.remove_at(slot_idx)
+				_update_tactical_hand_ui()
+				_spawn_floating_feedback(Vector2(640, 350), "+3s NÉ TRÁNH!", COLOR_ACCENT_GREEN)
+				emit_signal("tactical_card_used", card_id)
+				return
+
+			"card_tactical_reroll":
+				_spawn_floating_feedback(Vector2(640, 350), "Không thể đổi câu khi boss đang niệm Đại Phép!", COLOR_ACCENT_RED)
+				return
+
+			"card_tactical_stun":
+				play_karl_skill_cast(false)
+				is_stun_armed = true
+				tactical_hand.remove_at(slot_idx)
+				_update_tactical_hand_ui()
+				_spawn_floating_feedback(Vector2(200, 300), "⚡ CHOÁNG ĐÃ NẠP (Áp dụng sau Đại Phép)!", COLOR_ACCENT_GOLD)
+				emit_signal("stun_armed")
+				emit_signal("tactical_card_used", card_id)
+				return
+
+			"card_tactical_critical":
+				play_karl_skill_cast(false)
+				is_critical_armed = true
+				tactical_hand.remove_at(slot_idx)
+				_update_tactical_hand_ui()
+				_update_strike_card_stat()
+				_spawn_floating_feedback(Vector2(200, 300), "⚔️ CRITICAL ĐÃ NẠP!", COLOR_ACCENT_RED)
+				emit_signal("critical_armed")
+				emit_signal("tactical_card_used", card_id)
+				return
+
+			"card_tactical_aegis":
+				play_karl_skill_cast(false)
+				var new_shield: int = min(24, current_shield + 6)
+				set_shield(new_shield)
+				tactical_hand.remove_at(slot_idx)
+				_update_tactical_hand_ui()
+				_spawn_floating_feedback(Vector2(200, 300), "+6 GIÁP (BẢO HỘ)", COLOR_ACCENT_CYAN)
+				_spawn_barrier_pulse()
+				emit_signal("aegis_triggered", 6)
+				emit_signal("tactical_card_used", card_id)
+				return
+
 	match card_id:
 		"card_tactical_eliminate":
+			play_karl_skill_cast(true)
 			var q_data: Dictionary = questions_data[current_question_idx]
 			var correct_idx: int = q_data["correct"]
 			var wrong_available: Array[int] = []
@@ -2266,6 +2872,7 @@ func use_tactical_card(slot_idx: int) -> void:
 			emit_signal("tactical_card_used", card_id)
 
 		"card_tactical_reroll":
+			play_karl_skill_cast(true)
 			tactical_hand.remove_at(slot_idx)
 			_update_tactical_hand_ui()
 			cycle_question()
@@ -2275,6 +2882,7 @@ func use_tactical_card(slot_idx: int) -> void:
 			emit_signal("tactical_card_used", card_id)
 
 		"card_tactical_add_time":
+			play_karl_skill_cast(true)
 			if question_timer_seconds >= QUESTION_TIMER_MAX:
 				_spawn_floating_feedback(Vector2(640, 350), "Đã đạt thời gian tối đa (90s)!", COLOR_ACCENT_GOLD)
 				return
@@ -2285,6 +2893,7 @@ func use_tactical_card(slot_idx: int) -> void:
 			emit_signal("tactical_card_used", card_id)
 
 		"card_tactical_stun":
+			play_karl_skill_cast(false)
 			is_stun_armed = true
 			tactical_hand.remove_at(slot_idx)
 			_update_tactical_hand_ui()
@@ -2293,6 +2902,7 @@ func use_tactical_card(slot_idx: int) -> void:
 			emit_signal("tactical_card_used", card_id)
 
 		"card_tactical_critical":
+			play_karl_skill_cast(false)
 			is_critical_armed = true
 			tactical_hand.remove_at(slot_idx)
 			_update_tactical_hand_ui()
@@ -2302,6 +2912,7 @@ func use_tactical_card(slot_idx: int) -> void:
 			emit_signal("tactical_card_used", card_id)
 
 		"card_tactical_aegis":
+			play_karl_skill_cast(false)
 			var new_shield: int = min(24, current_shield + 6)
 			set_shield(new_shield)
 			tactical_hand.remove_at(slot_idx)
@@ -2476,6 +3087,18 @@ func _on_hint_pressed() -> void:
 func _on_cta_pressed() -> void:
 	if combat_resolving or is_draw_open:
 		return
+
+	if is_ultimate_challenge_active:
+		if not has_selected_answer or selected_answer_idx < 0:
+			_spawn_floating_feedback(Vector2(690, 410), "Chọn đáp án để phá giải!", COLOR_ACCENT_GOLD)
+			return
+		var is_correct_ult: bool = (selected_answer_idx == 0)
+		if is_correct_ult:
+			trigger_ultimate_success()
+		else:
+			trigger_ultimate_failure(false)
+		return
+
 	if not has_selected_answer or selected_answer_idx < 0:
 		_spawn_floating_feedback(Vector2(690, 410), "Chọn đáp án trước", COLOR_ACCENT_GOLD)
 		return
@@ -2487,6 +3110,8 @@ func _on_cta_pressed() -> void:
 
 	var q_data: Dictionary = questions_data[current_question_idx]
 	var is_correct: bool = (selected_answer_idx == q_data["correct"])
+
+	increment_ultimate_meter()
 
 	if is_correct:
 		add_probability_charge(1)
@@ -2522,8 +3147,8 @@ func _on_cta_pressed() -> void:
 				restore_question_after_combat()
 			)
 		else:
-			var spell_choice: int = boss_spell_rng.randi_range(0, 3)
-			cast_boss_spell(spell_choice as BossSpellType)
+			var chosen_spell: BossSpellType = select_boss_spell_weighted()
+			cast_boss_spell(chosen_spell)
 
 func _spawn_floating_feedback(pos: Vector2, text: String, color: Color) -> void:
 	if floating_status_container == null:
