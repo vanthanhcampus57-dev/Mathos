@@ -136,6 +136,11 @@ const BOSS_SPELL_DAMAGE: Dictionary = {
 const ASSET_KARL_DODGE_SEQUENCE: String = "res://assets/characters/player/karl/combat_pixel/karl_dodge_sequence.png"
 const ASSET_KARL_SKILL_CAST_SEQUENCE: String = "res://assets/characters/player/karl/combat_pixel/karl_skill_cast_sequence.png"
 const ASSET_KARL_CARD_HAND_CURSOR: String = "res://assets/characters/player/karl/combat_pixel/karl_card_hand_cursor.png"
+
+# Karl Card Hand Cursor Configuration (Task 235L)
+const HAND_CURSOR_SOURCE_SIZE: Vector2 = Vector2(256.0, 256.0)
+const HAND_CURSOR_HOTSPOT_SOURCE: Vector2 = Vector2(217.0, 29.0)
+const HAND_CURSOR_DISPLAY_SIZE: Vector2 = Vector2(144.0, 144.0)
 const ASSET_STOCHAS_ULTIMATE_SEQUENCE: String = "res://assets/characters/bosses/dungeon_1/stochas_ultimate_sequence.png"
 const ASSET_TACTICAL_ATLAS: String = "res://assets/ui/combat/tactical/tactical_cards_v1_atlas.png"
 
@@ -480,7 +485,7 @@ func _process(delta: float) -> void:
 
 func _input(event: InputEvent) -> void:
 	if is_tactical_pick_mode and hand_cursor_node != null and event is InputEventMouseMotion:
-		hand_cursor_node.position = event.position + Vector2(4, 4)
+		_update_hand_cursor_position(event.position)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.pressed or event.echo:
@@ -633,6 +638,52 @@ func get_tactical_card_atlas_texture(card_id: String) -> AtlasTexture:
 
 func get_hand_cursor_node() -> Control:
 	return hand_cursor_node
+
+func get_hand_cursor_display_size() -> Vector2:
+	return HAND_CURSOR_DISPLAY_SIZE
+
+func get_hand_cursor_hotspot_source() -> Vector2:
+	return HAND_CURSOR_HOTSPOT_SOURCE
+
+func get_hand_cursor_hotspot_display() -> Vector2:
+	return HAND_CURSOR_HOTSPOT_SOURCE * (HAND_CURSOR_DISPLAY_SIZE.x / HAND_CURSOR_SOURCE_SIZE.x)
+
+func get_hand_cursor_fingertip_position() -> Vector2:
+	if hand_cursor_node == null:
+		return Vector2.ZERO
+	return hand_cursor_node.position + get_hand_cursor_hotspot_display()
+
+var current_mouse_mode: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
+
+func get_tactical_mouse_mode() -> Input.MouseMode:
+	return current_mouse_mode
+
+func is_tactical_hand_cursor_active() -> bool:
+	return is_tactical_pick_mode and hand_cursor_node != null and hand_cursor_node.visible
+
+func _update_hand_cursor_position(mouse_pos: Vector2) -> void:
+	if hand_cursor_node != null:
+		hand_cursor_node.position = mouse_pos - get_hand_cursor_hotspot_display()
+
+func _set_tactical_hand_cursor_active(active: bool) -> void:
+	is_tactical_pick_mode = active
+	if active:
+		current_mouse_mode = Input.MOUSE_MODE_HIDDEN
+		Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
+		if hand_cursor_node != null:
+			hand_cursor_node.visible = true
+			var mouse_pos: Vector2 = Vector2(640.0, 360.0)
+			if get_viewport() != null:
+				mouse_pos = get_viewport().get_mouse_position()
+			_update_hand_cursor_position(mouse_pos)
+	else:
+		current_mouse_mode = Input.MOUSE_MODE_VISIBLE
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		if hand_cursor_node != null:
+			hand_cursor_node.visible = false
+
+func _exit_tree() -> void:
+	_set_tactical_hand_cursor_active(false)
 
 func get_boss_texture() -> Texture2D:
 	if boss_rect != null:
@@ -814,13 +865,11 @@ func reset_lab() -> void:
 	is_ultimate_charge_active = false
 	is_ultimate_challenge_active = false
 	ultimate_timer = 8.0
-	is_tactical_pick_mode = false
+	_set_tactical_hand_cursor_active(false)
 	if ultimate_telegraph_panel != null:
 		ultimate_telegraph_panel.visible = false
 	if ultimate_dim_overlay != null:
 		ultimate_dim_overlay.visible = false
-	if hand_cursor_node != null:
-		hand_cursor_node.visible = false
 	if card_row_container != null:
 		card_row_container.visible = true
 		card_row_container.modulate.a = 1.0
@@ -2327,12 +2376,15 @@ func _build_probability_draw_modal() -> void:
 
 	var cursor_tex_rect: TextureRect = TextureRect.new()
 	cursor_tex_rect.name = "HandCursorNode"
-	cursor_tex_rect.size = Vector2(96, 96)
-	cursor_tex_rect.custom_minimum_size = Vector2(96, 96)
+	cursor_tex_rect.size = HAND_CURSOR_DISPLAY_SIZE
+	cursor_tex_rect.custom_minimum_size = HAND_CURSOR_DISPLAY_SIZE
 	cursor_tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	cursor_tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	cursor_tex_rect.pivot_offset = Vector2(10, 10)
 	cursor_tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cursor_tex_rect.top_level = true
+	cursor_tex_rect.z_index = 200
+	var scaled_hotspot: Vector2 = HAND_CURSOR_HOTSPOT_SOURCE * (HAND_CURSOR_DISPLAY_SIZE.x / HAND_CURSOR_SOURCE_SIZE.x)
+	cursor_tex_rect.pivot_offset = scaled_hotspot
 	cursor_tex_rect.visible = false
 	if ResourceLoader.exists(ASSET_KARL_CARD_HAND_CURSOR):
 		cursor_tex_rect.texture = load(ASSET_KARL_CARD_HAND_CURSOR)
@@ -2759,10 +2811,7 @@ func open_probability_draw() -> void:
 	if is_draw_open or combat_resolving:
 		return
 	is_draw_open = true
-	is_tactical_pick_mode = true
-	if hand_cursor_node != null:
-		hand_cursor_node.visible = true
-		hand_cursor_node.position = Vector2(640, 360)
+	_set_tactical_hand_cursor_active(true)
 	fade_question_for_combat()
 	emit_signal("probability_draw_started")
 
@@ -2847,8 +2896,8 @@ func open_probability_draw() -> void:
 		pick_btn.pressed.connect(func():
 			if hand_cursor_node != null:
 				var c_tw: Tween = create_tween()
-				c_tw.tween_property(hand_cursor_node, "scale", Vector2(0.85, 0.85), 0.10)
-				c_tw.tween_property(hand_cursor_node, "scale", Vector2.ONE, 0.10)
+				c_tw.tween_property(hand_cursor_node, "scale", Vector2(0.92, 0.92), 0.05).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+				c_tw.tween_property(hand_cursor_node, "scale", Vector2.ONE, 0.06).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 			_on_tactical_card_picked(card_data)
 		)
 		cvbox.add_child(pick_btn)
@@ -2859,9 +2908,7 @@ func open_probability_draw() -> void:
 
 func close_probability_draw() -> void:
 	is_draw_open = false
-	is_tactical_pick_mode = false
-	if hand_cursor_node != null:
-		hand_cursor_node.visible = false
+	_set_tactical_hand_cursor_active(false)
 	if probability_draw_modal != null:
 		probability_draw_modal.visible = false
 	restore_question_after_combat()
