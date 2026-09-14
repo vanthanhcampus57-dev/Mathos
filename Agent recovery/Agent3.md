@@ -3,99 +3,108 @@
 > Canonical recovery note for Agent3. This file must be updated every time Agent3 receives a prompt, and updated again before sending a report if state changed.
 
 ## 1. CURRENT TASK
-- TASK_ID: MATHOS-STOCHAS-ACTION-ULTIMATE-DAMAGE-LAB-233L
-- TITLE: Boss Action System + per-spell damage + Ultimate Challenge + Karl Dodge + tactical activation presentation
+- TASK_ID: MATHOS-WAD2-233A-ASSET-INTEGRATION-234L
+- TITLE: WAD2 final ZIP intake + real animation asset integration
 - FROM: User / P0 HUMAN COMBAT LAB
 - PRIORITY: P0 / HUMAN COMBAT LAB
-- BASE: f7877882eea265fe845cb1315f8aa22a8315003c
-- STATUS: READY_FOR_REVIEW
-- PROMPT_RECEIVED_AT: 2026-09-14T14:22:21+07:00
-- UPDATED_AT: 2026-09-14T14:31:50+07:00
+- BASE: 567ee3fd9730bb0b92737ddb228ac0d89a6898fe
+- STATUS: COMPLETED
+- PROMPT_RECEIVED_AT: 2026-09-14T14:39:42+07:00
+- UPDATED_AT: 2026-09-14T14:47:30+07:00
 
 ## 2. WORKSPACE / GIT
 - PROJECT: Mathos
 - WORKTREE: D:\Mathos_Worktrees\MATHOS-STORY-PARITY-FIX-185
 - BRANCH: task/mathos-story-parity-fix-185
-- START_HEAD: f7877882eea265fe845cb1315f8aa22a8315003c
-- CURRENT_HEAD: 00398d51e5eff8e565ba80db5338a129900b41e8
-- FINAL_HEAD: 00398d51e5eff8e565ba80db5338a129900b41e8
-- CANONICAL_BASE: f7877882eea265fe845cb1315f8aa22a8315003c
-- PRODUCTION_SOURCE_CHANGED: NO (LAB only: res://labs/stochas_combat_ui/)
+- START_HEAD: 567ee3fd9730bb0b92737ddb228ac0d89a6898fe
+- CURRENT_HEAD: 599cefccfe5e1240ae869273dbcbce6e15cec2fe
+- FINAL_HEAD: 599cefccfe5e1240ae869273dbcbce6e15cec2fe
+- CANONICAL_BASE: 567ee3fd9730bb0b92737ddb228ac0d89a6898fe
+- PRODUCTION_SOURCE_CHANGED: NO (LAB only: res://labs/stochas_combat_ui/ and approved asset destinations)
 
-## 3. BOSS ACTION SYSTEM & DAMAGE CONTRACT
-- Boss Damage Table:
-  - ARCANE_BOLT: 8 damage
-  - PROBABILITY_ORB: 10 damage
-  - VOID_RIFT: 12 damage
-  - ARCANE_SWEEP: 14 damage
-  - CHAOS_VERDICT_ULTIMATE: 24 damage
-- Centralized Damage Resolution: All damage routes through apply_damage_to_karl(amount), resolving against Shield first, then HP overflow, auto-triggering shield break VFX on depletion.
-- Boss Action States:
-  - BOSS_IDLE
-  - BOSS_CAST_BOLT (~0.50s anticipation & snap, cyan flash)
-  - BOSS_CAST_ORB (~0.60s slow staff raise & float, cyan/gold aura pulse)
-  - BOSS_CAST_RIFT (~0.30s arm raise, lateral lean, purple dim, hold stance during ground detonation)
-  - BOSS_CAST_SWEEP (~0.65s windup twist & rotation, broad release into crescent sweep)
-  - BOSS_ULTIMATE_CHARGE (2.4s charge, scale ~1.10, aura intensification, telegraph warning banner)
-  - BOSS_ULTIMATE_RELEASE (0.75-0.85s beam/vortex release, applies 24 damage or MISS/NÉ on dodge)
-  - BOSS_HIT
-  - BOSS_STUN
-  - BOSS_ENRAGED
-- Deterministic Weighted Spell Selection:
-  - Normal Weights: Arcane Bolt 40%, Probability Orb 30%, Void Rift 20%, Arcane Sweep 10%
-  - Enraged Weights: Arcane Bolt 15%, Probability Orb 25%, Void Rift 30%, Arcane Sweep 30%
+## 3. ASSET INTAKE & DESTINATIONS
+- ZIP Source: C:\Users\Admin\Downloads\MATHOS_WAD2_233A_ULTIMATE_TACTICAL_ASSETS_FINAL.zip
+- Recovery Staging: D:\Mathos\Agent recovery\WAD2 Packages\MATHOS_WAD2_233A_ULTIMATE_TACTICAL_ASSETS_FINAL.zip (Untouched copy, SHA256: 367fd19d5f61b6c9e6905e66144fa432a04e014384a3e725647be7ac9f6a4e7b)
+- Target Project Destinations:
+  1. karl_dodge_sequence.png (1536x256, 6 frames of 256x256, SHA256: 6644ae53d4c028e52e9f891635f96ae5bb89de0e1d8522da70ff89f852e0bb5d) -> res://assets/characters/player/karl/combat_pixel/karl_dodge_sequence.png
+  2. karl_skill_cast_sequence.png (1536x256, 6 frames of 256x256, SHA256: 59d4f31f51122b7241cf896c289ecd07abf073f515b1017b5e8c48fc4b76ae2a) -> res://assets/characters/player/karl/combat_pixel/karl_skill_cast_sequence.png
+  3. karl_card_hand_cursor.png (256x256, single asset, SHA256: e8368beff1774f7f6cd33dbb5334826fc0041db64a14f33e1611f4571c2fa88f) -> res://assets/characters/player/karl/combat_pixel/karl_card_hand_cursor.png
+  4. stochas_ultimate_sequence.png (3072x384, 8 frames of 384x384, SHA256: 6747d14604aa7fccd8ab87c19e61849786d506f16a76b11039ccab70a0d01a94) -> canonical STOCHAS directory res://assets/characters/bosses/dungeon_1/stochas_ultimate_sequence.png
+  5. tactical_cards_v1_atlas.png (960x896, 3x2 grid of 320x448, SHA256: e17d0b78f9ce46621ad7406604771f0c6f6b1f931c9f6fbd77eb1ad4f1a105d5) -> res://assets/ui/combat/tactical/tactical_cards_v1_atlas.png
+- Zero image generation/editing/repainting.
 
-## 4. ULTIMATE METER & CHAOS VERDICT CHALLENGE
-- Meter Capacity: 0 / 4. Increments +1 on every completed normal question (regardless of correct/wrong).
-- Exceptions: 0 for Đổi Câu, Probability Draw, Tactical Hand actions, debug interactions, cancelled questions.
-- Queueing: At 4/4, meter resets to 0 and queues Chaos Verdict (starts immediately after active combat finishes).
-- Phase 1 Telegraph (2.4s): Hides normal question, base card row, and tactical tray. Boss scales to 1.10 with purple aura, dim overlay, and displays STOCHAS CHAOS VERDICT - ĐẠI PHÉP ĐANG ĐƯỢC NIỆM.
-- Phase 2 Challenge: 8.0-second countdown timer. Compact question challenge with CTA PHÁ GIẢI ĐẠI PHÉP.
-- Success Flow: Correct answer in time -> Karl enters KARL_DODGE -> STOCHAS releases ultimate -> MISS / NÉ! (0 damage) -> exact baseline restored -> normal UI restored.
-- Failure Flow: Wrong answer or timeout -> BOSS_ULTIMATE_RELEASE -> apply_damage_to_karl(24) -> respects Shield -> HP overflow -> normal UI restored.
-- Tactical Cards in Ultimate:
-  - LOẠI TRỪ: disables 1 wrong answer in challenge.
-  - THÊM GIỜ: grants +3.0s to Ultimate timer (respects 12.0s cap).
-  - ĐỔI CÂU: blocked with warning feedback.
-  - CHOÁNG: arms for next retaliation, does not cancel Ultimate.
-  - CRITICAL: persists for next strike.
-  - BẢO HỘ: grants +6 shield up to 24 cap.
+## 4. INTEGRATION DETAILS
+- Karl Dodge Integration:
+  - 6 horizontal frames sliced via AtlasTexture (256x256 px each).
+  - Playback at 10 FPS (0.10s per frame, total 0.60s).
+  - Subtle grounded horizontal displacement (-20px) returning smoothly to exact baseline (50, 350).
+  - Clean restoration of Karl IDLE state and sprite.
+- Karl Skill Cast Integration:
+  - 6 horizontal frames sliced via AtlasTexture (256x256 px each).
+  - Playback at 12 FPS (~0.50s) for full skill cast, shortened to 4 frames (~0.30s) for utility cards.
+  - Used for Probability Draw pre-draw sequence (0.50s delay) and Tactical cards: Choáng, Critical, Bảo Hộ, Loại Trừ, Đổi Câu, Thêm Giờ.
+- Karl Card Hand Cursor Integration:
+  - Real WAD2 256x256 asset used with scaled display footprint (96x96 px) via TextureRect.
+  - Visible only during TACTICAL_PICK_MODE.
+  - Smooth mouse following with hotspot offset (Vector2(4, 4)).
+  - Tap scale animation on card selection.
+- STOCHAS Ultimate Integration:
+  - 8 horizontal frames sliced via AtlasTexture (384x384 px each).
+  - Charge telegraph (2.4s): Ping-pong loop of frames 0-3 over 16 steps (0.15s each).
+  - Release (~0.72s): Sequential playback of frames 4, 5, 6, 7 (0.18s each).
+  - Full restoration of canonical stochas_boss.png and baseline boss state/transform.
+- Tactical Card Atlas Integration:
+  - 960x896 px atlas sliced into 3 columns x 2 rows (320x448 px each).
+  - Row 0: LOẠI TRỪ (0,0), ĐỔI CÂU (320,0), THÊM GIỜ (640,0).
+  - Row 1: CHOÁNG (0,448), CRITICAL (320,448), BẢO HỘ (640,448).
+  - Real card art displayed in Probability Draw modal via TextureRect with AtlasTexture.
+  - Real card art displayed on Tactical Hand tray slot buttons via button icon AtlasTexture.
+- Preserved Contracts:
+  - Boss per-spell damage: Bolt 8, Orb 10, Rift 12, Sweep 14, Chaos Verdict 24.
+  - Shield-first damage overflow and auto break.
+  - Ultimate 0/4 meter, 2.4s charge, 8.0s challenge timer, 0 dmg success, 24 dmg failure.
+  - Question layout 610x240 at center X=640 (335, 155), Karl entity 300x300.
 
-## 5. KARL DODGE, SKILL CAST & TACTICAL PRESENTATION
-- Karl Dodge (KARL_DODGE): lateral displacement (-50px), squash/stretch (0.85, 1.15), cyan afterimage ghost, ~0.65s duration, exact baseline return (50, 350).
-- Karl Skill Cast (KARL_SKILL_CAST): scale pulse (1.05), glow, hand spark. Triggered on Probability, Choáng, Critical, Bảo Hộ (shorter gesture for utility cards).
-- Probability Pre-Draw: 0.50s pre-draw animation (KARL_SKILL_CAST + question fade) before opening modal.
-- Tactical Pick Mode: Mouse-following cursor placeholder (HandCursorNode), card hover-lift (-12px), click pulse, and animated card intake to hand.
-- Asset Hooks Prepared:
-  - ASSET_KARL_DODGE_SEQUENCE: karl_dodge_sequence.png (Placeholder active)
-  - ASSET_KARL_SKILL_CAST_SEQUENCE: karl_skill_cast_sequence.png (Placeholder active)
-  - ASSET_KARL_CARD_HAND_CURSOR: karl_card_hand_cursor.png (Placeholder active)
-  - ASSET_STOCHAS_ULTIMATE_SEQUENCE: stochas_ultimate_sequence.png (Placeholder active)
-  - ASSET_TACTICAL_ATLAS: tactical_cards_v1_atlas.png (Placeholder active)
+## 5. ACCEPTANCE GATES STATUS (GATE 1 TO GATE 28)
+- G1: ZIP validation PASS.
+- G2: Exactly 5 WAD2 PNG assets integrated.
+- G3: No PNG modified (SHA256 verified).
+- G4: Karl Dodge slices exactly 6 frames (256x256).
+- G5: Karl Dodge sequence visibly plays.
+- G6: Karl returns to exact idle/baseline (50, 350).
+- G7: Karl Skill Cast slices exactly 6 frames (256x256).
+- G8: Probability uses real Skill Cast.
+- G9: Tactical skill activation uses real Skill Cast.
+- G10: Karl hand cursor uses actual WAD2 asset (96x96 footprint).
+- G11: Cursor follows mouse during Tactical Pick.
+- G12: STOCHAS Ultimate slices exactly 8 frames (384x384).
+- G13: Charge uses frames 0–3 (ping-pong loop during 2.4s).
+- G14: Release uses frames 4–7.
+- G15: Boss canonical asset restores after Ultimate.
+- G16: Tactical Atlas splits exactly 3x2 (320x448 each).
+- G17: All six card IDs map to correct atlas region.
+- G18: Probability Draw uses WAD2 card art.
+- G19: Tactical Hand uses WAD2 card art.
+- G20: Task233L damage table preserved.
+- G21: Ultimate success remains 0 damage.
+- G22: Ultimate failure remains 24 damage.
+- G23: Shield-first resolution preserved.
+- G24: Probability/Gacha mechanics preserved.
+- G25: Question/UI layout preserved.
+- G26: Production untouched (zero src/ modifications).
+- G27: Adaptive AI not integrated.
+- G28: No images generated/edited.
 
-## 6. TEST EVIDENCE & VERIFICATION
-- Test Runner: labs/stochas_combat_ui/run_lab_headless.gd
-- Command: & "D:\Tools\Godot\4.7.1\Godot_v4.7.1-stable_win64_console.exe" --headless -s labs/stochas_combat_ui/run_lab_headless.gd
-- Results:
-  - Asset Intake: A1 (PASS), A2 (PASS), A3-A5 (PASS)
-  - Karl Projectile: K1 (PASS), K2 (PASS), K3 (PASS), K4 (PASS), K5 (PASS)
-  - Boss Spells & Damage: GATE 1 (PASS), GATE 2 (PASS), GATE 3 (PASS), GATE 4 (PASS), GATE 5 (PASS)
-  - Cases A-D: CASE A (PASS: 8 dmg -> HP 92), CASE B (PASS: 10 dmg -> HP 98), CASE C (PASS: 12 dmg -> Shield 4, HP 100), CASE D (PASS: 14 dmg -> HP 94)
-  - Ultimate & Meter: GATE 6 (PASS), GATE 7 (PASS), GATE 8 (PASS), GATE 9-10 (PASS), GATE 11 (PASS), GATE 12 (PASS)
-  - Ultimate Resolution: CASE E / GATE 13, 17 (PASS: Dodge -> 0 dmg), GATE 18 (PASS: UI restored), CASE F / GATE 14, 16 (PASS: 24 dmg -> HP 84), GATE 15 (PASS: Timeout -> 24 dmg), CASE G (PASS: Perfect play triggers ultimate)
-  - Probability & Tactical: GATE 19 (PASS), GATE 20 (PASS), GATE 21 (PASS), GATE 22 (PASS), T1 (PASS), T3 / Part K (PASS), T9-T10 (PASS), T11-T12 (PASS)
-  - Integrity: GATE 23 (PASS: 0 images generated/edited), GATE 24 (PASS: 0 production files modified)
-  - Total Checks: ALL 24 GATES AND CASES A-G PASSED PERFECTLY (Exit code 0).
+## 6. VERIFICATION & LAUNCH
+- Test Suite: res://labs/stochas_combat_ui/run_lab_headless.gd
+- Test Result: ALL 28 ACCEPTANCE GATES AND REGRESSIONS PASSED (exit code 0).
+- Launch Command:
+  & "D:\Tools\Godot\4.7.1\Godot_v4.7.1-stable_win64_console.exe" --path "D:\Mathos_Worktrees\MATHOS-STORY-PARITY-FIX-185" res://labs/stochas_combat_ui/stochas_combat_ui_lab.tscn
+- Next Action: Await human review / visual sign-off of real WAD2 asset animations in LAB.
 
 ## 7. RECENT PROMPT LOG
-### Prompt entry 57
-- RECEIVED_AT: 2026-09-14T14:22:21+07:00
-- TASK_ID: MATHOS-STOCHAS-ACTION-ULTIMATE-DAMAGE-LAB-233L
-- ONE_LINE_INTENT: Boss Action System + per-spell damage + Ultimate Challenge + Karl Dodge + tactical activation presentation.
-- RESULT / CURRENT_STATE: READY_FOR_REVIEW (All 24 gates and cases A-G passing, committed locally).
-
-## 8. NEXT ACTION & LAUNCH COMMAND
-- Launch interactive LAB for human visual review of Boss Action & Ultimate System:
-  & "D:\Tools\Godot\4.7.1\Godot_v4.7.1-stable_win64_console.exe" --path . labs/stochas_combat_ui/stochas_combat_ui_lab.tscn
-- Local commit only: 00398d51e5eff8e565ba80db5338a129900b41e8.
-- Do not push to remote repository.
+### Prompt entry 58
+- RECEIVED_AT: 2026-09-14T14:39:42+07:00
+- TASK_ID: MATHOS-WAD2-233A-ASSET-INTEGRATION-234L
+- ONE_LINE_INTENT: Intake WAD2 233A ZIP package and integrate real animation sequences (Karl Dodge, Karl Skill Cast, Card Hand Cursor, STOCHAS Ultimate, Tactical Card Atlas) into LAB.
+- RESULT / CURRENT_STATE: COMPLETED (All 28 gates passed, verified via Godot headless).

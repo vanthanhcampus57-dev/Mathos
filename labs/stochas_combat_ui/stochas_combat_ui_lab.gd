@@ -132,20 +132,21 @@ const BOSS_SPELL_DAMAGE: Dictionary = {
 	BossSpellType.CHAOS_VERDICT_ULTIMATE: 24
 }
 
-# Future Asset Hooks (Contract Placeholders)
+# WAD2 Real Animation & Atlas Assets
 const ASSET_KARL_DODGE_SEQUENCE: String = "res://assets/characters/player/karl/combat_pixel/karl_dodge_sequence.png"
 const ASSET_KARL_SKILL_CAST_SEQUENCE: String = "res://assets/characters/player/karl/combat_pixel/karl_skill_cast_sequence.png"
-const ASSET_KARL_CARD_HAND_CURSOR: String = "res://assets/ui/combat/karl_card_hand_cursor.png"
+const ASSET_KARL_CARD_HAND_CURSOR: String = "res://assets/characters/player/karl/combat_pixel/karl_card_hand_cursor.png"
 const ASSET_STOCHAS_ULTIMATE_SEQUENCE: String = "res://assets/characters/bosses/dungeon_1/stochas_ultimate_sequence.png"
-const ASSET_TACTICAL_ATLAS: String = "res://assets/ui/combat/tactical_cards_v1_atlas.png"
+const ASSET_TACTICAL_ATLAS: String = "res://assets/ui/combat/tactical/tactical_cards_v1_atlas.png"
 
+# Tactical Atlas 3x2 Grid: 960x896 -> 320x448 per card region
 const TACTICAL_ATLAS_REGIONS: Dictionary = {
-	"LOAI_TRU": Rect2(0, 0, 104, 158),
-	"DOI_CAU": Rect2(104, 0, 104, 158),
-	"THEM_GIO": Rect2(208, 0, 104, 158),
-	"CHOANG": Rect2(312, 0, 104, 158),
-	"CRITICAL": Rect2(416, 0, 104, 158),
-	"BAO_HO": Rect2(520, 0, 104, 158)
+	"LOAI_TRU": Rect2(0, 0, 320, 448),
+	"DOI_CAU": Rect2(320, 0, 320, 448),
+	"THEM_GIO": Rect2(640, 0, 320, 448),
+	"CHOANG": Rect2(0, 448, 320, 448),
+	"CRITICAL": Rect2(320, 448, 320, 448),
+	"BAO_HO": Rect2(640, 448, 320, 448)
 }
 const TACTICAL_CARD_ATLAS_MAP: Dictionary = {
 	"card_tactical_eliminate": "LOAI_TRU",
@@ -170,6 +171,10 @@ var ultimate_telegraph_panel: Control = null
 var ultimate_dim_overlay: ColorRect = null
 var is_tactical_pick_mode: bool = false
 var hand_cursor_node: Control = null
+var karl_dodge_frames: Array[AtlasTexture] = []
+var karl_skill_cast_frames: Array[AtlasTexture] = []
+var stochas_ultimate_frames: Array[AtlasTexture] = []
+var tactical_atlas_textures: Dictionary = {}
 var card_row_container: HBoxContainer = null
 
 var current_boss_state: BossState = BossState.IDLE
@@ -425,6 +430,46 @@ func _load_karl_textures() -> void:
 	if ResourceLoader.exists(ASSET_KARL_SHIELD):
 		karl_textures[KarlState.SHIELD] = load(ASSET_KARL_SHIELD)
 
+	# Karl Dodge frames (6 horizontal frames: 256x256)
+	karl_dodge_frames.clear()
+	if ResourceLoader.exists(ASSET_KARL_DODGE_SEQUENCE):
+		var tex = load(ASSET_KARL_DODGE_SEQUENCE)
+		for i in range(6):
+			var at: AtlasTexture = AtlasTexture.new()
+			at.atlas = tex
+			at.region = Rect2(i * 256.0, 0.0, 256.0, 256.0)
+			karl_dodge_frames.append(at)
+
+	# Karl Skill Cast frames (6 horizontal frames: 256x256)
+	karl_skill_cast_frames.clear()
+	if ResourceLoader.exists(ASSET_KARL_SKILL_CAST_SEQUENCE):
+		var tex = load(ASSET_KARL_SKILL_CAST_SEQUENCE)
+		for i in range(6):
+			var at: AtlasTexture = AtlasTexture.new()
+			at.atlas = tex
+			at.region = Rect2(i * 256.0, 0.0, 256.0, 256.0)
+			karl_skill_cast_frames.append(at)
+
+	# STOCHAS Ultimate frames (8 horizontal frames: 384x384)
+	stochas_ultimate_frames.clear()
+	if ResourceLoader.exists(ASSET_STOCHAS_ULTIMATE_SEQUENCE):
+		var tex = load(ASSET_STOCHAS_ULTIMATE_SEQUENCE)
+		for i in range(8):
+			var at: AtlasTexture = AtlasTexture.new()
+			at.atlas = tex
+			at.region = Rect2(i * 384.0, 0.0, 384.0, 384.0)
+			stochas_ultimate_frames.append(at)
+
+	# Tactical Atlas Card Textures (3x2 grid: 320x448)
+	tactical_atlas_textures.clear()
+	if ResourceLoader.exists(ASSET_TACTICAL_ATLAS):
+		var tex = load(ASSET_TACTICAL_ATLAS)
+		for key in TACTICAL_ATLAS_REGIONS:
+			var at: AtlasTexture = AtlasTexture.new()
+			at.atlas = tex
+			at.region = TACTICAL_ATLAS_REGIONS[key]
+			tactical_atlas_textures[key] = at
+
 func _process(delta: float) -> void:
 	if is_ultimate_challenge_active and not combat_resolving:
 		ultimate_timer -= delta
@@ -435,7 +480,7 @@ func _process(delta: float) -> void:
 
 func _input(event: InputEvent) -> void:
 	if is_tactical_pick_mode and hand_cursor_node != null and event is InputEventMouseMotion:
-		hand_cursor_node.position = event.position + Vector2(16, 16)
+		hand_cursor_node.position = event.position + Vector2(4, 4)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or not event.pressed or event.echo:
@@ -560,6 +605,39 @@ func has_stochas_ultimate_asset() -> bool:
 
 func has_tactical_card_atlas() -> bool:
 	return ResourceLoader.exists(ASSET_TACTICAL_ATLAS)
+
+func get_karl_dodge_frames() -> Array[AtlasTexture]:
+	return karl_dodge_frames
+
+func get_karl_skill_cast_frames() -> Array[AtlasTexture]:
+	return karl_skill_cast_frames
+
+func get_stochas_ultimate_frames() -> Array[AtlasTexture]:
+	return stochas_ultimate_frames
+
+func get_tactical_atlas_textures() -> Dictionary:
+	return tactical_atlas_textures
+
+func get_tactical_card_atlas_texture(card_id: String) -> AtlasTexture:
+	var region_key: String = TACTICAL_CARD_ATLAS_MAP.get(card_id, "")
+	if tactical_atlas_textures.has(region_key):
+		return tactical_atlas_textures[region_key]
+	if ResourceLoader.exists(ASSET_TACTICAL_ATLAS) and TACTICAL_ATLAS_REGIONS.has(region_key):
+		var tex = load(ASSET_TACTICAL_ATLAS)
+		var at: AtlasTexture = AtlasTexture.new()
+		at.atlas = tex
+		at.region = TACTICAL_ATLAS_REGIONS[region_key]
+		tactical_atlas_textures[region_key] = at
+		return at
+	return null
+
+func get_hand_cursor_node() -> Control:
+	return hand_cursor_node
+
+func get_boss_texture() -> Texture2D:
+	if boss_rect != null:
+		return boss_rect.texture
+	return null
 
 func get_question_alpha() -> float:
 	if question_panel == null:
@@ -816,13 +894,23 @@ func set_karl_state(state: KarlState) -> void:
 	if karl_sprite_rect == null:
 		return
 	if state == KarlState.DODGE:
-		if has_karl_dodge_asset():
-			karl_sprite_rect.texture = load(ASSET_KARL_DODGE_SEQUENCE)
+		if karl_dodge_frames.size() > 0:
+			karl_sprite_rect.texture = karl_dodge_frames[0]
+		elif has_karl_dodge_asset():
+			var at: AtlasTexture = AtlasTexture.new()
+			at.atlas = load(ASSET_KARL_DODGE_SEQUENCE)
+			at.region = Rect2(0, 0, 256, 256)
+			karl_sprite_rect.texture = at
 		elif karl_textures.has(KarlState.IDLE):
 			karl_sprite_rect.texture = karl_textures[KarlState.IDLE]
 	elif state == KarlState.SKILL_CAST:
-		if has_karl_skill_cast_asset():
-			karl_sprite_rect.texture = load(ASSET_KARL_SKILL_CAST_SEQUENCE)
+		if karl_skill_cast_frames.size() > 0:
+			karl_sprite_rect.texture = karl_skill_cast_frames[0]
+		elif has_karl_skill_cast_asset():
+			var at: AtlasTexture = AtlasTexture.new()
+			at.atlas = load(ASSET_KARL_SKILL_CAST_SEQUENCE)
+			at.region = Rect2(0, 0, 256, 256)
+			karl_sprite_rect.texture = at
 		elif karl_textures.has(KarlState.CAST):
 			karl_sprite_rect.texture = karl_textures[KarlState.CAST]
 		elif karl_textures.has(KarlState.IDLE):
@@ -852,11 +940,18 @@ func play_karl_dodge() -> void:
 		g_tw.tween_callback(ghost.queue_free)
 
 	karl_state_tween = create_tween()
-	karl_state_tween.tween_property(karl_battlefield_entity, "position:x", base_entity_pos.x - 50.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	karl_state_tween.parallel().tween_property(karl_battlefield_entity, "scale", Vector2(0.85, 1.15), 0.18)
-	karl_state_tween.tween_interval(0.22)
-	karl_state_tween.tween_property(karl_battlefield_entity, "position:x", base_entity_pos.x, 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	karl_state_tween.parallel().tween_property(karl_battlefield_entity, "scale", Vector2.ONE, 0.25)
+	var pos_tw: Tween = create_tween()
+	pos_tw.tween_property(karl_battlefield_entity, "position:x", base_entity_pos.x - 20.0, 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	pos_tw.tween_property(karl_battlefield_entity, "position:x", base_entity_pos.x, 0.35).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+	# Step through 6 horizontal frames at ~10 FPS (0.10s per frame = 0.60s total)
+	for i in range(6):
+		karl_state_tween.tween_callback(func():
+			if karl_sprite_rect != null and i < karl_dodge_frames.size():
+				karl_sprite_rect.texture = karl_dodge_frames[i]
+		)
+		karl_state_tween.tween_interval(0.10)
+
 	karl_state_tween.tween_callback(func():
 		set_karl_state(KarlState.IDLE)
 		if karl_battlefield_entity != null:
@@ -871,14 +966,17 @@ func play_karl_skill_cast(is_utility: bool = false) -> void:
 
 	_spawn_cast_hand_spark()
 
-	var duration: float = 0.30 if is_utility else 0.50
+	var frame_count: int = 4 if is_utility else 6
+	var step_duration: float = 0.075 if is_utility else 0.083 # ~0.30s for utility, ~0.50s for full (~12 FPS)
 	karl_state_tween = create_tween()
-	karl_state_tween.set_parallel(true)
-	karl_state_tween.tween_property(karl_battlefield_entity, "scale", Vector2(1.05, 1.05), duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	karl_state_tween.tween_property(karl_battlefield_entity, "modulate", Color(1.2, 1.3, 1.5, 1.0), duration * 0.5)
-	karl_state_tween.chain().tween_property(karl_battlefield_entity, "scale", Vector2.ONE, duration * 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	karl_state_tween.parallel().tween_property(karl_battlefield_entity, "modulate", Color.WHITE, duration * 0.5)
-	karl_state_tween.chain().tween_callback(func():
+	for i in range(frame_count):
+		karl_state_tween.tween_callback(func():
+			if karl_sprite_rect != null and i < karl_skill_cast_frames.size():
+				karl_sprite_rect.texture = karl_skill_cast_frames[i]
+		)
+		karl_state_tween.tween_interval(step_duration)
+
+	karl_state_tween.tween_callback(func():
 		set_karl_state(KarlState.IDLE)
 		if karl_battlefield_entity != null:
 			karl_battlefield_entity.scale = Vector2.ONE
@@ -2173,6 +2271,9 @@ func _update_tactical_hand_ui() -> void:
 			var is_rare: bool = (card.get("rarity", "") == "RARE")
 			btn.text = card.get("name", "THẺ")
 			btn.disabled = false
+			var atlas_tex: AtlasTexture = get_tactical_card_atlas_texture(card.get("id", ""))
+			btn.icon = atlas_tex
+			btn.expand_icon = true
 			var btn_style: StyleBoxFlat = _create_solid_box(
 				Color(0.18, 0.14, 0.08, 0.90) if is_rare else Color(0.10, 0.18, 0.28, 0.90),
 				4
@@ -2186,6 +2287,7 @@ func _update_tactical_hand_ui() -> void:
 			btn.add_theme_color_override("font_color", COLOR_ACCENT_GOLD if is_rare else COLOR_ACCENT_CYAN)
 		else:
 			btn.text = "[ Trống ]"
+			btn.icon = null
 			btn.disabled = true
 			var btn_style: StyleBoxFlat = _create_solid_box(Color(0.08, 0.11, 0.16, 0.60), 4)
 			btn_style.border_width_left = 1
@@ -2212,9 +2314,9 @@ func _build_probability_draw_modal() -> void:
 
 	var dialog: PanelContainer = PanelContainer.new()
 	dialog.name = "DrawDialog"
-	dialog.position = Vector2(300, 160)
-	dialog.custom_minimum_size = Vector2(680, 380)
-	dialog.size = Vector2(680, 380)
+	dialog.position = Vector2(280, 120)
+	dialog.custom_minimum_size = Vector2(720, 460)
+	dialog.size = Vector2(720, 460)
 	var dbox: StyleBoxFlat = _create_glass_box(Color(0.06, 0.08, 0.14, 0.96), COLOR_ACCENT_CYAN, 12)
 	dbox.content_margin_left = 16
 	dbox.content_margin_top = 14
@@ -2223,26 +2325,18 @@ func _build_probability_draw_modal() -> void:
 	dialog.add_theme_stylebox_override("panel", dbox)
 	probability_draw_modal.add_child(dialog)
 
-	hand_cursor_node = Panel.new()
-	hand_cursor_node.name = "HandCursorNode"
-	hand_cursor_node.size = Vector2(24, 24)
-	hand_cursor_node.pivot_offset = Vector2(12, 12)
-	hand_cursor_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hand_cursor_node.visible = false
-	var c_box: StyleBoxFlat = StyleBoxFlat.new()
-	c_box.bg_color = Color(0.25, 0.85, 1.0, 0.75)
-	c_box.border_width_left = 2
-	c_box.border_width_top = 2
-	c_box.border_width_right = 2
-	c_box.border_width_bottom = 2
-	c_box.border_color = Color(1.0, 1.0, 1.0, 0.95)
-	c_box.corner_radius_top_left = 12
-	c_box.corner_radius_top_right = 12
-	c_box.corner_radius_bottom_right = 12
-	c_box.corner_radius_bottom_left = 12
-	c_box.shadow_color = Color(0.2, 0.85, 1.0, 0.7)
-	c_box.shadow_size = 10
-	hand_cursor_node.add_theme_stylebox_override("panel", c_box)
+	var cursor_tex_rect: TextureRect = TextureRect.new()
+	cursor_tex_rect.name = "HandCursorNode"
+	cursor_tex_rect.size = Vector2(96, 96)
+	cursor_tex_rect.custom_minimum_size = Vector2(96, 96)
+	cursor_tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	cursor_tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	cursor_tex_rect.pivot_offset = Vector2(10, 10)
+	cursor_tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cursor_tex_rect.visible = false
+	if ResourceLoader.exists(ASSET_KARL_CARD_HAND_CURSOR):
+		cursor_tex_rect.texture = load(ASSET_KARL_CARD_HAND_CURSOR)
+	hand_cursor_node = cursor_tex_rect
 	probability_draw_modal.add_child(hand_cursor_node)
 
 	var dvbox: VBoxContainer = VBoxContainer.new()
@@ -2476,12 +2570,23 @@ func trigger_boss_ultimate_charge() -> void:
 	if boss_action_tween != null and boss_action_tween.is_valid():
 		boss_action_tween.kill()
 	boss_action_tween = create_tween()
-	boss_action_tween.set_parallel(true)
-	boss_action_tween.tween_property(ultimate_dim_overlay, "modulate:a", 1.0, 0.40)
-	boss_action_tween.tween_property(ultimate_telegraph_panel, "modulate:a", 1.0, 0.40)
-	boss_action_tween.tween_property(boss_rect, "position", Vector2(730.0, 120.0), 0.60).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	boss_action_tween.tween_property(boss_rect, "scale", Vector2(1.10, 1.10), 0.60).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	boss_action_tween.tween_property(boss_rect, "modulate", Color(1.4, 0.9, 1.6, 1.0), 0.60)
+	# Loop ping-pong frames 0-3 during the 2.4s telegraph
+	var ping_pong_frames: Array[int] = [0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 0, 1, 2, 3]
+	var step_time: float = ULTIMATE_CHARGE_DURATION / float(ping_pong_frames.size())
+	for idx in ping_pong_frames:
+		boss_action_tween.tween_callback(func():
+			if boss_rect != null and idx < stochas_ultimate_frames.size():
+				boss_rect.texture = stochas_ultimate_frames[idx]
+		)
+		boss_action_tween.tween_interval(step_time)
+
+	var fx_tw: Tween = create_tween()
+	fx_tw.set_parallel(true)
+	fx_tw.tween_property(ultimate_dim_overlay, "modulate:a", 1.0, 0.40)
+	fx_tw.tween_property(ultimate_telegraph_panel, "modulate:a", 1.0, 0.40)
+	fx_tw.tween_property(boss_rect, "position", Vector2(730.0, 120.0), 0.60).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	fx_tw.tween_property(boss_rect, "scale", Vector2(1.10, 1.10), 0.60).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	fx_tw.tween_property(boss_rect, "modulate", Color(1.4, 0.9, 1.6, 1.0), 0.60)
 
 	var hold_tw: Tween = create_tween()
 	hold_tw.tween_interval(ULTIMATE_CHARGE_DURATION)
@@ -2551,12 +2656,24 @@ func trigger_ultimate_success() -> void:
 	play_karl_dodge()
 	set_boss_state(BossState.ULTIMATE_RELEASE)
 
+	if boss_action_tween != null and boss_action_tween.is_valid():
+		boss_action_tween.kill()
+	boss_action_tween = create_tween()
+	for idx in [4, 5, 6, 7]:
+		boss_action_tween.tween_callback(func():
+			if boss_rect != null and idx < stochas_ultimate_frames.size():
+				boss_rect.texture = stochas_ultimate_frames[idx]
+		)
+		boss_action_tween.tween_interval(0.18)
+
 	_spawn_floating_feedback(Vector2(200, 320), "MISS / NÉ!", COLOR_ACCENT_GOLD)
 
 	var rel_tw: Tween = create_tween()
 	rel_tw.tween_interval(0.75)
 	rel_tw.tween_callback(func():
 		if boss_rect != null:
+			if ResourceLoader.exists(ASSET_BOSS):
+				boss_rect.texture = load(ASSET_BOSS)
 			boss_rect.position = BOSS_BASE_POS
 			boss_rect.scale = Vector2.ONE
 			boss_rect.rotation_degrees = 0.0
@@ -2580,6 +2697,16 @@ func trigger_ultimate_failure(is_timeout: bool = false) -> void:
 	set_boss_state(BossState.ULTIMATE_RELEASE)
 	apply_damage_to_karl(24)
 
+	if boss_action_tween != null and boss_action_tween.is_valid():
+		boss_action_tween.kill()
+	boss_action_tween = create_tween()
+	for idx in [4, 5, 6, 7]:
+		boss_action_tween.tween_callback(func():
+			if boss_rect != null and idx < stochas_ultimate_frames.size():
+				boss_rect.texture = stochas_ultimate_frames[idx]
+		)
+		boss_action_tween.tween_interval(0.18)
+
 	if is_timeout:
 		_spawn_floating_feedback(Vector2(200, 270), "HẾT GIỜ! ĐẠI PHÉP GIÁNG LÂM!", COLOR_ACCENT_RED)
 	else:
@@ -2589,6 +2716,8 @@ func trigger_ultimate_failure(is_timeout: bool = false) -> void:
 	rel_tw.tween_interval(0.85)
 	rel_tw.tween_callback(func():
 		if boss_rect != null:
+			if ResourceLoader.exists(ASSET_BOSS):
+				boss_rect.texture = load(ASSET_BOSS)
 			boss_rect.position = BOSS_BASE_POS
 			boss_rect.scale = Vector2.ONE
 			boss_rect.rotation_degrees = 0.0
@@ -2647,7 +2776,7 @@ func open_probability_draw() -> void:
 		var card_data: Dictionary = drawn_cards[i]
 		var is_rare: bool = (card_data.get("rarity", "") == "RARE")
 		var pnl: PanelContainer = PanelContainer.new()
-		pnl.custom_minimum_size = Vector2(196, 260)
+		pnl.custom_minimum_size = Vector2(210, 380)
 		var pstyle: StyleBoxFlat = _create_glass_box(
 			Color(0.12, 0.10, 0.06, 0.95) if is_rare else Color(0.07, 0.11, 0.18, 0.95),
 			COLOR_ACCENT_GOLD if is_rare else COLOR_ACCENT_CYAN,
@@ -2669,6 +2798,17 @@ func open_probability_draw() -> void:
 		r_lbl.add_theme_font_size_override("font_size", 10)
 		r_lbl.add_theme_color_override("font_color", COLOR_ACCENT_GOLD if is_rare else COLOR_ACCENT_CYAN)
 		cvbox.add_child(r_lbl)
+
+		var card_art: TextureRect = TextureRect.new()
+		card_art.name = "CardArt"
+		card_art.custom_minimum_size = Vector2(100, 140)
+		card_art.size = Vector2(100, 140)
+		card_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		card_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		var atlas_tex: AtlasTexture = get_tactical_card_atlas_texture(card_data.get("id", ""))
+		if atlas_tex != null:
+			card_art.texture = atlas_tex
+		cvbox.add_child(card_art)
 
 		var name_lbl: Label = Label.new()
 		name_lbl.text = card_data.get("name", "")
