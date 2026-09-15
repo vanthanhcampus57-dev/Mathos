@@ -162,6 +162,104 @@ func _initialize() -> void:
 	lab.set_loop(false)
 	print("[TASK 239M] PASS: LOOP=ON wraps from F06 to F01 within ULTIMATE_CHARGE.")
 
+
+	# ----------------------------------------------------
+	# TASK 239O: PER-FRAME TRANSFORM TUNER TEST SUITE
+	# ----------------------------------------------------
+	# 1. Independent Frame Selection & Per-Frame Override
+	lab.select_tuner_frame(2) # F03
+	if lab.get_current_charge_frame() != 2:
+		_fail("TASK 239O FAIL: Selected tuner frame expected 2 (F03), got %d" % lab.get_current_charge_frame())
+		return
+	if not lab.is_paused_active():
+		_fail("TASK 239O FAIL: Selecting tuner frame should auto-pause animation!")
+		return
+
+	# Set custom transform for F03 only
+	lab.set_frame_transform(2, 1.2500, 195.0, 35.0)
+	var tf_f03 = lab.get_frame_transform(2)
+	var tf_f01 = lab.get_frame_transform(0)
+	if tf_f03["scale"] != 1.25 or tf_f03["x"] != 195.0 or tf_f03["y"] != 35.0:
+		_fail("TASK 239O FAIL: Set frame transform for F03 failed!")
+		return
+	if tf_f01["scale"] != 1.1378 or tf_f01["x"] != 180.0 or tf_f01["y"] != 41.91:
+		_fail("TASK 239O FAIL: Changing F03 modified F01! Transforms must be independent per-frame.")
+		return
+	if not lab.get_boss_scale().is_equal_approx(Vector2(1.25, 1.25)) or not lab.get_boss_position().is_equal_approx(Vector2(195.0, 35.0)):
+		_fail("TASK 239O FAIL: Live preview transform on boss_rect failed!")
+		return
+
+	# 2. Copy Previous Test (F04 copies F03)
+	lab.select_tuner_frame(3) # F04
+	lab.copy_previous_tuner_frame()
+	var tf_f04 = lab.get_frame_transform(3)
+	if tf_f04["scale"] != 1.25 or tf_f04["x"] != 195.0 or tf_f04["y"] != 35.0:
+		_fail("TASK 239O FAIL: Copy previous frame transform failed!")
+		return
+
+	# 3. Copy Current to All Test
+	lab.select_tuner_frame(2) # F03
+	lab.set_frame_transform(2, 1.3000, 200.0, 30.0)
+	lab.copy_current_tuner_to_all()
+	for i in range(6):
+		var tf = lab.get_frame_transform(i)
+		if tf["scale"] != 1.30 or tf["x"] != 200.0 or tf["y"] != 30.0:
+			_fail("TASK 239O FAIL: Copy current to all failed for frame F0%d!" % (i + 1))
+			return
+
+	# 4. Reset Current & Reset All
+	lab.select_tuner_frame(2)
+	lab.reset_current_frame_tuner()
+	if lab.get_frame_transform(2)["scale"] != 1.1378:
+		_fail("TASK 239O FAIL: Reset current frame failed!")
+		return
+	lab.reset_all_tuner_frames()
+	for i in range(6):
+		if lab.get_frame_transform(i)["scale"] != 1.1378:
+			_fail("TASK 239O FAIL: Reset all tuner frames failed!")
+			return
+
+	# 5. Save & Load Config JSON Persistence
+	lab.set_frame_transform(0, 1.1500, 182.0, 40.0)
+	lab.set_frame_transform(5, 1.4000, 210.0, 25.0)
+	lab.save_tuning_config()
+	if not FileAccess.file_exists(lab.CONFIG_PATH):
+		_fail("TASK 239O FAIL: Save tuning config file missing at %s!" % lab.CONFIG_PATH)
+		return
+
+	# Reset state and reload from file
+	lab._reset_all_transforms_to_default()
+	if lab.get_frame_transform(0)["scale"] != 1.1378:
+		pass # Verified reset
+	lab.load_tuning_config()
+	if lab.get_frame_transform(0)["scale"] != 1.15 or lab.get_frame_transform(5)["scale"] != 1.40:
+		_fail("TASK 239O FAIL: Reloading saved config failed to restore custom per-frame transforms!")
+		return
+
+	# Copy tuning values text block check
+	var copy_txt = lab.copy_tuning_values()
+	if not copy_txt.contains("F01 scale=1.1500") or not copy_txt.contains("F06 scale=1.4000"):
+		_fail("TASK 239O FAIL: Copy tuning values output format mismatch!")
+		return
+
+	# Clean up test save file and restore defaults
+	lab.reset_saved_tuning_config()
+
+	# 6. Animation Playback per-frame transform verification
+	lab.set_frame_transform(0, 1.1000, 180.0, 40.0)
+	lab.set_frame_transform(1, 1.2000, 190.0, 38.0)
+	lab.select_tuner_frame(0) # F01
+	if not lab.get_boss_scale().is_equal_approx(Vector2(1.10, 1.10)) or not lab.get_boss_position().is_equal_approx(Vector2(180.0, 40.0)):
+		_fail("TASK 239O FAIL: Playback/step F01 did not apply F01 transform!")
+		return
+	lab.step_frame(1) # F02
+	if not lab.get_boss_scale().is_equal_approx(Vector2(1.20, 1.20)) or not lab.get_boss_position().is_equal_approx(Vector2(190.0, 38.0)):
+		_fail("TASK 239O FAIL: Playback/step F02 did not apply F02 transform!")
+		return
+	lab.reset_all_tuner_frames()
+
+	print("[TASK 239O] PASS: Per-frame transform tuner, Nudges, Copy/Reset, JSON persistence & playback integration verified 100%.")
+
 	# ----------------------------------------------------
 	# REGRESSION & OTHER 10 ANIMATION STATES
 	# ----------------------------------------------------

@@ -222,6 +222,7 @@ func _ready() -> void:
 	_build_boss_preview()
 	_build_controls_ui()
 	_build_diagnostic_ui()
+	load_tuning_config()
 	restore_canonical_baseline()
 	play_animation(AnimationState.IDLE)
 
@@ -533,6 +534,458 @@ func _build_controls_ui() -> void:
 		play_animation(AnimationState.IDLE)
 	)
 	vbox.add_child(btn_reset_baseline)
+
+	_build_tuner_ui_section(vbox)
+
+
+# ==============================================================================
+# ULTIMATE_CHARGE PER-FRAME TRANSFORM TUNER (Task 239O)
+# ==============================================================================
+const CONFIG_PATH: String = "user://stochas_ultimate_charge_tuning.json"
+
+var charge_frame_transforms: Array[Dictionary] = [
+	{"scale": 1.1378, "x": 180.0, "y": 41.91},
+	{"scale": 1.1378, "x": 180.0, "y": 41.91},
+	{"scale": 1.1378, "x": 180.0, "y": 41.91},
+	{"scale": 1.1378, "x": 180.0, "y": 41.91},
+	{"scale": 1.1378, "x": 180.0, "y": 41.91},
+	{"scale": 1.1378, "x": 180.0, "y": 41.91}
+]
+
+var selected_tuner_frame_idx: int = 0
+var tuner_frame_buttons: Array[Button] = []
+var spin_tuner_scale: SpinBox = null
+var spin_tuner_x: SpinBox = null
+var spin_tuner_y: SpinBox = null
+var lbl_tuner_readout: Label = null
+var lbl_tuner_status: Label = null
+var is_updating_tuner_ui: bool = false
+
+func get_frame_transform(idx: int) -> Dictionary:
+	if idx >= 0 and idx < charge_frame_transforms.size():
+		return charge_frame_transforms[idx]
+	return {"scale": 1.1378, "x": 180.0, "y": 41.91}
+
+func set_frame_transform(idx: int, scale_val: float, pos_x: float, pos_y: float) -> void:
+	if idx >= 0 and idx < charge_frame_transforms.size():
+		charge_frame_transforms[idx] = {
+			"scale": clampf(scale_val, 0.50, 1.80),
+			"x": pos_x,
+			"y": pos_y
+		}
+		if current_charge_frame == idx:
+			_set_charge_frame(idx)
+		_update_tuner_ui_readout()
+
+func select_tuner_frame(idx: int) -> void:
+	if idx < 0 or idx >= 6:
+		return
+	selected_tuner_frame_idx = idx
+	# Stop active tween & auto pause for live tuning inspection
+	if active_tween != null and active_tween.is_valid():
+		active_tween.kill()
+	is_paused = true
+	if btn_pause != null:
+		btn_pause.text = "RESUME [Space]"
+		btn_pause.modulate = Color(1.3, 0.8, 0.3)
+
+	current_state = AnimationState.ULTIMATE_CHARGE
+	_set_charge_frame(idx)
+	_update_tuner_ui_readout()
+
+func nudge_tuner_scale(delta_scale: float) -> void:
+	var tf = get_frame_transform(selected_tuner_frame_idx)
+	var new_sc = clampf(tf["scale"] + delta_scale, 0.50, 1.80)
+	set_frame_transform(selected_tuner_frame_idx, new_sc, tf["x"], tf["y"])
+
+func nudge_tuner_pos(delta_x: float, delta_y: float) -> void:
+	var tf = get_frame_transform(selected_tuner_frame_idx)
+	set_frame_transform(selected_tuner_frame_idx, tf["scale"], tf["x"] + delta_x, tf["y"] + delta_y)
+
+func reset_current_frame_tuner() -> void:
+	set_frame_transform(selected_tuner_frame_idx, 1.1378, 180.0, 41.91)
+	if lbl_tuner_status != null:
+		lbl_tuner_status.text = "Reset F0%d to default transform." % (selected_tuner_frame_idx + 1)
+
+func reset_all_tuner_frames() -> void:
+	_reset_all_transforms_to_default()
+	if lbl_tuner_status != null:
+		lbl_tuner_status.text = "Reset all F01..F06 to default transforms."
+
+func copy_current_tuner_to_all() -> void:
+	var cur_tf = get_frame_transform(selected_tuner_frame_idx)
+	for i in range(6):
+		charge_frame_transforms[i] = {"scale": cur_tf["scale"], "x": cur_tf["x"], "y": cur_tf["y"]}
+	if current_charge_frame >= 0:
+		_set_charge_frame(current_charge_frame)
+	_update_tuner_ui_readout()
+	if lbl_tuner_status != null:
+		lbl_tuner_status.text = "Copied F0%d transform to all frames!" % (selected_tuner_frame_idx + 1)
+
+func copy_previous_tuner_frame() -> void:
+	if selected_tuner_frame_idx > 0:
+		var prev_tf = get_frame_transform(selected_tuner_frame_idx - 1)
+		charge_frame_transforms[selected_tuner_frame_idx] = {"scale": prev_tf["scale"], "x": prev_tf["x"], "y": prev_tf["y"]}
+		_set_charge_frame(selected_tuner_frame_idx)
+		_update_tuner_ui_readout()
+		if lbl_tuner_status != null:
+			lbl_tuner_status.text = "Copied F0%d transform to F0%d!" % [selected_tuner_frame_idx, selected_tuner_frame_idx + 1]
+	else:
+		if lbl_tuner_status != null:
+			lbl_tuner_status.text = "F01 has no previous frame to copy from."
+
+func load_tuning_config() -> void:
+	if FileAccess.file_exists(CONFIG_PATH):
+		var file = FileAccess.open(CONFIG_PATH, FileAccess.READ)
+		if file != null:
+			var json_str = file.get_as_text()
+			file.close()
+			var json = JSON.new()
+			var parse_result = json.parse(json_str)
+			if parse_result == OK and json.data is Dictionary:
+				var data: Dictionary = json.data
+				for i in range(6):
+					var key = "F0%d" % (i + 1)
+					if data.has(key) and data[key] is Dictionary:
+						var entry: Dictionary = data[key]
+						var sc = float(entry.get("scale", 1.1378))
+						var px = float(entry.get("x", 180.0))
+						var py = float(entry.get("y", 41.91))
+						charge_frame_transforms[i] = {"scale": sc, "x": px, "y": py}
+				print("[TUNER] Loaded tuning config from %s" % CONFIG_PATH)
+				if current_charge_frame >= 0:
+					_set_charge_frame(current_charge_frame)
+				_update_tuner_ui_readout()
+				if lbl_tuner_status != null:
+					lbl_tuner_status.text = "Loaded tuning from saved config file!"
+				return
+	_reset_all_transforms_to_default()
+
+func save_tuning_config() -> void:
+	var data: Dictionary = {}
+	for i in range(6):
+		var key = "F0%d" % (i + 1)
+		data[key] = charge_frame_transforms[i]
+	var file = FileAccess.open(CONFIG_PATH, FileAccess.WRITE)
+	if file != null:
+		file.store_string(JSON.stringify(data, "\t"))
+		file.close()
+		print("[TUNER] Saved tuning config to %s" % CONFIG_PATH)
+		if lbl_tuner_status != null:
+			lbl_tuner_status.text = "Saved tuning to user:// config file!"
+
+func reset_saved_tuning_config() -> void:
+	if FileAccess.file_exists(CONFIG_PATH):
+		DirAccess.remove_absolute(CONFIG_PATH)
+	_reset_all_transforms_to_default()
+	if lbl_tuner_status != null:
+		lbl_tuner_status.text = "Reset saved config & restored defaults!"
+
+func copy_tuning_values() -> String:
+	var lines: Array[String] = []
+	for i in range(6):
+		var tf = charge_frame_transforms[i]
+		lines.append("F0%d scale=%.4f x=%.2f y=%.2f" % [i + 1, tf["scale"], tf["x"], tf["y"]])
+	var output = "\n".join(lines)
+	print("=== ULTIMATE_CHARGE TUNING VALUES ===")
+	print(output)
+	print("=====================================")
+	DisplayServer.clipboard_set(output)
+	if lbl_tuner_status != null:
+		lbl_tuner_status.text = "Copied tuning values to clipboard & console!"
+	return output
+
+func _reset_all_transforms_to_default() -> void:
+	for i in range(6):
+		charge_frame_transforms[i] = {"scale": 1.1378, "x": 180.0, "y": 41.91}
+	if current_charge_frame >= 0 and current_charge_frame < 6:
+		_set_charge_frame(current_charge_frame)
+	_update_tuner_ui_readout()
+
+func _update_tuner_ui_readout() -> void:
+	var tf = get_frame_transform(selected_tuner_frame_idx)
+	is_updating_tuner_ui = true
+	if spin_tuner_scale != null:
+		spin_tuner_scale.value = tf["scale"]
+	if spin_tuner_x != null:
+		spin_tuner_x.value = tf["x"]
+	if spin_tuner_y != null:
+		spin_tuner_y.value = tf["y"]
+	is_updating_tuner_ui = false
+
+	if lbl_tuner_readout != null:
+		lbl_tuner_readout.text = "F0%d | Scale: %.4f | X: %.2f | Y: %.2f" % [
+			selected_tuner_frame_idx + 1,
+			tf["scale"],
+			tf["x"],
+			tf["y"]
+		]
+
+	for i in range(tuner_frame_buttons.size()):
+		if tuner_frame_buttons[i] != null:
+			tuner_frame_buttons[i].modulate = Color(1.4, 1.2, 0.3) if i == selected_tuner_frame_idx else Color.WHITE
+
+func _build_tuner_ui_section(vbox: VBoxContainer) -> void:
+	var sec_title = Label.new()
+	sec_title.text = "ULTIMATE_CHARGE FRAME TUNER"
+	sec_title.add_theme_font_size_override("font_size", 12)
+	sec_title.modulate = Color(0.4, 0.9, 1.0, 0.9)
+	vbox.add_child(sec_title)
+
+	# Frame Selector Buttons (F01 .. F06)
+	var f_box = HBoxContainer.new()
+	f_box.add_theme_constant_override("separation", 6)
+	vbox.add_child(f_box)
+
+	tuner_frame_buttons.clear()
+	for i in range(6):
+		var btn = Button.new()
+		btn.text = "F0%d" % (i + 1)
+		btn.custom_minimum_size = Vector2(65, 26)
+		btn.add_theme_font_size_override("font_size", 11)
+		var f_idx = i
+		btn.pressed.connect(func(): select_tuner_frame(f_idx))
+		f_box.add_child(btn)
+		tuner_frame_buttons.append(btn)
+
+	# Readout Label
+	lbl_tuner_readout = Label.new()
+	lbl_tuner_readout.text = "F01 | Scale: 1.1378 | X: 180.0 | Y: 41.91"
+	lbl_tuner_readout.add_theme_font_size_override("font_size", 12)
+	lbl_tuner_readout.modulate = Color(1.0, 0.9, 0.4, 1.0)
+	vbox.add_child(lbl_tuner_readout)
+
+	# SpinBoxes Row (Scale, X, Y)
+	var spin_row = HBoxContainer.new()
+	spin_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(spin_row)
+
+	# Scale SpinBox
+	var sc_lbl = Label.new()
+	sc_lbl.text = "Scale:"
+	sc_lbl.add_theme_font_size_override("font_size", 11)
+	spin_row.add_child(sc_lbl)
+
+	spin_tuner_scale = SpinBox.new()
+	spin_tuner_scale.min_value = 0.50
+	spin_tuner_scale.max_value = 1.80
+	spin_tuner_scale.step = 0.005
+	spin_tuner_scale.value = 1.1378
+	spin_tuner_scale.custom_minimum_size = Vector2(90, 26)
+	spin_tuner_scale.value_changed.connect(func(val):
+		if not is_updating_tuner_ui:
+			var tf = get_frame_transform(selected_tuner_frame_idx)
+			set_frame_transform(selected_tuner_frame_idx, val, tf["x"], tf["y"])
+	)
+	spin_row.add_child(spin_tuner_scale)
+
+	# X SpinBox
+	var x_lbl = Label.new()
+	x_lbl.text = "X:"
+	x_lbl.add_theme_font_size_override("font_size", 11)
+	spin_row.add_child(x_lbl)
+
+	spin_tuner_x = SpinBox.new()
+	spin_tuner_x.min_value = -500.0
+	spin_tuner_x.max_value = 1000.0
+	spin_tuner_x.step = 1.0
+	spin_tuner_x.value = 180.0
+	spin_tuner_x.custom_minimum_size = Vector2(90, 26)
+	spin_tuner_x.value_changed.connect(func(val):
+		if not is_updating_tuner_ui:
+			var tf = get_frame_transform(selected_tuner_frame_idx)
+			set_frame_transform(selected_tuner_frame_idx, tf["scale"], val, tf["y"])
+	)
+	spin_row.add_child(spin_tuner_x)
+
+	# Y SpinBox
+	var y_lbl = Label.new()
+	y_lbl.text = "Y:"
+	y_lbl.add_theme_font_size_override("font_size", 11)
+	spin_row.add_child(y_lbl)
+
+	spin_tuner_y = SpinBox.new()
+	spin_tuner_y.min_value = -500.0
+	spin_tuner_y.max_value = 1000.0
+	spin_tuner_y.step = 1.0
+	spin_tuner_y.value = 41.91
+	spin_tuner_y.custom_minimum_size = Vector2(90, 26)
+	spin_tuner_y.value_changed.connect(func(val):
+		if not is_updating_tuner_ui:
+			var tf = get_frame_transform(selected_tuner_frame_idx)
+			set_frame_transform(selected_tuner_frame_idx, tf["scale"], tf["x"], val)
+	)
+	spin_row.add_child(spin_tuner_y)
+
+	# Nudge Row 1: Position Nudges
+	var nudge_pos_row = HBoxContainer.new()
+	nudge_pos_row.add_theme_constant_override("separation", 4)
+	vbox.add_child(nudge_pos_row)
+
+	var btn_left1 = Button.new()
+	btn_left1.text = "LEFT -1"
+	btn_left1.custom_minimum_size = Vector2(65, 24)
+	btn_left1.add_theme_font_size_override("font_size", 10)
+	btn_left1.pressed.connect(func(): nudge_tuner_pos(-1.0, 0.0))
+	nudge_pos_row.add_child(btn_left1)
+
+	var btn_right1 = Button.new()
+	btn_right1.text = "RIGHT +1"
+	btn_right1.custom_minimum_size = Vector2(65, 24)
+	btn_right1.add_theme_font_size_override("font_size", 10)
+	btn_right1.pressed.connect(func(): nudge_tuner_pos(1.0, 0.0))
+	nudge_pos_row.add_child(btn_right1)
+
+	var btn_up1 = Button.new()
+	btn_up1.text = "UP -1"
+	btn_up1.custom_minimum_size = Vector2(65, 24)
+	btn_up1.add_theme_font_size_override("font_size", 10)
+	btn_up1.pressed.connect(func(): nudge_tuner_pos(0.0, -1.0))
+	nudge_pos_row.add_child(btn_up1)
+
+	var btn_down1 = Button.new()
+	btn_down1.text = "DOWN +1"
+	btn_down1.custom_minimum_size = Vector2(65, 24)
+	btn_down1.add_theme_font_size_override("font_size", 10)
+	btn_down1.pressed.connect(func(): nudge_tuner_pos(0.0, 1.0))
+	nudge_pos_row.add_child(btn_down1)
+
+	var btn_left5 = Button.new()
+	btn_left5.text = "X -5"
+	btn_left5.custom_minimum_size = Vector2(50, 24)
+	btn_left5.add_theme_font_size_override("font_size", 10)
+	btn_left5.pressed.connect(func(): nudge_tuner_pos(-5.0, 0.0))
+	nudge_pos_row.add_child(btn_left5)
+
+	var btn_right5 = Button.new()
+	btn_right5.text = "X +5"
+	btn_right5.custom_minimum_size = Vector2(50, 24)
+	btn_right5.add_theme_font_size_override("font_size", 10)
+	btn_right5.pressed.connect(func(): nudge_tuner_pos(5.0, 0.0))
+	nudge_pos_row.add_child(btn_right5)
+
+	var btn_up5 = Button.new()
+	btn_up5.text = "Y -5"
+	btn_up5.custom_minimum_size = Vector2(50, 24)
+	btn_up5.add_theme_font_size_override("font_size", 10)
+	btn_up5.pressed.connect(func(): nudge_tuner_pos(0.0, -5.0))
+	nudge_pos_row.add_child(btn_up5)
+
+	var btn_down5 = Button.new()
+	btn_down5.text = "Y +5"
+	btn_down5.custom_minimum_size = Vector2(50, 24)
+	btn_down5.add_theme_font_size_override("font_size", 10)
+	btn_down5.pressed.connect(func(): nudge_tuner_pos(0.0, 5.0))
+	nudge_pos_row.add_child(btn_down5)
+
+	# Nudge Row 2: Scale Nudges
+	var nudge_sc_row = HBoxContainer.new()
+	nudge_sc_row.add_theme_constant_override("separation", 6)
+	vbox.add_child(nudge_sc_row)
+
+	var btn_sc_sub005 = Button.new()
+	btn_sc_sub005.text = "SCALE -0.005"
+	btn_sc_sub005.custom_minimum_size = Vector2(100, 24)
+	btn_sc_sub005.add_theme_font_size_override("font_size", 10)
+	btn_sc_sub005.pressed.connect(func(): nudge_tuner_scale(-0.005))
+	nudge_sc_row.add_child(btn_sc_sub005)
+
+	var btn_sc_add005 = Button.new()
+	btn_sc_add005.text = "SCALE +0.005"
+	btn_sc_add005.custom_minimum_size = Vector2(100, 24)
+	btn_sc_add005.add_theme_font_size_override("font_size", 10)
+	btn_sc_add005.pressed.connect(func(): nudge_tuner_scale(0.005))
+	nudge_sc_row.add_child(btn_sc_add005)
+
+	var btn_sc_sub01 = Button.new()
+	btn_sc_sub01.text = "SCALE -0.01"
+	btn_sc_sub01.custom_minimum_size = Vector2(95, 24)
+	btn_sc_sub01.add_theme_font_size_override("font_size", 10)
+	btn_sc_sub01.pressed.connect(func(): nudge_tuner_scale(-0.01))
+	nudge_sc_row.add_child(btn_sc_sub01)
+
+	var btn_sc_add01 = Button.new()
+	btn_sc_add01.text = "SCALE +0.01"
+	btn_sc_add01.custom_minimum_size = Vector2(95, 24)
+	btn_sc_add01.add_theme_font_size_override("font_size", 10)
+	btn_sc_add01.pressed.connect(func(): nudge_tuner_scale(0.01))
+	nudge_sc_row.add_child(btn_sc_add01)
+
+	# Utility Buttons Row 1: Transform Manipulation
+	var util_row1 = HBoxContainer.new()
+	util_row1.add_theme_constant_override("separation", 6)
+	vbox.add_child(util_row1)
+
+	var btn_rst_cur = Button.new()
+	btn_rst_cur.text = "RESET FRAME"
+	btn_rst_cur.custom_minimum_size = Vector2(100, 26)
+	btn_rst_cur.add_theme_font_size_override("font_size", 10)
+	btn_rst_cur.pressed.connect(reset_current_frame_tuner)
+	util_row1.add_child(btn_rst_cur)
+
+	var btn_rst_all = Button.new()
+	btn_rst_all.text = "RESET ALL"
+	btn_rst_all.custom_minimum_size = Vector2(90, 26)
+	btn_rst_all.add_theme_font_size_override("font_size", 10)
+	btn_rst_all.pressed.connect(reset_all_tuner_frames)
+	util_row1.add_child(btn_rst_all)
+
+	var btn_copy_all = Button.new()
+	btn_copy_all.text = "COPY TO ALL"
+	btn_copy_all.custom_minimum_size = Vector2(100, 26)
+	btn_copy_all.add_theme_font_size_override("font_size", 10)
+	btn_copy_all.pressed.connect(copy_current_tuner_to_all)
+	util_row1.add_child(btn_copy_all)
+
+	var btn_copy_prev = Button.new()
+	btn_copy_prev.text = "COPY PREVIOUS"
+	btn_copy_prev.custom_minimum_size = Vector2(110, 26)
+	btn_copy_prev.add_theme_font_size_override("font_size", 10)
+	btn_copy_prev.pressed.connect(copy_previous_tuner_frame)
+	util_row1.add_child(btn_copy_prev)
+
+	# Save / Persistence Row
+	var save_row = HBoxContainer.new()
+	save_row.add_theme_constant_override("separation", 6)
+	vbox.add_child(save_row)
+
+	var btn_save = Button.new()
+	btn_save.text = "SAVE TUNING"
+	btn_save.custom_minimum_size = Vector2(130, 26)
+	btn_save.add_theme_font_size_override("font_size", 11)
+	btn_save.modulate = Color(0.4, 1.2, 0.5)
+	btn_save.pressed.connect(save_tuning_config)
+	save_row.add_child(btn_save)
+
+	var btn_reload = Button.new()
+	btn_reload.text = "RELOAD TUNING"
+	btn_reload.custom_minimum_size = Vector2(130, 26)
+	btn_reload.add_theme_font_size_override("font_size", 11)
+	btn_reload.pressed.connect(load_tuning_config)
+	save_row.add_child(btn_reload)
+
+	var btn_rst_save = Button.new()
+	btn_rst_save.text = "RESET SAVED TUNING"
+	btn_rst_save.custom_minimum_size = Vector2(150, 26)
+	btn_rst_save.add_theme_font_size_override("font_size", 11)
+	btn_rst_save.pressed.connect(reset_saved_tuning_config)
+	save_row.add_child(btn_rst_save)
+
+	# Copyable Output Button
+	var btn_copy_out = Button.new()
+	btn_copy_out.text = "COPY TUNING VALUES (PRINT & CLIPBOARD)"
+	btn_copy_out.custom_minimum_size = Vector2(430, 28)
+	btn_copy_out.add_theme_font_size_override("font_size", 11)
+	btn_copy_out.modulate = Color(1.2, 1.1, 0.4)
+	btn_copy_out.pressed.connect(func(): copy_tuning_values())
+	vbox.add_child(btn_copy_out)
+
+	# Status Toast Label
+	lbl_tuner_status = Label.new()
+	lbl_tuner_status.text = "Tuner ready. Select frame F01..F06 to adjust."
+	lbl_tuner_status.add_theme_font_size_override("font_size", 11)
+	lbl_tuner_status.modulate = Color(0.6, 0.8, 1.0, 0.8)
+	vbox.add_child(lbl_tuner_status)
 
 func _build_diagnostic_ui() -> void:
 	bottom_panel = PanelContainer.new()
@@ -1170,8 +1623,9 @@ func _set_charge_frame(idx: int) -> void:
 	current_charge_frame = idx
 	current_atlas_frame = -1
 	if boss_rect != null:
-		boss_rect.position = CHARGE_BASE_POS
-		boss_rect.scale = CHARGE_BASE_SCALE
+		var tf: Dictionary = get_frame_transform(idx)
+		boss_rect.scale = Vector2(tf["scale"], tf["scale"])
+		boss_rect.position = Vector2(tf["x"], tf["y"])
 		if idx >= 0 and idx < stochas_ultimate_charge_frames.size():
 			boss_rect.texture = stochas_ultimate_charge_frames[idx]
 
