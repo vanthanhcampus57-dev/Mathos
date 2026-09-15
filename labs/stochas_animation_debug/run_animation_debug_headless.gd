@@ -260,6 +260,82 @@ func _initialize() -> void:
 
 	print("[TASK 239O] PASS: Per-frame transform tuner, Nudges, Copy/Reset, JSON persistence & playback integration verified 100%.")
 
+
+	# ----------------------------------------------------
+	# TASK 239P: ONION SKIN GHOST OVERLAY TEST SUITE
+	# ----------------------------------------------------
+	# 1. F02 shows F01 ghost
+	lab.select_tuner_frame(1) # F02
+	if not lab.is_ghost_enabled():
+		_fail("TASK 239P FAIL: Ghost should be enabled by default!")
+		return
+	if lab.boss_ghost_rect == null or not lab.boss_ghost_rect.visible:
+		_fail("TASK 239P FAIL: Ghost should be visible when viewing F02!")
+		return
+	if lab.boss_ghost_rect.texture != charge_frames[0]:
+		_fail("TASK 239P FAIL: F02 ghost texture should be F01!")
+		return
+
+	# 2. F03 shows F02 ghost, F06 shows F05 ghost
+	lab.select_tuner_frame(2) # F03
+	if lab.boss_ghost_rect.texture != charge_frames[1]:
+		_fail("TASK 239P FAIL: F03 ghost texture should be F02!")
+		return
+
+	lab.select_tuner_frame(5) # F06
+	if lab.boss_ghost_rect.texture != charge_frames[4]:
+		_fail("TASK 239P FAIL: F06 ghost texture should be F05!")
+		return
+
+	# 3. F01 has no previous-frame ghost when LOOP = OFF
+	lab.set_loop(false)
+	lab.select_tuner_frame(0) # F01
+	if lab.boss_ghost_rect.visible:
+		_fail("TASK 239P FAIL: F01 should have no ghost when LOOP=OFF!")
+		return
+
+	# 4. Toggle OFF / ON
+	lab.select_tuner_frame(1) # F02
+	lab.toggle_ghost_overlay() # OFF
+	if lab.boss_ghost_rect.visible or lab.is_ghost_enabled():
+		_fail("TASK 239P FAIL: Toggling ghost OFF did not hide ghost!")
+		return
+
+	lab.toggle_ghost_overlay() # ON
+	if not lab.boss_ghost_rect.visible or not lab.is_ghost_enabled():
+		_fail("TASK 239P FAIL: Toggling ghost ON did not show ghost!")
+		return
+
+	# 5. Opacity control
+	lab.set_ghost_opacity(0.35)
+	if not is_equal_approx(lab.get_ghost_opacity(), 0.35) or not is_equal_approx(lab.boss_ghost_rect.modulate.a, 0.35):
+		_fail("TASK 239P FAIL: Changing ghost opacity failed!")
+		return
+
+	# 6. Ghost reflects updated transform of previous frame
+	lab.set_frame_transform(0, 1.2200, 192.0, 36.0) # Tune F01
+	lab.select_tuner_frame(1) # View F02 -> ghost shows F01
+	if not lab.boss_ghost_rect.scale.is_equal_approx(Vector2(1.22, 1.22)) or not lab.boss_ghost_rect.position.is_equal_approx(Vector2(192.0, 36.0)):
+		_fail("TASK 239P FAIL: F02 ghost did not reflect updated F01 tuned transform!")
+		return
+	lab.reset_all_tuner_frames()
+
+	# 7. Settings persistence for ghost settings
+	lab.set_ghost_enabled(true)
+	lab.set_ghost_opacity(0.30)
+	lab.save_tuning_config()
+
+	lab.set_ghost_enabled(false)
+	lab.set_ghost_opacity(0.10)
+	lab.load_tuning_config()
+
+	if not lab.is_ghost_enabled() or not is_equal_approx(lab.get_ghost_opacity(), 0.30):
+		_fail("TASK 239P FAIL: Ghost settings persistence save/load failed!")
+		return
+
+	lab.reset_saved_tuning_config()
+	print("[TASK 239P] PASS: Onion skin ghost overlay, live transform update, toggle/opacity UI & persistence verified 100%.")
+
 	# ----------------------------------------------------
 	# REGRESSION & OTHER 10 ANIMATION STATES
 	# ----------------------------------------------------

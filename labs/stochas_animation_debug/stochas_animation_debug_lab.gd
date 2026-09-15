@@ -335,6 +335,19 @@ func _build_ui_environment() -> void:
 	add_child(motion_path_line)
 
 func _build_boss_preview() -> void:
+	# Ghost TextureRect for Previous-Frame Onion Skin Overlay (Task 239P)
+	boss_ghost_rect = TextureRect.new()
+	boss_ghost_rect.name = "StochasGhostBoss"
+	boss_ghost_rect.position = BOSS_BASE_POS
+	boss_ghost_rect.size = BOSS_BASE_SIZE
+	boss_ghost_rect.custom_minimum_size = BOSS_BASE_SIZE
+	boss_ghost_rect.pivot_offset = BOSS_BASE_SIZE * 0.5
+	boss_ghost_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	boss_ghost_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	boss_ghost_rect.visible = false
+	boss_ghost_rect.modulate = Color(0.7, 0.85, 1.0, 0.25)
+	add_child(boss_ghost_rect)
+
 	boss_rect = TextureRect.new()
 	boss_rect.name = "StochasPreviewBoss"
 	boss_rect.position = BOSS_BASE_POS
@@ -575,6 +588,8 @@ func set_frame_transform(idx: int, scale_val: float, pos_x: float, pos_y: float)
 		}
 		if current_charge_frame == idx:
 			_set_charge_frame(idx)
+		else:
+			_update_ghost_overlay()
 		_update_tuner_ui_readout()
 
 func select_tuner_frame(idx: int) -> void:
@@ -652,10 +667,14 @@ func load_tuning_config() -> void:
 						var px = float(entry.get("x", 180.0))
 						var py = float(entry.get("y", 41.91))
 						charge_frame_transforms[i] = {"scale": sc, "x": px, "y": py}
+				show_prev_ghost = bool(data.get("show_prev_ghost", true))
+				ghost_opacity = float(data.get("ghost_opacity", 0.25))
+				_update_ghost_ui_controls()
 				print("[TUNER] Loaded tuning config from %s" % CONFIG_PATH)
 				if current_charge_frame >= 0:
 					_set_charge_frame(current_charge_frame)
 				_update_tuner_ui_readout()
+				_update_ghost_overlay()
 				if lbl_tuner_status != null:
 					lbl_tuner_status.text = "Loaded tuning from saved config file!"
 				return
@@ -666,6 +685,8 @@ func save_tuning_config() -> void:
 	for i in range(6):
 		var key = "F0%d" % (i + 1)
 		data[key] = charge_frame_transforms[i]
+	data["show_prev_ghost"] = show_prev_ghost
+	data["ghost_opacity"] = ghost_opacity
 	var file = FileAccess.open(CONFIG_PATH, FileAccess.WRITE)
 	if file != null:
 		file.store_string(JSON.stringify(data, "\t"))
@@ -677,6 +698,9 @@ func save_tuning_config() -> void:
 func reset_saved_tuning_config() -> void:
 	if FileAccess.file_exists(CONFIG_PATH):
 		DirAccess.remove_absolute(CONFIG_PATH)
+	show_prev_ghost = true
+	ghost_opacity = 0.25
+	_update_ghost_ui_controls()
 	_reset_all_transforms_to_default()
 	if lbl_tuner_status != null:
 		lbl_tuner_status.text = "Reset saved config & restored defaults!"
@@ -725,12 +749,111 @@ func _update_tuner_ui_readout() -> void:
 		if tuner_frame_buttons[i] != null:
 			tuner_frame_buttons[i].modulate = Color(1.4, 1.2, 0.3) if i == selected_tuner_frame_idx else Color.WHITE
 
+
+# Ghost / Onion Skin Variables (Task 239P)
+var boss_ghost_rect: TextureRect = null
+var show_prev_ghost: bool = true
+var ghost_opacity: float = 0.25
+var btn_ghost_toggle: Button = null
+var slider_ghost_opacity: HSlider = null
+var lbl_ghost_readout: Label = null
+
+func toggle_ghost_overlay() -> void:
+	set_ghost_enabled(not show_prev_ghost)
+
+func set_ghost_enabled(enabled: bool) -> void:
+	show_prev_ghost = enabled
+	_update_ghost_ui_controls()
+	_update_ghost_overlay()
+
+func set_ghost_opacity(val: float) -> void:
+	ghost_opacity = clampf(val, 0.00, 0.60)
+	_update_ghost_ui_controls()
+	_update_ghost_overlay()
+
+func is_ghost_enabled() -> bool:
+	return show_prev_ghost
+
+func get_ghost_opacity() -> float:
+	return ghost_opacity
+
+func _update_ghost_ui_controls() -> void:
+	if btn_ghost_toggle != null:
+		btn_ghost_toggle.text = "GHOST: ON [G]" if show_prev_ghost else "GHOST: OFF [G]"
+		btn_ghost_toggle.modulate = Color(0.4, 1.2, 0.6) if show_prev_ghost else Color.WHITE
+	if slider_ghost_opacity != null and not is_equal_approx(slider_ghost_opacity.value, ghost_opacity):
+		slider_ghost_opacity.value = ghost_opacity
+
+func _update_ghost_overlay() -> void:
+	if boss_ghost_rect == null:
+		return
+
+	if current_state != AnimationState.ULTIMATE_CHARGE or not show_prev_ghost or current_charge_frame < 0:
+		boss_ghost_rect.visible = false
+		if lbl_ghost_readout != null:
+			lbl_ghost_readout.text = "PREV = NONE" if current_state == AnimationState.ULTIMATE_CHARGE else "PREV = N/A"
+		return
+
+	var prev_idx: int = -1
+	if current_charge_frame > 0:
+		prev_idx = current_charge_frame - 1
+	elif is_loop_enabled:
+		prev_idx = 5 # Wrap to F06 when looping on F01
+
+	if prev_idx >= 0 and prev_idx < stochas_ultimate_charge_frames.size():
+		var prev_tf = get_frame_transform(prev_idx)
+		boss_ghost_rect.texture = stochas_ultimate_charge_frames[prev_idx]
+		boss_ghost_rect.scale = Vector2(prev_tf["scale"], prev_tf["scale"])
+		boss_ghost_rect.position = Vector2(prev_tf["x"], prev_tf["y"])
+		boss_ghost_rect.modulate = Color(0.7, 0.85, 1.0, ghost_opacity)
+		boss_ghost_rect.visible = (ghost_opacity > 0.001)
+		if lbl_ghost_readout != null:
+			lbl_ghost_readout.text = "PREV = F0%d" % (prev_idx + 1)
+	else:
+		boss_ghost_rect.visible = false
+		if lbl_ghost_readout != null:
+			lbl_ghost_readout.text = "PREV = NONE (F01)"
+
 func _build_tuner_ui_section(vbox: VBoxContainer) -> void:
 	var sec_title = Label.new()
 	sec_title.text = "ULTIMATE_CHARGE FRAME TUNER"
 	sec_title.add_theme_font_size_override("font_size", 12)
 	sec_title.modulate = Color(0.4, 0.9, 1.0, 0.9)
 	vbox.add_child(sec_title)
+
+	# Section: ONION SKIN GHOST OVERLAY (Task 239P)
+	var ghost_row = HBoxContainer.new()
+	ghost_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(ghost_row)
+
+	btn_ghost_toggle = Button.new()
+	btn_ghost_toggle.text = "GHOST: ON [G]" if show_prev_ghost else "GHOST: OFF [G]"
+	btn_ghost_toggle.custom_minimum_size = Vector2(130, 26)
+	btn_ghost_toggle.add_theme_font_size_override("font_size", 11)
+	btn_ghost_toggle.modulate = Color(0.4, 1.2, 0.6) if show_prev_ghost else Color.WHITE
+	btn_ghost_toggle.pressed.connect(toggle_ghost_overlay)
+	ghost_row.add_child(btn_ghost_toggle)
+
+	var op_lbl = Label.new()
+	op_lbl.text = "Opacity:"
+	op_lbl.add_theme_font_size_override("font_size", 11)
+	ghost_row.add_child(op_lbl)
+
+	slider_ghost_opacity = HSlider.new()
+	slider_ghost_opacity.min_value = 0.00
+	slider_ghost_opacity.max_value = 0.60
+	slider_ghost_opacity.step = 0.01
+	slider_ghost_opacity.value = ghost_opacity
+	slider_ghost_opacity.custom_minimum_size = Vector2(130, 24)
+	slider_ghost_opacity.value_changed.connect(set_ghost_opacity)
+	ghost_row.add_child(slider_ghost_opacity)
+
+	lbl_ghost_readout = Label.new()
+	lbl_ghost_readout.text = "PREV = NONE"
+	lbl_ghost_readout.custom_minimum_size = Vector2(90, 24)
+	lbl_ghost_readout.add_theme_font_size_override("font_size", 11)
+	lbl_ghost_readout.modulate = Color(0.7, 0.85, 1.0, 0.9)
+	ghost_row.add_child(lbl_ghost_readout)
 
 	# Frame Selector Buttons (F01 .. F06)
 	var f_box = HBoxContainer.new()
@@ -1049,6 +1172,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				toggle_loop()
 			KEY_V:
 				start_compare_casts()
+			KEY_G:
+				toggle_ghost_overlay()
 			KEY_M:
 				toggle_motion_path()
 			KEY_LEFT:
@@ -1610,6 +1735,8 @@ func restore_canonical_baseline() -> void:
 		dim_overlay.modulate.a = 0.0
 	if stun_overlay != null:
 		stun_overlay.visible = false
+	if boss_ghost_rect != null:
+		boss_ghost_rect.visible = false
 
 	_clear_transient_vfx()
 
@@ -1628,6 +1755,7 @@ func _set_charge_frame(idx: int) -> void:
 		boss_rect.position = Vector2(tf["x"], tf["y"])
 		if idx >= 0 and idx < stochas_ultimate_charge_frames.size():
 			boss_rect.texture = stochas_ultimate_charge_frames[idx]
+	_update_ghost_overlay()
 
 func _set_atlas_frame(idx: int) -> void:
 	current_atlas_frame = idx
