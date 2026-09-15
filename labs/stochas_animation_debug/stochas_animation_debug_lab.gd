@@ -334,6 +334,16 @@ func _build_ui_environment() -> void:
 	motion_path_line.visible = false
 	add_child(motion_path_line)
 
+	# Interactive Transform Gizmo Control (Task 239R)
+	gizmo_overlay = Control.new()
+	gizmo_overlay.name = "GizmoOverlay"
+	gizmo_overlay.position = Vector2(40.0, 20.0)
+	gizmo_overlay.size = Vector2(700.0, 590.0)
+	gizmo_overlay.mouse_filter = Control.MOUSE_FILTER_PASS
+	gizmo_overlay.draw.connect(Callable(self, "_on_draw_gizmo_overlay"))
+	gizmo_overlay.gui_input.connect(Callable(self, "_on_gui_input_gizmo_overlay"))
+	add_child(gizmo_overlay)
+
 func _build_boss_preview() -> void:
 	# Ghost TextureRect for Previous-Frame Onion Skin Overlay (Task 239P)
 	boss_ghost_rect = TextureRect.new()
@@ -851,6 +861,153 @@ func _update_ghost_overlay() -> void:
 				lbl_ghost_readout.text = "CURRENT = F0%d | REFERENCE = F0%d" % [current_charge_frame + 1, prev_idx + 1]
 		else:
 			boss_ghost_rect.visible = false
+
+
+# Task 239R Interactive Transform Gizmo & Layout Variables
+var gizmo_overlay: Control = null
+var is_gizmo_dragging_move: bool = false
+var is_gizmo_dragging_resize: bool = false
+var gizmo_drag_handle_idx: int = -1
+var gizmo_drag_start_mouse: Vector2 = Vector2.ZERO
+var gizmo_drag_start_pos: Vector2 = Vector2.ZERO
+var gizmo_drag_start_scale: float = 1.1378
+var is_status_panel_collapsed: bool = false
+var btn_status_toggle: Button = null
+
+func toggle_status_panel_collapse() -> void:
+	is_status_panel_collapsed = not is_status_panel_collapsed
+	if bottom_panel != null:
+		if is_status_panel_collapsed:
+			bottom_panel.position = Vector2(40.0, 675.0)
+			bottom_panel.size = Vector2(1200.0, 35.0)
+			if lbl_diag_details != null:
+				lbl_diag_details.visible = false
+		else:
+			bottom_panel.position = Vector2(40.0, 625.0)
+			bottom_panel.size = Vector2(1200.0, 85.0)
+			if lbl_diag_details != null:
+				lbl_diag_details.visible = true
+	if btn_status_toggle != null:
+		btn_status_toggle.text = "STATUS [SHOW]" if is_status_panel_collapsed else "STATUS [HIDE]"
+
+func queue_gizmo_redraw() -> void:
+	if gizmo_overlay != null:
+		gizmo_overlay.queue_redraw()
+
+func _on_draw_gizmo_overlay() -> void:
+	if gizmo_overlay == null or boss_rect == null:
+		return
+
+	# Show gizmo ONLY during ULTIMATE_CHARGE and when paused / manual frame inspection mode
+	if current_state != AnimationState.ULTIMATE_CHARGE or current_charge_frame < 0:
+		return
+	if not is_paused and active_tween != null and active_tween.is_valid():
+		return
+
+	# Calculate boss_rect bounding box in local gizmo_overlay coordinates
+	# gizmo_overlay position is (40, 20). boss_rect center in global screen coords:
+	var center_global = boss_rect.position + boss_rect.pivot_offset
+	var center_local = center_global - gizmo_overlay.position
+
+	var half_size = (boss_rect.size * 0.5) * boss_rect.scale
+	var rect_tl = center_local - half_size
+	var rect_br = center_local + half_size
+	var rect_size = rect_br - rect_tl
+
+	# 1. Draw Bright Cyan Bounding Box Outline
+	gizmo_overlay.draw_rect(Rect2(rect_tl, rect_size), Color(0.2, 0.9, 1.0, 0.95), false, 2.0)
+
+	# 2. Draw 4 Corner Handles (TL, TR, BL, BR)
+	var corners = [
+		rect_tl,
+		Vector2(rect_br.x, rect_tl.y),
+		Vector2(rect_tl.x, rect_br.y),
+		rect_br
+	]
+	for c in corners:
+		gizmo_overlay.draw_rect(Rect2(c - Vector2(6, 6), Vector2(12, 12)), Color(1.0, 1.0, 0.4, 0.95), true)
+		gizmo_overlay.draw_rect(Rect2(c - Vector2(6, 6), Vector2(12, 12)), Color(0.1, 0.1, 0.1, 0.9), false, 1.5)
+
+	# 3. Draw Center Move Handle (Crosshair)
+	gizmo_overlay.draw_circle(center_local, 5.0, Color(0.2, 0.9, 1.0, 0.95))
+	gizmo_overlay.draw_line(center_local - Vector2(10, 0), center_local + Vector2(10, 0), Color(0.2, 0.9, 1.0, 0.95), 1.5)
+	gizmo_overlay.draw_line(center_local - Vector2(0, 10), center_local + Vector2(0, 10), Color(0.2, 0.9, 1.0, 0.95), 1.5)
+
+	# 4. Draw Live Drag Info Readout
+	var tf = get_frame_transform(selected_tuner_frame_idx)
+	var info_text = "F0%d Scale: %.4f | Pos: (%.1f, %.1f)" % [selected_tuner_frame_idx + 1, tf["scale"], tf["x"], tf["y"]]
+	var font = get_theme_default_font()
+	if font != null:
+		gizmo_overlay.draw_string(font, rect_tl + Vector2(0, -8), info_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.4, 1.0, 0.6, 0.95))
+
+func _on_gui_input_gizmo_overlay(event: InputEvent) -> void:
+	if current_state != AnimationState.ULTIMATE_CHARGE or current_charge_frame < 0 or boss_rect == null:
+		return
+	if not is_paused and active_tween != null and active_tween.is_valid():
+		return
+
+	var center_global = boss_rect.position + boss_rect.pivot_offset
+	var center_local = center_global - gizmo_overlay.position
+	var half_size = (boss_rect.size * 0.5) * boss_rect.scale
+	var rect_tl = center_local - half_size
+	var rect_br = center_local + half_size
+
+	var corners = [
+		rect_tl,
+		Vector2(rect_br.x, rect_tl.y),
+		Vector2(rect_tl.x, rect_br.y),
+		rect_br
+	]
+
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				# Check corner handles hit (16x16px hitbox around each corner)
+				gizmo_drag_handle_idx = -1
+				for i in range(corners.size()):
+					if event.position.distance_to(corners[i]) <= 12.0:
+						gizmo_drag_handle_idx = i
+						break
+
+				if gizmo_drag_handle_idx >= 0:
+					is_gizmo_dragging_resize = true
+					gizmo_drag_start_mouse = event.position
+					gizmo_drag_start_scale = get_frame_transform(selected_tuner_frame_idx)["scale"]
+				elif Rect2(rect_tl, rect_br - rect_tl).has_point(event.position):
+					is_gizmo_dragging_move = true
+					gizmo_drag_start_mouse = event.position
+					var tf = get_frame_transform(selected_tuner_frame_idx)
+					gizmo_drag_start_pos = Vector2(tf["x"], tf["y"])
+			else:
+				is_gizmo_dragging_move = false
+				is_gizmo_dragging_resize = false
+				gizmo_drag_handle_idx = -1
+				queue_gizmo_redraw()
+
+	elif event is InputEventMouseMotion:
+		var speed_mult: float = 1.0
+		if Input.is_key_pressed(KEY_SHIFT):
+			speed_mult = 0.2
+		elif Input.is_key_pressed(KEY_CTRL):
+			speed_mult = 0.05
+
+		if is_gizmo_dragging_move:
+			var mouse_delta = (event.position - gizmo_drag_start_mouse) * speed_mult
+			var new_x = gizmo_drag_start_pos.x + mouse_delta.x
+			var new_y = gizmo_drag_start_pos.y + mouse_delta.y
+			var cur_sc = get_frame_transform(selected_tuner_frame_idx)["scale"]
+			set_frame_transform(selected_tuner_frame_idx, cur_sc, new_x, new_y)
+			queue_gizmo_redraw()
+
+		elif is_gizmo_dragging_resize:
+			var dist_start = gizmo_drag_start_mouse.distance_to(center_local)
+			var dist_curr = event.position.distance_to(center_local)
+			var ratio = (dist_curr / dist_start) if dist_start > 0.001 else 1.0
+			var delta_ratio = (ratio - 1.0) * speed_mult
+			var new_scale = clampf(gizmo_drag_start_scale * (1.0 + delta_ratio), 0.50, 1.80)
+			var cur_tf = get_frame_transform(selected_tuner_frame_idx)
+			set_frame_transform(selected_tuner_frame_idx, new_scale, cur_tf["x"], cur_tf["y"])
+			queue_gizmo_redraw()
 
 func _build_tuner_ui_section(vbox: VBoxContainer) -> void:
 	var sec_title = Label.new()
@@ -1829,6 +1986,7 @@ func _set_charge_frame(idx: int) -> void:
 			boss_rect.texture = stochas_ultimate_charge_frames[idx]
 		_apply_current_frame_opacity()
 	_update_ghost_overlay()
+	queue_gizmo_redraw()
 
 func _set_atlas_frame(idx: int) -> void:
 	current_atlas_frame = idx

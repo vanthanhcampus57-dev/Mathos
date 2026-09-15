@@ -330,6 +330,81 @@ func _initialize() -> void:
 	lab.reset_saved_tuning_config()
 	print("[TASK 239Q] PASS: Canonical IDLE ghost reference for F01, F02..F06 prev mapping, dual opacity controls & persistence verified 100%.")
 
+
+	# ----------------------------------------------------
+	# TASK 239R: INTERACTIVE TRANSFORM GIZMO & LAYOUT TEST SUITE
+	# ----------------------------------------------------
+	# 1. Gizmo Overlay Initialization
+	lab.select_tuner_frame(0) # F01
+	if lab.gizmo_overlay == null:
+		_fail("TASK 239R FAIL: Gizmo overlay node missing!")
+		return
+
+	# 2. Simulate Drag Move on Gizmo Overlay
+	var cur_tf = lab.get_frame_transform(0)
+	var move_event_down = InputEventMouseButton.new()
+	move_event_down.button_index = MOUSE_BUTTON_LEFT
+	move_event_down.pressed = true
+	move_event_down.position = Vector2(300.0, 250.0) # Inside boss rect
+	lab._on_gui_input_gizmo_overlay(move_event_down)
+
+	var move_event_drag = InputEventMouseMotion.new()
+	move_event_drag.position = Vector2(320.0, 260.0) # +20 X, +10 Y
+	lab._on_gui_input_gizmo_overlay(move_event_drag)
+
+	var move_event_up = InputEventMouseButton.new()
+	move_event_up.button_index = MOUSE_BUTTON_LEFT
+	move_event_up.pressed = false
+	move_event_up.position = Vector2(320.0, 260.0)
+	lab._on_gui_input_gizmo_overlay(move_event_up)
+
+	var moved_tf = lab.get_frame_transform(0)
+	if not is_equal_approx(moved_tf["x"], cur_tf["x"] + 20.0) or not is_equal_approx(moved_tf["y"], cur_tf["y"] + 10.0):
+		_fail("TASK 239R FAIL: Drag move gizmo interaction failed! Expected pos (%f, %f), got (%f, %f)" % [cur_tf["x"] + 20.0, cur_tf["y"] + 10.0, moved_tf["x"], moved_tf["y"]])
+		return
+
+	# 3. Simulate Drag Resize on Gizmo Corner Handle
+	var center_global = lab.boss_rect.position + lab.boss_rect.pivot_offset
+	var center_local = center_global - lab.gizmo_overlay.position
+	var half_size = (lab.boss_rect.size * 0.5) * lab.boss_rect.scale
+	var rect_tl = center_local - half_size
+
+	var resize_event_down = InputEventMouseButton.new()
+	resize_event_down.button_index = MOUSE_BUTTON_LEFT
+	resize_event_down.pressed = true
+	resize_event_down.position = rect_tl # Top Left Corner handle
+	lab._on_gui_input_gizmo_overlay(resize_event_down)
+
+	var resize_event_drag = InputEventMouseMotion.new()
+	# Move mouse outwards from center to increase scale
+	var drag_vec = (rect_tl - center_local).normalized() * 30.0
+	resize_event_drag.position = rect_tl + drag_vec
+	lab._on_gui_input_gizmo_overlay(resize_event_drag)
+
+	lab._on_gui_input_gizmo_overlay(move_event_up)
+
+	var resized_tf = lab.get_frame_transform(0)
+	if resized_tf["scale"] <= moved_tf["scale"]:
+		_fail("TASK 239R FAIL: Drag resize gizmo interaction failed! Scale did not increase on corner drag outward.")
+		return
+	if resized_tf["scale"] > 1.80 or resized_tf["scale"] < 0.50:
+		_fail("TASK 239R FAIL: Scale out of allowed range 0.50..1.80!")
+		return
+
+	lab.reset_all_tuner_frames()
+
+	# 4. Status Panel Collapse Toggle Layout Test
+	lab.toggle_status_panel_collapse()
+	if not lab.is_status_panel_collapsed:
+		_fail("TASK 239R FAIL: Status panel collapse toggle failed!")
+		return
+	lab.toggle_status_panel_collapse()
+	if lab.is_status_panel_collapsed:
+		_fail("TASK 239R FAIL: Status panel expand toggle failed!")
+		return
+
+	print("[TASK 239R] PASS: Drag move, corner resize, uniform scale rule & status panel layout collapse verified 100%.")
+
 	# ----------------------------------------------------
 	# REGRESSION & OTHER 10 ANIMATION STATES
 	# ----------------------------------------------------
