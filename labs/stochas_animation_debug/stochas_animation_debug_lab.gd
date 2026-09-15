@@ -154,7 +154,7 @@ const STATE_DURATIONS: Dictionary = {
 	AnimationState.HIT: 0.35,
 	AnimationState.STUN: 1.00,
 	AnimationState.ENRAGED: 1.80,
-	AnimationState.ULTIMATE_CHARGE: 1.20,
+	AnimationState.ULTIMATE_CHARGE: 0.80,
 	AnimationState.ULTIMATE_RELEASE: 1.02, # 0.72s frames + 0.30s recovery
 	AnimationState.ULTIMATE_FULL: 3.42 # 2.40s charge + 1.02s release/recovery
 }
@@ -386,12 +386,13 @@ func _build_boss_preview() -> void:
 	gizmo_overlay.gui_input.connect(Callable(self, "_on_gui_input_gizmo_overlay"))
 	add_child(gizmo_overlay)
 
-	# Pre-roll Arcane Entry Flash Overlay (Task 239T)
+	# Pre-roll Arcane Entry Flash Overlay (Task 239T & 239U)
+	# Enlarged bloom area (~1.6x larger) centered over STOCHAS
 	entry_flash_rect = TextureRect.new()
 	entry_flash_rect.name = "EntryFlashOverlay"
-	entry_flash_rect.position = Vector2(210.0, 100.0)
-	entry_flash_rect.size = Vector2(460.0, 460.0)
-	entry_flash_rect.pivot_offset = Vector2(230.0, 230.0)
+	entry_flash_rect.position = Vector2(100.0, -10.0)
+	entry_flash_rect.size = Vector2(680.0, 680.0)
+	entry_flash_rect.pivot_offset = Vector2(340.0, 340.0)
 	entry_flash_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	entry_flash_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	entry_flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -640,7 +641,7 @@ var charge_frame_transforms: Array[Dictionary] = [
 	{"scale": 1.1378, "x": 190.18, "y": 14.30}
 ]
 
-var selected_tuner_frame_idx: int = 0
+var selected_tuner_frame_idx: int = 2
 var tuner_frame_buttons: Array[Button] = []
 var spin_tuner_scale: SpinBox = null
 var spin_tuner_x: SpinBox = null
@@ -828,7 +829,8 @@ func _update_tuner_ui_readout() -> void:
 
 	for i in range(tuner_frame_buttons.size()):
 		if tuner_frame_buttons[i] != null:
-			tuner_frame_buttons[i].modulate = Color(1.4, 1.2, 0.3) if i == selected_tuner_frame_idx else Color.WHITE
+			var f_idx = i + 2 # tuner button 0 is F03 (index 2)
+			tuner_frame_buttons[i].modulate = Color(1.4, 1.2, 0.3) if f_idx == selected_tuner_frame_idx else Color.WHITE
 
 
 # Ghost / Onion Skin Variables (Task 239P & 239Q Dual Opacity)
@@ -903,8 +905,8 @@ func _update_ghost_overlay() -> void:
 			lbl_ghost_readout.text = "CURRENT = %s | REFERENCE = NONE" % STATE_NAMES.get(current_state, "N/A")
 		return
 
-	if current_charge_frame == 0:
-		# Task 239Q Gate 1 & 2: F01 reference MUST be CANONICAL IDLE boss frame with original transform
+	if current_charge_frame <= 2:
+		# Task 239U: F03 (index 2) is the first active Charge frame; reference MUST be CANONICAL IDLE
 		if canonical_boss_tex != null:
 			boss_ghost_rect.texture = canonical_boss_tex
 			boss_ghost_rect.position = BOSS_BASE_POS
@@ -914,11 +916,11 @@ func _update_ghost_overlay() -> void:
 		else:
 			boss_ghost_rect.visible = false
 		if lbl_ghost_readout != null:
-			lbl_ghost_readout.text = "CURRENT = F01 | REFERENCE = CANONICAL IDLE"
+			lbl_ghost_readout.text = "CURRENT = F03 | REFERENCE = CANONICAL IDLE"
 	else:
-		# F02..F06: Reference ghost is previous frame F0(x-1) with its tuned transform
+		# F04..F06: Reference ghost is previous frame F0(x-1) with its tuned transform
 		var prev_idx: int = current_charge_frame - 1
-		if prev_idx >= 0 and prev_idx < stochas_ultimate_charge_frames.size():
+		if prev_idx >= 2 and prev_idx < stochas_ultimate_charge_frames.size():
 			var prev_tf = get_frame_transform(prev_idx)
 			boss_ghost_rect.texture = stochas_ultimate_charge_frames[prev_idx]
 			boss_ghost_rect.scale = Vector2(prev_tf["scale"], prev_tf["scale"])
@@ -1244,10 +1246,10 @@ func _build_tuner_ui_section(vbox: VBoxContainer) -> void:
 	vbox.add_child(f_box)
 
 	tuner_frame_buttons.clear()
-	for i in range(6):
+	for i in [2, 3, 4, 5]:
 		var btn = Button.new()
 		btn.text = "F0%d" % (i + 1)
-		btn.custom_minimum_size = Vector2(65, 26)
+		btn.custom_minimum_size = Vector2(98, 26)
 		btn.add_theme_font_size_override("font_size", 11)
 		var f_idx = i
 		btn.pressed.connect(func(): select_tuner_frame(f_idx))
@@ -1844,53 +1846,45 @@ func _play_enraged() -> void:
 
 func _play_ultimate_charge(prev_state: AnimationState = AnimationState.ULTIMATE_CHARGE) -> void:
 	restore_canonical_baseline()
-	state_duration = STATE_DURATIONS[AnimationState.ULTIMATE_CHARGE] # 1.20s
+	state_duration = STATE_DURATIONS[AnimationState.ULTIMATE_CHARGE] # 0.80s (4 frames * 0.20s)
 	active_tween = create_tween()
 
-	# Task 239T Trigger Rule: Entry flash ONLY when entering ULTIMATE_CHARGE from another state
+	# Task 239T & 239U Trigger Rule: Entry flash ONLY when entering ULTIMATE_CHARGE from another state
 	var is_state_entry: bool = (prev_state != AnimationState.ULTIMATE_CHARGE) and entry_flash_enabled and not is_paused
 
 	if is_state_entry and entry_flash_rect != null:
-		# Pre-roll Arcane Entry Flash (0.15s: 0.06s rise, peak switch to F01, 0.09s fade out)
+		# Task 239U: Large Arcane Entry Flash (0.15s: 0.06s rise, peak switch directly to F03, 0.09s fade out)
 		entry_flash_rect.modulate = Color(1.0, 1.0, 1.0, 0.0)
-		entry_flash_rect.scale = Vector2(0.7, 0.7)
+		entry_flash_rect.scale = Vector2(0.8, 0.8)
 
-		# 0.00s -> 0.06s: Flash rises to peak brightness
+		# 0.00s -> 0.06s: Large bloom expands & brightens to peak
 		active_tween.tween_property(entry_flash_rect, "modulate:a", 0.95, 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		active_tween.parallel().tween_property(entry_flash_rect, "scale", Vector2(1.15, 1.15), 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		active_tween.parallel().tween_property(entry_flash_rect, "scale", Vector2(1.25, 1.25), 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
-		# AT PEAK FLASH (0.06s): Switch boss underneath to F01
-		active_tween.chain().tween_callback(func(): _set_charge_frame(0))
+		# AT PEAK FLASH (0.06s): Switch boss DIRECTLY underneath from IDLE to F03 (index 2)
+		active_tween.chain().tween_callback(func(): _set_charge_frame(2))
 
-		# 0.06s -> 0.15s: Flash fades away to reveal F01 cleanly
+		# 0.06s -> 0.15s: Large bloom fades away to reveal F03 cleanly
 		active_tween.tween_property(entry_flash_rect, "modulate:a", 0.0, 0.09).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		active_tween.parallel().tween_property(entry_flash_rect, "scale", Vector2(1.0, 1.0), 0.09).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		active_tween.parallel().tween_property(dim_overlay, "modulate:a", 0.45, 0.09).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
-		# F01 holds visual duration
+		# F03 holds visual duration
 		active_tween.tween_interval(0.14)
 	else:
-		# Direct entry (looping, stepping, or tuner) - immediate F01 display without flash
-		_set_charge_frame(0)
+		# Direct entry (looping, stepping, or tuner) - immediate F03 display without flash
+		_set_charge_frame(2)
 		active_tween.tween_property(dim_overlay, "modulate:a", 0.45, 0.20).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
-	# F02 (0.20s - 0.40s)
-	active_tween.tween_callback(func(): _set_charge_frame(1))
-	active_tween.tween_interval(0.20)
-
-	# F03 (0.40s - 0.60s)
-	active_tween.tween_callback(func(): _set_charge_frame(2))
+	# F04 (0.20s - 0.40s)
+	active_tween.tween_callback(func(): _set_charge_frame(3))
 	active_tween.tween_property(boss_rect, "modulate", Color(1.30, 1.20, 1.60), 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
-	# F04 (0.60s - 0.80s)
-	active_tween.tween_callback(func(): _set_charge_frame(3))
-	active_tween.tween_property(boss_rect, "modulate", Color(1.50, 1.40, 1.80), 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-
-	# F05 (0.80s - 1.00s)
+	# F05 (0.40s - 0.60s)
 	active_tween.tween_callback(func(): _set_charge_frame(4))
-	active_tween.tween_property(boss_rect, "modulate", Color(1.70, 1.50, 2.00), 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	active_tween.tween_property(boss_rect, "modulate", Color(1.60, 1.45, 1.90), 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
-	# F06 (1.00s - 1.20s): Peak charge hold
+	# F06 (0.60s - 0.80s): Peak charge hold
 	active_tween.tween_callback(func(): _set_charge_frame(5))
 	active_tween.tween_property(boss_rect, "modulate", Color(1.80, 1.60, 2.20), 0.20).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
@@ -2057,14 +2051,14 @@ func step_frame(direction: int) -> void:
 		active_tween.kill()
 
 	if current_state == AnimationState.ULTIMATE_CHARGE or current_charge_frame >= 0:
-		if current_charge_frame < 0:
-			current_charge_frame = 0 if direction >= 0 else 5
+		if current_charge_frame < 2:
+			current_charge_frame = 2 if direction >= 0 else 5
 		else:
 			var next_f: int = current_charge_frame + direction
 			if next_f > 5:
-				current_charge_frame = 0 if is_loop_enabled else 5
-			elif next_f < 0:
-				current_charge_frame = 5 if is_loop_enabled else 0
+				current_charge_frame = 2 if is_loop_enabled else 5
+			elif next_f < 2:
+				current_charge_frame = 5 if is_loop_enabled else 2
 			else:
 				current_charge_frame = next_f
 		_set_charge_frame(current_charge_frame)

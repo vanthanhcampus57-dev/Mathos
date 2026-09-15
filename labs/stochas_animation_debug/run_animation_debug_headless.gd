@@ -116,30 +116,32 @@ func _initialize() -> void:
 	if lab.get_current_state() != lab.AnimationState.ULTIMATE_CHARGE:
 		_fail("STATE FAIL: Current state is not ULTIMATE_CHARGE!")
 		return
-	if not is_equal_approx(lab.get_animation_duration(lab.AnimationState.ULTIMATE_CHARGE), 1.20):
-		_fail("TASK 239N FAIL: ULTIMATE_CHARGE visual duration expected 1.20s, got %f!" % lab.get_animation_duration(lab.AnimationState.ULTIMATE_CHARGE))
+	if not is_equal_approx(lab.get_animation_duration(lab.AnimationState.ULTIMATE_CHARGE), 0.80):
+		_fail("TASK 239N FAIL: ULTIMATE_CHARGE visual duration expected 0.80s, got %f!" % lab.get_animation_duration(lab.AnimationState.ULTIMATE_CHARGE))
 		return
 
-	# Frame stepping F01 -> F06 & Task 239N Stable Transform Verification
-	for i in range(6):
+	# Frame stepping F03 -> F06 & Task 239N Stable Transform Verification
+	var active_indices_239n = [2, 3, 4, 5]
+	for i in range(4):
+		var frame_idx = active_indices_239n[i]
 		lab.step_frame(1 if i > 0 else 0)
-		if lab.get_current_charge_frame() != i:
-			_fail("STEPPING FAIL: Expected charge frame index %d, got %d" % [i, lab.get_current_charge_frame()])
+		if lab.get_current_charge_frame() != frame_idx:
+			_fail("STEPPING FAIL: Expected charge frame index %d, got %d" % [frame_idx, lab.get_current_charge_frame()])
 			return
-		if lab.get_boss_texture() != charge_frames[i]:
-			_fail("STEPPING FAIL: Boss texture at step %d does not match F0%d!" % [i, i + 1])
+		if lab.get_boss_texture() != charge_frames[frame_idx]:
+			_fail("STEPPING FAIL: Boss texture at step %d does not match F0%d!" % [i, frame_idx + 1])
 			return
-		# Task 239S: Verify authoritative per-frame transform across F01..F06
+		# Task 239S: Verify authoritative per-frame transform across F03..F06
 		var f_pos: Vector2 = lab.get_boss_position()
 		var f_scale: Vector2 = lab.get_boss_scale()
-		var exp_tf: Dictionary = lab.get_frame_transform(i)
+		var exp_tf: Dictionary = lab.get_frame_transform(frame_idx)
 		if not f_pos.is_equal_approx(Vector2(exp_tf["x"], exp_tf["y"])):
-			_fail("TASK 239S FAIL: F0%d position %s does not match expected %s!" % [(i + 1), str(f_pos), str(Vector2(exp_tf["x"], exp_tf["y"]))])
+			_fail("TASK 239S FAIL: F0%d position %s does not match expected %s!" % [(frame_idx + 1), str(f_pos), str(Vector2(exp_tf["x"], exp_tf["y"]))])
 			return
 		if not f_scale.is_equal_approx(Vector2(exp_tf["scale"], exp_tf["scale"])):
-			_fail("TASK 239S FAIL: F0%d scale %s does not match expected %f!" % [(i + 1), str(f_scale), exp_tf["scale"]])
+			_fail("TASK 239S FAIL: F0%d scale %s does not match expected %f!" % [(frame_idx + 1), str(f_scale), exp_tf["scale"]])
 			return
-	print("[TASK 239N] PASS: Frame stepping F01..F06 verified with 1.20s visual timing and stable single transform.")
+	print("[TASK 239N] PASS: Frame stepping F03..F06 verified with 0.80s visual timing and stable single transform.")
 
 	# Post-F06 behavior when LOOP = OFF: must HOLD on F06 and remain in ULTIMATE_CHARGE
 	lab.step_frame(1) # Next frame at F06 with LOOP = OFF
@@ -151,17 +153,17 @@ func _initialize() -> void:
 		return
 	print("[TASK 239M] PASS: LOOP=OFF holds on F06 without transitioning out of ULTIMATE_CHARGE.")
 
-	# Post-F06 behavior when LOOP = ON: must wrap to F01
+	# Post-F06 behavior when LOOP = ON: must wrap to F03
 	lab.set_loop(true)
 	lab.step_frame(1) # Next frame at F06 with LOOP = ON
-	if lab.get_current_charge_frame() != 0:
-		_fail("TASK 239M FAIL: Step frame at F06 with LOOP=ON should wrap to F01 (index 0), got %d!" % lab.get_current_charge_frame())
+	if lab.get_current_charge_frame() != 2:
+		_fail("TASK 239M FAIL: Step frame at F06 with LOOP=ON should wrap to F03 (index 2), got %d!" % lab.get_current_charge_frame())
 		return
 	if lab.get_current_state() != lab.AnimationState.ULTIMATE_CHARGE:
 		_fail("TASK 239M FAIL: LAB transitioned out of ULTIMATE_CHARGE when LOOP=ON!")
 		return
 	lab.set_loop(false)
-	print("[TASK 239M] PASS: LOOP=ON wraps from F06 to F01 within ULTIMATE_CHARGE.")
+	print("[TASK 239M] PASS: LOOP=ON wraps from F06 to F03 within ULTIMATE_CHARGE.")
 
 
 	# ----------------------------------------------------
@@ -250,15 +252,15 @@ func _initialize() -> void:
 	lab.reset_saved_tuning_config()
 
 	# 6. Animation Playback per-frame transform verification
-	lab.set_frame_transform(0, 1.1000, 180.0, 40.0)
-	lab.set_frame_transform(1, 1.2000, 190.0, 38.0)
-	lab.select_tuner_frame(0) # F01
+	lab.set_frame_transform(2, 1.1000, 180.0, 40.0)
+	lab.set_frame_transform(3, 1.2000, 190.0, 38.0)
+	lab.select_tuner_frame(2) # F03
 	if not lab.get_boss_scale().is_equal_approx(Vector2(1.10, 1.10)) or not lab.get_boss_position().is_equal_approx(Vector2(180.0, 40.0)):
-		_fail("TASK 239O FAIL: Playback/step F01 did not apply F01 transform!")
+		_fail("TASK 239O FAIL: Playback/step F03 did not apply F03 transform!")
 		return
-	lab.step_frame(1) # F02
+	lab.step_frame(1) # F04
 	if not lab.get_boss_scale().is_equal_approx(Vector2(1.20, 1.20)) or not lab.get_boss_position().is_equal_approx(Vector2(190.0, 38.0)):
-		_fail("TASK 239O FAIL: Playback/step F02 did not apply F02 transform!")
+		_fail("TASK 239O FAIL: Playback/step F04 did not apply F04 transform!")
 		return
 	lab.reset_all_tuner_frames()
 
@@ -268,25 +270,25 @@ func _initialize() -> void:
 	# ----------------------------------------------------
 	# TASK 239Q: CANONICAL IDLE F01 GHOST & DUAL OPACITY TEST SUITE
 	# ----------------------------------------------------
-	# 1. F01 reference MUST be CANONICAL IDLE boss frame with original transform
-	lab.select_tuner_frame(0) # F01
+	# 1. F03 reference MUST be CANONICAL IDLE boss frame with original transform
+	lab.select_tuner_frame(2) # F03
 	if not lab.is_ghost_enabled():
 		_fail("TASK 239Q FAIL: Reference ghost should be enabled by default!")
 		return
 	if lab.boss_ghost_rect == null or not lab.boss_ghost_rect.visible:
-		_fail("TASK 239Q FAIL: Canonical ghost should be visible when viewing F01!")
+		_fail("TASK 239Q FAIL: Canonical ghost should be visible when viewing F03!")
 		return
 	if lab.boss_ghost_rect.texture != lab.canonical_boss_tex:
-		_fail("TASK 239Q FAIL: F01 reference ghost texture MUST be canonical_boss_tex (stochas_boss.png)!")
+		_fail("TASK 239Q FAIL: F03 reference ghost texture MUST be canonical_boss_tex (stochas_boss.png)!")
 		return
 	if not lab.boss_ghost_rect.position.is_equal_approx(lab.BOSS_BASE_POS) or not lab.boss_ghost_rect.scale.is_equal_approx(Vector2.ONE):
-		_fail("TASK 239Q FAIL: F01 canonical reference ghost MUST use original canonical transform (BOSS_BASE_POS, scale 1.0)!")
+		_fail("TASK 239Q FAIL: F03 canonical reference ghost MUST use original canonical transform (BOSS_BASE_POS, scale 1.0)!")
 		return
 
-	# 2. F02 -> F01, F06 -> F05 reference mapping
-	lab.select_tuner_frame(1) # F02
-	if lab.boss_ghost_rect.texture != charge_frames[0]:
-		_fail("TASK 239Q FAIL: F02 reference ghost texture should be F01!")
+	# 2. F04 -> F03, F06 -> F05 reference mapping
+	lab.select_tuner_frame(3) # F04
+	if lab.boss_ghost_rect.texture != charge_frames[2]:
+		_fail("TASK 239Q FAIL: F04 reference ghost texture should be F03!")
 		return
 
 	lab.select_tuner_frame(5) # F06
@@ -335,82 +337,104 @@ func _initialize() -> void:
 	print("[TASK 239Q] PASS: Canonical IDLE ghost reference for F01, F02..F06 prev mapping, dual opacity controls & persistence verified 100%.")
 
 
-				# ----------------------------------------------------
-	# TASK 239T: PRE-ROLL ARCANE ENTRY FLASH TEST SUITE
+					# ----------------------------------------------------
+	# TASK 239U: F03..F06 ACTIVE CHARGE SEQUENCE & LARGE FLASH TEST SUITE
 	# ----------------------------------------------------
-	# 1. Entry Flash Node Existence & Layering
+	# 1. Large Entry Flash Node Dimensions & Layering (Gate 4)
 	if lab.entry_flash_rect == null:
-		_fail("TASK 239T FAIL: entry_flash_rect overlay node missing!")
+		_fail("TASK 239U FAIL: entry_flash_rect overlay node missing!")
 		return
-	if lab.entry_flash_rect.mouse_filter != Control.MOUSE_FILTER_IGNORE:
-		_fail("TASK 239T FAIL: entry_flash_rect must have MOUSE_FILTER_IGNORE!")
-		return
-	if not lab.is_entry_flash_active():
-		_fail("TASK 239T FAIL: Entry flash should be enabled by default!")
+	if lab.entry_flash_rect.size != Vector2(680, 680):
+		_fail("TASK 239U FAIL: Flash area size expected (680, 680), got %s!" % str(lab.entry_flash_rect.size))
 		return
 
-	# 2. State Entry Trigger Check (IDLE -> ULTIMATE_CHARGE)
+	# 2. State Entry Trigger (IDLE -> Large Flash -> F03) (Gates 1, 2, 3, 5, 6, 7)
 	lab.set_paused(false)
 	lab.play_animation(lab.AnimationState.IDLE)
 	await process_frame
 	lab.play_animation(lab.AnimationState.ULTIMATE_CHARGE)
 
-	# Verify active tween is running entry flash pre-roll
-	if lab.active_tween == null or not lab.active_tween.is_valid():
-		_fail("TASK 239T FAIL: ULTIMATE_CHARGE tween failed to initialize!")
+	if not is_equal_approx(lab.get_animation_duration(lab.AnimationState.ULTIMATE_CHARGE), 0.80):
+		_fail("TASK 239U FAIL: Visual duration expected 0.80s (4 frames * 0.20s), got %f!" % lab.get_animation_duration(lab.AnimationState.ULTIMATE_CHARGE))
 		return
 
 	# Fast forward to peak flash (~0.06s)
 	lab.active_tween.custom_step(0.06)
-	if lab.entry_flash_rect.modulate.a <= 0.50:
-		_fail("TASK 239T FAIL: Pre-roll entry flash did not reach peak opacity (~0.95), got %f!" % lab.entry_flash_rect.modulate.a)
+	if lab.get_current_charge_frame() != 2: # F03
+		_fail("TASK 239U FAIL: Frame at peak flash expected F03 (index 2), got index %d!" % lab.get_current_charge_frame())
 		return
 
-	# Fast forward to flash fade completion (~0.15s)
-	lab.active_tween.custom_step(0.09)
-	if lab.entry_flash_rect.modulate.a > 0.01:
-		_fail("TASK 239T FAIL: Pre-roll entry flash did not fade out at ~0.15s, got opacity %f!" % lab.entry_flash_rect.modulate.a)
+	# Step through active sequence F03 -> F04 -> F05 -> F06
+	var active_indices = [2, 3, 4, 5]
+	for i in range(4):
+		var target_idx = active_indices[i]
+		if i > 0:
+			lab.step_frame(1)
+		if lab.get_current_charge_frame() != target_idx:
+			_fail("TASK 239U FAIL: Step %d expected active charge frame %d (F0%d), got %d!" % [i, target_idx, target_idx + 1, lab.get_current_charge_frame()])
+			return
+		if lab.get_current_charge_frame() == 0 or lab.get_current_charge_frame() == 1:
+			_fail("TASK 239U FAIL: F01 or F02 appeared during active sequence!")
+			return
+
+	print("[TASK 239U ACTIVE SEQUENCE] PASS: Active sequence F03->F04->F05->F06 verified in 0.80s without F01/F02.")
+
+	# 3. Post-F06 Hold & Loop Wrap F06 -> F03 (Gates 8, 9, 10)
+	lab.set_loop(false)
+	lab.step_frame(1) # Next on F06 with LOOP OFF
+	if lab.get_current_charge_frame() != 5: # F06
+		_fail("TASK 239U FAIL: LOOP OFF should hold on F06 (index 5), got %d!" % lab.get_current_charge_frame())
 		return
 
-	# Verify F01 is displayed underneath with locked transform
-	if lab.get_current_charge_frame() != 0:
-		_fail("TASK 239T FAIL: Boss frame after flash peak is not F01!")
-		return
-	var f01_pos = lab.get_boss_position()
-	var f01_scale = lab.get_boss_scale()
-	if not f01_pos.is_equal_approx(Vector2(203.99, 8.49)) or not f01_scale.is_equal_approx(Vector2(1.0076, 1.0076)):
-		_fail("TASK 239T FAIL: F01 after entry flash does not match locked transform (1.0076 / 203.99 / 8.49), got pos %s scale %s!" % [str(f01_pos), str(f01_scale)])
-		return
-
-	print("[TASK 239T ENTRY FLASH] PASS: IDLE -> ULTIMATE_CHARGE triggers sharp 0.15s entry flash masking F01 pose switch.")
-
-	# 3. Non-Trigger Rule: F06 -> F01 Loop Wrap Must NOT Trigger Entry Flash
 	lab.set_loop(true)
-	lab.select_tuner_frame(5) # F06
-	lab.step_frame(1) # Step to wrap to F01
+	lab.step_frame(1) # Next on F06 with LOOP ON
+	if lab.get_current_charge_frame() != 2: # F03
+		_fail("TASK 239U FAIL: LOOP ON should wrap F06 -> F03 (index 2), got %d!" % lab.get_current_charge_frame())
+		return
 	if lab.entry_flash_rect.modulate.a > 0.001:
-		_fail("TASK 239T FAIL: Loop wrap F06 -> F01 triggered entry flash! Flash must be STATE ENTRY ONLY.")
+		_fail("TASK 239U FAIL: Loop wrap F06 -> F03 triggered entry flash!")
 		return
 	lab.set_loop(false)
 
-	# 4. Non-Trigger Rule: Manual Frame Stepping Must NOT Trigger Entry Flash
-	lab.select_tuner_frame(0) # F01
-	lab.step_frame(1) # F02
-	if lab.entry_flash_rect.modulate.a > 0.001:
-		_fail("TASK 239T FAIL: Manual frame stepping triggered entry flash!")
+	print("[TASK 239U LOOP WRAP] PASS: LOOP OFF holds F06, LOOP ON wraps F06->F03 with NO flash.")
+
+	# 4. Frame Stepping Bounds (Gate 11)
+	lab.select_tuner_frame(2) # F03
+	lab.step_frame(-1) # Prev on F03 with LOOP OFF
+	if lab.get_current_charge_frame() != 2:
+		_fail("TASK 239U FAIL: PREV on F03 with LOOP OFF should hold F03, got %d!" % lab.get_current_charge_frame())
 		return
 
-	# 5. Debug Toggle ENTRY FLASH: ON / OFF
-	lab.toggle_entry_flash() # OFF
-	if lab.is_entry_flash_active():
-		_fail("TASK 239T FAIL: Toggling entry flash OFF failed!")
+	lab.set_loop(true)
+	lab.step_frame(-1) # Prev on F03 with LOOP ON
+	if lab.get_current_charge_frame() != 5:
+		_fail("TASK 239U FAIL: PREV on F03 with LOOP ON should wrap to F06, got %d!" % lab.get_current_charge_frame())
 		return
-	lab.toggle_entry_flash() # ON
-	if not lab.is_entry_flash_active():
-		_fail("TASK 239T FAIL: Toggling entry flash ON failed!")
+	lab.set_loop(false)
+
+	# 5. Reference Ghost Mapping F03->IDLE, F04->F03, F05->F04, F06->F05 (Gates 12, 13, 14, 15)
+	lab.select_tuner_frame(2) # F03
+	if lab.boss_ghost_rect.texture != lab.canonical_boss_tex:
+		_fail("TASK 239U FAIL: F03 reference ghost MUST be canonical_boss_tex (IDLE)!")
 		return
 
-	print("[TASK 239T TRIGGER RULES] PASS: Loop wrap, manual frame stepping, and debug toggle rules verified 100%.")
+	var ref_charge_frames = lab.get_ultimate_charge_frames()
+	lab.select_tuner_frame(3) # F04
+	if lab.boss_ghost_rect.texture != ref_charge_frames[2]: # F03
+		_fail("TASK 239U FAIL: F04 reference ghost MUST be F03!")
+		return
+
+	lab.select_tuner_frame(4) # F05
+	if lab.boss_ghost_rect.texture != ref_charge_frames[3]: # F04
+		_fail("TASK 239U FAIL: F05 reference ghost MUST be F04!")
+		return
+
+	lab.select_tuner_frame(5) # F06
+	if lab.boss_ghost_rect.texture != ref_charge_frames[4]: # F05
+		_fail("TASK 239U FAIL: F06 reference ghost MUST be F05!")
+		return
+
+	print("[TASK 239U GHOST MAPPING] PASS: F03->IDLE, F04->F03, F05->F04, F06->F05 reference mapping verified.")
 
 
 	# ----------------------------------------------------
@@ -438,13 +462,15 @@ func _initialize() -> void:
 
 	# 2. Verify Normal Playback Applies Exact Final Transforms
 	lab.play_animation(lab.AnimationState.ULTIMATE_CHARGE)
-	for i in range(6):
+	var active_indices_239s = [2, 3, 4, 5]
+	for i in range(4):
+		var frame_idx = active_indices_239s[i]
 		lab.step_frame(1 if i > 0 else 0)
 		var play_pos = lab.get_boss_position()
 		var play_scale = lab.get_boss_scale()
-		var exp = expected_final[i]
+		var exp = expected_final[frame_idx]
 		if not play_pos.is_equal_approx(Vector2(exp["x"], exp["y"])) or not play_scale.is_equal_approx(Vector2(exp["scale"], exp["scale"])):
-			_fail("TASK 239S FAIL: Runtime F0%d playback transform expected pos (%f, %f) scale %f, got pos %s scale %s!" % [i + 1, exp["x"], exp["y"], exp["scale"], str(play_pos), str(play_scale)])
+			_fail("TASK 239S FAIL: Runtime F0%d playback transform expected pos (%f, %f) scale %f, got pos %s scale %s!" % [frame_idx + 1, exp["x"], exp["y"], exp["scale"], str(play_pos), str(play_scale)])
 			return
 
 	print("[TASK 239S PLAYBACK] PASS: ULTIMATE_CHARGE normal playback applies exact final per-frame transforms.")

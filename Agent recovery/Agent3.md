@@ -3,97 +3,70 @@
 > Canonical recovery note for Agent3. This file must be updated every time Agent3 receives a prompt, and updated again before sending a report if state changed.
 
 ## 1. CURRENT TASK
-- TASK_ID: MATHOS-STOCHAS-ANIMATION-DEBUG-LAB-236L
-- TITLE: Dedicated STOCHAS animation inspection/refinement LAB
-- FROM: User / P0 BOSS ANIMATION DEBUG
-- PRIORITY: P0 / BOSS ANIMATION DEBUG
-- BASE: 21f9c30b1d86a9429f5539f25f2723856e35cb8c
-- STATUS: READY_FOR_STOCHAS_ANIMATION_DEBUG_HUMAN_REVIEW
-- PROMPT_RECEIVED_AT: 2026-09-14T15:28:44+07:00
-- UPDATED_AT: 2026-09-14T15:35:00+07:00
+- TASK_ID: MATHOS-STOCHAS-ULTIMATE-CHARGE-START-F03-BIGGER-FLASH-239U
+- TITLE: Update active ULTIMATE_CHARGE sequence to F03->F06 (~0.80s), larger entry flash bloom, and F03 reference mapping
+- FROM: User / P0 HUMAN VISUAL POLISH
+- PRIORITY: P0 / HUMAN VISUAL POLISH
+- BASE: d23d41ebabb0b69b414b3bd1880e1d5f8e27b7e2
+- STATUS: READY_FOR_HUMAN_TRANSITION_REVIEW
+- PROMPT_RECEIVED_AT: 2026-09-15T16:35:22+07:00
+- UPDATED_AT: 2026-09-15T16:41:30+07:00
 
 ## 2. WORKSPACE / GIT
 - PROJECT: Mathos
 - WORKTREE: D:\Mathos_Worktrees\MATHOS-STORY-PARITY-FIX-185
 - BRANCH: task/mathos-story-parity-fix-185
-- START_HEAD: 21f9c30b1d86a9429f5539f25f2723856e35cb8c
-- CURRENT_HEAD: 54e88ff9954d9a4a178e96aff484c33b2380b73f
-- FINAL_HEAD: 54e88ff9954d9a4a178e96aff484c33b2380b73f
-- CANONICAL_BASE: 21f9c30b1d86a9429f5539f25f2723856e35cb8c
+- START_HEAD: d23d41ebabb0b69b414b3bd1880e1d5f8e27b7e2
+- CURRENT_HEAD: PENDING_LOCAL_COMMIT
+- FINAL_HEAD: PENDING_LOCAL_COMMIT
+- CANONICAL_BASE: d23d41ebabb0b69b414b3bd1880e1d5f8e27b7e2
 - PRODUCTION_SOURCE_CHANGED: NO (res://src/ completely untouched)
 - COMBAT_LAB_CHANGED: NO (res://labs/stochas_combat_ui/ completely untouched)
+- ASSET_BYTES_EDITED: NO (PNG hashes 100% unchanged)
 
-## 3. DEDICATED ANIMATION LAB ARCHITECTURE
-- Directory: res://labs/stochas_animation_debug/
-- Files:
-  - stochas_animation_debug_lab.tscn (independent studio scene)
-  - stochas_animation_debug_lab.gd (full animation controller, speed scaling, diagnostics)
-  - run_animation_debug_headless.gd (26 automated acceptance gate tests)
-- Authoritative STOCHAS Assets:
-  - Canonical Boss: res://assets/characters/bosses/dungeon_1/stochas_boss.png
-  - Ultimate Sequence: res://assets/characters/bosses/dungeon_1/stochas_ultimate_sequence.png (8 frames, 384x384)
-  - Combat VFX:
-    - res://assets/vfx/combat/stochas_arcane_bolt.png
-    - res://assets/vfx/combat/stochas_probability_orb.png
-    - res://assets/vfx/combat/stochas_void_rift.png
-    - res://assets/vfx/combat/stochas_arcane_sweep.png
-- Layout: 1280 x 720
-  - Left / Center: Large STOCHAS Preview (520x560 px, ground baseline at Y=610.0, base pos (180, 50))
-  - Right: Animation controls & speed sliders (X=760 to X=1250)
-  - Bottom: Diagnostic timeline & state readouts (Y=625 to Y=710, 1200x85)
-- 11 Selectable Animation States:
-  1. IDLE: 3.20s breathing/floating loop (+/-6px Y)
-  2. CAST_BOLT: 0.45s fast snappy forward snap (-32px, +2.5°), anticipation (+16px, -1.5°), cyan projectile flare
-  3. CAST_ORB: 0.80s ritual controlled vertical float (-26px Y, -2.5°), scale expansion 1.05, orbiting orb VFX, forward release
-  4. CAST_RIFT: 0.95s heavy summon downward sink (+20px Y, +22px X, +3.8°), held pose for 0.40s while rift opens
-  5. CAST_SWEEP: 1.00s wide forceful windup (+40px X, -6.2°), massive lateral sweep (-45px X, +5.5°), sweep arc VFX (displacement 85px, rotation swing 11.7°)
-  6. HIT: 0.35s recoil (+18px X, -8px Y, -3.0°), red modulate flash
-  7. STUN: 1.00s slump pose (-15px X, +15px Y, -4.5°), orbiting dizzy stars overlay
-  8. ENRAGED: 1.80s rapid floating loop, crimson aura tint modulate
-  9. ULTIMATE_CHARGE: 2.40s across Phase A (initiate rise/dim, frames 0->1), Phase B (build ping-pong frames 0-3, scale 1.10), Phase C (peak hold frame 3 flare)
-  10. ULTIMATE_RELEASE: 1.02s across Frame 4 (anticipation 0.12s), Frame 5 (discharge 0.15s), Frame 6 (peak impact 0.25s), Frame 7 (follow-through 0.20s), and Recovery (0.30s restoring canonical boss texture and baseline)
-  11. ULTIMATE_FULL: 3.42s end-to-end (Charge 2.40s -> Release 1.02s -> IDLE baseline)
-- Playback & Inspection Features:
-  - Speed Multiplier: 0.10x to 2.00x (slider + quick buttons + hotkeys 1-5) scaling all tweens
-  - Pause / Resume (Space)
-  - Atlas Frame Stepping (Prev [<-] / Next [->])
-  - Loop Toggle (L)
-  - Compare Casts Mode (V) playing Bolt -> Orb -> Rift -> Sweep with 0.5s pauses
-  - Motion Path Debug Overlay (M)
-  - Reset Baseline (R)
-  - Real-time diagnostic readouts: State, Speed, Frame, Elapsed/Duration, Pos, Rot, Scale, Modulate, Flags
+## 3. GOAL & REQUIREMENTS
+- Active Frame Sequence:
+  - Remove F01 and F02 from active ULTIMATE_CHARGE playback.
+  - Active sequence: F03 -> F04 -> F05 -> F06 (4 frames * 0.20s = ~0.80s visual duration at 1.00x speed).
+  - DO NOT delete or edit F01/F02 PNG assets.
+- Entry Flash Tuning:
+  - Increase bloom size (approx 1.5x - 1.8x larger area: 680x680px size, scaling up to 1.25x peak expansion).
+  - Transition: IDLE -> LARGE FLASH -> peak bloom (at ~0.06s) switches directly to F03 -> bloom fades out (0.06s-0.15s).
+  - F01 and F02 are NEVER displayed during entry flash or active playback.
+- Loop & Frame Stepping & Tuner:
+  - LOOP OFF: F03 -> F04 -> F05 -> F06 -> HOLD F06.
+  - LOOP ON: F06 -> F03 wrap (NO entry flash on loop wrap).
+  - Frame stepping & tuner buttons: show F03, F04, F05, F06.
+  - Reference mapping: F03 -> CANONICAL IDLE, F04 -> F03, F05 -> F04, F06 -> F05.
+- Locked Transforms (F03..F06):
+  - F03: scale = 1.1378, x = 195.26, y = 25.20
+  - F04: scale = 1.1378, x = 208.35, y = 35.37
+  - F05: scale = 1.1378, x = 214.89, y = 25.20
+  - F06: scale = 1.1378, x = 190.18, y = 14.30
+- Prohibited Scope:
+  - DO NOT edit PNG images, regenerate assets, or touch production code (`res://src/`).
+  - DO NOT touch combat LAB (`res://labs/stochas_combat_ui/`).
+  - DO NOT push to remote.
 
-## 4. ACCEPTANCE GATES VERIFICATION (G1 TO G26)
-- G1: PASS — Dedicated animation debug LAB launches independently (1280x720, 520x560 boss, baseline Y=610).
-- G2: PASS — Combat LAB files in res://labs/stochas_combat_ui/ remain completely untouched.
-- G3: PASS — IDLE selectable with 3.20s breathing cycle and exact baseline alignment.
-- G4: PASS — CAST_BOLT (-32px rapid snap, 0.45s) clearly reads differently from CAST_ORB (-26px float, 0.80s).
-- G5: PASS — CAST_ORB (float up Y=-26px) clearly reads differently from CAST_RIFT (sink down Y=+20px, held pose 0.40s).
-- G6: PASS — CAST_RIFT (held summon hold) clearly reads differently from CAST_SWEEP (85px wide lateral sweep).
-- G7: PASS — CAST_SWEEP has strongest lateral body motion (85px displacement, 11.7 deg rotation swing).
-- G8: PASS — HIT independently previewable (0.35s recoil + red modulate flash).
-- G9: PASS — STUN independently previewable (slump forward, dizzy stars overlay).
-- G10: PASS — ENRAGED independently previewable (1.80s rapid cycle + crimson aura tint).
-- G11: PASS — ULTIMATE_CHARGE independently previewable (2.40s duration across Phases A, B, C).
-- G12: PASS — ULTIMATE_RELEASE independently previewable (frames 4->5->6->7 + recovery).
-- G13: PASS — ULTIMATE_FULL end-to-end workflow (charge 2.40s -> release 1.02s -> IDLE).
-- G14: PASS — Playback speed control range 0.10x to 2.00x verified with robust clamping.
-- G15, G16: PASS — 0.25x multiplier scales active tween (4x slower).
-- G17: PASS — 2.00x multiplier scales active tween (2x faster).
-- G18: PASS — Pause/Resume toggle functions cleanly.
-- G19: PASS — Ultimate 8-frame atlas stepping works forwards and backwards.
-- G20: PASS — Current frame clearly displayed in UI readout (Atlas Frame X / 8).
-- G21: PASS — Comprehensive diagnostic timeline and kinematic readouts visible.
-- G22: PASS — Loop toggle functions as expected.
-- G23: PASS — Compare Casts mode sequence correctly initiated (Bolt -> Orb -> Rift -> Sweep).
-- G24: PASS — Boss always cleanly returns to exact canonical baseline.
-- G25: PASS — Production source directory res://src/ is completely unmodified.
-- G26: PASS — All 6 canonical textures and atlas sequences used strictly verbatim.
+## 4. ACCEPTANCE GATES
+- GATE 1: IDLE -> large flash -> F03.
+- GATE 2: F01 never appears.
+- GATE 3: F02 never appears.
+- GATE 4: Flash area visibly larger than 239T.
+- GATE 5: Flash hides IDLE -> F03 cut.
+- GATE 6: Active playback: F03 -> F04 -> F05 -> F06.
+- GATE 7: Active visual duration ~= 0.80s.
+- GATE 8: LOOP OFF holds F06.
+- GATE 9: LOOP ON wraps F06 -> F03.
+- GATE 10: Loop wrap has NO flash.
+- GATE 11: Frame-step contains only F03..F06.
+- GATE 12: F03 reference ghost = canonical IDLE.
+- GATE 13: F04 reference = F03.
+- GATE 14: F05 reference = F04.
+- GATE 15: F06 reference = F05.
+- GATE 16: Locked F03..F06 transforms unchanged.
+- GATE 17: PNG hashes unchanged.
+- GATE 18: Combat LAB regression PASS.
 
-## 5. LAUNCH COMMAND
-```powershell
-& "D:\Tools\Godot\4.7.1\Godot_v4.7.1-stable_win64_console.exe" labs/stochas_animation_debug/stochas_animation_debug_lab.tscn
-```
-
-## 6. NEXT ACTION
-Human review of STOCHAS animation states, speed controls, and motion differences in the dedicated animation debug lab.
+## 5. RECENT PROMPT LOG
+- 2026-09-15 16:35 [MATHOS-STOCHAS-ULTIMATE-CHARGE-START-F03-BIGGER-FLASH-239U]: Human requested active sequence change to F03->F06 (~0.80s), larger entry flash bloom, and F03->IDLE reference ghost mapping. Started implementation.
