@@ -39,6 +39,17 @@ const BASELINE_Y: float = 610.0 # 50.0 + 560.0 = 610.0
 const CHARGE_BASE_POS: Vector2 = Vector2(180.0, 41.91)
 const CHARGE_BASE_SCALE: Vector2 = Vector2(1.1378, 1.1378)
 
+# Thresholded Alpha Bounding Boxes (in 512x512 texture space)
+const FRAME_ALPHA_BBOXES: Dictionary = {
+	-1: Rect2(58.0, 3.0, 449.0, 509.0), # Canonical IDLE boss
+	0: Rect2(67.0, 38.0, 377.0, 450.0), # F01
+	1: Rect2(63.0, 24.0, 385.0, 464.0), # F02
+	2: Rect2(75.0, 25.0, 362.0, 463.0), # F03
+	3: Rect2(51.0, 26.0, 408.0, 461.0), # F04
+	4: Rect2(44.0, 26.0, 418.0, 461.0), # F05
+	5: Rect2(36.0, 28.0, 435.0, 459.0), # F06
+}
+
 # 11 Selectable Animation States
 enum AnimationState {
 	IDLE,
@@ -224,6 +235,7 @@ func _ready() -> void:
 	_build_diagnostic_ui()
 	load_tuning_config()
 	restore_canonical_baseline()
+	_apply_initial_status_panel_state()
 	play_animation(AnimationState.IDLE)
 
 func _load_resources() -> void:
@@ -334,15 +346,7 @@ func _build_ui_environment() -> void:
 	motion_path_line.visible = false
 	add_child(motion_path_line)
 
-	# Interactive Transform Gizmo Control (Task 239R)
-	gizmo_overlay = Control.new()
-	gizmo_overlay.name = "GizmoOverlay"
-	gizmo_overlay.position = Vector2(40.0, 20.0)
-	gizmo_overlay.size = Vector2(700.0, 590.0)
-	gizmo_overlay.mouse_filter = Control.MOUSE_FILTER_PASS
-	gizmo_overlay.draw.connect(Callable(self, "_on_draw_gizmo_overlay"))
-	gizmo_overlay.gui_input.connect(Callable(self, "_on_gui_input_gizmo_overlay"))
-	add_child(gizmo_overlay)
+
 
 func _build_boss_preview() -> void:
 	# Ghost TextureRect for Previous-Frame Onion Skin Overlay (Task 239P)
@@ -356,6 +360,7 @@ func _build_boss_preview() -> void:
 	boss_ghost_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	boss_ghost_rect.visible = false
 	boss_ghost_rect.modulate = Color(0.7, 0.85, 1.0, 0.25)
+	boss_ghost_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(boss_ghost_rect)
 
 	boss_rect = TextureRect.new()
@@ -366,9 +371,21 @@ func _build_boss_preview() -> void:
 	boss_rect.pivot_offset = BOSS_BASE_SIZE * 0.5
 	boss_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	boss_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	boss_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if canonical_boss_tex != null:
 		boss_rect.texture = canonical_boss_tex
 	add_child(boss_rect)
+
+	# Interactive Transform Gizmo Control (Task 239R & 239R1)
+	# Placed AFTER boss_rect so it sits on top in z-order and receives pointer events
+	gizmo_overlay = Control.new()
+	gizmo_overlay.name = "GizmoOverlay"
+	gizmo_overlay.position = Vector2(0.0, 0.0)
+	gizmo_overlay.size = Vector2(750.0, 620.0)
+	gizmo_overlay.mouse_filter = Control.MOUSE_FILTER_PASS
+	gizmo_overlay.draw.connect(Callable(self, "_on_draw_gizmo_overlay"))
+	gizmo_overlay.gui_input.connect(Callable(self, "_on_gui_input_gizmo_overlay"))
+	add_child(gizmo_overlay)
 
 	# Boss VFX container attached to boss
 	boss_vfx_container = Control.new()
@@ -396,8 +413,8 @@ func _build_boss_preview() -> void:
 func _build_controls_ui() -> void:
 	right_panel = PanelContainer.new()
 	right_panel.name = "ControlPanel"
-	right_panel.position = Vector2(760.0, 20.0)
-	right_panel.size = Vector2(490.0, 590.0)
+	right_panel.position = Vector2(750.0, 15.0)
+	right_panel.size = Vector2(510.0, 680.0)
 
 	var panel_style = StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.09, 0.10, 0.14, 0.95)
@@ -414,15 +431,22 @@ func _build_controls_ui() -> void:
 	add_child(right_panel)
 
 	var margin = MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 14)
-	margin.add_theme_constant_override("margin_top", 12)
-	margin.add_theme_constant_override("margin_right", 14)
-	margin.add_theme_constant_override("margin_bottom", 12)
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 10)
 	right_panel.add_child(margin)
+
+	var scroll = ScrollContainer.new()
+	scroll.name = "RightPanelScroll"
+	scroll.custom_minimum_size = Vector2(480, 655)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	margin.add_child(scroll)
 
 	var vbox = VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 8)
-	margin.add_child(vbox)
+	scroll.add_child(vbox)
 
 	# Header Title
 	var title = Label.new()
@@ -863,7 +887,7 @@ func _update_ghost_overlay() -> void:
 			boss_ghost_rect.visible = false
 
 
-# Task 239R Interactive Transform Gizmo & Layout Variables
+# Task 239R & 239R1 Interactive Transform Gizmo & Layout Variables
 var gizmo_overlay: Control = null
 var is_gizmo_dragging_move: bool = false
 var is_gizmo_dragging_resize: bool = false
@@ -871,24 +895,72 @@ var gizmo_drag_handle_idx: int = -1
 var gizmo_drag_start_mouse: Vector2 = Vector2.ZERO
 var gizmo_drag_start_pos: Vector2 = Vector2.ZERO
 var gizmo_drag_start_scale: float = 1.1378
-var is_status_panel_collapsed: bool = false
+var is_status_panel_collapsed: bool = true # Task 239R1: DEFAULT COLLAPSED
 var btn_status_toggle: Button = null
+
+func _apply_initial_status_panel_state() -> void:
+	is_status_panel_collapsed = true
+	if bottom_panel != null:
+		bottom_panel.position = Vector2(40.0, 675.0)
+		bottom_panel.size = Vector2(680.0, 35.0)
+		bottom_panel.custom_minimum_size = Vector2(680.0, 35.0)
+		if lbl_diag_details != null:
+			lbl_diag_details.visible = false
+	if btn_status_toggle != null:
+		btn_status_toggle.text = "STATUS [SHOW]"
 
 func toggle_status_panel_collapse() -> void:
 	is_status_panel_collapsed = not is_status_panel_collapsed
 	if bottom_panel != null:
 		if is_status_panel_collapsed:
 			bottom_panel.position = Vector2(40.0, 675.0)
-			bottom_panel.size = Vector2(1200.0, 35.0)
+			bottom_panel.size = Vector2(680.0, 35.0)
+			bottom_panel.custom_minimum_size = Vector2(680.0, 35.0)
 			if lbl_diag_details != null:
 				lbl_diag_details.visible = false
 		else:
-			bottom_panel.position = Vector2(40.0, 625.0)
-			bottom_panel.size = Vector2(1200.0, 85.0)
+			bottom_panel.position = Vector2(40.0, 615.0)
+			bottom_panel.size = Vector2(680.0, 95.0)
+			bottom_panel.custom_minimum_size = Vector2(680.0, 95.0)
 			if lbl_diag_details != null:
 				lbl_diag_details.visible = true
 	if btn_status_toggle != null:
 		btn_status_toggle.text = "STATUS [SHOW]" if is_status_panel_collapsed else "STATUS [HIDE]"
+
+func get_frame_art_gizmo_rect(frame_idx: int) -> Rect2:
+	if boss_rect == null or gizmo_overlay == null:
+		return Rect2()
+
+	var alpha_rect: Rect2 = FRAME_ALPHA_BBOXES.get(frame_idx, Rect2(0.0, 0.0, 512.0, 512.0))
+	var tex_size: Vector2 = Vector2(512.0, 512.0)
+	if boss_rect.texture != null:
+		tex_size = boss_rect.texture.get_size()
+
+	var container_size: Vector2 = boss_rect.size # (520, 560)
+	var aspect_scale: float = minf(container_size.x / tex_size.x, container_size.y / tex_size.y)
+	var drawn_size: Vector2 = tex_size * aspect_scale
+	var drawn_offset: Vector2 = (container_size - drawn_size) * 0.5
+
+	# Map alpha bbox to unscaled local coords inside boss_rect
+	var local_tl: Vector2 = drawn_offset + alpha_rect.position * aspect_scale
+	var local_br: Vector2 = drawn_offset + (alpha_rect.position + alpha_rect.size) * aspect_scale
+
+	# Transform relative to boss_rect.pivot_offset by boss_rect.scale
+	var pivot: Vector2 = boss_rect.pivot_offset
+	var tl_from_pivot: Vector2 = (local_tl - pivot) * boss_rect.scale
+	var br_from_pivot: Vector2 = (local_br - pivot) * boss_rect.scale
+
+	# Global center of boss_rect
+	var center_global: Vector2 = boss_rect.position + pivot
+	var global_tl: Vector2 = center_global + tl_from_pivot
+	var global_br: Vector2 = center_global + br_from_pivot
+
+	# Convert to local gizmo_overlay coordinates using global_position
+	var gizmo_origin: Vector2 = gizmo_overlay.global_position
+	var gizmo_tl: Vector2 = global_tl - gizmo_origin
+	var gizmo_br: Vector2 = global_br - gizmo_origin
+
+	return Rect2(gizmo_tl, gizmo_br - gizmo_tl)
 
 func queue_gizmo_redraw() -> void:
 	if gizmo_overlay != null:
@@ -904,20 +976,19 @@ func _on_draw_gizmo_overlay() -> void:
 	if not is_paused and active_tween != null and active_tween.is_valid():
 		return
 
-	# Calculate boss_rect bounding box in local gizmo_overlay coordinates
-	# gizmo_overlay position is (40, 20). boss_rect center in global screen coords:
-	var center_global = boss_rect.position + boss_rect.pivot_offset
-	var center_local = center_global - gizmo_overlay.position
+	# Task 239R1: Calculate tight artwork bounding box in local gizmo_overlay coordinates
+	var art_rect: Rect2 = get_frame_art_gizmo_rect(selected_tuner_frame_idx)
+	if art_rect.size.x <= 0.0 or art_rect.size.y <= 0.0:
+		return
 
-	var half_size = (boss_rect.size * 0.5) * boss_rect.scale
-	var rect_tl = center_local - half_size
-	var rect_br = center_local + half_size
-	var rect_size = rect_br - rect_tl
+	var rect_tl = art_rect.position
+	var rect_br = art_rect.position + art_rect.size
+	var center_local = art_rect.position + art_rect.size * 0.5
 
-	# 1. Draw Bright Cyan Bounding Box Outline
-	gizmo_overlay.draw_rect(Rect2(rect_tl, rect_size), Color(0.2, 0.9, 1.0, 0.95), false, 2.0)
+	# 1. Draw Bright Cyan Bounding Box Outline around tight artwork
+	gizmo_overlay.draw_rect(art_rect, Color(0.2, 0.9, 1.0, 0.95), false, 2.0)
 
-	# 2. Draw 4 Corner Handles (TL, TR, BL, BR)
+	# 2. Draw 4 Corner Handles (TL, TR, BL, BR) - 10x10px visible rect
 	var corners = [
 		rect_tl,
 		Vector2(rect_br.x, rect_tl.y),
@@ -925,8 +996,8 @@ func _on_draw_gizmo_overlay() -> void:
 		rect_br
 	]
 	for c in corners:
-		gizmo_overlay.draw_rect(Rect2(c - Vector2(6, 6), Vector2(12, 12)), Color(1.0, 1.0, 0.4, 0.95), true)
-		gizmo_overlay.draw_rect(Rect2(c - Vector2(6, 6), Vector2(12, 12)), Color(0.1, 0.1, 0.1, 0.9), false, 1.5)
+		gizmo_overlay.draw_rect(Rect2(c - Vector2(5, 5), Vector2(10, 10)), Color(1.0, 1.0, 0.3, 0.95), true)
+		gizmo_overlay.draw_rect(Rect2(c - Vector2(5, 5), Vector2(10, 10)), Color(0.1, 0.1, 0.1, 0.9), false, 1.5)
 
 	# 3. Draw Center Move Handle (Crosshair)
 	gizmo_overlay.draw_circle(center_local, 5.0, Color(0.2, 0.9, 1.0, 0.95))
@@ -935,7 +1006,13 @@ func _on_draw_gizmo_overlay() -> void:
 
 	# 4. Draw Live Drag Info Readout
 	var tf = get_frame_transform(selected_tuner_frame_idx)
-	var info_text = "F0%d Scale: %.4f | Pos: (%.1f, %.1f)" % [selected_tuner_frame_idx + 1, tf["scale"], tf["x"], tf["y"]]
+	var mode_str = "IDLE"
+	if is_gizmo_dragging_move:
+		mode_str = "DRAG MOVE"
+	elif is_gizmo_dragging_resize:
+		mode_str = "CORNER RESIZE"
+
+	var info_text = "[%s] F0%d | Scale: %.4f | Pos: (%.1f, %.1f)" % [mode_str, selected_tuner_frame_idx + 1, tf["scale"], tf["x"], tf["y"]]
 	var font = get_theme_default_font()
 	if font != null:
 		gizmo_overlay.draw_string(font, rect_tl + Vector2(0, -8), info_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.4, 1.0, 0.6, 0.95))
@@ -946,11 +1023,10 @@ func _on_gui_input_gizmo_overlay(event: InputEvent) -> void:
 	if not is_paused and active_tween != null and active_tween.is_valid():
 		return
 
-	var center_global = boss_rect.position + boss_rect.pivot_offset
-	var center_local = center_global - gizmo_overlay.position
-	var half_size = (boss_rect.size * 0.5) * boss_rect.scale
-	var rect_tl = center_local - half_size
-	var rect_br = center_local + half_size
+	var art_rect: Rect2 = get_frame_art_gizmo_rect(selected_tuner_frame_idx)
+	var rect_tl = art_rect.position
+	var rect_br = art_rect.position + art_rect.size
+	var center_local = art_rect.position + art_rect.size * 0.5
 
 	var corners = [
 		rect_tl,
@@ -962,10 +1038,10 @@ func _on_gui_input_gizmo_overlay(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
-				# Check corner handles hit (16x16px hitbox around each corner)
+				# Check corner handles hit (28px diameter / 14px radius hit area around each corner)
 				gizmo_drag_handle_idx = -1
 				for i in range(corners.size()):
-					if event.position.distance_to(corners[i]) <= 12.0:
+					if event.position.distance_to(corners[i]) <= 14.0:
 						gizmo_drag_handle_idx = i
 						break
 
@@ -973,21 +1049,38 @@ func _on_gui_input_gizmo_overlay(event: InputEvent) -> void:
 					is_gizmo_dragging_resize = true
 					gizmo_drag_start_mouse = event.position
 					gizmo_drag_start_scale = get_frame_transform(selected_tuner_frame_idx)["scale"]
-				elif Rect2(rect_tl, rect_br - rect_tl).has_point(event.position):
+					gizmo_overlay.accept_event()
+				elif art_rect.has_point(event.position):
 					is_gizmo_dragging_move = true
 					gizmo_drag_start_mouse = event.position
 					var tf = get_frame_transform(selected_tuner_frame_idx)
 					gizmo_drag_start_pos = Vector2(tf["x"], tf["y"])
+					gizmo_overlay.accept_event()
 			else:
+				if is_gizmo_dragging_move or is_gizmo_dragging_resize:
+					gizmo_overlay.accept_event()
 				is_gizmo_dragging_move = false
 				is_gizmo_dragging_resize = false
 				gizmo_drag_handle_idx = -1
 				queue_gizmo_redraw()
 
 	elif event is InputEventMouseMotion:
+		# Update cursor shape feedback
+		var hover_corner = false
+		for c in corners:
+			if event.position.distance_to(c) <= 14.0:
+				hover_corner = true
+				break
+		if hover_corner or is_gizmo_dragging_resize:
+			gizmo_overlay.mouse_default_cursor_shape = Control.CURSOR_FDIAGSIZE
+		elif art_rect.has_point(event.position) or is_gizmo_dragging_move:
+			gizmo_overlay.mouse_default_cursor_shape = Control.CURSOR_MOVE
+		else:
+			gizmo_overlay.mouse_default_cursor_shape = Control.CURSOR_ARROW
+
 		var speed_mult: float = 1.0
 		if Input.is_key_pressed(KEY_SHIFT):
-			speed_mult = 0.2
+			speed_mult = 0.20
 		elif Input.is_key_pressed(KEY_CTRL):
 			speed_mult = 0.05
 
@@ -997,6 +1090,7 @@ func _on_gui_input_gizmo_overlay(event: InputEvent) -> void:
 			var new_y = gizmo_drag_start_pos.y + mouse_delta.y
 			var cur_sc = get_frame_transform(selected_tuner_frame_idx)["scale"]
 			set_frame_transform(selected_tuner_frame_idx, cur_sc, new_x, new_y)
+			gizmo_overlay.accept_event()
 			queue_gizmo_redraw()
 
 		elif is_gizmo_dragging_resize:
@@ -1007,7 +1101,9 @@ func _on_gui_input_gizmo_overlay(event: InputEvent) -> void:
 			var new_scale = clampf(gizmo_drag_start_scale * (1.0 + delta_ratio), 0.50, 1.80)
 			var cur_tf = get_frame_transform(selected_tuner_frame_idx)
 			set_frame_transform(selected_tuner_frame_idx, new_scale, cur_tf["x"], cur_tf["y"])
+			gizmo_overlay.accept_event()
 			queue_gizmo_redraw()
+
 
 func _build_tuner_ui_section(vbox: VBoxContainer) -> void:
 	var sec_title = Label.new()
@@ -1342,8 +1438,9 @@ func _build_tuner_ui_section(vbox: VBoxContainer) -> void:
 func _build_diagnostic_ui() -> void:
 	bottom_panel = PanelContainer.new()
 	bottom_panel.name = "DiagnosticPanel"
-	bottom_panel.position = Vector2(40.0, 625.0)
-	bottom_panel.size = Vector2(1200.0, 85.0)
+	bottom_panel.position = Vector2(40.0, 675.0)
+	bottom_panel.size = Vector2(680.0, 35.0)
+	bottom_panel.custom_minimum_size = Vector2(680.0, 35.0)
 
 	var bg_box = StyleBoxFlat.new()
 	bg_box.bg_color = Color(0.06, 0.07, 0.10, 0.95)
@@ -1370,15 +1467,30 @@ func _build_diagnostic_ui() -> void:
 	vbox.add_theme_constant_override("separation", 4)
 	margin.add_child(vbox)
 
+	var top_row = HBoxContainer.new()
+	top_row.add_theme_constant_override("separation", 10)
+	vbox.add_child(top_row)
+
+	btn_status_toggle = Button.new()
+	btn_status_toggle.text = "STATUS [SHOW]"
+	btn_status_toggle.custom_minimum_size = Vector2(120, 24)
+	btn_status_toggle.add_theme_font_size_override("font_size", 10)
+	btn_status_toggle.pressed.connect(toggle_status_panel_collapse)
+	top_row.add_child(btn_status_toggle)
+
 	lbl_diag_state = Label.new()
 	lbl_diag_state.text = "STATE: IDLE | SPEED: 1.00x | FRAME: Canonical (stochas_boss.png) | ELAPSED: 0.00s / 3.20s"
-	lbl_diag_state.add_theme_font_size_override("font_size", 13)
+	lbl_diag_state.add_theme_font_size_override("font_size", 11)
+	lbl_diag_state.clip_text = true
+	lbl_diag_state.custom_minimum_size = Vector2(500, 24)
 	lbl_diag_state.modulate = Color(0.3, 0.9, 1.0, 1.0)
-	vbox.add_child(lbl_diag_state)
+	top_row.add_child(lbl_diag_state)
 
 	lbl_diag_details = Label.new()
 	lbl_diag_details.text = "POS: (180.0, 50.0) [d: +0.0, +0.0] | ROT: 0.0 deg | SCALE: (1.00, 1.00) | MOD: (1.0, 1.0, 1.0) | FLAGS: Loop: OFF | Paused: NO | Compare: NO"
-	lbl_diag_details.add_theme_font_size_override("font_size", 12)
+	lbl_diag_details.add_theme_font_size_override("font_size", 10)
+	lbl_diag_details.clip_text = true
+	lbl_diag_details.custom_minimum_size = Vector2(650, 24)
 	lbl_diag_details.modulate = Color(0.75, 0.85, 0.95, 0.90)
 	vbox.add_child(lbl_diag_details)
 
@@ -1445,13 +1557,16 @@ func _update_diagnostic_labels() -> void:
 
 	var frame_desc: String = get_frame_display_text()
 
-	lbl_diag_state.text = "STATE: %s | SPEED: %.2fx | FRAME: %s | ELAPSED: %.2fs / %.2fs" % [
-		STATE_NAMES[current_state],
-		playback_speed,
-		frame_desc,
-		minf(elapsed_time, state_duration),
-		state_duration
-	]
+	if is_status_panel_collapsed:
+		lbl_diag_state.text = "STATE: %s | FRAME: %s" % [STATE_NAMES[current_state], frame_desc]
+	else:
+		lbl_diag_state.text = "STATE: %s | SPEED: %.2fx | FRAME: %s | ELAPSED: %.2fs / %.2fs" % [
+			STATE_NAMES[current_state],
+			playback_speed,
+			frame_desc,
+			minf(elapsed_time, state_duration),
+			state_duration
+		]
 
 	var delta_pos: Vector2 = boss_rect.position - BOSS_BASE_POS
 	lbl_diag_details.text = "POS: (%.1f, %.1f) [d: %+.1f, %+.1f] | ROT: %+.1f deg | SCALE: (%.2f, %.2f) | MOD: (%.1f, %.1f, %.1f) | FLAGS: Loop: %s | Paused: %s | Compare: %s" % [
