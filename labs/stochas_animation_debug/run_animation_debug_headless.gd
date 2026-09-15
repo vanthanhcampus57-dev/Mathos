@@ -109,8 +109,9 @@ func _initialize() -> void:
 	print("[GATE 3, 4, 5] PASS: 6 independent 512x512 Texture2D charge frames (F01..F06) loaded directly without atlas or sprite strip.")
 
 	# ----------------------------------------------------
-	# ULTIMATE_CHARGE Animation Flow (F01 -> F02 -> F03 -> F04 -> F05 -> F06)
+	# ULTIMATE_CHARGE Animation Flow & Post-F06 Behavior (Task 239M)
 	# ----------------------------------------------------
+	lab.set_loop(false)
 	lab.play_animation(lab.AnimationState.ULTIMATE_CHARGE)
 	if lab.get_current_state() != lab.AnimationState.ULTIMATE_CHARGE:
 		_fail("STATE FAIL: Current state is not ULTIMATE_CHARGE!")
@@ -129,6 +130,28 @@ func _initialize() -> void:
 			_fail("STEPPING FAIL: Boss texture at step %d does not match F0%d!" % [i, i + 1])
 			return
 	print("[LAB INTEGRATION] PASS: Frame stepping F01 -> F02 -> F03 -> F04 -> F05 -> F06 verified 100%.")
+
+	# Post-F06 behavior when LOOP = OFF: must HOLD on F06 and remain in ULTIMATE_CHARGE
+	lab.step_frame(1) # Next frame at F06 with LOOP = OFF
+	if lab.get_current_charge_frame() != 5:
+		_fail("TASK 239M FAIL: Step frame at F06 with LOOP=OFF should hold on F06 (index 5), got %d!" % lab.get_current_charge_frame())
+		return
+	if lab.get_current_state() != lab.AnimationState.ULTIMATE_CHARGE:
+		_fail("TASK 239M FAIL: LAB auto-transitioned out of ULTIMATE_CHARGE when LOOP=OFF!")
+		return
+	print("[TASK 239M] PASS: LOOP=OFF holds on F06 without transitioning out of ULTIMATE_CHARGE.")
+
+	# Post-F06 behavior when LOOP = ON: must wrap to F01
+	lab.set_loop(true)
+	lab.step_frame(1) # Next frame at F06 with LOOP = ON
+	if lab.get_current_charge_frame() != 0:
+		_fail("TASK 239M FAIL: Step frame at F06 with LOOP=ON should wrap to F01 (index 0), got %d!" % lab.get_current_charge_frame())
+		return
+	if lab.get_current_state() != lab.AnimationState.ULTIMATE_CHARGE:
+		_fail("TASK 239M FAIL: LAB transitioned out of ULTIMATE_CHARGE when LOOP=ON!")
+		return
+	lab.set_loop(false)
+	print("[TASK 239M] PASS: LOOP=ON wraps from F06 to F01 within ULTIMATE_CHARGE.")
 
 	# ----------------------------------------------------
 	# REGRESSION & OTHER 10 ANIMATION STATES

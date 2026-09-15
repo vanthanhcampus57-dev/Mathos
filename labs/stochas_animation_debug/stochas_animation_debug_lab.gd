@@ -994,8 +994,14 @@ func _on_animation_finished() -> void:
 	if is_loop_enabled:
 		play_animation(current_state)
 	else:
-		restore_canonical_baseline()
-		play_animation(AnimationState.IDLE)
+		if current_state == AnimationState.ULTIMATE_CHARGE:
+			# Hold on F06 / remain in ULTIMATE_CHARGE without auto-transitioning
+			current_charge_frame = 5
+			_set_charge_frame(5)
+			elapsed_time = state_duration
+		else:
+			restore_canonical_baseline()
+			play_animation(AnimationState.IDLE)
 
 # ==============================================================================
 # SPEED & TRANSPORT CONTROLS
@@ -1051,13 +1057,25 @@ func step_frame(direction: int) -> void:
 		if current_charge_frame < 0:
 			current_charge_frame = 0 if direction >= 0 else 5
 		else:
-			current_charge_frame = clampi(current_charge_frame + direction, 0, 5)
+			var next_f: int = current_charge_frame + direction
+			if next_f > 5:
+				current_charge_frame = 0 if is_loop_enabled else 5
+			elif next_f < 0:
+				current_charge_frame = 5 if is_loop_enabled else 0
+			else:
+				current_charge_frame = next_f
 		_set_charge_frame(current_charge_frame)
 	else:
 		if current_atlas_frame < 0:
 			current_atlas_frame = 0 if direction >= 0 else 7
 		else:
-			current_atlas_frame = clampi(current_atlas_frame + direction, 0, 7)
+			var next_a: int = current_atlas_frame + direction
+			if next_a > 7:
+				current_atlas_frame = 0 if is_loop_enabled else 7
+			elif next_a < 0:
+				current_atlas_frame = 7 if is_loop_enabled else 0
+			else:
+				current_atlas_frame = next_a
 		_set_atlas_frame(current_atlas_frame)
 
 func get_current_atlas_frame() -> int:
