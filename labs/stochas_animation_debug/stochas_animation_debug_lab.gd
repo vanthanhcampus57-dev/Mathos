@@ -233,7 +233,7 @@ func _ready() -> void:
 	_build_boss_preview()
 	_build_controls_ui()
 	_build_diagnostic_ui()
-	load_tuning_config()
+	_reset_all_transforms_to_default()
 	restore_canonical_baseline()
 	_apply_initial_status_panel_state()
 	play_animation(AnimationState.IDLE)
@@ -590,13 +590,23 @@ func _build_controls_ui() -> void:
 # ==============================================================================
 const CONFIG_PATH: String = "user://stochas_ultimate_charge_tuning.json"
 
+# Authoritative Human-Approved Final Ultimate Charge Transforms (Task 239S)
+const FINAL_CHARGE_TRANSFORMS: Dictionary = {
+	0: {"scale": 1.0076, "x": 203.99, "y": 8.49},
+	1: {"scale": 1.1533, "x": 191.63, "y": 24.47},
+	2: {"scale": 1.1378, "x": 195.26, "y": 25.20},
+	3: {"scale": 1.1378, "x": 208.35, "y": 35.37},
+	4: {"scale": 1.1378, "x": 214.89, "y": 25.20},
+	5: {"scale": 1.1378, "x": 190.18, "y": 14.30}
+}
+
 var charge_frame_transforms: Array[Dictionary] = [
-	{"scale": 1.1378, "x": 180.0, "y": 41.91},
-	{"scale": 1.1378, "x": 180.0, "y": 41.91},
-	{"scale": 1.1378, "x": 180.0, "y": 41.91},
-	{"scale": 1.1378, "x": 180.0, "y": 41.91},
-	{"scale": 1.1378, "x": 180.0, "y": 41.91},
-	{"scale": 1.1378, "x": 180.0, "y": 41.91}
+	{"scale": 1.0076, "x": 203.99, "y": 8.49},
+	{"scale": 1.1533, "x": 191.63, "y": 24.47},
+	{"scale": 1.1378, "x": 195.26, "y": 25.20},
+	{"scale": 1.1378, "x": 208.35, "y": 35.37},
+	{"scale": 1.1378, "x": 214.89, "y": 25.20},
+	{"scale": 1.1378, "x": 190.18, "y": 14.30}
 ]
 
 var selected_tuner_frame_idx: int = 0
@@ -611,7 +621,7 @@ var is_updating_tuner_ui: bool = false
 func get_frame_transform(idx: int) -> Dictionary:
 	if idx >= 0 and idx < charge_frame_transforms.size():
 		return charge_frame_transforms[idx]
-	return {"scale": 1.1378, "x": 180.0, "y": 41.91}
+	return FINAL_CHARGE_TRANSFORMS.get(idx, {"scale": 1.1378, "x": 180.0, "y": 41.91})
 
 func set_frame_transform(idx: int, scale_val: float, pos_x: float, pos_y: float) -> void:
 	if idx >= 0 and idx < charge_frame_transforms.size():
@@ -652,14 +662,16 @@ func nudge_tuner_pos(delta_x: float, delta_y: float) -> void:
 	set_frame_transform(selected_tuner_frame_idx, tf["scale"], tf["x"] + delta_x, tf["y"] + delta_y)
 
 func reset_current_frame_tuner() -> void:
-	set_frame_transform(selected_tuner_frame_idx, 1.1378, 180.0, 41.91)
-	if lbl_tuner_status != null:
-		lbl_tuner_status.text = "Reset F0%d to default transform." % (selected_tuner_frame_idx + 1)
+	if selected_tuner_frame_idx >= 0 and selected_tuner_frame_idx < 6:
+		var tf: Dictionary = FINAL_CHARGE_TRANSFORMS[selected_tuner_frame_idx]
+		set_frame_transform(selected_tuner_frame_idx, tf["scale"], tf["x"], tf["y"])
+		if lbl_tuner_status != null:
+			lbl_tuner_status.text = "Reset F0%d to HUMAN FINAL transform." % (selected_tuner_frame_idx + 1)
 
 func reset_all_tuner_frames() -> void:
 	_reset_all_transforms_to_default()
 	if lbl_tuner_status != null:
-		lbl_tuner_status.text = "Reset all F01..F06 to default transforms."
+		lbl_tuner_status.text = "Reset all F01..F06 to HUMAN FINAL transforms."
 
 func copy_current_tuner_to_all() -> void:
 	var cur_tf = get_frame_transform(selected_tuner_frame_idx)
@@ -758,7 +770,8 @@ func copy_tuning_values() -> String:
 
 func _reset_all_transforms_to_default() -> void:
 	for i in range(6):
-		charge_frame_transforms[i] = {"scale": 1.1378, "x": 180.0, "y": 41.91}
+		var tf: Dictionary = FINAL_CHARGE_TRANSFORMS[i]
+		charge_frame_transforms[i] = {"scale": tf["scale"], "x": tf["x"], "y": tf["y"]}
 	if current_charge_frame >= 0 and current_charge_frame < 6:
 		_set_charge_frame(current_charge_frame)
 	_update_tuner_ui_readout()
@@ -1789,9 +1802,7 @@ func _play_ultimate_charge() -> void:
 	active_tween = create_tween()
 
 	# WAD2 Human-Approved 6 Independent Charge Frames (F01 -> F06)
-	# Single stable transform across F01..F06 to match IDLE body size & baseline
-	boss_rect.position = CHARGE_BASE_POS
-	boss_rect.scale = CHARGE_BASE_SCALE
+	# Uses authoritative per-frame transforms from FINAL_CHARGE_TRANSFORMS
 
 	# Visual duration 1.20s at 1.00x speed (6 frames * 0.20s = 1.20s)
 

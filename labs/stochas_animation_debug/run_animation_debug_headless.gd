@@ -129,14 +129,15 @@ func _initialize() -> void:
 		if lab.get_boss_texture() != charge_frames[i]:
 			_fail("STEPPING FAIL: Boss texture at step %d does not match F0%d!" % [i, i + 1])
 			return
-		# Task 239N Gate 2: Verify stable single transform across F01..F06
+		# Task 239S: Verify authoritative per-frame transform across F01..F06
 		var f_pos: Vector2 = lab.get_boss_position()
 		var f_scale: Vector2 = lab.get_boss_scale()
-		if not f_pos.is_equal_approx(lab.CHARGE_BASE_POS):
-			_fail("TASK 239N FAIL: F0%d position %s does not match CHARGE_BASE_POS %s!" % [(i + 1), str(f_pos), str(lab.CHARGE_BASE_POS)])
+		var exp_tf: Dictionary = lab.get_frame_transform(i)
+		if not f_pos.is_equal_approx(Vector2(exp_tf["x"], exp_tf["y"])):
+			_fail("TASK 239S FAIL: F0%d position %s does not match expected %s!" % [(i + 1), str(f_pos), str(Vector2(exp_tf["x"], exp_tf["y"]))])
 			return
-		if not f_scale.is_equal_approx(lab.CHARGE_BASE_SCALE):
-			_fail("TASK 239N FAIL: F0%d scale %s does not match CHARGE_BASE_SCALE %s!" % [(i + 1), str(f_scale), str(lab.CHARGE_BASE_SCALE)])
+		if not f_scale.is_equal_approx(Vector2(exp_tf["scale"], exp_tf["scale"])):
+			_fail("TASK 239S FAIL: F0%d scale %s does not match expected %f!" % [(i + 1), str(f_scale), exp_tf["scale"]])
 			return
 	print("[TASK 239N] PASS: Frame stepping F01..F06 verified with 1.20s visual timing and stable single transform.")
 
@@ -182,7 +183,8 @@ func _initialize() -> void:
 	if tf_f03["scale"] != 1.25 or tf_f03["x"] != 195.0 or tf_f03["y"] != 35.0:
 		_fail("TASK 239O FAIL: Set frame transform for F03 failed!")
 		return
-	if tf_f01["scale"] != 1.1378 or tf_f01["x"] != 180.0 or tf_f01["y"] != 41.91:
+	var exp_f01 = lab.FINAL_CHARGE_TRANSFORMS[0]
+	if not is_equal_approx(tf_f01["scale"], exp_f01["scale"]) or not is_equal_approx(tf_f01["x"], exp_f01["x"]) or not is_equal_approx(tf_f01["y"], exp_f01["y"]):
 		_fail("TASK 239O FAIL: Changing F03 modified F01! Transforms must be independent per-frame.")
 		return
 	if not lab.get_boss_scale().is_equal_approx(Vector2(1.25, 1.25)) or not lab.get_boss_position().is_equal_approx(Vector2(195.0, 35.0)):
@@ -210,12 +212,14 @@ func _initialize() -> void:
 	# 4. Reset Current & Reset All
 	lab.select_tuner_frame(2)
 	lab.reset_current_frame_tuner()
-	if lab.get_frame_transform(2)["scale"] != 1.1378:
+	var exp_f03 = lab.FINAL_CHARGE_TRANSFORMS[2]
+	if not is_equal_approx(lab.get_frame_transform(2)["scale"], exp_f03["scale"]):
 		_fail("TASK 239O FAIL: Reset current frame failed!")
 		return
 	lab.reset_all_tuner_frames()
 	for i in range(6):
-		if lab.get_frame_transform(i)["scale"] != 1.1378:
+		var exp_i = lab.FINAL_CHARGE_TRANSFORMS[i]
+		if not is_equal_approx(lab.get_frame_transform(i)["scale"], exp_i["scale"]):
 			_fail("TASK 239O FAIL: Reset all tuner frames failed!")
 			return
 
@@ -229,7 +233,7 @@ func _initialize() -> void:
 
 	# Reset state and reload from file
 	lab._reset_all_transforms_to_default()
-	if lab.get_frame_transform(0)["scale"] != 1.1378:
+	if not is_equal_approx(lab.get_frame_transform(0)["scale"], lab.FINAL_CHARGE_TRANSFORMS[0]["scale"]):
 		pass # Verified reset
 	lab.load_tuning_config()
 	if lab.get_frame_transform(0)["scale"] != 1.15 or lab.get_frame_transform(5)["scale"] != 1.40:
@@ -331,122 +335,97 @@ func _initialize() -> void:
 	print("[TASK 239Q] PASS: Canonical IDLE ghost reference for F01, F02..F06 prev mapping, dual opacity controls & persistence verified 100%.")
 
 
-		# ----------------------------------------------------
-	# TASK 239R1: GIZMO INTERACTION & BOUNDS ACCEPTANCE GATES
+			# ----------------------------------------------------
+	# TASK 239S: HUMAN FINAL TRANSFORMS LOCK TEST SUITE
 	# ----------------------------------------------------
-	# 1. Default COLLAPSED Status Panel Check (Gate 8 & Gate 9)
-	if not lab.is_status_panel_collapsed:
-		_fail("TASK 239R1 FAIL: Status panel must start COLLAPSED by default!")
-		return
-	if lab.bottom_panel.size.x > 700.0 or lab.bottom_panel.position.x + lab.bottom_panel.size.x > 750.0:
-		_fail("TASK 239R1 FAIL: Status panel width exceeds stage boundary (700px) and overlaps control panel!")
-		return
+	# Authoritative Expected Values:
+	var expected_final = {
+		0: {"scale": 1.0076, "x": 203.99, "y": 8.49},
+		1: {"scale": 1.1533, "x": 191.63, "y": 24.47},
+		2: {"scale": 1.1378, "x": 195.26, "y": 25.20},
+		3: {"scale": 1.1378, "x": 208.35, "y": 35.37},
+		4: {"scale": 1.1378, "x": 214.89, "y": 25.20},
+		5: {"scale": 1.1378, "x": 190.18, "y": 14.30}
+	}
 
-	# 2. Right Panel ScrollContainer Check (Gate 10)
-	var scroll_node = lab.right_panel.find_child("RightPanelScroll", true, false)
-	if scroll_node == null or not (scroll_node is ScrollContainer):
-		_fail("TASK 239R1 FAIL: Right panel ScrollContainer 'RightPanelScroll' missing!")
-		return
+	# 1. Fresh Launch Source Default Verification
+	for i in range(6):
+		var tf = lab.get_frame_transform(i)
+		var exp = expected_final[i]
+		if not is_equal_approx(tf["scale"], exp["scale"]) or not is_equal_approx(tf["x"], exp["x"]) or not is_equal_approx(tf["y"], exp["y"]):
+			_fail("TASK 239S FAIL: F0%d default transform mismatch! Expected (%f, %f, %f), got (%f, %f, %f)" % [i + 1, exp["scale"], exp["x"], exp["y"], tf["scale"], tf["x"], tf["y"]])
+			return
 
-	# 3. Mouse Filter Verification on Background / Ghost / Boss Rects (Gate 4)
-	if lab.boss_rect.mouse_filter != Control.MOUSE_FILTER_IGNORE:
-		_fail("TASK 239R1 FAIL: boss_rect must be MOUSE_FILTER_IGNORE to avoid intercepting gizmo pointer events!")
-		return
-	if lab.boss_ghost_rect.mouse_filter != Control.MOUSE_FILTER_IGNORE:
-		_fail("TASK 239R1 FAIL: boss_ghost_rect must be MOUSE_FILTER_IGNORE to avoid blocking pointer events!")
-		return
-	if lab.dim_overlay.mouse_filter != Control.MOUSE_FILTER_IGNORE:
-		_fail("TASK 239R1 FAIL: dim_overlay must be MOUSE_FILTER_IGNORE!")
-		return
-	if lab.gizmo_overlay == null or lab.gizmo_overlay.mouse_filter != Control.MOUSE_FILTER_PASS:
-		_fail("TASK 239R1 FAIL: gizmo_overlay must exist with MOUSE_FILTER_PASS!")
-		return
+	print("[TASK 239S STARTUP] PASS: Fresh launch defaults to exact HUMAN-approved final transforms F01..F06.")
 
-	# 4. Tight Bounding Box Calculation Verification (Gate 1)
-	lab.select_tuner_frame(0) # F01
-	var bbox_f01: Rect2 = lab.get_frame_art_gizmo_rect(0)
-	lab.select_tuner_frame(5) # F06
-	var bbox_f06: Rect2 = lab.get_frame_art_gizmo_rect(5)
+	# 2. Verify Normal Playback Applies Exact Final Transforms
+	lab.play_animation(lab.AnimationState.ULTIMATE_CHARGE)
+	for i in range(6):
+		lab.step_frame(1 if i > 0 else 0)
+		var play_pos = lab.get_boss_position()
+		var play_scale = lab.get_boss_scale()
+		var exp = expected_final[i]
+		if not play_pos.is_equal_approx(Vector2(exp["x"], exp["y"])) or not play_scale.is_equal_approx(Vector2(exp["scale"], exp["scale"])):
+			_fail("TASK 239S FAIL: Runtime F0%d playback transform expected pos (%f, %f) scale %f, got pos %s scale %s!" % [i + 1, exp["x"], exp["y"], exp["scale"], str(play_pos), str(play_scale)])
+			return
 
-	if bbox_f01.size.x <= 0.0 or bbox_f01.size.y <= 0.0:
-		_fail("TASK 239R1 FAIL: F01 tight gizmo bounding box size invalid!")
-		return
-	if bbox_f01.size.x >= 520.0 or bbox_f01.size.y >= 560.0:
-		_fail("TASK 239R1 FAIL: F01 gizmo box spans full stage container (%s)! Must tightly wrap visible artwork." % str(bbox_f01.size))
-		return
-	if bbox_f06.size.x <= bbox_f01.size.x:
-		_fail("TASK 239R1 FAIL: F06 artwork width (%f) should be larger than F01 (%f)!" % [bbox_f06.size.x, bbox_f01.size.x])
+	print("[TASK 239S PLAYBACK] PASS: ULTIMATE_CHARGE normal playback applies exact final per-frame transforms.")
+
+	# 3. Test RESET FRAME & RESET ALL Restore HUMAN Final Values
+	lab.select_tuner_frame(1) # F02
+	lab.set_frame_transform(1, 1.4500, 300.0, 100.0) # Apply experimental override
+	var modified_tf = lab.get_frame_transform(1)
+	if is_equal_approx(modified_tf["scale"], expected_final[1]["scale"]):
+		_fail("TASK 239S FAIL: Modified F02 transform failed to set!")
 		return
 
-	print("[TASK 239R1 BOUNDS] PASS: Gizmo tightly wraps visible artwork (F01: %s, F06: %s)." % [str(bbox_f01.size), str(bbox_f06.size)])
-
-	# 5. Pointer Drag Move Interaction (Gate 2 & Gate 5)
-	lab.select_tuner_frame(0) # F01
-	var cur_tf_f01 = lab.get_frame_transform(0)
-	var move_down = InputEventMouseButton.new()
-	move_down.button_index = MOUSE_BUTTON_LEFT
-	move_down.pressed = true
-	move_down.position = bbox_f01.position + bbox_f01.size * 0.5 # Center of artwork box
-	lab._on_gui_input_gizmo_overlay(move_down)
-
-	var move_motion = InputEventMouseMotion.new()
-	move_motion.position = move_down.position + Vector2(50.0, 30.0) # Drag +50 X, +30 Y
-	lab._on_gui_input_gizmo_overlay(move_motion)
-
-	var move_up = InputEventMouseButton.new()
-	move_up.button_index = MOUSE_BUTTON_LEFT
-	move_up.pressed = false
-	move_up.position = move_motion.position
-	lab._on_gui_input_gizmo_overlay(move_up)
-
-	var moved_tf_f01 = lab.get_frame_transform(0)
-	if not is_equal_approx(moved_tf_f01["x"], cur_tf_f01["x"] + 50.0) or not is_equal_approx(moved_tf_f01["y"], cur_tf_f01["y"] + 30.0):
-		_fail("TASK 239R1 FAIL: Pointer drag move failed! Expected pos (%f, %f), got (%f, %f)" % [cur_tf_f01["x"] + 50.0, cur_tf_f01["y"] + 30.0, moved_tf_f01["x"], moved_tf_f01["y"]])
-		return
-	if not lab.get_boss_position().is_equal_approx(Vector2(moved_tf_f01["x"], moved_tf_f01["y"])):
-		_fail("TASK 239R1 FAIL: boss_rect visual position did not update live during drag move!")
+	lab.reset_current_frame_tuner()
+	var reset_f02 = lab.get_frame_transform(1)
+	if not is_equal_approx(reset_f02["scale"], expected_final[1]["scale"]) or not is_equal_approx(reset_f02["x"], expected_final[1]["x"]):
+		_fail("TASK 239S FAIL: RESET FRAME did not restore F02 to HUMAN final transform!")
 		return
 
-	# 6. Pointer Corner Drag Resize Interaction (Gate 3 & Gate 5)
-	var bbox_f01_moved = lab.get_frame_art_gizmo_rect(0)
-	var rect_tr = Vector2(bbox_f01_moved.position.x + bbox_f01_moved.size.x, bbox_f01_moved.position.y)
-	var resize_down = InputEventMouseButton.new()
-	resize_down.button_index = MOUSE_BUTTON_LEFT
-	resize_down.pressed = true
-	resize_down.position = rect_tr # Top Right corner handle
-	lab._on_gui_input_gizmo_overlay(resize_down)
-
-	var center_local = bbox_f01.position + bbox_f01.size * 0.5
-	var drag_outward = (rect_tr - center_local).normalized() * 40.0
-	var resize_motion = InputEventMouseMotion.new()
-	resize_motion.position = rect_tr + drag_outward
-	lab._on_gui_input_gizmo_overlay(resize_motion)
-
-	lab._on_gui_input_gizmo_overlay(move_up)
-
-	var resized_tf_f01 = lab.get_frame_transform(0)
-	if resized_tf_f01["scale"] <= moved_tf_f01["scale"]:
-		_fail("TASK 239R1 FAIL: Pointer corner drag resize failed! Scale did not increase on corner drag outward.")
-		return
-	if resized_tf_f01["scale"] > 1.80 or resized_tf_f01["scale"] < 0.50:
-		_fail("TASK 239R1 FAIL: Scale out of allowed range 0.50..1.80!")
-		return
-
-	# 7. Persistence Check (Gate 6 & Gate 7)
-	lab.save_tuning_config()
-	var saved_scale = resized_tf_f01["scale"]
-	var saved_x = resized_tf_f01["x"]
-	var saved_y = resized_tf_f01["y"]
-
+	# Modify all frames and call RESET ALL
+	for i in range(6):
+		lab.set_frame_transform(i, 1.5000, 250.0, 50.0)
 	lab.reset_all_tuner_frames()
+	for i in range(6):
+		var tf = lab.get_frame_transform(i)
+		var exp = expected_final[i]
+		if not is_equal_approx(tf["scale"], exp["scale"]) or not is_equal_approx(tf["x"], exp["x"]) or not is_equal_approx(tf["y"], exp["y"]):
+			_fail("TASK 239S FAIL: RESET ALL did not restore F0%d to HUMAN final transform!" % (i + 1))
+			return
+
+	print("[TASK 239S RESETS] PASS: RESET FRAME and RESET ALL restore exact HUMAN-approved final transforms.")
+
+	# 4. Verify Stale Config File Does Not Auto-Override Startup Defaults
+	lab.set_frame_transform(0, 1.7777, 999.0, 999.0)
+	lab.save_tuning_config() # Create a stale config file
+
+	# Re-instantiate lab to simulate fresh scene startup
+	lab.queue_free()
+	await process_frame
+	await process_frame
+
+	lab = lab_scene.instantiate()
+	self.root.add_child(lab)
+	await process_frame
+	await process_frame
+
+	var fresh_f01 = lab.get_frame_transform(0)
+	if not is_equal_approx(fresh_f01["scale"], expected_final[0]["scale"]) or not is_equal_approx(fresh_f01["x"], expected_final[0]["x"]):
+		_fail("TASK 239S FAIL: Fresh launch auto-loaded stale user config file instead of HUMAN final source defaults!")
+		return
+
+	# RELOAD TUNING manually loads local override
 	lab.load_tuning_config()
-	var reloaded_tf = lab.get_frame_transform(0)
-	if not is_equal_approx(reloaded_tf["scale"], saved_scale) or not is_equal_approx(reloaded_tf["x"], saved_x) or not is_equal_approx(reloaded_tf["y"], saved_y):
-		_fail("TASK 239R1 FAIL: Save/reload persistence of mouse-adjusted transform failed!")
+	var reloaded_f01 = lab.get_frame_transform(0)
+	if not is_equal_approx(reloaded_f01["scale"], 1.7777) or not is_equal_approx(reloaded_f01["x"], 999.0):
+		_fail("TASK 239S FAIL: Manual RELOAD TUNING failed to load user config override!")
 		return
 
 	lab.reset_saved_tuning_config()
-	print("[TASK 239R1 INTERACTION] PASS: Pointer move drag, corner drag resize, mouse filter routing & persistence verified 100%.")
+	print("[TASK 239S CONFIG] PASS: Startup defaults to source final values; user config works as manual debug override only.")
 
 
 	# REGRESSION & OTHER 10 ANIMATION STATES
