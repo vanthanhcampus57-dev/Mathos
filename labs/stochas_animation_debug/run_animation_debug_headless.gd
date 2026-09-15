@@ -116,11 +116,11 @@ func _initialize() -> void:
 	if lab.get_current_state() != lab.AnimationState.ULTIMATE_CHARGE:
 		_fail("STATE FAIL: Current state is not ULTIMATE_CHARGE!")
 		return
-	if lab.get_animation_duration(lab.AnimationState.ULTIMATE_CHARGE) != 2.40:
-		_fail("STATE FAIL: ULTIMATE_CHARGE duration expected 2.40s!")
+	if not is_equal_approx(lab.get_animation_duration(lab.AnimationState.ULTIMATE_CHARGE), 1.20):
+		_fail("TASK 239N FAIL: ULTIMATE_CHARGE visual duration expected 1.20s, got %f!" % lab.get_animation_duration(lab.AnimationState.ULTIMATE_CHARGE))
 		return
 
-	# Frame stepping F01 -> F06
+	# Frame stepping F01 -> F06 & Task 239N Stable Transform Verification
 	for i in range(6):
 		lab.step_frame(1 if i > 0 else 0)
 		if lab.get_current_charge_frame() != i:
@@ -129,7 +129,16 @@ func _initialize() -> void:
 		if lab.get_boss_texture() != charge_frames[i]:
 			_fail("STEPPING FAIL: Boss texture at step %d does not match F0%d!" % [i, i + 1])
 			return
-	print("[LAB INTEGRATION] PASS: Frame stepping F01 -> F02 -> F03 -> F04 -> F05 -> F06 verified 100%.")
+		# Task 239N Gate 2: Verify stable single transform across F01..F06
+		var f_pos: Vector2 = lab.get_boss_position()
+		var f_scale: Vector2 = lab.get_boss_scale()
+		if not f_pos.is_equal_approx(lab.CHARGE_BASE_POS):
+			_fail("TASK 239N FAIL: F0%d position %s does not match CHARGE_BASE_POS %s!" % [(i + 1), str(f_pos), str(lab.CHARGE_BASE_POS)])
+			return
+		if not f_scale.is_equal_approx(lab.CHARGE_BASE_SCALE):
+			_fail("TASK 239N FAIL: F0%d scale %s does not match CHARGE_BASE_SCALE %s!" % [(i + 1), str(f_scale), str(lab.CHARGE_BASE_SCALE)])
+			return
+	print("[TASK 239N] PASS: Frame stepping F01..F06 verified with 1.20s visual timing and stable single transform.")
 
 	# Post-F06 behavior when LOOP = OFF: must HOLD on F06 and remain in ULTIMATE_CHARGE
 	lab.step_frame(1) # Next frame at F06 with LOOP = OFF

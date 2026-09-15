@@ -32,6 +32,13 @@ const BOSS_BASE_POS: Vector2 = Vector2(180.0, 50.0)
 const BOSS_BASE_SIZE: Vector2 = Vector2(520.0, 560.0)
 const BASELINE_Y: float = 610.0 # 50.0 + 560.0 = 610.0
 
+# WAD2 ULTIMATE_CHARGE Presentation Normalization (Task 239N)
+# Canonical IDLE visible height in 512 canvas = 512px. F01..F06 visible height = 450px.
+# Scaling factor S = 512 / 450 = 1.137778 (~1.1378).
+# Bottom Y = 488 (24px above canvas bottom). Position Y = BOSS_BASE_POS.y - 8.09 = 41.91.
+const CHARGE_BASE_POS: Vector2 = Vector2(180.0, 41.91)
+const CHARGE_BASE_SCALE: Vector2 = Vector2(1.1378, 1.1378)
+
 # 11 Selectable Animation States
 enum AnimationState {
 	IDLE,
@@ -136,7 +143,7 @@ const STATE_DURATIONS: Dictionary = {
 	AnimationState.HIT: 0.35,
 	AnimationState.STUN: 1.00,
 	AnimationState.ENRAGED: 1.80,
-	AnimationState.ULTIMATE_CHARGE: 2.40,
+	AnimationState.ULTIMATE_CHARGE: 1.20,
 	AnimationState.ULTIMATE_RELEASE: 1.02, # 0.72s frames + 0.30s recovery
 	AnimationState.ULTIMATE_FULL: 3.42 # 2.40s charge + 1.02s release/recovery
 }
@@ -854,42 +861,41 @@ func _play_enraged() -> void:
 
 func _play_ultimate_charge() -> void:
 	restore_canonical_baseline()
-	state_duration = STATE_DURATIONS[AnimationState.ULTIMATE_CHARGE] # 2.40s
+	state_duration = STATE_DURATIONS[AnimationState.ULTIMATE_CHARGE] # 1.20s
 	_set_charge_frame(0)
 
 	active_tween = create_tween()
 
-	# WAD2 Human-Approved 6 Independent Charge Frames (F01 -> F02 -> F03 -> F04 -> F05 -> F06)
-	# Total duration 2.40s deterministic distribution: 0.40s per frame (6 * 0.40s = 2.40s)
+	# WAD2 Human-Approved 6 Independent Charge Frames (F01 -> F06)
+	# Single stable transform across F01..F06 to match IDLE body size & baseline
+	boss_rect.position = CHARGE_BASE_POS
+	boss_rect.scale = CHARGE_BASE_SCALE
 
-	# F01 (0.00s - 0.40s): Initiate rise & dim overlay
+	# Visual duration 1.20s at 1.00x speed (6 frames * 0.20s = 1.20s)
+
+	# F01 (0.00s - 0.20s): Initiate rise & dim overlay
 	active_tween.tween_callback(func(): _set_charge_frame(0))
-	active_tween.tween_property(boss_rect, "position:y", BOSS_BASE_POS.y - 20.0, 0.40).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	active_tween.parallel().tween_property(dim_overlay, "modulate:a", 0.45, 0.40)
+	active_tween.tween_property(dim_overlay, "modulate:a", 0.45, 0.20).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
-	# F02 (0.40s - 0.80s)
+	# F02 (0.20s - 0.40s)
 	active_tween.tween_callback(func(): _set_charge_frame(1))
-	active_tween.tween_property(boss_rect, "scale", Vector2(1.04, 1.04), 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	active_tween.tween_interval(0.20)
 
-	# F03 (0.80s - 1.20s)
+	# F03 (0.40s - 0.60s)
 	active_tween.tween_callback(func(): _set_charge_frame(2))
-	active_tween.tween_property(boss_rect, "scale", Vector2(1.07, 1.07), 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.30, 1.20, 1.60), 0.40)
+	active_tween.tween_property(boss_rect, "modulate", Color(1.30, 1.20, 1.60), 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
-	# F04 (1.20s - 1.60s)
+	# F04 (0.60s - 0.80s)
 	active_tween.tween_callback(func(): _set_charge_frame(3))
-	active_tween.tween_property(boss_rect, "scale", Vector2(1.10, 1.10), 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.50, 1.40, 1.80), 0.40)
+	active_tween.tween_property(boss_rect, "modulate", Color(1.50, 1.40, 1.80), 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
-	# F05 (1.60s - 2.00s)
+	# F05 (0.80s - 1.00s)
 	active_tween.tween_callback(func(): _set_charge_frame(4))
-	active_tween.tween_property(boss_rect, "scale", Vector2(1.12, 1.12), 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.70, 1.50, 2.00), 0.40)
+	active_tween.tween_property(boss_rect, "modulate", Color(1.70, 1.50, 2.00), 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
-	# F06 (2.00s - 2.40s): Peak charge hold
+	# F06 (1.00s - 1.20s): Peak charge hold
 	active_tween.tween_callback(func(): _set_charge_frame(5))
-	active_tween.tween_property(boss_rect, "scale", Vector2(1.10, 1.10), 0.40).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.80, 1.60, 2.20), 0.40)
+	active_tween.tween_property(boss_rect, "modulate", Color(1.80, 1.60, 2.20), 0.20).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 	active_tween.tween_callback(Callable(self, "_on_animation_finished"))
 
@@ -1163,8 +1169,11 @@ func _set_canonical_boss() -> void:
 func _set_charge_frame(idx: int) -> void:
 	current_charge_frame = idx
 	current_atlas_frame = -1
-	if boss_rect != null and idx >= 0 and idx < stochas_ultimate_charge_frames.size():
-		boss_rect.texture = stochas_ultimate_charge_frames[idx]
+	if boss_rect != null:
+		boss_rect.position = CHARGE_BASE_POS
+		boss_rect.scale = CHARGE_BASE_SCALE
+		if idx >= 0 and idx < stochas_ultimate_charge_frames.size():
+			boss_rect.texture = stochas_ultimate_charge_frames[idx]
 
 func _set_atlas_frame(idx: int) -> void:
 	current_atlas_frame = idx
