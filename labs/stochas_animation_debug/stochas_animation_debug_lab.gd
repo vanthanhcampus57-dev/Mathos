@@ -377,7 +377,6 @@ func _build_boss_preview() -> void:
 	add_child(boss_rect)
 
 	# Interactive Transform Gizmo Control (Task 239R & 239R1)
-	# Placed AFTER boss_rect so it sits on top in z-order and receives pointer events
 	gizmo_overlay = Control.new()
 	gizmo_overlay.name = "GizmoOverlay"
 	gizmo_overlay.position = Vector2(0.0, 0.0)
@@ -386,6 +385,30 @@ func _build_boss_preview() -> void:
 	gizmo_overlay.draw.connect(Callable(self, "_on_draw_gizmo_overlay"))
 	gizmo_overlay.gui_input.connect(Callable(self, "_on_gui_input_gizmo_overlay"))
 	add_child(gizmo_overlay)
+
+	# Pre-roll Arcane Entry Flash Overlay (Task 239T)
+	entry_flash_rect = TextureRect.new()
+	entry_flash_rect.name = "EntryFlashOverlay"
+	entry_flash_rect.position = Vector2(210.0, 100.0)
+	entry_flash_rect.size = Vector2(460.0, 460.0)
+	entry_flash_rect.pivot_offset = Vector2(230.0, 230.0)
+	entry_flash_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	entry_flash_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	entry_flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	entry_flash_rect.modulate = Color(1.0, 1.0, 1.0, 0.0)
+
+	var grad = Gradient.new()
+	grad.set_color(0, Color(0.85, 1.90, 2.50, 1.00)) # Core bright cyan-white arcane bloom
+	grad.set_color(1, Color(0.15, 0.50, 1.20, 0.00)) # Outer cyan-blue fade
+	var grad_tex = GradientTexture2D.new()
+	grad_tex.gradient = grad
+	grad_tex.fill = GradientTexture2D.FILL_RADIAL
+	grad_tex.fill_from = Vector2(0.5, 0.5)
+	grad_tex.fill_to = Vector2(0.5, 0.0)
+	grad_tex.width = 256
+	grad_tex.height = 256
+	entry_flash_rect.texture = grad_tex
+	add_child(entry_flash_rect)
 
 	# Boss VFX container attached to boss
 	boss_vfx_container = Control.new()
@@ -569,9 +592,17 @@ func _build_controls_ui() -> void:
 
 	btn_motion_path = Button.new()
 	btn_motion_path.text = "PATH: OFF [M]"
-	btn_motion_path.custom_minimum_size = Vector2(120, 28)
+	btn_motion_path.custom_minimum_size = Vector2(100, 28)
 	btn_motion_path.pressed.connect(toggle_motion_path)
 	trans_row2.add_child(btn_motion_path)
+
+	btn_flash_toggle = Button.new()
+	btn_flash_toggle.text = "ENTRY FLASH: ON [F]"
+	btn_flash_toggle.custom_minimum_size = Vector2(140, 28)
+	btn_flash_toggle.add_theme_font_size_override("font_size", 10)
+	btn_flash_toggle.modulate = Color(0.3, 1.0, 1.0) if entry_flash_enabled else Color.WHITE
+	btn_flash_toggle.pressed.connect(toggle_entry_flash)
+	trans_row2.add_child(btn_flash_toggle)
 
 	btn_reset_baseline = Button.new()
 	btn_reset_baseline.text = "RESET BASELINE [R]"
@@ -899,6 +930,20 @@ func _update_ghost_overlay() -> void:
 		else:
 			boss_ghost_rect.visible = false
 
+
+# Task 239T Pre-roll Arcane Entry Flash Variables
+var entry_flash_rect: TextureRect = null
+var entry_flash_enabled: bool = true
+var btn_flash_toggle: Button = null
+
+func toggle_entry_flash() -> void:
+	entry_flash_enabled = not entry_flash_enabled
+	if btn_flash_toggle != null:
+		btn_flash_toggle.text = "ENTRY FLASH: ON [F]" if entry_flash_enabled else "ENTRY FLASH: OFF [F]"
+		btn_flash_toggle.modulate = Color(0.3, 1.0, 1.0) if entry_flash_enabled else Color.WHITE
+
+func is_entry_flash_active() -> bool:
+	return entry_flash_enabled
 
 # Task 239R & 239R1 Interactive Transform Gizmo & Layout Variables
 var gizmo_overlay: Control = null
@@ -1530,6 +1575,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				toggle_ghost_overlay()
 			KEY_M:
 				toggle_motion_path()
+			KEY_F:
+				toggle_entry_flash()
 			KEY_LEFT:
 				step_frame(-1)
 			KEY_RIGHT:
@@ -1603,6 +1650,7 @@ func _update_diagnostic_labels() -> void:
 # ==============================================================================
 
 func play_animation(state: AnimationState) -> void:
+	var prev_state = current_state
 	current_state = state
 	elapsed_time = 0.0
 	state_duration = STATE_DURATIONS.get(state, 1.0)
@@ -1634,7 +1682,7 @@ func play_animation(state: AnimationState) -> void:
 		AnimationState.ENRAGED:
 			_play_enraged()
 		AnimationState.ULTIMATE_CHARGE:
-			_play_ultimate_charge()
+			_play_ultimate_charge(prev_state)
 		AnimationState.ULTIMATE_RELEASE:
 			_play_ultimate_release()
 		AnimationState.ULTIMATE_FULL:
@@ -1794,21 +1842,37 @@ func _play_enraged() -> void:
 	active_tween.tween_property(boss_rect, "position:y", BOSS_BASE_POS.y, half_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	active_tween.parallel().tween_property(boss_rect, "scale", Vector2.ONE, half_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
-func _play_ultimate_charge() -> void:
+func _play_ultimate_charge(prev_state: AnimationState = AnimationState.ULTIMATE_CHARGE) -> void:
 	restore_canonical_baseline()
 	state_duration = STATE_DURATIONS[AnimationState.ULTIMATE_CHARGE] # 1.20s
-	_set_charge_frame(0)
-
 	active_tween = create_tween()
 
-	# WAD2 Human-Approved 6 Independent Charge Frames (F01 -> F06)
-	# Uses authoritative per-frame transforms from FINAL_CHARGE_TRANSFORMS
+	# Task 239T Trigger Rule: Entry flash ONLY when entering ULTIMATE_CHARGE from another state
+	var is_state_entry: bool = (prev_state != AnimationState.ULTIMATE_CHARGE) and entry_flash_enabled and not is_paused
 
-	# Visual duration 1.20s at 1.00x speed (6 frames * 0.20s = 1.20s)
+	if is_state_entry and entry_flash_rect != null:
+		# Pre-roll Arcane Entry Flash (0.15s: 0.06s rise, peak switch to F01, 0.09s fade out)
+		entry_flash_rect.modulate = Color(1.0, 1.0, 1.0, 0.0)
+		entry_flash_rect.scale = Vector2(0.7, 0.7)
 
-	# F01 (0.00s - 0.20s): Initiate rise & dim overlay
-	active_tween.tween_callback(func(): _set_charge_frame(0))
-	active_tween.tween_property(dim_overlay, "modulate:a", 0.45, 0.20).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		# 0.00s -> 0.06s: Flash rises to peak brightness
+		active_tween.tween_property(entry_flash_rect, "modulate:a", 0.95, 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		active_tween.parallel().tween_property(entry_flash_rect, "scale", Vector2(1.15, 1.15), 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+		# AT PEAK FLASH (0.06s): Switch boss underneath to F01
+		active_tween.chain().tween_callback(func(): _set_charge_frame(0))
+
+		# 0.06s -> 0.15s: Flash fades away to reveal F01 cleanly
+		active_tween.tween_property(entry_flash_rect, "modulate:a", 0.0, 0.09).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		active_tween.parallel().tween_property(entry_flash_rect, "scale", Vector2(1.0, 1.0), 0.09).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		active_tween.parallel().tween_property(dim_overlay, "modulate:a", 0.45, 0.09).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+		# F01 holds visual duration
+		active_tween.tween_interval(0.14)
+	else:
+		# Direct entry (looping, stepping, or tuner) - immediate F01 display without flash
+		_set_charge_frame(0)
+		active_tween.tween_property(dim_overlay, "modulate:a", 0.45, 0.20).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 	# F02 (0.20s - 0.40s)
 	active_tween.tween_callback(func(): _set_charge_frame(1))
@@ -2092,6 +2156,8 @@ func restore_canonical_baseline() -> void:
 		stun_overlay.visible = false
 	if boss_ghost_rect != null:
 		boss_ghost_rect.visible = false
+	if entry_flash_rect != null:
+		entry_flash_rect.modulate.a = 0.0
 
 	_clear_transient_vfx()
 

@@ -335,7 +335,85 @@ func _initialize() -> void:
 	print("[TASK 239Q] PASS: Canonical IDLE ghost reference for F01, F02..F06 prev mapping, dual opacity controls & persistence verified 100%.")
 
 
-			# ----------------------------------------------------
+				# ----------------------------------------------------
+	# TASK 239T: PRE-ROLL ARCANE ENTRY FLASH TEST SUITE
+	# ----------------------------------------------------
+	# 1. Entry Flash Node Existence & Layering
+	if lab.entry_flash_rect == null:
+		_fail("TASK 239T FAIL: entry_flash_rect overlay node missing!")
+		return
+	if lab.entry_flash_rect.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+		_fail("TASK 239T FAIL: entry_flash_rect must have MOUSE_FILTER_IGNORE!")
+		return
+	if not lab.is_entry_flash_active():
+		_fail("TASK 239T FAIL: Entry flash should be enabled by default!")
+		return
+
+	# 2. State Entry Trigger Check (IDLE -> ULTIMATE_CHARGE)
+	lab.set_paused(false)
+	lab.play_animation(lab.AnimationState.IDLE)
+	await process_frame
+	lab.play_animation(lab.AnimationState.ULTIMATE_CHARGE)
+
+	# Verify active tween is running entry flash pre-roll
+	if lab.active_tween == null or not lab.active_tween.is_valid():
+		_fail("TASK 239T FAIL: ULTIMATE_CHARGE tween failed to initialize!")
+		return
+
+	# Fast forward to peak flash (~0.06s)
+	lab.active_tween.custom_step(0.06)
+	if lab.entry_flash_rect.modulate.a <= 0.50:
+		_fail("TASK 239T FAIL: Pre-roll entry flash did not reach peak opacity (~0.95), got %f!" % lab.entry_flash_rect.modulate.a)
+		return
+
+	# Fast forward to flash fade completion (~0.15s)
+	lab.active_tween.custom_step(0.09)
+	if lab.entry_flash_rect.modulate.a > 0.01:
+		_fail("TASK 239T FAIL: Pre-roll entry flash did not fade out at ~0.15s, got opacity %f!" % lab.entry_flash_rect.modulate.a)
+		return
+
+	# Verify F01 is displayed underneath with locked transform
+	if lab.get_current_charge_frame() != 0:
+		_fail("TASK 239T FAIL: Boss frame after flash peak is not F01!")
+		return
+	var f01_pos = lab.get_boss_position()
+	var f01_scale = lab.get_boss_scale()
+	if not f01_pos.is_equal_approx(Vector2(203.99, 8.49)) or not f01_scale.is_equal_approx(Vector2(1.0076, 1.0076)):
+		_fail("TASK 239T FAIL: F01 after entry flash does not match locked transform (1.0076 / 203.99 / 8.49), got pos %s scale %s!" % [str(f01_pos), str(f01_scale)])
+		return
+
+	print("[TASK 239T ENTRY FLASH] PASS: IDLE -> ULTIMATE_CHARGE triggers sharp 0.15s entry flash masking F01 pose switch.")
+
+	# 3. Non-Trigger Rule: F06 -> F01 Loop Wrap Must NOT Trigger Entry Flash
+	lab.set_loop(true)
+	lab.select_tuner_frame(5) # F06
+	lab.step_frame(1) # Step to wrap to F01
+	if lab.entry_flash_rect.modulate.a > 0.001:
+		_fail("TASK 239T FAIL: Loop wrap F06 -> F01 triggered entry flash! Flash must be STATE ENTRY ONLY.")
+		return
+	lab.set_loop(false)
+
+	# 4. Non-Trigger Rule: Manual Frame Stepping Must NOT Trigger Entry Flash
+	lab.select_tuner_frame(0) # F01
+	lab.step_frame(1) # F02
+	if lab.entry_flash_rect.modulate.a > 0.001:
+		_fail("TASK 239T FAIL: Manual frame stepping triggered entry flash!")
+		return
+
+	# 5. Debug Toggle ENTRY FLASH: ON / OFF
+	lab.toggle_entry_flash() # OFF
+	if lab.is_entry_flash_active():
+		_fail("TASK 239T FAIL: Toggling entry flash OFF failed!")
+		return
+	lab.toggle_entry_flash() # ON
+	if not lab.is_entry_flash_active():
+		_fail("TASK 239T FAIL: Toggling entry flash ON failed!")
+		return
+
+	print("[TASK 239T TRIGGER RULES] PASS: Loop wrap, manual frame stepping, and debug toggle rules verified 100%.")
+
+
+	# ----------------------------------------------------
 	# TASK 239S: HUMAN FINAL TRANSFORMS LOCK TEST SUITE
 	# ----------------------------------------------------
 	# Authoritative Expected Values:
