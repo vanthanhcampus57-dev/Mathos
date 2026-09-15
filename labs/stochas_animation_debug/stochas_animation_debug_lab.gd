@@ -667,8 +667,9 @@ func load_tuning_config() -> void:
 						var px = float(entry.get("x", 180.0))
 						var py = float(entry.get("y", 41.91))
 						charge_frame_transforms[i] = {"scale": sc, "x": px, "y": py}
-				show_prev_ghost = bool(data.get("show_prev_ghost", true))
-				ghost_opacity = float(data.get("ghost_opacity", 0.25))
+				show_prev_ghost = bool(data.get("show_prev_ghost", data.get("show_reference_ghost", true)))
+				current_frame_opacity = float(data.get("current_frame_opacity", 1.00))
+				reference_frame_opacity = float(data.get("reference_frame_opacity", data.get("ghost_opacity", 0.25)))
 				_update_ghost_ui_controls()
 				print("[TUNER] Loaded tuning config from %s" % CONFIG_PATH)
 				if current_charge_frame >= 0:
@@ -686,7 +687,8 @@ func save_tuning_config() -> void:
 		var key = "F0%d" % (i + 1)
 		data[key] = charge_frame_transforms[i]
 	data["show_prev_ghost"] = show_prev_ghost
-	data["ghost_opacity"] = ghost_opacity
+	data["current_frame_opacity"] = current_frame_opacity
+	data["reference_frame_opacity"] = reference_frame_opacity
 	var file = FileAccess.open(CONFIG_PATH, FileAccess.WRITE)
 	if file != null:
 		file.store_string(JSON.stringify(data, "\t"))
@@ -699,7 +701,8 @@ func reset_saved_tuning_config() -> void:
 	if FileAccess.file_exists(CONFIG_PATH):
 		DirAccess.remove_absolute(CONFIG_PATH)
 	show_prev_ghost = true
-	ghost_opacity = 0.25
+	current_frame_opacity = 1.00
+	reference_frame_opacity = 0.25
 	_update_ghost_ui_controls()
 	_reset_all_transforms_to_default()
 	if lbl_tuner_status != null:
@@ -750,13 +753,16 @@ func _update_tuner_ui_readout() -> void:
 			tuner_frame_buttons[i].modulate = Color(1.4, 1.2, 0.3) if i == selected_tuner_frame_idx else Color.WHITE
 
 
-# Ghost / Onion Skin Variables (Task 239P)
+# Ghost / Onion Skin Variables (Task 239P & 239Q Dual Opacity)
 var boss_ghost_rect: TextureRect = null
 var show_prev_ghost: bool = true
-var ghost_opacity: float = 0.25
+var current_frame_opacity: float = 1.00
+var reference_frame_opacity: float = 0.25
 var btn_ghost_toggle: Button = null
-var slider_ghost_opacity: HSlider = null
+var slider_current_opacity: HSlider = null
+var slider_reference_opacity: HSlider = null
 var lbl_ghost_readout: Label = null
+var lbl_opacity_readout: Label = null
 
 func toggle_ghost_overlay() -> void:
 	set_ghost_enabled(not show_prev_ghost)
@@ -766,23 +772,48 @@ func set_ghost_enabled(enabled: bool) -> void:
 	_update_ghost_ui_controls()
 	_update_ghost_overlay()
 
-func set_ghost_opacity(val: float) -> void:
-	ghost_opacity = clampf(val, 0.00, 0.60)
+func set_current_frame_opacity(val: float) -> void:
+	current_frame_opacity = clampf(val, 0.00, 1.00)
+	_update_ghost_ui_controls()
+	_apply_current_frame_opacity()
+
+func set_reference_frame_opacity(val: float) -> void:
+	reference_frame_opacity = clampf(val, 0.00, 1.00)
 	_update_ghost_ui_controls()
 	_update_ghost_overlay()
+
+func set_ghost_opacity(val: float) -> void:
+	set_reference_frame_opacity(val)
 
 func is_ghost_enabled() -> bool:
 	return show_prev_ghost
 
+func get_current_frame_opacity() -> float:
+	return current_frame_opacity
+
+func get_reference_frame_opacity() -> float:
+	return reference_frame_opacity
+
 func get_ghost_opacity() -> float:
-	return ghost_opacity
+	return reference_frame_opacity
+
+func _apply_current_frame_opacity() -> void:
+	if boss_rect == null:
+		return
+	if is_paused or active_tween == null or not active_tween.is_valid():
+		boss_rect.modulate.a = current_frame_opacity
 
 func _update_ghost_ui_controls() -> void:
 	if btn_ghost_toggle != null:
-		btn_ghost_toggle.text = "GHOST: ON [G]" if show_prev_ghost else "GHOST: OFF [G]"
+		btn_ghost_toggle.text = "SHOW REF GHOST: ON [G]" if show_prev_ghost else "SHOW REF GHOST: OFF [G]"
 		btn_ghost_toggle.modulate = Color(0.4, 1.2, 0.6) if show_prev_ghost else Color.WHITE
-	if slider_ghost_opacity != null and not is_equal_approx(slider_ghost_opacity.value, ghost_opacity):
-		slider_ghost_opacity.value = ghost_opacity
+	if slider_current_opacity != null and not is_equal_approx(slider_current_opacity.value, current_frame_opacity):
+		slider_current_opacity.value = current_frame_opacity
+	if slider_reference_opacity != null and not is_equal_approx(slider_reference_opacity.value, reference_frame_opacity):
+		slider_reference_opacity.value = reference_frame_opacity
+
+	if lbl_opacity_readout != null:
+		lbl_opacity_readout.text = "Cur Alpha: %.2f | Ref Alpha: %.2f" % [current_frame_opacity, reference_frame_opacity]
 
 func _update_ghost_overlay() -> void:
 	if boss_ghost_rect == null:
@@ -791,28 +822,35 @@ func _update_ghost_overlay() -> void:
 	if current_state != AnimationState.ULTIMATE_CHARGE or not show_prev_ghost or current_charge_frame < 0:
 		boss_ghost_rect.visible = false
 		if lbl_ghost_readout != null:
-			lbl_ghost_readout.text = "PREV = NONE" if current_state == AnimationState.ULTIMATE_CHARGE else "PREV = N/A"
+			lbl_ghost_readout.text = "CURRENT = %s | REFERENCE = NONE" % STATE_NAMES.get(current_state, "N/A")
 		return
 
-	var prev_idx: int = -1
-	if current_charge_frame > 0:
-		prev_idx = current_charge_frame - 1
-	elif is_loop_enabled:
-		prev_idx = 5 # Wrap to F06 when looping on F01
-
-	if prev_idx >= 0 and prev_idx < stochas_ultimate_charge_frames.size():
-		var prev_tf = get_frame_transform(prev_idx)
-		boss_ghost_rect.texture = stochas_ultimate_charge_frames[prev_idx]
-		boss_ghost_rect.scale = Vector2(prev_tf["scale"], prev_tf["scale"])
-		boss_ghost_rect.position = Vector2(prev_tf["x"], prev_tf["y"])
-		boss_ghost_rect.modulate = Color(0.7, 0.85, 1.0, ghost_opacity)
-		boss_ghost_rect.visible = (ghost_opacity > 0.001)
+	if current_charge_frame == 0:
+		# Task 239Q Gate 1 & 2: F01 reference MUST be CANONICAL IDLE boss frame with original transform
+		if canonical_boss_tex != null:
+			boss_ghost_rect.texture = canonical_boss_tex
+			boss_ghost_rect.position = BOSS_BASE_POS
+			boss_ghost_rect.scale = Vector2.ONE
+			boss_ghost_rect.modulate = Color(0.7, 0.85, 1.0, reference_frame_opacity)
+			boss_ghost_rect.visible = (reference_frame_opacity > 0.001)
+		else:
+			boss_ghost_rect.visible = false
 		if lbl_ghost_readout != null:
-			lbl_ghost_readout.text = "PREV = F0%d" % (prev_idx + 1)
+			lbl_ghost_readout.text = "CURRENT = F01 | REFERENCE = CANONICAL IDLE"
 	else:
-		boss_ghost_rect.visible = false
-		if lbl_ghost_readout != null:
-			lbl_ghost_readout.text = "PREV = NONE (F01)"
+		# F02..F06: Reference ghost is previous frame F0(x-1) with its tuned transform
+		var prev_idx: int = current_charge_frame - 1
+		if prev_idx >= 0 and prev_idx < stochas_ultimate_charge_frames.size():
+			var prev_tf = get_frame_transform(prev_idx)
+			boss_ghost_rect.texture = stochas_ultimate_charge_frames[prev_idx]
+			boss_ghost_rect.scale = Vector2(prev_tf["scale"], prev_tf["scale"])
+			boss_ghost_rect.position = Vector2(prev_tf["x"], prev_tf["y"])
+			boss_ghost_rect.modulate = Color(0.7, 0.85, 1.0, reference_frame_opacity)
+			boss_ghost_rect.visible = (reference_frame_opacity > 0.001)
+			if lbl_ghost_readout != null:
+				lbl_ghost_readout.text = "CURRENT = F0%d | REFERENCE = F0%d" % [current_charge_frame + 1, prev_idx + 1]
+		else:
+			boss_ghost_rect.visible = false
 
 func _build_tuner_ui_section(vbox: VBoxContainer) -> void:
 	var sec_title = Label.new()
@@ -821,39 +859,73 @@ func _build_tuner_ui_section(vbox: VBoxContainer) -> void:
 	sec_title.modulate = Color(0.4, 0.9, 1.0, 0.9)
 	vbox.add_child(sec_title)
 
-	# Section: ONION SKIN GHOST OVERLAY (Task 239P)
-	var ghost_row = HBoxContainer.new()
-	ghost_row.add_theme_constant_override("separation", 8)
-	vbox.add_child(ghost_row)
+	# Section: ONION SKIN REFERENCE GHOST & DUAL OPACITY (Task 239Q)
+	var ghost_toggle_row = HBoxContainer.new()
+	ghost_toggle_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(ghost_toggle_row)
 
 	btn_ghost_toggle = Button.new()
-	btn_ghost_toggle.text = "GHOST: ON [G]" if show_prev_ghost else "GHOST: OFF [G]"
-	btn_ghost_toggle.custom_minimum_size = Vector2(130, 26)
+	btn_ghost_toggle.text = "SHOW REF GHOST: ON [G]" if show_prev_ghost else "SHOW REF GHOST: OFF [G]"
+	btn_ghost_toggle.custom_minimum_size = Vector2(180, 26)
 	btn_ghost_toggle.add_theme_font_size_override("font_size", 11)
 	btn_ghost_toggle.modulate = Color(0.4, 1.2, 0.6) if show_prev_ghost else Color.WHITE
 	btn_ghost_toggle.pressed.connect(toggle_ghost_overlay)
-	ghost_row.add_child(btn_ghost_toggle)
-
-	var op_lbl = Label.new()
-	op_lbl.text = "Opacity:"
-	op_lbl.add_theme_font_size_override("font_size", 11)
-	ghost_row.add_child(op_lbl)
-
-	slider_ghost_opacity = HSlider.new()
-	slider_ghost_opacity.min_value = 0.00
-	slider_ghost_opacity.max_value = 0.60
-	slider_ghost_opacity.step = 0.01
-	slider_ghost_opacity.value = ghost_opacity
-	slider_ghost_opacity.custom_minimum_size = Vector2(130, 24)
-	slider_ghost_opacity.value_changed.connect(set_ghost_opacity)
-	ghost_row.add_child(slider_ghost_opacity)
+	ghost_toggle_row.add_child(btn_ghost_toggle)
 
 	lbl_ghost_readout = Label.new()
-	lbl_ghost_readout.text = "PREV = NONE"
-	lbl_ghost_readout.custom_minimum_size = Vector2(90, 24)
+	lbl_ghost_readout.text = "CURRENT = F01 | REFERENCE = CANONICAL IDLE"
 	lbl_ghost_readout.add_theme_font_size_override("font_size", 11)
 	lbl_ghost_readout.modulate = Color(0.7, 0.85, 1.0, 0.9)
-	ghost_row.add_child(lbl_ghost_readout)
+	ghost_toggle_row.add_child(lbl_ghost_readout)
+
+	# Dual Opacity Sliders (Current Frame Alpha & Reference Frame Alpha)
+	var opacity_box = HBoxContainer.new()
+	opacity_box.add_theme_constant_override("separation", 10)
+	vbox.add_child(opacity_box)
+
+	# Current Frame Opacity Slider
+	var cur_op_box = HBoxContainer.new()
+	cur_op_box.add_theme_constant_override("separation", 4)
+	opacity_box.add_child(cur_op_box)
+
+	var cur_lbl = Label.new()
+	cur_lbl.text = "Current Alpha:"
+	cur_lbl.add_theme_font_size_override("font_size", 11)
+	cur_op_box.add_child(cur_lbl)
+
+	slider_current_opacity = HSlider.new()
+	slider_current_opacity.min_value = 0.00
+	slider_current_opacity.max_value = 1.00
+	slider_current_opacity.step = 0.01
+	slider_current_opacity.value = current_frame_opacity
+	slider_current_opacity.custom_minimum_size = Vector2(110, 24)
+	slider_current_opacity.value_changed.connect(set_current_frame_opacity)
+	cur_op_box.add_child(slider_current_opacity)
+
+	# Reference Frame Opacity Slider
+	var ref_op_box = HBoxContainer.new()
+	ref_op_box.add_theme_constant_override("separation", 4)
+	opacity_box.add_child(ref_op_box)
+
+	var ref_lbl = Label.new()
+	ref_lbl.text = "Ref Alpha:"
+	ref_lbl.add_theme_font_size_override("font_size", 11)
+	ref_op_box.add_child(ref_lbl)
+
+	slider_reference_opacity = HSlider.new()
+	slider_reference_opacity.min_value = 0.00
+	slider_reference_opacity.max_value = 1.00
+	slider_reference_opacity.step = 0.01
+	slider_reference_opacity.value = reference_frame_opacity
+	slider_reference_opacity.custom_minimum_size = Vector2(110, 24)
+	slider_reference_opacity.value_changed.connect(set_reference_frame_opacity)
+	ref_op_box.add_child(slider_reference_opacity)
+
+	lbl_opacity_readout = Label.new()
+	lbl_opacity_readout.text = "Cur Alpha: 1.00 | Ref Alpha: 0.25"
+	lbl_opacity_readout.add_theme_font_size_override("font_size", 11)
+	lbl_opacity_readout.modulate = Color(1.0, 0.9, 0.5, 0.9)
+	vbox.add_child(lbl_opacity_readout)
 
 	# Frame Selector Buttons (F01 .. F06)
 	var f_box = HBoxContainer.new()
@@ -1755,6 +1827,7 @@ func _set_charge_frame(idx: int) -> void:
 		boss_rect.position = Vector2(tf["x"], tf["y"])
 		if idx >= 0 and idx < stochas_ultimate_charge_frames.size():
 			boss_rect.texture = stochas_ultimate_charge_frames[idx]
+		_apply_current_frame_opacity()
 	_update_ghost_overlay()
 
 func _set_atlas_frame(idx: int) -> void:

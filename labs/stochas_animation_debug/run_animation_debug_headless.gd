@@ -262,79 +262,73 @@ func _initialize() -> void:
 
 
 	# ----------------------------------------------------
-	# TASK 239P: ONION SKIN GHOST OVERLAY TEST SUITE
+	# TASK 239Q: CANONICAL IDLE F01 GHOST & DUAL OPACITY TEST SUITE
 	# ----------------------------------------------------
-	# 1. F02 shows F01 ghost
-	lab.select_tuner_frame(1) # F02
+	# 1. F01 reference MUST be CANONICAL IDLE boss frame with original transform
+	lab.select_tuner_frame(0) # F01
 	if not lab.is_ghost_enabled():
-		_fail("TASK 239P FAIL: Ghost should be enabled by default!")
+		_fail("TASK 239Q FAIL: Reference ghost should be enabled by default!")
 		return
 	if lab.boss_ghost_rect == null or not lab.boss_ghost_rect.visible:
-		_fail("TASK 239P FAIL: Ghost should be visible when viewing F02!")
+		_fail("TASK 239Q FAIL: Canonical ghost should be visible when viewing F01!")
 		return
-	if lab.boss_ghost_rect.texture != charge_frames[0]:
-		_fail("TASK 239P FAIL: F02 ghost texture should be F01!")
+	if lab.boss_ghost_rect.texture != lab.canonical_boss_tex:
+		_fail("TASK 239Q FAIL: F01 reference ghost texture MUST be canonical_boss_tex (stochas_boss.png)!")
+		return
+	if not lab.boss_ghost_rect.position.is_equal_approx(lab.BOSS_BASE_POS) or not lab.boss_ghost_rect.scale.is_equal_approx(Vector2.ONE):
+		_fail("TASK 239Q FAIL: F01 canonical reference ghost MUST use original canonical transform (BOSS_BASE_POS, scale 1.0)!")
 		return
 
-	# 2. F03 shows F02 ghost, F06 shows F05 ghost
-	lab.select_tuner_frame(2) # F03
-	if lab.boss_ghost_rect.texture != charge_frames[1]:
-		_fail("TASK 239P FAIL: F03 ghost texture should be F02!")
+	# 2. F02 -> F01, F06 -> F05 reference mapping
+	lab.select_tuner_frame(1) # F02
+	if lab.boss_ghost_rect.texture != charge_frames[0]:
+		_fail("TASK 239Q FAIL: F02 reference ghost texture should be F01!")
 		return
 
 	lab.select_tuner_frame(5) # F06
 	if lab.boss_ghost_rect.texture != charge_frames[4]:
-		_fail("TASK 239P FAIL: F06 ghost texture should be F05!")
+		_fail("TASK 239Q FAIL: F06 reference ghost texture should be F05!")
 		return
 
-	# 3. F01 has no previous-frame ghost when LOOP = OFF
-	lab.set_loop(false)
-	lab.select_tuner_frame(0) # F01
-	if lab.boss_ghost_rect.visible:
-		_fail("TASK 239P FAIL: F01 should have no ghost when LOOP=OFF!")
+	# 3. Dual Opacity Controls (Current Frame Alpha vs Reference Frame Alpha)
+	lab.set_current_frame_opacity(0.50)
+	lab.set_reference_frame_opacity(0.50)
+	if not is_equal_approx(lab.get_current_frame_opacity(), 0.50) or not is_equal_approx(lab.get_reference_frame_opacity(), 0.50):
+		_fail("TASK 239Q FAIL: Dual opacity values setter/getter failed!")
+		return
+	if not is_equal_approx(lab.boss_rect.modulate.a, 0.50) or not is_equal_approx(lab.boss_ghost_rect.modulate.a, 0.50):
+		_fail("TASK 239Q FAIL: Both current main frame and reference ghost should render at half opacity (0.50)!")
 		return
 
-	# 4. Toggle OFF / ON
-	lab.select_tuner_frame(1) # F02
+	# 4. Reference Ghost Toggle OFF / ON
 	lab.toggle_ghost_overlay() # OFF
 	if lab.boss_ghost_rect.visible or lab.is_ghost_enabled():
-		_fail("TASK 239P FAIL: Toggling ghost OFF did not hide ghost!")
+		_fail("TASK 239Q FAIL: Toggling reference ghost OFF did not hide ghost!")
+		return
+	if not is_equal_approx(lab.boss_rect.modulate.a, 0.50):
+		_fail("TASK 239Q FAIL: Toggling ghost OFF should NOT hide main frame!")
 		return
 
 	lab.toggle_ghost_overlay() # ON
 	if not lab.boss_ghost_rect.visible or not lab.is_ghost_enabled():
-		_fail("TASK 239P FAIL: Toggling ghost ON did not show ghost!")
+		_fail("TASK 239Q FAIL: Toggling reference ghost ON did not show ghost!")
 		return
 
-	# 5. Opacity control
-	lab.set_ghost_opacity(0.35)
-	if not is_equal_approx(lab.get_ghost_opacity(), 0.35) or not is_equal_approx(lab.boss_ghost_rect.modulate.a, 0.35):
-		_fail("TASK 239P FAIL: Changing ghost opacity failed!")
-		return
-
-	# 6. Ghost reflects updated transform of previous frame
-	lab.set_frame_transform(0, 1.2200, 192.0, 36.0) # Tune F01
-	lab.select_tuner_frame(1) # View F02 -> ghost shows F01
-	if not lab.boss_ghost_rect.scale.is_equal_approx(Vector2(1.22, 1.22)) or not lab.boss_ghost_rect.position.is_equal_approx(Vector2(192.0, 36.0)):
-		_fail("TASK 239P FAIL: F02 ghost did not reflect updated F01 tuned transform!")
-		return
-	lab.reset_all_tuner_frames()
-
-	# 7. Settings persistence for ghost settings
-	lab.set_ghost_enabled(true)
-	lab.set_ghost_opacity(0.30)
+	# 5. Dual opacity persistence
+	lab.set_current_frame_opacity(0.70)
+	lab.set_reference_frame_opacity(0.30)
 	lab.save_tuning_config()
 
-	lab.set_ghost_enabled(false)
-	lab.set_ghost_opacity(0.10)
+	lab.set_current_frame_opacity(1.00)
+	lab.set_reference_frame_opacity(0.10)
 	lab.load_tuning_config()
 
-	if not lab.is_ghost_enabled() or not is_equal_approx(lab.get_ghost_opacity(), 0.30):
-		_fail("TASK 239P FAIL: Ghost settings persistence save/load failed!")
+	if not is_equal_approx(lab.get_current_frame_opacity(), 0.70) or not is_equal_approx(lab.get_reference_frame_opacity(), 0.30):
+		_fail("TASK 239Q FAIL: Dual opacity persistence save/load failed!")
 		return
 
 	lab.reset_saved_tuning_config()
-	print("[TASK 239P] PASS: Onion skin ghost overlay, live transform update, toggle/opacity UI & persistence verified 100%.")
+	print("[TASK 239Q] PASS: Canonical IDLE ghost reference for F01, F02..F06 prev mapping, dual opacity controls & persistence verified 100%.")
 
 	# ----------------------------------------------------
 	# REGRESSION & OTHER 10 ANIMATION STATES
