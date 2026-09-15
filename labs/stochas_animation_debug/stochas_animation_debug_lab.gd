@@ -2,16 +2,25 @@ extends Control
 
 ## ==============================================================================
 ## STOCHAS ANIMATION DEBUG & INSPECTION LAB
-## TASK_ID: MATHOS-STOCHAS-ANIMATION-DEBUG-LAB-236L
+## TASK_ID: MATHOS-STOCHAS-ULTIMATE-CHARGE-FINAL-INTEGRATE-239L
 ##
 ## Dedicated diagnostic studio for inspecting, timing, and refining STOCHAS
 ## boss animation states, distinct spell profiles, speed scaling, and the
-## 3-phase Ultimate presentation.
+## human-approved 6-frame Ultimate Charge sequence (F01 - F06).
 ## ==============================================================================
 
 # Assets
 const ASSET_STOCHAS_BOSS: String = "res://assets/characters/bosses/dungeon_1/stochas_boss.png"
 const ASSET_STOCHAS_ULTIMATE_SEQUENCE: String = "res://assets/characters/bosses/dungeon_1/stochas_ultimate_sequence.png"
+
+# WAD2 Human-Approved Final Ultimate Charge Frames (6 Independent Textures)
+const ASSET_STOCHAS_ULTIMATE_CHARGE_F01: String = "res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f01.png"
+const ASSET_STOCHAS_ULTIMATE_CHARGE_F02: String = "res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f02.png"
+const ASSET_STOCHAS_ULTIMATE_CHARGE_F03: String = "res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f03.png"
+const ASSET_STOCHAS_ULTIMATE_CHARGE_F04: String = "res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f04.png"
+const ASSET_STOCHAS_ULTIMATE_CHARGE_F05: String = "res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f05.png"
+const ASSET_STOCHAS_ULTIMATE_CHARGE_F06: String = "res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f06.png"
+
 const ASSET_VFX_BOLT: String = "res://assets/vfx/combat/stochas_arcane_bolt.png"
 const ASSET_VFX_ORB: String = "res://assets/vfx/combat/stochas_probability_orb.png"
 const ASSET_VFX_RIFT: String = "res://assets/vfx/combat/stochas_void_rift.png"
@@ -65,8 +74,8 @@ const SPELL_PROFILES: Dictionary = {
 		"snap_rotation": 2.5,
 		"snap_time": 0.15,
 		"recoil_time": 0.18,
-		"max_lateral_displacement": 48.0, # |16 - (-32)| = 48.0
-		"max_rotation_swing": 4.0, # |-1.5 - 2.5| = 4.0
+		"max_lateral_displacement": 48.0,
+		"max_rotation_swing": 4.0,
 		"vfx_type": "cyan_flare_projectile"
 	},
 	AnimationState.CAST_ORB: {
@@ -111,8 +120,8 @@ const SPELL_PROFILES: Dictionary = {
 		"sweep_scale": Vector2(0.96, 1.04),
 		"sweep_time": 0.35,
 		"recoil_time": 0.30,
-		"max_lateral_displacement": 85.0, # |40 - (-45)| = 85.0
-		"max_rotation_swing": 11.7, # |-6.2 - 5.5| = 11.7
+		"max_lateral_displacement": 85.0,
+		"max_rotation_swing": 11.7,
 		"vfx_type": "wide_arc_slash"
 	}
 }
@@ -147,7 +156,8 @@ var compare_sequence: Array[AnimationState] = [
 	AnimationState.CAST_SWEEP
 ]
 
-var current_atlas_frame: int = -1 # -1 = canonical boss, 0..7 = atlas frames
+var current_atlas_frame: int = -1 # -1 = canonical boss / charge frame, 0..7 = release atlas frames
+var current_charge_frame: int = -1 # -1 = canonical boss / atlas frame, 0..5 = F01..F06
 var elapsed_time: float = 0.0
 var state_duration: float = 3.20
 var active_tween: Tween = null
@@ -161,6 +171,7 @@ const MAX_MOTION_POINTS: int = 150
 # Loaded Assets
 var canonical_boss_tex: Texture2D = null
 var stochas_ultimate_frames: Array[AtlasTexture] = []
+var stochas_ultimate_charge_frames: Array[Texture2D] = []
 var vfx_bolt_tex: Texture2D = null
 var vfx_orb_tex: Texture2D = null
 var vfx_rift_tex: Texture2D = null
@@ -221,7 +232,27 @@ func _load_resources() -> void:
 	if ResourceLoader.exists(ASSET_VFX_SWEEP):
 		vfx_sweep_tex = load(ASSET_VFX_SWEEP)
 
-	# Slice 8 frames of 384x384 Ultimate sequence
+	# 1. Load 6 Independent WAD2 Ultimate Charge Textures (F01 - F06)
+	stochas_ultimate_charge_frames.clear()
+	var charge_paths: Array[String] = [
+		ASSET_STOCHAS_ULTIMATE_CHARGE_F01,
+		ASSET_STOCHAS_ULTIMATE_CHARGE_F02,
+		ASSET_STOCHAS_ULTIMATE_CHARGE_F03,
+		ASSET_STOCHAS_ULTIMATE_CHARGE_F04,
+		ASSET_STOCHAS_ULTIMATE_CHARGE_F05,
+		ASSET_STOCHAS_ULTIMATE_CHARGE_F06
+	]
+	for p in charge_paths:
+		if ResourceLoader.exists(p):
+			var tex: Texture2D = load(p) as Texture2D
+			stochas_ultimate_charge_frames.append(tex)
+		elif FileAccess.file_exists(p):
+			var img: Image = Image.load_from_file(p)
+			if img != null and not img.is_empty():
+				var tex: ImageTexture = ImageTexture.create_from_image(img)
+				stochas_ultimate_charge_frames.append(tex)
+
+	# 2. Slice 8 frames of 384x384 Ultimate Release sequence
 	stochas_ultimate_frames.clear()
 	if ResourceLoader.exists(ASSET_STOCHAS_ULTIMATE_SEQUENCE):
 		var full_seq = load(ASSET_STOCHAS_ULTIMATE_SEQUENCE)
@@ -438,7 +469,7 @@ func _build_controls_ui() -> void:
 
 	# Section 3: Transport & Stepping Controls
 	var sec3 = Label.new()
-	sec3.text = "TRANSPORT & ATLAN STEPPING"
+	sec3.text = "TRANSPORT & FRAME STEPPING"
 	sec3.add_theme_font_size_override("font_size", 12)
 	sec3.modulate = Color(0.8, 0.8, 0.9, 0.8)
 	vbox.add_child(sec3)
@@ -598,9 +629,7 @@ func _update_diagnostic_labels() -> void:
 	if lbl_diag_state == null or lbl_diag_details == null or boss_rect == null:
 		return
 
-	var frame_desc: String = "Canonical (stochas_boss.png)"
-	if current_atlas_frame >= 0 and current_atlas_frame < stochas_ultimate_frames.size():
-		frame_desc = "Atlas Frame %d / 8" % (current_atlas_frame + 1)
+	var frame_desc: String = get_frame_display_text()
 
 	lbl_diag_state.text = "STATE: %s | SPEED: %.2fx | FRAME: %s | ELAPSED: %.2fs / %.2fs" % [
 		STATE_NAMES[current_state],
@@ -676,7 +705,6 @@ func play_animation(state: AnimationState) -> void:
 
 func _play_idle() -> void:
 	restore_canonical_baseline()
-	current_atlas_frame = -1
 	state_duration = 3.20
 
 	active_tween = create_tween().set_loops()
@@ -688,7 +716,6 @@ func _play_idle() -> void:
 
 func _play_cast_bolt() -> void:
 	restore_canonical_baseline()
-	current_atlas_frame = -1
 	var prof = SPELL_PROFILES[AnimationState.CAST_BOLT]
 	state_duration = prof["duration"]
 
@@ -712,7 +739,6 @@ func _play_cast_bolt() -> void:
 
 func _play_cast_orb() -> void:
 	restore_canonical_baseline()
-	current_atlas_frame = -1
 	var prof = SPELL_PROFILES[AnimationState.CAST_ORB]
 	state_duration = prof["duration"]
 
@@ -739,7 +765,6 @@ func _play_cast_orb() -> void:
 
 func _play_cast_rift() -> void:
 	restore_canonical_baseline()
-	current_atlas_frame = -1
 	var prof = SPELL_PROFILES[AnimationState.CAST_RIFT]
 	state_duration = prof["duration"]
 
@@ -762,7 +787,6 @@ func _play_cast_rift() -> void:
 
 func _play_cast_sweep() -> void:
 	restore_canonical_baseline()
-	current_atlas_frame = -1
 	var prof = SPELL_PROFILES[AnimationState.CAST_SWEEP]
 	state_duration = prof["duration"]
 
@@ -789,7 +813,6 @@ func _play_cast_sweep() -> void:
 
 func _play_hit() -> void:
 	restore_canonical_baseline()
-	current_atlas_frame = -1
 	state_duration = STATE_DURATIONS[AnimationState.HIT]
 
 	active_tween = create_tween()
@@ -805,7 +828,6 @@ func _play_hit() -> void:
 
 func _play_stun() -> void:
 	restore_canonical_baseline()
-	current_atlas_frame = -1
 	state_duration = STATE_DURATIONS[AnimationState.STUN]
 
 	active_tween = create_tween()
@@ -820,7 +842,6 @@ func _play_stun() -> void:
 
 func _play_enraged() -> void:
 	restore_canonical_baseline()
-	current_atlas_frame = -1
 	state_duration = STATE_DURATIONS[AnimationState.ENRAGED]
 	boss_rect.modulate = Color(1.35, 0.85, 0.85)
 
@@ -833,29 +854,42 @@ func _play_enraged() -> void:
 
 func _play_ultimate_charge() -> void:
 	restore_canonical_baseline()
-	state_duration = STATE_DURATIONS[AnimationState.ULTIMATE_CHARGE]
+	state_duration = STATE_DURATIONS[AnimationState.ULTIMATE_CHARGE] # 2.40s
+	_set_charge_frame(0)
 
 	active_tween = create_tween()
 
-	# Phase A: Initiate (0.0s - 0.6s) -> Rise, dim studio, frames 0 -> 1
-	active_tween.tween_callback(func(): _set_atlas_frame(0))
-	active_tween.tween_property(boss_rect, "position:y", BOSS_BASE_POS.y - 20.0, 0.60).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	active_tween.parallel().tween_property(dim_overlay, "modulate:a", 0.45, 0.60)
-	active_tween.parallel().tween_callback(func(): _set_atlas_frame(1)).set_delay(0.30)
+	# WAD2 Human-Approved 6 Independent Charge Frames (F01 -> F02 -> F03 -> F04 -> F05 -> F06)
+	# Total duration 2.40s deterministic distribution: 0.40s per frame (6 * 0.40s = 2.40s)
 
-	# Phase B: Build (0.6s - 1.8s) -> Scale up 1.10, radiance build, cycle frames 0-3
-	active_tween.tween_property(boss_rect, "scale", Vector2(1.10, 1.10), 1.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.40, 1.30, 1.80), 1.20)
-	active_tween.parallel().tween_callback(func(): _set_atlas_frame(2)).set_delay(0.00)
-	active_tween.parallel().tween_callback(func(): _set_atlas_frame(3)).set_delay(0.30)
-	active_tween.parallel().tween_callback(func(): _set_atlas_frame(2)).set_delay(0.60)
-	active_tween.parallel().tween_callback(func(): _set_atlas_frame(1)).set_delay(0.90)
+	# F01 (0.00s - 0.40s): Initiate rise & dim overlay
+	active_tween.tween_callback(func(): _set_charge_frame(0))
+	active_tween.tween_property(boss_rect, "position:y", BOSS_BASE_POS.y - 20.0, 0.40).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	active_tween.parallel().tween_property(dim_overlay, "modulate:a", 0.45, 0.40)
 
-	# Phase C: Peak (1.8s - 2.4s) -> Hold frame 3, high radiance flare
-	active_tween.tween_callback(func(): _set_atlas_frame(3))
-	active_tween.tween_property(boss_rect, "scale", Vector2(1.12, 1.12), 0.30).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.80, 1.60, 2.20), 0.30)
-	active_tween.tween_property(boss_rect, "scale", Vector2(1.10, 1.10), 0.30).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	# F02 (0.40s - 0.80s)
+	active_tween.tween_callback(func(): _set_charge_frame(1))
+	active_tween.tween_property(boss_rect, "scale", Vector2(1.04, 1.04), 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+	# F03 (0.80s - 1.20s)
+	active_tween.tween_callback(func(): _set_charge_frame(2))
+	active_tween.tween_property(boss_rect, "scale", Vector2(1.07, 1.07), 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.30, 1.20, 1.60), 0.40)
+
+	# F04 (1.20s - 1.60s)
+	active_tween.tween_callback(func(): _set_charge_frame(3))
+	active_tween.tween_property(boss_rect, "scale", Vector2(1.10, 1.10), 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.50, 1.40, 1.80), 0.40)
+
+	# F05 (1.60s - 2.00s)
+	active_tween.tween_callback(func(): _set_charge_frame(4))
+	active_tween.tween_property(boss_rect, "scale", Vector2(1.12, 1.12), 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.70, 1.50, 2.00), 0.40)
+
+	# F06 (2.00s - 2.40s): Peak charge hold
+	active_tween.tween_callback(func(): _set_charge_frame(5))
+	active_tween.tween_property(boss_rect, "scale", Vector2(1.10, 1.10), 0.40).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.80, 1.60, 2.20), 0.40)
 
 	active_tween.tween_callback(Callable(self, "_on_animation_finished"))
 
@@ -896,27 +930,34 @@ func _play_ultimate_release() -> void:
 
 func _play_ultimate_full() -> void:
 	restore_canonical_baseline()
-	state_duration = STATE_DURATIONS[AnimationState.ULTIMATE_FULL]
+	state_duration = STATE_DURATIONS[AnimationState.ULTIMATE_FULL] # 3.42s
+	_set_charge_frame(0)
 
 	active_tween = create_tween()
 
-	# 1. Charge Phase (2.40s)
-	active_tween.tween_callback(func(): _set_atlas_frame(0))
-	active_tween.tween_property(boss_rect, "position:y", BOSS_BASE_POS.y - 20.0, 0.60).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	active_tween.parallel().tween_property(dim_overlay, "modulate:a", 0.45, 0.60)
-	active_tween.parallel().tween_callback(func(): _set_atlas_frame(1)).set_delay(0.30)
+	# 1. Charge Phase (2.40s) using 6 independent frames (F01 -> F06)
+	active_tween.tween_callback(func(): _set_charge_frame(0))
+	active_tween.tween_property(boss_rect, "position:y", BOSS_BASE_POS.y - 20.0, 0.40).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	active_tween.parallel().tween_property(dim_overlay, "modulate:a", 0.45, 0.40)
 
-	active_tween.tween_property(boss_rect, "scale", Vector2(1.10, 1.10), 1.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.40, 1.30, 1.80), 1.20)
-	active_tween.parallel().tween_callback(func(): _set_atlas_frame(2)).set_delay(0.00)
-	active_tween.parallel().tween_callback(func(): _set_atlas_frame(3)).set_delay(0.30)
-	active_tween.parallel().tween_callback(func(): _set_atlas_frame(2)).set_delay(0.60)
-	active_tween.parallel().tween_callback(func(): _set_atlas_frame(1)).set_delay(0.90)
+	active_tween.tween_callback(func(): _set_charge_frame(1))
+	active_tween.tween_property(boss_rect, "scale", Vector2(1.04, 1.04), 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
-	active_tween.tween_callback(func(): _set_atlas_frame(3))
-	active_tween.tween_property(boss_rect, "scale", Vector2(1.12, 1.12), 0.30).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.80, 1.60, 2.20), 0.30)
-	active_tween.tween_property(boss_rect, "scale", Vector2(1.10, 1.10), 0.30).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	active_tween.tween_callback(func(): _set_charge_frame(2))
+	active_tween.tween_property(boss_rect, "scale", Vector2(1.07, 1.07), 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.30, 1.20, 1.60), 0.40)
+
+	active_tween.tween_callback(func(): _set_charge_frame(3))
+	active_tween.tween_property(boss_rect, "scale", Vector2(1.10, 1.10), 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.50, 1.40, 1.80), 0.40)
+
+	active_tween.tween_callback(func(): _set_charge_frame(4))
+	active_tween.tween_property(boss_rect, "scale", Vector2(1.12, 1.12), 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.70, 1.50, 2.00), 0.40)
+
+	active_tween.tween_callback(func(): _set_charge_frame(5))
+	active_tween.tween_property(boss_rect, "scale", Vector2(1.10, 1.10), 0.40).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	active_tween.parallel().tween_property(boss_rect, "modulate", Color(1.80, 1.60, 2.20), 0.40)
 
 	# 2. Release Phase (0.72s)
 	active_tween.tween_callback(func(): _set_atlas_frame(4))
@@ -1002,23 +1043,34 @@ func is_loop_active() -> bool:
 	return is_loop_enabled
 
 func step_frame(direction: int) -> void:
-	# Stop active playback to inspect static atlas frames
+	# Stop active playback to inspect static frames
 	if active_tween != null and active_tween.is_valid():
 		active_tween.kill()
 
-	if current_atlas_frame < 0:
-		current_atlas_frame = 0 if direction > 0 else 7
+	if current_state == AnimationState.ULTIMATE_CHARGE or current_charge_frame >= 0:
+		if current_charge_frame < 0:
+			current_charge_frame = 0 if direction >= 0 else 5
+		else:
+			current_charge_frame = clampi(current_charge_frame + direction, 0, 5)
+		_set_charge_frame(current_charge_frame)
 	else:
-		current_atlas_frame = clampi(current_atlas_frame + direction, 0, 7)
-
-	_set_atlas_frame(current_atlas_frame)
+		if current_atlas_frame < 0:
+			current_atlas_frame = 0 if direction >= 0 else 7
+		else:
+			current_atlas_frame = clampi(current_atlas_frame + direction, 0, 7)
+		_set_atlas_frame(current_atlas_frame)
 
 func get_current_atlas_frame() -> int:
 	return current_atlas_frame
 
+func get_current_charge_frame() -> int:
+	return current_charge_frame
+
 func get_frame_display_text() -> String:
+	if current_charge_frame >= 0 and current_charge_frame < stochas_ultimate_charge_frames.size():
+		return "Charge Frame %d / 6 (F0%d)" % [current_charge_frame + 1, current_charge_frame + 1]
 	if current_atlas_frame >= 0 and current_atlas_frame < stochas_ultimate_frames.size():
-		return "Atlas Frame %d / 8" % (current_atlas_frame + 1)
+		return "Release Atlas Frame %d / 8" % (current_atlas_frame + 1)
 	return "Canonical (stochas_boss.png)"
 
 func toggle_motion_path() -> void:
@@ -1063,7 +1115,7 @@ func _advance_compare_cast() -> void:
 	_play_next_compare_cast()
 
 # ==============================================================================
-# BASELINE & ATLAS HELPERS
+# BASELINE & FRAME HELPERS
 # ==============================================================================
 
 func restore_canonical_baseline() -> void:
@@ -1086,11 +1138,19 @@ func restore_canonical_baseline() -> void:
 
 func _set_canonical_boss() -> void:
 	current_atlas_frame = -1
+	current_charge_frame = -1
 	if boss_rect != null and canonical_boss_tex != null:
 		boss_rect.texture = canonical_boss_tex
 
+func _set_charge_frame(idx: int) -> void:
+	current_charge_frame = idx
+	current_atlas_frame = -1
+	if boss_rect != null and idx >= 0 and idx < stochas_ultimate_charge_frames.size():
+		boss_rect.texture = stochas_ultimate_charge_frames[idx]
+
 func _set_atlas_frame(idx: int) -> void:
 	current_atlas_frame = idx
+	current_charge_frame = -1
 	if boss_rect != null and idx >= 0 and idx < stochas_ultimate_frames.size():
 		boss_rect.texture = stochas_ultimate_frames[idx]
 
@@ -1215,3 +1275,6 @@ func get_diagnostic_text() -> String:
 
 func get_ultimate_frames() -> Array[AtlasTexture]:
 	return stochas_ultimate_frames
+
+func get_ultimate_charge_frames() -> Array[Texture2D]:
+	return stochas_ultimate_charge_frames
