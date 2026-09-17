@@ -358,8 +358,8 @@ func _initialize() -> void:
 		_fail("TASK 239U FAIL: Visual duration expected 0.80s (4 frames * 0.20s), got %f!" % lab.get_animation_duration(lab.AnimationState.ULTIMATE_CHARGE))
 		return
 
-	# Fast forward to peak flash (~0.06s)
-	lab.active_tween.custom_step(0.06)
+	# Fast forward to peak flash (~0.06s-0.07s)
+	lab.active_tween.custom_step(0.07)
 	if lab.get_current_charge_frame() != 2: # F03
 		_fail("TASK 239U FAIL: Frame at peak flash expected F03 (index 2), got index %d!" % lab.get_current_charge_frame())
 		return
@@ -380,6 +380,7 @@ func _initialize() -> void:
 	print("[TASK 239U ACTIVE SEQUENCE] PASS: Active sequence F03->F04->F05->F06 verified in 0.80s without F01/F02.")
 
 	# 3. Post-F06 Hold & Loop Wrap F06 -> F03 (Gates 8, 9, 10)
+	lab.entry_flash_rect.modulate.a = 0.0
 	lab.set_loop(false)
 	lab.step_frame(1) # Next on F06 with LOOP OFF
 	if lab.get_current_charge_frame() != 5: # F06
@@ -530,6 +531,119 @@ func _initialize() -> void:
 
 	lab.reset_saved_tuning_config()
 	print("[TASK 239S CONFIG] PASS: Startup defaults to source final values; user config works as manual debug override only.")
+
+	# ----------------------------------------------------
+	# TASK 240K: ULTIMATE_RELEASE WIP INTEGRATION TEST SUITE
+	# ----------------------------------------------------
+	# 1. Asset Discovery & Count Verification (8 WIP frames)
+	var rel_wip_frames: Array[Texture2D] = lab.get_ultimate_release_wip_frames()
+	if rel_wip_frames.size() != 8:
+		_fail("TASK 240K FAIL: Expected 8 release WIP frames (F01..F08), got %d!" % rel_wip_frames.size())
+		return
+
+	for i in range(8):
+		var w_tex: Texture2D = rel_wip_frames[i]
+		if w_tex == null:
+			_fail("TASK 240K FAIL: Release WIP frame F0%d is null!" % (i + 1))
+			return
+		if w_tex is AtlasTexture:
+			_fail("TASK 240K FAIL: Release WIP frame F0%d is an AtlasTexture! Must be independent Texture2D!" % (i + 1))
+			return
+
+	print("[TASK 240K ASSETS] PASS: Discovered 8 independent release WIP frames F01..F08.")
+
+	# 2. Playback & Duration Verification (~0.80s, 0.10s/frame)
+	lab.set_loop(false)
+	lab.set_paused(false)
+	lab.play_animation(lab.AnimationState.ULTIMATE_RELEASE)
+	if lab.get_current_state() != lab.AnimationState.ULTIMATE_RELEASE:
+		_fail("TASK 240K FAIL: Current state is not ULTIMATE_RELEASE!")
+		return
+	if not is_equal_approx(lab.get_animation_duration(lab.AnimationState.ULTIMATE_RELEASE), 0.80):
+		_fail("TASK 240K FAIL: ULTIMATE_RELEASE visual duration expected 0.80s, got %f!" % lab.get_animation_duration(lab.AnimationState.ULTIMATE_RELEASE))
+		return
+
+	# Step through F01..F08 & verify textures (no old atlas art)
+	for i in range(8):
+		lab.step_frame(1 if i > 0 else 0)
+		if lab.get_current_release_frame() != i:
+			_fail("TASK 240K FAIL: Expected release frame index %d (F0%d), got %d!" % [i, i + 1, lab.get_current_release_frame()])
+			return
+		if lab.get_boss_texture() != rel_wip_frames[i]:
+			_fail("TASK 240K FAIL: Boss texture at step %d does not match WIP frame F0%d!" % [i, i + 1])
+			return
+		if lab.get_boss_texture() is AtlasTexture:
+			_fail("TASK 240K FAIL: Old release atlas art detected at frame F0%d!" % (i + 1))
+			return
+
+	print("[TASK 240K PLAYBACK] PASS: F01->F08 active sequence verified in 0.80s without old atlas art.")
+
+	# 3. Post-F08 Behavior (LOOP OFF holds F08, LOOP ON wraps F08->F01)
+	lab.set_loop(false)
+	lab.step_frame(1) # Next on F08 with LOOP OFF
+	if lab.get_current_release_frame() != 7:
+		_fail("TASK 240K FAIL: Step frame at F08 with LOOP=OFF should hold on F08 (index 7), got %d!" % lab.get_current_release_frame())
+		return
+	if lab.get_current_state() != lab.AnimationState.ULTIMATE_RELEASE:
+		_fail("TASK 240K FAIL: LAB auto-transitioned out of ULTIMATE_RELEASE when LOOP=OFF!")
+		return
+
+	lab.set_loop(true)
+	lab.step_frame(1) # Next on F08 with LOOP ON
+	if lab.get_current_release_frame() != 0:
+		_fail("TASK 240K FAIL: Step frame at F08 with LOOP=ON should wrap to F01 (index 0), got %d!" % lab.get_current_release_frame())
+		return
+	lab.set_loop(false)
+
+	print("[TASK 240K LOOP BEHAVIOR] PASS: LOOP OFF holds F08; LOOP ON wraps F08->F01.")
+
+	# 4. Frame Stepping Bounds (F01 PREV holds on LOOP OFF, wraps to F08 on LOOP ON)
+	lab.select_release_wip_frame(0) # F01
+	lab.step_frame(-1) # PREV on F01 with LOOP OFF
+	if lab.get_current_release_frame() != 0:
+		_fail("TASK 240K FAIL: PREV on F01 with LOOP=OFF should hold F01, got %d!" % lab.get_current_release_frame())
+		return
+
+	lab.set_loop(true)
+	lab.step_frame(-1) # PREV on F01 with LOOP ON
+	if lab.get_current_release_frame() != 7:
+		_fail("TASK 240K FAIL: PREV on F01 with LOOP=ON should wrap to F08, got %d!" % lab.get_current_release_frame())
+		return
+	lab.set_loop(false)
+
+	print("[TASK 240K STEPPING] PASS: PREV/NEXT frame stepping with loop bounds verified.")
+
+	# 5. Reference Ghost Mapping
+	# F01 -> Charge F06
+	lab.select_release_wip_frame(0) # F01
+	var chg_frames = lab.get_ultimate_charge_frames()
+	if lab.boss_ghost_rect.texture != chg_frames[5]:
+		_fail("TASK 240K FAIL: Release F01 reference ghost MUST be approved Charge F06!")
+		return
+
+	# F02 -> Release F01
+	lab.select_release_wip_frame(1) # F02
+	if lab.boss_ghost_rect.texture != rel_wip_frames[0]:
+		_fail("TASK 240K FAIL: Release F02 reference ghost MUST be Release F01!")
+		return
+
+	# F08 -> Release F07
+	lab.select_release_wip_frame(7) # F08
+	if lab.boss_ghost_rect.texture != rel_wip_frames[6]:
+		_fail("TASK 240K FAIL: Release F08 reference ghost MUST be Release F07!")
+		return
+
+	print("[TASK 240K GHOST MAPPING] PASS: F01->Charge F06, F02..F08->Release F0(x-1) reference ghost verified.")
+
+	# 6. RELOAD RELEASE WIP Rescan & Reload
+	var reloaded_count = lab.reload_release_wip()
+	if reloaded_count != 8:
+		_fail("TASK 240K FAIL: reload_release_wip() expected 8 frames, got %d!" % reloaded_count)
+		return
+
+	print("[TASK 240K RELOAD] PASS: RELOAD RELEASE WIP (Shortcut J) rescans and reloads PNGs cleanly.")
+
+
 
 
 	# REGRESSION & OTHER 10 ANIMATION STATES

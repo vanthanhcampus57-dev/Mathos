@@ -155,7 +155,7 @@ const STATE_DURATIONS: Dictionary = {
 	AnimationState.STUN: 1.00,
 	AnimationState.ENRAGED: 1.80,
 	AnimationState.ULTIMATE_CHARGE: 0.80,
-	AnimationState.ULTIMATE_RELEASE: 1.02, # 0.72s frames + 0.30s recovery
+	AnimationState.ULTIMATE_RELEASE: 0.80, # 8 WIP frames * 0.10s = 0.80s
 	AnimationState.ULTIMATE_FULL: 3.42 # 2.40s charge + 1.02s release/recovery
 }
 
@@ -176,6 +176,7 @@ var compare_sequence: Array[AnimationState] = [
 
 var current_atlas_frame: int = -1 # -1 = canonical boss / charge frame, 0..7 = release atlas frames
 var current_charge_frame: int = -1 # -1 = canonical boss / atlas frame, 0..5 = F01..F06
+var current_release_frame: int = -1 # -1 = canonical boss / charge frame, 0..7 = F01..F08 WIP frames
 var elapsed_time: float = 0.0
 var state_duration: float = 3.20
 var active_tween: Tween = null
@@ -190,6 +191,7 @@ const MAX_MOTION_POINTS: int = 150
 var canonical_boss_tex: Texture2D = null
 var stochas_ultimate_frames: Array[AtlasTexture] = []
 var stochas_ultimate_charge_frames: Array[Texture2D] = []
+var stochas_ultimate_release_wip_frames: Array[Texture2D] = []
 var vfx_bolt_tex: Texture2D = null
 var vfx_orb_tex: Texture2D = null
 var vfx_rift_tex: Texture2D = null
@@ -272,7 +274,7 @@ func _load_resources() -> void:
 				var tex: ImageTexture = ImageTexture.create_from_image(img)
 				stochas_ultimate_charge_frames.append(tex)
 
-	# 2. Slice 8 frames of 384x384 Ultimate Release sequence
+	# 2. Slice 8 frames of 384x384 Ultimate Release sequence (legacy atlas backup)
 	stochas_ultimate_frames.clear()
 	if ResourceLoader.exists(ASSET_STOCHAS_ULTIMATE_SEQUENCE):
 		var full_seq = load(ASSET_STOCHAS_ULTIMATE_SEQUENCE)
@@ -281,6 +283,76 @@ func _load_resources() -> void:
 			at.atlas = full_seq
 			at.region = Rect2(i * 384.0, 0.0, 384.0, 384.0)
 			stochas_ultimate_frames.append(at)
+
+	# 3. Load NEW Human-Approved Ultimate Release WIP Frames (F01..F08)
+	reload_release_wip()
+
+func reload_release_wip() -> int:
+	stochas_ultimate_release_wip_frames.clear()
+	for i in range(1, 9):
+		var rel_path: String = "res://labs/stochas_animation_debug/assets/ultimate_release_wip/stochas_ultimate_release_f0%d.png" % i
+		var abs_path: String = ProjectSettings.globalize_path(rel_path)
+		var tex: Texture2D = null
+		if FileAccess.file_exists(abs_path):
+			var img: Image = Image.load_from_file(abs_path)
+			if img != null and not img.is_empty():
+				tex = ImageTexture.create_from_image(img)
+		if tex == null and ResourceLoader.exists(rel_path):
+			tex = load(rel_path) as Texture2D
+		if tex != null:
+			stochas_ultimate_release_wip_frames.append(tex)
+
+	var count: int = stochas_ultimate_release_wip_frames.size()
+	print("[RELEASE WIP] Loaded %d release WIP frames (F01..F08)." % count)
+
+	if lbl_release_wip_status != null:
+		lbl_release_wip_status.text = "ULTIMATE_RELEASE WIP | AVAILABLE: %d/8" % count
+
+	if current_state == AnimationState.ULTIMATE_RELEASE and current_release_frame >= 0:
+		_set_release_wip_frame(current_release_frame)
+
+	_update_release_wip_ui_readout()
+	_update_ghost_overlay()
+	return count
+
+func get_ultimate_release_wip_frames() -> Array[Texture2D]:
+	return stochas_ultimate_release_wip_frames
+
+func get_current_release_frame() -> int:
+	return current_release_frame
+
+func select_release_wip_frame(idx: int) -> void:
+	if idx < 0 or idx >= 8:
+		return
+	if active_tween != null and active_tween.is_valid():
+		active_tween.kill()
+	is_paused = true
+	if btn_pause != null:
+		btn_pause.text = "RESUME [Space]"
+		btn_pause.modulate = Color(1.3, 0.8, 0.3)
+
+	current_state = AnimationState.ULTIMATE_RELEASE
+	_set_release_wip_frame(idx)
+
+func _set_release_wip_frame(idx: int) -> void:
+	current_release_frame = idx
+	current_charge_frame = -1
+	current_atlas_frame = -1
+	if boss_rect != null:
+		boss_rect.position = BOSS_BASE_POS
+		boss_rect.rotation = 0.0
+		boss_rect.scale = Vector2.ONE
+		if idx >= 0 and idx < stochas_ultimate_release_wip_frames.size():
+			boss_rect.texture = stochas_ultimate_release_wip_frames[idx]
+		_apply_current_frame_opacity()
+	_update_ghost_overlay()
+	_update_release_wip_ui_readout()
+	queue_gizmo_redraw()
+
+func _update_release_wip_ui_readout() -> void:
+	for i in range(release_frame_buttons.size()):
+		if release_frame_buttons[i] != null:
+			release_frame_buttons[i].modulate = Color(1.4, 1.2, 0.3) if i == current_release_frame else Color.WHITE
 
 func _build_ui_environment() -> void:
 	# Studio dark background
@@ -615,6 +687,7 @@ func _build_controls_ui() -> void:
 	vbox.add_child(btn_reset_baseline)
 
 	_build_tuner_ui_section(vbox)
+	_build_release_wip_ui_section(vbox)
 
 
 # ==============================================================================
@@ -648,6 +721,9 @@ var spin_tuner_x: SpinBox = null
 var spin_tuner_y: SpinBox = null
 var lbl_tuner_readout: Label = null
 var lbl_tuner_status: Label = null
+var lbl_release_wip_status: Label = null
+var btn_reload_release_wip: Button = null
+var release_frame_buttons: Array[Button] = []
 var is_updating_tuner_ui: bool = false
 
 func get_frame_transform(idx: int) -> Dictionary:
@@ -897,6 +973,40 @@ func _update_ghost_ui_controls() -> void:
 
 func _update_ghost_overlay() -> void:
 	if boss_ghost_rect == null:
+		return
+
+	if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+		if not show_prev_ghost or current_release_frame < 0:
+			boss_ghost_rect.visible = false
+			if lbl_ghost_readout != null:
+				lbl_ghost_readout.text = "CURRENT = ULTIMATE_RELEASE | REFERENCE = NONE"
+			return
+
+		if current_release_frame == 0:
+			var f06_idx: int = 5
+			if f06_idx < stochas_ultimate_charge_frames.size():
+				var tf: Dictionary = get_frame_transform(f06_idx)
+				boss_ghost_rect.texture = stochas_ultimate_charge_frames[f06_idx]
+				boss_ghost_rect.scale = Vector2(tf["scale"], tf["scale"])
+				boss_ghost_rect.position = Vector2(tf["x"], tf["y"])
+				boss_ghost_rect.modulate = Color(0.7, 0.85, 1.0, reference_frame_opacity)
+				boss_ghost_rect.visible = (reference_frame_opacity > 0.001)
+			else:
+				boss_ghost_rect.visible = false
+			if lbl_ghost_readout != null:
+				lbl_ghost_readout.text = "CURRENT = Release F01 | REFERENCE = Charge F06"
+		else:
+			var prev_idx: int = current_release_frame - 1
+			if prev_idx >= 0 and prev_idx < stochas_ultimate_release_wip_frames.size():
+				boss_ghost_rect.texture = stochas_ultimate_release_wip_frames[prev_idx]
+				boss_ghost_rect.scale = Vector2.ONE
+				boss_ghost_rect.position = BOSS_BASE_POS
+				boss_ghost_rect.modulate = Color(0.7, 0.85, 1.0, reference_frame_opacity)
+				boss_ghost_rect.visible = (reference_frame_opacity > 0.001)
+				if lbl_ghost_readout != null:
+					lbl_ghost_readout.text = "CURRENT = Release F0%d | REFERENCE = Release F0%d" % [current_release_frame + 1, prev_idx + 1]
+			else:
+				boss_ghost_rect.visible = false
 		return
 
 	if current_state != AnimationState.ULTIMATE_CHARGE or not show_prev_ghost or current_charge_frame < 0:
@@ -1495,6 +1605,44 @@ func _build_tuner_ui_section(vbox: VBoxContainer) -> void:
 	lbl_tuner_status.modulate = Color(0.6, 0.8, 1.0, 0.8)
 	vbox.add_child(lbl_tuner_status)
 
+func _build_release_wip_ui_section(vbox: VBoxContainer) -> void:
+	var sec_title = Label.new()
+	sec_title.text = "ULTIMATE_RELEASE WIP REVIEW"
+	sec_title.add_theme_font_size_override("font_size", 12)
+	sec_title.modulate = Color(1.0, 0.6, 0.3, 0.9)
+	vbox.add_child(sec_title)
+
+	lbl_release_wip_status = Label.new()
+	lbl_release_wip_status.text = "ULTIMATE_RELEASE WIP | AVAILABLE: %d/8" % stochas_ultimate_release_wip_frames.size()
+	lbl_release_wip_status.add_theme_font_size_override("font_size", 12)
+	lbl_release_wip_status.modulate = Color(1.0, 0.8, 0.4, 1.0)
+	vbox.add_child(lbl_release_wip_status)
+
+	var f_grid = GridContainer.new()
+	f_grid.columns = 4
+	f_grid.add_theme_constant_override("h_separation", 6)
+	f_grid.add_theme_constant_override("v_separation", 6)
+	vbox.add_child(f_grid)
+
+	release_frame_buttons.clear()
+	for i in range(8):
+		var btn = Button.new()
+		btn.text = "F0%d" % (i + 1)
+		btn.custom_minimum_size = Vector2(108, 26)
+		btn.add_theme_font_size_override("font_size", 11)
+		var f_idx = i
+		btn.pressed.connect(func(): select_release_wip_frame(f_idx))
+		f_grid.add_child(btn)
+		release_frame_buttons.append(btn)
+
+	btn_reload_release_wip = Button.new()
+	btn_reload_release_wip.text = "RELOAD RELEASE WIP [J]"
+	btn_reload_release_wip.custom_minimum_size = Vector2(430, 28)
+	btn_reload_release_wip.add_theme_font_size_override("font_size", 11)
+	btn_reload_release_wip.modulate = Color(0.3, 1.2, 0.8)
+	btn_reload_release_wip.pressed.connect(func(): reload_release_wip())
+	vbox.add_child(btn_reload_release_wip)
+
 func _build_diagnostic_ui() -> void:
 	bottom_panel = PanelContainer.new()
 	bottom_panel.name = "DiagnosticPanel"
@@ -1579,6 +1727,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				toggle_motion_path()
 			KEY_F:
 				toggle_entry_flash()
+			KEY_J:
+				reload_release_wip()
 			KEY_LEFT:
 				step_frame(-1)
 			KEY_RIGHT:
@@ -1891,38 +2041,19 @@ func _play_ultimate_charge(prev_state: AnimationState = AnimationState.ULTIMATE_
 	active_tween.tween_callback(Callable(self, "_on_animation_finished"))
 
 func _play_ultimate_release() -> void:
-	state_duration = STATE_DURATIONS[AnimationState.ULTIMATE_RELEASE]
+	restore_canonical_baseline()
+	state_duration = 0.80 # 8 WIP frames * 0.10s
+	current_release_frame = 0
+	_set_release_wip_frame(0)
 
 	active_tween = create_tween()
-	# Frame 4: Anticipation hold (0.12s)
-	active_tween.tween_callback(func(): _set_atlas_frame(4))
-	active_tween.tween_property(boss_rect, "scale", Vector2(1.08, 1.08), 0.12)
+	var frame_dur: float = 0.10
+	for i in range(1, 8):
+		var f_idx = i
+		active_tween.tween_interval(frame_dur)
+		active_tween.tween_callback(func(): _set_release_wip_frame(f_idx))
 
-	# Frame 5: Discharge flash (0.15s)
-	active_tween.tween_callback(func(): _set_atlas_frame(5))
-	active_tween.tween_property(boss_rect, "modulate", Color(2.5, 2.5, 3.0), 0.15)
-
-	# Frame 6: Peak impact (0.25s)
-	active_tween.tween_callback(func():
-		_set_atlas_frame(6)
-		_spawn_sweep_vfx()
-	)
-	active_tween.tween_property(boss_rect, "modulate", Color(1.8, 1.4, 2.2), 0.25)
-
-	# Frame 7: Follow-through (0.20s)
-	active_tween.tween_callback(func(): _set_atlas_frame(7))
-	active_tween.tween_interval(0.20)
-
-	# Recovery Phase (0.30s) -> Restores canonical boss texture & baseline
-	active_tween.tween_callback(func():
-		_set_canonical_boss()
-	)
-	active_tween.tween_property(boss_rect, "position", BOSS_BASE_POS, 0.30).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	active_tween.parallel().tween_property(boss_rect, "rotation_degrees", 0.0, 0.30)
-	active_tween.parallel().tween_property(boss_rect, "scale", Vector2.ONE, 0.30)
-	active_tween.parallel().tween_property(boss_rect, "modulate", Color.WHITE, 0.30)
-	active_tween.parallel().tween_property(dim_overlay, "modulate:a", 0.0, 0.30)
-
+	active_tween.tween_interval(frame_dur)
 	active_tween.tween_callback(Callable(self, "_on_animation_finished"))
 
 func _play_ultimate_full() -> void:
@@ -1996,6 +2127,11 @@ func _on_animation_finished() -> void:
 			current_charge_frame = 5
 			_set_charge_frame(5)
 			elapsed_time = state_duration
+		elif current_state == AnimationState.ULTIMATE_RELEASE:
+			# Hold on F08 / remain in ULTIMATE_RELEASE without auto-transitioning
+			current_release_frame = 7
+			_set_release_wip_frame(7)
+			elapsed_time = state_duration
 		else:
 			restore_canonical_baseline()
 			play_animation(AnimationState.IDLE)
@@ -2062,6 +2198,18 @@ func step_frame(direction: int) -> void:
 			else:
 				current_charge_frame = next_f
 		_set_charge_frame(current_charge_frame)
+	elif current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+		if current_release_frame < 0:
+			current_release_frame = 0 if direction >= 0 else 7
+		else:
+			var next_f: int = current_release_frame + direction
+			if next_f > 7:
+				current_release_frame = 0 if is_loop_enabled else 7
+			elif next_f < 0:
+				current_release_frame = 7 if is_loop_enabled else 0
+			else:
+				current_release_frame = next_f
+		_set_release_wip_frame(current_release_frame)
 	else:
 		if current_atlas_frame < 0:
 			current_atlas_frame = 0 if direction >= 0 else 7
@@ -2082,6 +2230,8 @@ func get_current_charge_frame() -> int:
 	return current_charge_frame
 
 func get_frame_display_text() -> String:
+	if current_release_frame >= 0 and current_release_frame < stochas_ultimate_release_wip_frames.size():
+		return "Release WIP Frame %d / 8 (F0%d)" % [current_release_frame + 1, current_release_frame + 1]
 	if current_charge_frame >= 0 and current_charge_frame < stochas_ultimate_charge_frames.size():
 		return "Charge Frame %d / 6 (F0%d)" % [current_charge_frame + 1, current_charge_frame + 1]
 	if current_atlas_frame >= 0 and current_atlas_frame < stochas_ultimate_frames.size():
@@ -2137,6 +2287,10 @@ func restore_canonical_baseline() -> void:
 	if active_tween != null and active_tween.is_valid():
 		active_tween.kill()
 
+	current_release_frame = -1
+	current_charge_frame = -1
+	current_atlas_frame = -1
+
 	if boss_rect != null:
 		boss_rect.position = BOSS_BASE_POS
 		boss_rect.rotation = 0.0
@@ -2158,6 +2312,7 @@ func restore_canonical_baseline() -> void:
 func _set_canonical_boss() -> void:
 	current_atlas_frame = -1
 	current_charge_frame = -1
+	current_release_frame = -1
 	if boss_rect != null and canonical_boss_tex != null:
 		boss_rect.texture = canonical_boss_tex
 
