@@ -339,13 +339,15 @@ func _set_release_wip_frame(idx: int) -> void:
 	current_charge_frame = -1
 	current_atlas_frame = -1
 	if boss_rect != null:
-		boss_rect.position = BOSS_BASE_POS
 		boss_rect.rotation = 0.0
-		boss_rect.scale = Vector2.ONE
 		if idx >= 0 and idx < stochas_ultimate_release_wip_frames.size():
 			boss_rect.texture = stochas_ultimate_release_wip_frames[idx]
+			var tf: Dictionary = get_frame_transform(idx)
+			boss_rect.scale = Vector2(tf["scale"], tf["scale"])
+			boss_rect.position = Vector2(tf["x"], tf["y"])
 		_apply_current_frame_opacity()
 	_update_ghost_overlay()
+	_update_tuner_ui_readout()
 	_update_release_wip_ui_readout()
 	queue_gizmo_redraw()
 
@@ -694,6 +696,29 @@ func _build_controls_ui() -> void:
 # ULTIMATE_CHARGE PER-FRAME TRANSFORM TUNER (Task 239O)
 # ==============================================================================
 const CONFIG_PATH: String = "user://stochas_ultimate_charge_tuning.json"
+const RELEASE_CONFIG_PATH: String = "user://stochas_ultimate_release_tuning.json"
+
+const DEFAULT_RELEASE_TRANSFORMS: Dictionary = {
+	0: {"scale": 1.0000, "x": 180.0, "y": 50.0},
+	1: {"scale": 1.0000, "x": 180.0, "y": 50.0},
+	2: {"scale": 1.0000, "x": 180.0, "y": 50.0},
+	3: {"scale": 1.0000, "x": 180.0, "y": 50.0},
+	4: {"scale": 1.0000, "x": 180.0, "y": 50.0},
+	5: {"scale": 1.0000, "x": 180.0, "y": 50.0},
+	6: {"scale": 1.0000, "x": 180.0, "y": 50.0},
+	7: {"scale": 1.0000, "x": 180.0, "y": 50.0}
+}
+
+var release_frame_transforms: Array[Dictionary] = [
+	{"scale": 1.0000, "x": 180.0, "y": 50.0},
+	{"scale": 1.0000, "x": 180.0, "y": 50.0},
+	{"scale": 1.0000, "x": 180.0, "y": 50.0},
+	{"scale": 1.0000, "x": 180.0, "y": 50.0},
+	{"scale": 1.0000, "x": 180.0, "y": 50.0},
+	{"scale": 1.0000, "x": 180.0, "y": 50.0},
+	{"scale": 1.0000, "x": 180.0, "y": 50.0},
+	{"scale": 1.0000, "x": 180.0, "y": 50.0}
+]
 
 # Authoritative Human-Approved Final Ultimate Charge Transforms (Task 239S)
 const FINAL_CHARGE_TRANSFORMS: Dictionary = {
@@ -721,34 +746,60 @@ var spin_tuner_x: SpinBox = null
 var spin_tuner_y: SpinBox = null
 var lbl_tuner_readout: Label = null
 var lbl_tuner_status: Label = null
+var lbl_tuner_sec_title: Label = null
+var tuner_buttons_container: Container = null
 var lbl_release_wip_status: Label = null
 var btn_reload_release_wip: Button = null
 var release_frame_buttons: Array[Button] = []
 var is_updating_tuner_ui: bool = false
 
+func get_active_tuner_frame_idx() -> int:
+	if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+		if current_release_frame >= 0 and current_release_frame < 8:
+			return current_release_frame
+		return selected_tuner_frame_idx if (selected_tuner_frame_idx >= 0 and selected_tuner_frame_idx < 8) else 0
+	else:
+		if current_charge_frame >= 2 and current_charge_frame < 6:
+			return current_charge_frame
+		return selected_tuner_frame_idx if (selected_tuner_frame_idx >= 0 and selected_tuner_frame_idx < 6) else 2
+
 func get_frame_transform(idx: int) -> Dictionary:
-	if idx >= 0 and idx < charge_frame_transforms.size():
-		return charge_frame_transforms[idx]
-	return FINAL_CHARGE_TRANSFORMS.get(idx, {"scale": 1.1378, "x": 180.0, "y": 41.91})
+	if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+		if idx >= 0 and idx < release_frame_transforms.size():
+			return release_frame_transforms[idx]
+		return DEFAULT_RELEASE_TRANSFORMS.get(idx, {"scale": 1.0000, "x": 180.0, "y": 50.0})
+	else:
+		if idx >= 0 and idx < charge_frame_transforms.size():
+			return charge_frame_transforms[idx]
+		return FINAL_CHARGE_TRANSFORMS.get(idx, {"scale": 1.1378, "x": 180.0, "y": 41.91})
 
 func set_frame_transform(idx: int, scale_val: float, pos_x: float, pos_y: float) -> void:
-	if idx >= 0 and idx < charge_frame_transforms.size():
-		charge_frame_transforms[idx] = {
-			"scale": clampf(scale_val, 0.50, 1.80),
-			"x": pos_x,
-			"y": pos_y
-		}
-		if current_charge_frame == idx:
-			_set_charge_frame(idx)
-		else:
-			_update_ghost_overlay()
-		_update_tuner_ui_readout()
+	if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+		if idx >= 0 and idx < release_frame_transforms.size():
+			release_frame_transforms[idx] = {
+				"scale": clampf(scale_val, 0.50, 1.80),
+				"x": pos_x,
+				"y": pos_y
+			}
+			if current_release_frame == idx:
+				_set_release_wip_frame(idx)
+			else:
+				_update_ghost_overlay()
+			_update_tuner_ui_readout()
+	else:
+		if idx >= 0 and idx < charge_frame_transforms.size():
+			charge_frame_transforms[idx] = {
+				"scale": clampf(scale_val, 0.50, 1.80),
+				"x": pos_x,
+				"y": pos_y
+			}
+			if current_charge_frame == idx:
+				_set_charge_frame(idx)
+			else:
+				_update_ghost_overlay()
+			_update_tuner_ui_readout()
 
 func select_tuner_frame(idx: int) -> void:
-	if idx < 0 or idx >= 6:
-		return
-	selected_tuner_frame_idx = idx
-	# Stop active tween & auto pause for live tuning inspection
 	if active_tween != null and active_tween.is_valid():
 		active_tween.kill()
 	is_paused = true
@@ -756,54 +807,105 @@ func select_tuner_frame(idx: int) -> void:
 		btn_pause.text = "RESUME [Space]"
 		btn_pause.modulate = Color(1.3, 0.8, 0.3)
 
-	current_state = AnimationState.ULTIMATE_CHARGE
-	_set_charge_frame(idx)
+	if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+		if idx < 0 or idx >= 8:
+			return
+		selected_tuner_frame_idx = idx
+		current_state = AnimationState.ULTIMATE_RELEASE
+		_set_release_wip_frame(idx)
+	else:
+		if idx < 0 or idx >= 6:
+			return
+		selected_tuner_frame_idx = idx
+		current_state = AnimationState.ULTIMATE_CHARGE
+		_set_charge_frame(idx)
 	_update_tuner_ui_readout()
 
 func nudge_tuner_scale(delta_scale: float) -> void:
-	var tf = get_frame_transform(selected_tuner_frame_idx)
+	var active_idx = get_active_tuner_frame_idx()
+	var tf = get_frame_transform(active_idx)
 	var new_sc = clampf(tf["scale"] + delta_scale, 0.50, 1.80)
-	set_frame_transform(selected_tuner_frame_idx, new_sc, tf["x"], tf["y"])
+	set_frame_transform(active_idx, new_sc, tf["x"], tf["y"])
 
 func nudge_tuner_pos(delta_x: float, delta_y: float) -> void:
-	var tf = get_frame_transform(selected_tuner_frame_idx)
-	set_frame_transform(selected_tuner_frame_idx, tf["scale"], tf["x"] + delta_x, tf["y"] + delta_y)
+	var active_idx = get_active_tuner_frame_idx()
+	var tf = get_frame_transform(active_idx)
+	set_frame_transform(active_idx, tf["scale"], tf["x"] + delta_x, tf["y"] + delta_y)
 
 func reset_current_frame_tuner() -> void:
-	if selected_tuner_frame_idx >= 0 and selected_tuner_frame_idx < 6:
-		var tf: Dictionary = FINAL_CHARGE_TRANSFORMS[selected_tuner_frame_idx]
-		set_frame_transform(selected_tuner_frame_idx, tf["scale"], tf["x"], tf["y"])
+	var active_idx = get_active_tuner_frame_idx()
+	if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+		var def_tf: Dictionary = DEFAULT_RELEASE_TRANSFORMS.get(active_idx, {"scale": 1.0, "x": 180.0, "y": 50.0})
+		set_frame_transform(active_idx, def_tf["scale"], def_tf["x"], def_tf["y"])
 		if lbl_tuner_status != null:
-			lbl_tuner_status.text = "Reset F0%d to HUMAN FINAL transform." % (selected_tuner_frame_idx + 1)
+			lbl_tuner_status.text = "Reset Release F0%d to default transform." % (active_idx + 1)
+	else:
+		if active_idx >= 0 and active_idx < 6:
+			var tf: Dictionary = FINAL_CHARGE_TRANSFORMS[active_idx]
+			set_frame_transform(active_idx, tf["scale"], tf["x"], tf["y"])
+			if lbl_tuner_status != null:
+				lbl_tuner_status.text = "Reset Charge F0%d to HUMAN FINAL transform." % (active_idx + 1)
 
 func reset_all_tuner_frames() -> void:
-	_reset_all_transforms_to_default()
-	if lbl_tuner_status != null:
-		lbl_tuner_status.text = "Reset all F01..F06 to HUMAN FINAL transforms."
+	if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+		_reset_all_release_transforms_to_default()
+		if lbl_tuner_status != null:
+			lbl_tuner_status.text = "Reset all Release F01..F08 to default transforms."
+	else:
+		_reset_all_transforms_to_default()
+		if lbl_tuner_status != null:
+			lbl_tuner_status.text = "Reset all Charge F01..F06 to HUMAN FINAL transforms."
 
 func copy_current_tuner_to_all() -> void:
-	var cur_tf = get_frame_transform(selected_tuner_frame_idx)
-	for i in range(6):
-		charge_frame_transforms[i] = {"scale": cur_tf["scale"], "x": cur_tf["x"], "y": cur_tf["y"]}
-	if current_charge_frame >= 0:
-		_set_charge_frame(current_charge_frame)
-	_update_tuner_ui_readout()
-	if lbl_tuner_status != null:
-		lbl_tuner_status.text = "Copied F0%d transform to all frames!" % (selected_tuner_frame_idx + 1)
-
-func copy_previous_tuner_frame() -> void:
-	if selected_tuner_frame_idx > 0:
-		var prev_tf = get_frame_transform(selected_tuner_frame_idx - 1)
-		charge_frame_transforms[selected_tuner_frame_idx] = {"scale": prev_tf["scale"], "x": prev_tf["x"], "y": prev_tf["y"]}
-		_set_charge_frame(selected_tuner_frame_idx)
+	var active_idx = get_active_tuner_frame_idx()
+	var cur_tf = get_frame_transform(active_idx)
+	if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+		for i in range(8):
+			release_frame_transforms[i] = {"scale": cur_tf["scale"], "x": cur_tf["x"], "y": cur_tf["y"]}
+		if current_release_frame >= 0:
+			_set_release_wip_frame(current_release_frame)
 		_update_tuner_ui_readout()
 		if lbl_tuner_status != null:
-			lbl_tuner_status.text = "Copied F0%d transform to F0%d!" % [selected_tuner_frame_idx, selected_tuner_frame_idx + 1]
+			lbl_tuner_status.text = "Copied Release F0%d transform to all 8 Release frames!" % (active_idx + 1)
+	else:
+		for i in range(6):
+			charge_frame_transforms[i] = {"scale": cur_tf["scale"], "x": cur_tf["x"], "y": cur_tf["y"]}
+		if current_charge_frame >= 0:
+			_set_charge_frame(current_charge_frame)
+		_update_tuner_ui_readout()
+		if lbl_tuner_status != null:
+			lbl_tuner_status.text = "Copied Charge F0%d transform to all frames!" % (active_idx + 1)
+
+func copy_previous_tuner_frame() -> void:
+	var active_idx = get_active_tuner_frame_idx()
+	if active_idx > 0:
+		var prev_tf = get_frame_transform(active_idx - 1)
+		set_frame_transform(active_idx, prev_tf["scale"], prev_tf["x"], prev_tf["y"])
+		if lbl_tuner_status != null:
+			lbl_tuner_status.text = "Copied F0%d transform to F0%d!" % [active_idx, active_idx + 1]
 	else:
 		if lbl_tuner_status != null:
 			lbl_tuner_status.text = "F01 has no previous frame to copy from."
 
 func load_tuning_config() -> void:
+	if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+		_load_release_tuning_config()
+	else:
+		_load_charge_tuning_config()
+
+func save_tuning_config() -> void:
+	if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+		_save_release_tuning_config()
+	else:
+		_save_charge_tuning_config()
+
+func reset_saved_tuning_config() -> void:
+	if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+		_reset_saved_release_tuning_config()
+	else:
+		_reset_saved_charge_tuning_config()
+
+func _load_charge_tuning_config() -> void:
 	if FileAccess.file_exists(CONFIG_PATH):
 		var file = FileAccess.open(CONFIG_PATH, FileAccess.READ)
 		if file != null:
@@ -825,17 +927,17 @@ func load_tuning_config() -> void:
 				current_frame_opacity = float(data.get("current_frame_opacity", 1.00))
 				reference_frame_opacity = float(data.get("reference_frame_opacity", data.get("ghost_opacity", 0.25)))
 				_update_ghost_ui_controls()
-				print("[TUNER] Loaded tuning config from %s" % CONFIG_PATH)
+				print("[TUNER] Loaded Charge tuning config from %s" % CONFIG_PATH)
 				if current_charge_frame >= 0:
 					_set_charge_frame(current_charge_frame)
 				_update_tuner_ui_readout()
 				_update_ghost_overlay()
 				if lbl_tuner_status != null:
-					lbl_tuner_status.text = "Loaded tuning from saved config file!"
+					lbl_tuner_status.text = "Loaded Charge tuning from saved config file!"
 				return
 	_reset_all_transforms_to_default()
 
-func save_tuning_config() -> void:
+func _save_charge_tuning_config() -> void:
 	var data: Dictionary = {}
 	for i in range(6):
 		var key = "F0%d" % (i + 1)
@@ -847,11 +949,11 @@ func save_tuning_config() -> void:
 	if file != null:
 		file.store_string(JSON.stringify(data, "\t"))
 		file.close()
-		print("[TUNER] Saved tuning config to %s" % CONFIG_PATH)
+		print("[TUNER] Saved Charge tuning config to %s" % CONFIG_PATH)
 		if lbl_tuner_status != null:
-			lbl_tuner_status.text = "Saved tuning to user:// config file!"
+			lbl_tuner_status.text = "Saved Charge tuning to user:// config file!"
 
-func reset_saved_tuning_config() -> void:
+func _reset_saved_charge_tuning_config() -> void:
 	if FileAccess.file_exists(CONFIG_PATH):
 		DirAccess.remove_absolute(CONFIG_PATH)
 	show_prev_ghost = true
@@ -860,21 +962,97 @@ func reset_saved_tuning_config() -> void:
 	_update_ghost_ui_controls()
 	_reset_all_transforms_to_default()
 	if lbl_tuner_status != null:
-		lbl_tuner_status.text = "Reset saved config & restored defaults!"
+		lbl_tuner_status.text = "Reset saved Charge config & restored defaults!"
+
+func _load_release_tuning_config() -> void:
+	if FileAccess.file_exists(RELEASE_CONFIG_PATH):
+		var file = FileAccess.open(RELEASE_CONFIG_PATH, FileAccess.READ)
+		if file != null:
+			var json_str = file.get_as_text()
+			file.close()
+			var json = JSON.new()
+			var parse_result = json.parse(json_str)
+			if parse_result == OK and json.data is Dictionary:
+				var data: Dictionary = json.data
+				for i in range(8):
+					var key = "F0%d" % (i + 1)
+					if data.has(key) and data[key] is Dictionary:
+						var entry: Dictionary = data[key]
+						var sc = float(entry.get("scale", 1.0000))
+						var px = float(entry.get("x", 180.0))
+						var py = float(entry.get("y", 50.0))
+						release_frame_transforms[i] = {"scale": sc, "x": px, "y": py}
+				show_prev_ghost = bool(data.get("show_prev_ghost", data.get("show_reference_ghost", true)))
+				current_frame_opacity = float(data.get("current_frame_opacity", 1.00))
+				reference_frame_opacity = float(data.get("reference_frame_opacity", data.get("ghost_opacity", 0.25)))
+				_update_ghost_ui_controls()
+				print("[TUNER] Loaded Release tuning config from %s" % RELEASE_CONFIG_PATH)
+				if current_release_frame >= 0:
+					_set_release_wip_frame(current_release_frame)
+				_update_tuner_ui_readout()
+				_update_ghost_overlay()
+				if lbl_tuner_status != null:
+					lbl_tuner_status.text = "Loaded Release tuning from saved config file!"
+				return
+	_reset_all_release_transforms_to_default()
+
+func _save_release_tuning_config() -> void:
+	var data: Dictionary = {}
+	for i in range(8):
+		var key = "F0%d" % (i + 1)
+		data[key] = release_frame_transforms[i]
+	data["show_prev_ghost"] = show_prev_ghost
+	data["current_frame_opacity"] = current_frame_opacity
+	data["reference_frame_opacity"] = reference_frame_opacity
+	var file = FileAccess.open(RELEASE_CONFIG_PATH, FileAccess.WRITE)
+	if file != null:
+		file.store_string(JSON.stringify(data, "\t"))
+		file.close()
+		print("[TUNER] Saved Release tuning config to %s" % RELEASE_CONFIG_PATH)
+		if lbl_tuner_status != null:
+			lbl_tuner_status.text = "Saved Release tuning to user:// config file!"
+
+func _reset_saved_release_tuning_config() -> void:
+	if FileAccess.file_exists(RELEASE_CONFIG_PATH):
+		DirAccess.remove_absolute(RELEASE_CONFIG_PATH)
+	_reset_all_release_transforms_to_default()
+	if lbl_tuner_status != null:
+		lbl_tuner_status.text = "Reset saved Release config & restored defaults!"
+
+func _reset_all_release_transforms_to_default() -> void:
+	for i in range(8):
+		var tf: Dictionary = DEFAULT_RELEASE_TRANSFORMS[i]
+		release_frame_transforms[i] = {"scale": tf["scale"], "x": tf["x"], "y": tf["y"]}
+	if current_release_frame >= 0 and current_release_frame < 8:
+		_set_release_wip_frame(current_release_frame)
+	_update_tuner_ui_readout()
 
 func copy_tuning_values() -> String:
 	var lines: Array[String] = []
-	for i in range(6):
-		var tf = charge_frame_transforms[i]
-		lines.append("F0%d scale=%.4f x=%.2f y=%.2f" % [i + 1, tf["scale"], tf["x"], tf["y"]])
-	var output = "\n".join(lines)
-	print("=== ULTIMATE_CHARGE TUNING VALUES ===")
-	print(output)
-	print("=====================================")
-	DisplayServer.clipboard_set(output)
-	if lbl_tuner_status != null:
-		lbl_tuner_status.text = "Copied tuning values to clipboard & console!"
-	return output
+	if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+		for i in range(8):
+			var tf = release_frame_transforms[i]
+			lines.append("F0%d scale=%.4f x=%.2f y=%.2f" % [i + 1, tf["scale"], tf["x"], tf["y"]])
+		var output = "\n".join(lines)
+		print("=== ULTIMATE_RELEASE TUNING VALUES ===")
+		print(output)
+		print("=====================================")
+		DisplayServer.clipboard_set(output)
+		if lbl_tuner_status != null:
+			lbl_tuner_status.text = "Copied Release tuning values to clipboard & console!"
+		return output
+	else:
+		for i in range(6):
+			var tf = charge_frame_transforms[i]
+			lines.append("F0%d scale=%.4f x=%.2f y=%.2f" % [i + 1, tf["scale"], tf["x"], tf["y"]])
+		var output = "\n".join(lines)
+		print("=== ULTIMATE_CHARGE TUNING VALUES ===")
+		print(output)
+		print("=====================================")
+		DisplayServer.clipboard_set(output)
+		if lbl_tuner_status != null:
+			lbl_tuner_status.text = "Copied Charge tuning values to clipboard & console!"
+		return output
 
 func _reset_all_transforms_to_default() -> void:
 	for i in range(6):
@@ -884,15 +1062,84 @@ func _reset_all_transforms_to_default() -> void:
 		_set_charge_frame(current_charge_frame)
 	_update_tuner_ui_readout()
 
+func _rebuild_tuner_frame_buttons() -> void:
+	if lbl_tuner_sec_title != null:
+		if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+			lbl_tuner_sec_title.text = "ULTIMATE_RELEASE FRAME TUNER"
+		else:
+			lbl_tuner_sec_title.text = "ULTIMATE_CHARGE FRAME TUNER"
+
+	if tuner_buttons_container == null:
+		return
+
+	for child in tuner_buttons_container.get_children():
+		child.queue_free()
+	tuner_frame_buttons.clear()
+
+	if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+		for i in range(8):
+			var btn = Button.new()
+			btn.text = "F0%d" % (i + 1)
+			btn.custom_minimum_size = Vector2(46, 26)
+			btn.add_theme_font_size_override("font_size", 11)
+			var f_idx = i
+			btn.pressed.connect(func(): select_tuner_frame(f_idx))
+			tuner_buttons_container.add_child(btn)
+			tuner_frame_buttons.append(btn)
+	else:
+		for i in [2, 3, 4, 5]:
+			var btn = Button.new()
+			btn.text = "F0%d" % (i + 1)
+			btn.custom_minimum_size = Vector2(98, 26)
+			btn.add_theme_font_size_override("font_size", 11)
+			var f_idx = i
+			btn.pressed.connect(func(): select_tuner_frame(f_idx))
+			tuner_buttons_container.add_child(btn)
+			tuner_frame_buttons.append(btn)
+
+	_update_tuner_ui_readout()
+
 func _update_tuner_ui_readout() -> void:
-	var tf = get_frame_transform(selected_tuner_frame_idx)
 	is_updating_tuner_ui = true
+	var active_idx = get_active_tuner_frame_idx()
+	var tf = get_frame_transform(active_idx)
+
+	if lbl_tuner_sec_title != null:
+		if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+			lbl_tuner_sec_title.text = "ULTIMATE_RELEASE FRAME TUNER"
+		else:
+			lbl_tuner_sec_title.text = "ULTIMATE_CHARGE FRAME TUNER"
+
+	if lbl_tuner_readout != null:
+		if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+			lbl_tuner_readout.text = "Release WIP F0%d | Scale: %.4f | X: %.2f | Y: %.2f" % [active_idx + 1, tf["scale"], tf["x"], tf["y"]]
+		else:
+			lbl_tuner_readout.text = "Charge F0%d | Scale: %.4f | X: %.2f | Y: %.2f" % [active_idx + 1, tf["scale"], tf["x"], tf["y"]]
+
 	if spin_tuner_scale != null:
 		spin_tuner_scale.value = tf["scale"]
 	if spin_tuner_x != null:
 		spin_tuner_x.value = tf["x"]
 	if spin_tuner_y != null:
 		spin_tuner_y.value = tf["y"]
+
+	# Highlight current frame button
+	if current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0:
+		for i in range(tuner_frame_buttons.size()):
+			if tuner_frame_buttons[i] != null:
+				if i == active_idx:
+					tuner_frame_buttons[i].modulate = Color(0.4, 0.9, 1.0)
+				else:
+					tuner_frame_buttons[i].modulate = Color.WHITE
+	else:
+		for i in range(tuner_frame_buttons.size()):
+			if tuner_frame_buttons[i] != null:
+				var f_idx = i + 2 # Buttons correspond to indices 2, 3, 4, 5
+				if f_idx == active_idx:
+					tuner_frame_buttons[i].modulate = Color(0.4, 0.9, 1.0)
+				else:
+					tuner_frame_buttons[i].modulate = Color.WHITE
+
 	is_updating_tuner_ui = false
 
 	if lbl_tuner_readout != null:
@@ -1140,14 +1387,15 @@ func _on_draw_gizmo_overlay() -> void:
 	if gizmo_overlay == null or boss_rect == null:
 		return
 
-	# Show gizmo ONLY during ULTIMATE_CHARGE and when paused / manual frame inspection mode
-	if current_state != AnimationState.ULTIMATE_CHARGE or current_charge_frame < 0:
+	var is_charge_active: bool = (current_state == AnimationState.ULTIMATE_CHARGE and current_charge_frame >= 0)
+	var is_release_active: bool = (current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0)
+	if not (is_charge_active or is_release_active):
 		return
 	if not is_paused and active_tween != null and active_tween.is_valid():
 		return
 
-	# Task 239R1: Calculate tight artwork bounding box in local gizmo_overlay coordinates
-	var art_rect: Rect2 = get_frame_art_gizmo_rect(selected_tuner_frame_idx)
+	var active_idx = get_active_tuner_frame_idx()
+	var art_rect: Rect2 = get_frame_art_gizmo_rect(active_idx)
 	if art_rect.size.x <= 0.0 or art_rect.size.y <= 0.0:
 		return
 
@@ -1175,25 +1423,28 @@ func _on_draw_gizmo_overlay() -> void:
 	gizmo_overlay.draw_line(center_local - Vector2(0, 10), center_local + Vector2(0, 10), Color(0.2, 0.9, 1.0, 0.95), 1.5)
 
 	# 4. Draw Live Drag Info Readout
-	var tf = get_frame_transform(selected_tuner_frame_idx)
+	var tf = get_frame_transform(active_idx)
 	var mode_str = "IDLE"
 	if is_gizmo_dragging_move:
 		mode_str = "DRAG MOVE"
 	elif is_gizmo_dragging_resize:
 		mode_str = "CORNER RESIZE"
 
-	var info_text = "[%s] F0%d | Scale: %.4f | Pos: (%.1f, %.1f)" % [mode_str, selected_tuner_frame_idx + 1, tf["scale"], tf["x"], tf["y"]]
+	var info_text = "[%s] F0%d | Scale: %.4f | Pos: (%.1f, %.1f)" % [mode_str, active_idx + 1, tf["scale"], tf["x"], tf["y"]]
 	var font = get_theme_default_font()
 	if font != null:
 		gizmo_overlay.draw_string(font, rect_tl + Vector2(0, -8), info_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.4, 1.0, 0.6, 0.95))
 
 func _on_gui_input_gizmo_overlay(event: InputEvent) -> void:
-	if current_state != AnimationState.ULTIMATE_CHARGE or current_charge_frame < 0 or boss_rect == null:
+	var is_charge_active: bool = (current_state == AnimationState.ULTIMATE_CHARGE and current_charge_frame >= 0)
+	var is_release_active: bool = (current_state == AnimationState.ULTIMATE_RELEASE or current_release_frame >= 0)
+	if not (is_charge_active or is_release_active) or boss_rect == null:
 		return
 	if not is_paused and active_tween != null and active_tween.is_valid():
 		return
 
-	var art_rect: Rect2 = get_frame_art_gizmo_rect(selected_tuner_frame_idx)
+	var active_idx = get_active_tuner_frame_idx()
+	var art_rect: Rect2 = get_frame_art_gizmo_rect(active_idx)
 	var rect_tl = art_rect.position
 	var rect_br = art_rect.position + art_rect.size
 	var center_local = art_rect.position + art_rect.size * 0.5
@@ -1218,12 +1469,12 @@ func _on_gui_input_gizmo_overlay(event: InputEvent) -> void:
 				if gizmo_drag_handle_idx >= 0:
 					is_gizmo_dragging_resize = true
 					gizmo_drag_start_mouse = event.position
-					gizmo_drag_start_scale = get_frame_transform(selected_tuner_frame_idx)["scale"]
+					gizmo_drag_start_scale = get_frame_transform(get_active_tuner_frame_idx())["scale"]
 					gizmo_overlay.accept_event()
 				elif art_rect.has_point(event.position):
 					is_gizmo_dragging_move = true
 					gizmo_drag_start_mouse = event.position
-					var tf = get_frame_transform(selected_tuner_frame_idx)
+					var tf = get_frame_transform(get_active_tuner_frame_idx())
 					gizmo_drag_start_pos = Vector2(tf["x"], tf["y"])
 					gizmo_overlay.accept_event()
 			else:
@@ -1258,8 +1509,8 @@ func _on_gui_input_gizmo_overlay(event: InputEvent) -> void:
 			var mouse_delta = (event.position - gizmo_drag_start_mouse) * speed_mult
 			var new_x = gizmo_drag_start_pos.x + mouse_delta.x
 			var new_y = gizmo_drag_start_pos.y + mouse_delta.y
-			var cur_sc = get_frame_transform(selected_tuner_frame_idx)["scale"]
-			set_frame_transform(selected_tuner_frame_idx, cur_sc, new_x, new_y)
+			var cur_sc = get_frame_transform(active_idx)["scale"]
+			set_frame_transform(active_idx, cur_sc, new_x, new_y)
 			gizmo_overlay.accept_event()
 			queue_gizmo_redraw()
 
@@ -1269,18 +1520,18 @@ func _on_gui_input_gizmo_overlay(event: InputEvent) -> void:
 			var ratio = (dist_curr / dist_start) if dist_start > 0.001 else 1.0
 			var delta_ratio = (ratio - 1.0) * speed_mult
 			var new_scale = clampf(gizmo_drag_start_scale * (1.0 + delta_ratio), 0.50, 1.80)
-			var cur_tf = get_frame_transform(selected_tuner_frame_idx)
-			set_frame_transform(selected_tuner_frame_idx, new_scale, cur_tf["x"], cur_tf["y"])
+			var cur_tf = get_frame_transform(active_idx)
+			set_frame_transform(active_idx, new_scale, cur_tf["x"], cur_tf["y"])
 			gizmo_overlay.accept_event()
 			queue_gizmo_redraw()
 
 
 func _build_tuner_ui_section(vbox: VBoxContainer) -> void:
-	var sec_title = Label.new()
-	sec_title.text = "ULTIMATE_CHARGE FRAME TUNER"
-	sec_title.add_theme_font_size_override("font_size", 12)
-	sec_title.modulate = Color(0.4, 0.9, 1.0, 0.9)
-	vbox.add_child(sec_title)
+	lbl_tuner_sec_title = Label.new()
+	lbl_tuner_sec_title.text = "ULTIMATE_CHARGE FRAME TUNER"
+	lbl_tuner_sec_title.add_theme_font_size_override("font_size", 12)
+	lbl_tuner_sec_title.modulate = Color(0.4, 0.9, 1.0, 0.9)
+	vbox.add_child(lbl_tuner_sec_title)
 
 	# Section: ONION SKIN REFERENCE GHOST & DUAL OPACITY (Task 239Q)
 	var ghost_toggle_row = HBoxContainer.new()
@@ -1350,21 +1601,11 @@ func _build_tuner_ui_section(vbox: VBoxContainer) -> void:
 	lbl_opacity_readout.modulate = Color(1.0, 0.9, 0.5, 0.9)
 	vbox.add_child(lbl_opacity_readout)
 
-	# Frame Selector Buttons (F01 .. F06)
-	var f_box = HBoxContainer.new()
-	f_box.add_theme_constant_override("separation", 6)
-	vbox.add_child(f_box)
-
-	tuner_frame_buttons.clear()
-	for i in [2, 3, 4, 5]:
-		var btn = Button.new()
-		btn.text = "F0%d" % (i + 1)
-		btn.custom_minimum_size = Vector2(98, 26)
-		btn.add_theme_font_size_override("font_size", 11)
-		var f_idx = i
-		btn.pressed.connect(func(): select_tuner_frame(f_idx))
-		f_box.add_child(btn)
-		tuner_frame_buttons.append(btn)
+	# Frame Selector Buttons (Dynamic Charge vs Release)
+	tuner_buttons_container = HBoxContainer.new()
+	tuner_buttons_container.add_theme_constant_override("separation", 6)
+	vbox.add_child(tuner_buttons_container)
+	_rebuild_tuner_frame_buttons()
 
 	# Readout Label
 	lbl_tuner_readout = Label.new()
@@ -1392,8 +1633,9 @@ func _build_tuner_ui_section(vbox: VBoxContainer) -> void:
 	spin_tuner_scale.custom_minimum_size = Vector2(90, 26)
 	spin_tuner_scale.value_changed.connect(func(val):
 		if not is_updating_tuner_ui:
-			var tf = get_frame_transform(selected_tuner_frame_idx)
-			set_frame_transform(selected_tuner_frame_idx, val, tf["x"], tf["y"])
+			var active_idx = get_active_tuner_frame_idx()
+			var tf = get_frame_transform(active_idx)
+			set_frame_transform(active_idx, val, tf["x"], tf["y"])
 	)
 	spin_row.add_child(spin_tuner_scale)
 
@@ -1411,8 +1653,9 @@ func _build_tuner_ui_section(vbox: VBoxContainer) -> void:
 	spin_tuner_x.custom_minimum_size = Vector2(90, 26)
 	spin_tuner_x.value_changed.connect(func(val):
 		if not is_updating_tuner_ui:
-			var tf = get_frame_transform(selected_tuner_frame_idx)
-			set_frame_transform(selected_tuner_frame_idx, tf["scale"], val, tf["y"])
+			var active_idx = get_active_tuner_frame_idx()
+			var tf = get_frame_transform(active_idx)
+			set_frame_transform(active_idx, tf["scale"], val, tf["y"])
 	)
 	spin_row.add_child(spin_tuner_x)
 
@@ -1430,8 +1673,9 @@ func _build_tuner_ui_section(vbox: VBoxContainer) -> void:
 	spin_tuner_y.custom_minimum_size = Vector2(90, 26)
 	spin_tuner_y.value_changed.connect(func(val):
 		if not is_updating_tuner_ui:
-			var tf = get_frame_transform(selected_tuner_frame_idx)
-			set_frame_transform(selected_tuner_frame_idx, tf["scale"], tf["x"], val)
+			var active_idx = get_active_tuner_frame_idx()
+			var tf = get_frame_transform(active_idx)
+			set_frame_transform(active_idx, tf["scale"], tf["x"], val)
 	)
 	spin_row.add_child(spin_tuner_y)
 
@@ -1804,6 +2048,13 @@ func _update_diagnostic_labels() -> void:
 func play_animation(state: AnimationState) -> void:
 	var prev_state = current_state
 	current_state = state
+	if state == AnimationState.ULTIMATE_RELEASE:
+		if current_release_frame < 0:
+			current_release_frame = 0
+		current_charge_frame = -1
+	else:
+		current_release_frame = -1
+	_rebuild_tuner_frame_buttons()
 	elapsed_time = 0.0
 	state_duration = STATE_DURATIONS.get(state, 1.0)
 	_clear_transient_vfx()

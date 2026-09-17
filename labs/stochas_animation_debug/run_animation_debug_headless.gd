@@ -643,6 +643,67 @@ func _initialize() -> void:
 
 	print("[TASK 240K RELOAD] PASS: RELOAD RELEASE WIP (Shortcut J) rescans and reloads PNGs cleanly.")
 
+	# ----------------------------------------------------
+	# TASK 240K1: ULTIMATE_RELEASE TUNER UI & DATA PERSISTENCE BINDING TEST SUITE
+	# ----------------------------------------------------
+	# 1. Switch to ULTIMATE_RELEASE state & verify tuner header and buttons
+	lab.play_animation(lab.AnimationState.ULTIMATE_RELEASE)
+	if lab.lbl_tuner_sec_title == null or lab.lbl_tuner_sec_title.text != "ULTIMATE_RELEASE FRAME TUNER":
+		_fail("TASK 240K1 FAIL: Tuner header title expected 'ULTIMATE_RELEASE FRAME TUNER', got %s" % (lab.lbl_tuner_sec_title.text if lab.lbl_tuner_sec_title != null else "null"))
+		return
+	if lab.tuner_frame_buttons.size() != 8:
+		_fail("TASK 240K1 FAIL: Release tuner expected 8 frame buttons (F01..F08), got %d" % lab.tuner_frame_buttons.size())
+		return
+
+	# 2. Select Release frame 0 (F01) and set custom transform
+	lab.select_tuner_frame(0) # F01
+	lab.set_frame_transform(0, 1.2500, 190.0, 45.0)
+	var rel_tf0 = lab.get_frame_transform(0)
+	if rel_tf0["scale"] != 1.25 or rel_tf0["x"] != 190.0 or rel_tf0["y"] != 45.0:
+		_fail("TASK 240K1 FAIL: Set frame transform for Release F01 failed!")
+		return
+
+	# 3. Verify Charge transforms were NOT affected by Release changes
+	var chg_tf2 = lab.charge_frame_transforms[2]
+	var exp_chg2 = lab.FINAL_CHARGE_TRANSFORMS[2]
+	if not is_equal_approx(chg_tf2["scale"], exp_chg2["scale"]) or not is_equal_approx(chg_tf2["x"], exp_chg2["x"]):
+		_fail("TASK 240K1 FAIL: Release frame transform modification leaked into Charge transforms!")
+		return
+
+	# 4. Save Release tuning config to user://stochas_ultimate_release_tuning.json
+	lab.save_tuning_config()
+	if not FileAccess.file_exists(lab.RELEASE_CONFIG_PATH):
+		_fail("TASK 240K1 FAIL: Release config file missing at %s!" % lab.RELEASE_CONFIG_PATH)
+		return
+
+	# Reset Release defaults and load from JSON persistence
+	lab._reset_all_release_transforms_to_default()
+	lab.load_tuning_config()
+	if lab.get_frame_transform(0)["scale"] != 1.25 or lab.get_frame_transform(0)["x"] != 190.0:
+		_fail("TASK 240K1 FAIL: Reloading saved Release config failed to restore per-frame transforms!")
+		return
+
+	# 5. Copy Release tuning values text check
+	var rel_copy_txt = lab.copy_tuning_values()
+	if not ("F01 scale=1.2500" in rel_copy_txt) or not ("F08 scale=1.0000" in rel_copy_txt):
+		_fail("TASK 240K1 FAIL: Copy Release tuning values output mismatch!")
+		return
+
+	# 6. Switch back to ULTIMATE_CHARGE and verify Charge tuner UI & values restored cleanly
+	lab.play_animation(lab.AnimationState.ULTIMATE_CHARGE)
+	if lab.lbl_tuner_sec_title == null or lab.lbl_tuner_sec_title.text != "ULTIMATE_CHARGE FRAME TUNER":
+		_fail("TASK 240K1 FAIL: Switch back to Charge failed to update tuner header title!")
+		return
+	if lab.tuner_frame_buttons.size() != 4:
+		_fail("TASK 240K1 FAIL: Charge tuner expected 4 frame buttons (F03..F06), got %d" % lab.tuner_frame_buttons.size())
+		return
+
+	# Cleanup Release test save
+	lab.select_tuner_frame(0)
+	lab.reset_saved_tuning_config()
+
+	print("[TASK 240K1 BINDING] PASS: Dynamic header/button switching, Release JSON storage, copy & clean Charge restoration verified 100%.")
+
 
 
 
