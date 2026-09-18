@@ -698,26 +698,28 @@ func _build_controls_ui() -> void:
 const CONFIG_PATH: String = "user://stochas_ultimate_charge_tuning.json"
 const RELEASE_CONFIG_PATH: String = "user://stochas_ultimate_release_tuning.json"
 
-const DEFAULT_RELEASE_TRANSFORMS: Dictionary = {
-	0: {"scale": 1.0000, "x": 180.0, "y": 50.0},
-	1: {"scale": 1.0000, "x": 180.0, "y": 50.0},
-	2: {"scale": 1.0000, "x": 180.0, "y": 50.0},
-	3: {"scale": 1.0000, "x": 180.0, "y": 50.0},
-	4: {"scale": 1.0000, "x": 180.0, "y": 50.0},
-	5: {"scale": 1.0000, "x": 180.0, "y": 50.0},
-	6: {"scale": 1.0000, "x": 180.0, "y": 50.0},
-	7: {"scale": 1.0000, "x": 180.0, "y": 50.0}
+# Authoritative Human-Approved Final Ultimate Release Transforms (Task 240K2)
+const FINAL_RELEASE_TRANSFORMS: Dictionary = {
+	0: {"scale": 0.9807, "x": 179.00, "y": 49.00},
+	1: {"scale": 1.0000, "x": 182.00, "y": 50.00},
+	2: {"scale": 1.1089, "x": 180.00, "y": 50.00},
+	3: {"scale": 0.9423, "x": 180.00, "y": 62.00},
+	4: {"scale": 1.0037, "x": 180.00, "y": 50.00},
+	5: {"scale": 1.0000, "x": 180.00, "y": 50.00},
+	6: {"scale": 1.0000, "x": 180.00, "y": 50.00},
+	7: {"scale": 1.0000, "x": 180.00, "y": 50.00}
 }
+const DEFAULT_RELEASE_TRANSFORMS: Dictionary = FINAL_RELEASE_TRANSFORMS
 
 var release_frame_transforms: Array[Dictionary] = [
-	{"scale": 1.0000, "x": 180.0, "y": 50.0},
-	{"scale": 1.0000, "x": 180.0, "y": 50.0},
-	{"scale": 1.0000, "x": 180.0, "y": 50.0},
-	{"scale": 1.0000, "x": 180.0, "y": 50.0},
-	{"scale": 1.0000, "x": 180.0, "y": 50.0},
-	{"scale": 1.0000, "x": 180.0, "y": 50.0},
-	{"scale": 1.0000, "x": 180.0, "y": 50.0},
-	{"scale": 1.0000, "x": 180.0, "y": 50.0}
+	{"scale": 0.9807, "x": 179.00, "y": 49.00},
+	{"scale": 1.0000, "x": 182.00, "y": 50.00},
+	{"scale": 1.1089, "x": 180.00, "y": 50.00},
+	{"scale": 0.9423, "x": 180.00, "y": 62.00},
+	{"scale": 1.0037, "x": 180.00, "y": 50.00},
+	{"scale": 1.0000, "x": 180.00, "y": 50.00},
+	{"scale": 1.0000, "x": 180.00, "y": 50.00},
+	{"scale": 1.0000, "x": 180.00, "y": 50.00}
 ]
 
 # Authoritative Human-Approved Final Ultimate Charge Transforms (Task 239S)
@@ -1021,7 +1023,7 @@ func _reset_saved_release_tuning_config() -> void:
 
 func _reset_all_release_transforms_to_default() -> void:
 	for i in range(8):
-		var tf: Dictionary = DEFAULT_RELEASE_TRANSFORMS[i]
+		var tf: Dictionary = FINAL_RELEASE_TRANSFORMS[i]
 		release_frame_transforms[i] = {"scale": tf["scale"], "x": tf["x"], "y": tf["y"]}
 	if current_release_frame >= 0 and current_release_frame < 8:
 		_set_release_wip_frame(current_release_frame)
@@ -1245,9 +1247,10 @@ func _update_ghost_overlay() -> void:
 		else:
 			var prev_idx: int = current_release_frame - 1
 			if prev_idx >= 0 and prev_idx < stochas_ultimate_release_wip_frames.size():
+				var prev_tf: Dictionary = get_frame_transform(prev_idx)
 				boss_ghost_rect.texture = stochas_ultimate_release_wip_frames[prev_idx]
-				boss_ghost_rect.scale = Vector2.ONE
-				boss_ghost_rect.position = BOSS_BASE_POS
+				boss_ghost_rect.scale = Vector2(prev_tf["scale"], prev_tf["scale"])
+				boss_ghost_rect.position = Vector2(prev_tf["x"], prev_tf["y"])
 				boss_ghost_rect.modulate = Color(0.7, 0.85, 1.0, reference_frame_opacity)
 				boss_ghost_rect.visible = (reference_frame_opacity > 0.001)
 				if lbl_ghost_readout != null:

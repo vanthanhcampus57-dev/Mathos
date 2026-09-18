@@ -704,6 +704,63 @@ func _initialize() -> void:
 
 	print("[TASK 240K1 BINDING] PASS: Dynamic header/button switching, Release JSON storage, copy & clean Charge restoration verified 100%.")
 
+	# ----------------------------------------------------
+	# TASK 240K2: AUTHORITATIVE HUMAN FINAL APPROVED RELEASE TRANSFORMS LOCK
+	# ----------------------------------------------------
+	# 1. Fresh launch / default values verification
+	lab.play_animation(lab.AnimationState.ULTIMATE_RELEASE)
+	lab.reset_saved_tuning_config() # ensure no user JSON override
+	lab._reset_all_release_transforms_to_default()
+
+	var expected_release_240k2: Dictionary = {
+		0: {"scale": 0.9807, "x": 179.00, "y": 49.00},
+		1: {"scale": 1.0000, "x": 182.00, "y": 50.00},
+		2: {"scale": 1.1089, "x": 180.00, "y": 50.00},
+		3: {"scale": 0.9423, "x": 180.00, "y": 62.00},
+		4: {"scale": 1.0037, "x": 180.00, "y": 50.00},
+		5: {"scale": 1.0000, "x": 180.00, "y": 50.00},
+		6: {"scale": 1.0000, "x": 180.00, "y": 50.00},
+		7: {"scale": 1.0000, "x": 180.00, "y": 50.00}
+	}
+
+	for i in range(8):
+		var tf = lab.get_frame_transform(i)
+		var exp_tf = expected_release_240k2[i]
+		if not is_equal_approx(tf["scale"], exp_tf["scale"]) or not is_equal_approx(tf["x"], exp_tf["x"]) or not is_equal_approx(tf["y"], exp_tf["y"]):
+			_fail("TASK 240K2 FAIL: Fresh Release frame F0%d transform mismatch! Expected %s, got %s" % [(i + 1), str(exp_tf), str(tf)])
+			return
+
+	print("[TASK 240K2 DEFAULTS] PASS: Fresh launch defaults to exact HUMAN-approved final transforms F01..F08.")
+
+	# 2. Reset Frame & Reset All verification
+	lab.select_tuner_frame(0) # F01
+	lab.set_frame_transform(0, 1.5000, 200.0, 100.0)
+	lab.reset_current_frame_tuner()
+	var reset_tf0 = lab.get_frame_transform(0)
+	if not is_equal_approx(reset_tf0["scale"], 0.9807) or not is_equal_approx(reset_tf0["x"], 179.00) or not is_equal_approx(reset_tf0["y"], 49.00):
+		_fail("TASK 240K2 FAIL: RESET FRAME for Release F01 did not restore HUMAN FINAL transform!")
+		return
+
+	for i in range(8):
+		lab.set_frame_transform(i, 1.2000, 190.0, 60.0)
+	lab.reset_all_tuner_frames()
+	for i in range(8):
+		var tf = lab.get_frame_transform(i)
+		var exp_tf = expected_release_240k2[i]
+		if not is_equal_approx(tf["scale"], exp_tf["scale"]) or not is_equal_approx(tf["x"], exp_tf["x"]) or not is_equal_approx(tf["y"], exp_tf["y"]):
+			_fail("TASK 240K2 FAIL: RESET ALL for Release did not restore HUMAN FINAL transform for F0%d!" % (i + 1))
+			return
+
+	print("[TASK 240K2 RESETS] PASS: RESET FRAME and RESET ALL restore exact HUMAN-approved final transforms F01..F08.")
+
+	# 3. Copy Tuning Values format check
+	var copy_txt_240k2 = lab.copy_tuning_values()
+	if not ("F01 scale=0.9807 x=179.00 y=49.00" in copy_txt_240k2) or not ("F03 scale=1.1089 x=180.00 y=50.00" in copy_txt_240k2) or not ("F04 scale=0.9423 x=180.00 y=62.00" in copy_txt_240k2) or not ("F05 scale=1.0037 x=180.00 y=50.00" in copy_txt_240k2):
+		_fail("TASK 240K2 FAIL: COPY TUNING VALUES output mismatch for locked Release transforms!")
+		return
+
+	print("[TASK 240K2 COPY] PASS: COPY TUNING VALUES outputs exact approved F01..F08 transforms.")
+
 
 
 
