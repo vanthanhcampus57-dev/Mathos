@@ -698,28 +698,28 @@ func _build_controls_ui() -> void:
 const CONFIG_PATH: String = "user://stochas_ultimate_charge_tuning.json"
 const RELEASE_CONFIG_PATH: String = "user://stochas_ultimate_release_tuning.json"
 
-# Authoritative Human-Approved Final Ultimate Release Transforms (Task 240K2)
+# Authoritative Human-Approved Final Ultimate Release Transforms (Task 240K3 Relock)
 const FINAL_RELEASE_TRANSFORMS: Dictionary = {
-	0: {"scale": 0.9807, "x": 179.00, "y": 49.00},
-	1: {"scale": 1.0000, "x": 182.00, "y": 50.00},
-	2: {"scale": 1.1089, "x": 180.00, "y": 50.00},
-	3: {"scale": 0.9423, "x": 180.00, "y": 62.00},
-	4: {"scale": 1.0037, "x": 180.00, "y": 50.00},
-	5: {"scale": 1.0000, "x": 180.00, "y": 50.00},
-	6: {"scale": 1.0000, "x": 180.00, "y": 50.00},
-	7: {"scale": 1.0000, "x": 180.00, "y": 50.00}
+	0: {"scale": 1.1512, "x": 190.63, "y": 11.22},
+	1: {"scale": 1.2852, "x": 192.18, "y": 38.38},
+	2: {"scale": 1.3829, "x": 193.08, "y": 36.92},
+	3: {"scale": 1.1775, "x": 193.08, "y": 53.28},
+	4: {"scale": 1.3067, "x": 194.54, "y": 45.64},
+	5: {"scale": 1.2652, "x": 194.54, "y": 41.28},
+	6: {"scale": 1.2673, "x": 197.44, "y": 37.65},
+	7: {"scale": 1.2531, "x": 195.99, "y": 39.83}
 }
 const DEFAULT_RELEASE_TRANSFORMS: Dictionary = FINAL_RELEASE_TRANSFORMS
 
 var release_frame_transforms: Array[Dictionary] = [
-	{"scale": 0.9807, "x": 179.00, "y": 49.00},
-	{"scale": 1.0000, "x": 182.00, "y": 50.00},
-	{"scale": 1.1089, "x": 180.00, "y": 50.00},
-	{"scale": 0.9423, "x": 180.00, "y": 62.00},
-	{"scale": 1.0037, "x": 180.00, "y": 50.00},
-	{"scale": 1.0000, "x": 180.00, "y": 50.00},
-	{"scale": 1.0000, "x": 180.00, "y": 50.00},
-	{"scale": 1.0000, "x": 180.00, "y": 50.00}
+	{"scale": 1.1512, "x": 190.63, "y": 11.22},
+	{"scale": 1.2852, "x": 192.18, "y": 38.38},
+	{"scale": 1.3829, "x": 193.08, "y": 36.92},
+	{"scale": 1.1775, "x": 193.08, "y": 53.28},
+	{"scale": 1.3067, "x": 194.54, "y": 45.64},
+	{"scale": 1.2652, "x": 194.54, "y": 41.28},
+	{"scale": 1.2673, "x": 197.44, "y": 37.65},
+	{"scale": 1.2531, "x": 195.99, "y": 39.83}
 ]
 
 # Authoritative Human-Approved Final Ultimate Charge Transforms (Task 239S)
