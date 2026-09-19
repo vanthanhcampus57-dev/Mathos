@@ -60,9 +60,9 @@ func _apply_combat_styling(is_combat: bool) -> void:
 	_ensure_ui_built()
 	if is_combat:
 		size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		custom_minimum_size = Vector2(740, 290)
+		custom_minimum_size = Vector2(740, 310)
 		var glass_box: StyleBoxFlat = StyleBoxFlat.new()
-		glass_box.bg_color = Color(0.06, 0.08, 0.14, 0.88)
+		glass_box.bg_color = Color(0.06, 0.08, 0.14, 0.90)
 		glass_box.border_width_left = 1
 		glass_box.border_width_top = 1
 		glass_box.border_width_right = 1
@@ -74,10 +74,10 @@ func _apply_combat_styling(is_combat: bool) -> void:
 		glass_box.corner_radius_bottom_left = 16
 		glass_box.shadow_color = Color(0.20, 0.75, 0.90, 0.25)
 		glass_box.shadow_size = 10
-		glass_box.content_margin_left = 24
-		glass_box.content_margin_top = 16
-		glass_box.content_margin_right = 24
-		glass_box.content_margin_bottom = 16
+		glass_box.content_margin_left = 20
+		glass_box.content_margin_top = 10
+		glass_box.content_margin_right = 20
+		glass_box.content_margin_bottom = 8
 		add_theme_stylebox_override("panel", glass_box)
 
 		if _objective_label != null:
@@ -85,18 +85,28 @@ func _apply_combat_styling(is_combat: bool) -> void:
 			_objective_label.visible = true
 			_objective_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 			_objective_label.add_theme_color_override("font_color", Color(0.20, 0.85, 0.95, 0.95))
-			_objective_label.add_theme_font_size_override("font_size", 13)
+			_objective_label.add_theme_font_size_override("font_size", 12)
 
 		if _prompt_label != null:
-			_prompt_label.custom_minimum_size = Vector2(680, 40)
+			_prompt_label.custom_minimum_size = Vector2(680, 38)
 			_prompt_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 		if _feedback_label != null:
-			_feedback_label.custom_minimum_size = Vector2(680, 24)
+			_feedback_label.custom_minimum_size = Vector2(680, 20)
 			_feedback_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
+		if _interaction_container != null:
+			_interaction_container.custom_minimum_size = Vector2(0, 96)
+		var scroll_target: Control = get_interaction_scroll_container()
+		if scroll_target != null:
+			scroll_target.custom_minimum_size = Vector2(0, 92)
+
+		if _action_hbox != null:
+			_action_hbox.add_theme_constant_override("separation", 12)
+
 		if _hint_button != null:
-			_hint_button.custom_minimum_size = Vector2(160, 48)
+			_hint_button.custom_minimum_size = Vector2(100, 38)
+			_hint_button.add_theme_font_size_override("font_size", 11)
 
 		if _submit_button != null:
 			var btn_style: StyleBoxFlat = StyleBoxFlat.new()
@@ -106,16 +116,21 @@ func _apply_combat_styling(is_combat: bool) -> void:
 			btn_style.border_width_right = 1
 			btn_style.border_width_bottom = 1
 			btn_style.border_color = Color(0.35, 0.85, 1.0, 0.95)
-			btn_style.corner_radius_top_left = 8
-			btn_style.corner_radius_top_right = 8
-			btn_style.corner_radius_bottom_right = 8
-			btn_style.corner_radius_bottom_left = 8
+			btn_style.corner_radius_top_left = 6
+			btn_style.corner_radius_top_right = 6
+			btn_style.corner_radius_bottom_right = 6
+			btn_style.corner_radius_bottom_left = 6
 			btn_style.shadow_color = Color(0.20, 0.85, 1.0, 0.45)
-			btn_style.shadow_size = 8
+			btn_style.shadow_size = 6
 			_submit_button.add_theme_stylebox_override("normal", btn_style)
 			_submit_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
-			_submit_button.custom_minimum_size = Vector2(220, 50)
-			_submit_button.add_theme_font_size_override("font_size", 14)
+			_submit_button.custom_minimum_size = Vector2(260, 40)
+			_submit_button.add_theme_font_size_override("font_size", 13)
+
+			# In combat mode, place SubmitButton side-by-side with HintButton in ActionHBox to conserve height
+			if _action_hbox != null and _submit_button.get_parent() != _action_hbox:
+				_submit_button.owner = null
+				_submit_button.reparent(_action_hbox)
 
 		_ensure_combat_rule_footer(true)
 		if _active_interaction_view != null and _active_interaction_view.has_method("set_combat_grid_mode"):
@@ -127,13 +142,24 @@ func _apply_combat_styling(is_combat: bool) -> void:
 		if _objective_label != null:
 			_objective_label.remove_theme_color_override("font_color")
 			_objective_label.remove_theme_font_size_override("font_size")
+		if _interaction_container != null:
+			_interaction_container.custom_minimum_size = Vector2.ZERO
+		var scroll_target: Control = get_interaction_scroll_container()
+		if scroll_target != null:
+			scroll_target.custom_minimum_size = Vector2.ZERO
 		if _hint_button != null:
 			_hint_button.custom_minimum_size = Vector2(140, 44)
+			_hint_button.remove_theme_font_size_override("font_size")
 		if _submit_button != null:
 			_submit_button.remove_theme_stylebox_override("normal")
 			_submit_button.remove_theme_color_override("font_color")
 			_submit_button.remove_theme_font_size_override("font_size")
 			_submit_button.custom_minimum_size = Vector2(160, 44)
+			var footer_vbox: Control = _main_vbox.get_node_or_null("FooterVBox") as Control
+			if footer_vbox != null and _submit_button.get_parent() != footer_vbox:
+				if _submit_button.get_parent() != null:
+					_submit_button.get_parent().remove_child(_submit_button)
+				footer_vbox.add_child(_submit_button)
 		_ensure_combat_rule_footer(false)
 		if _active_interaction_view != null and _active_interaction_view.has_method("set_combat_grid_mode"):
 			_active_interaction_view.call("set_combat_grid_mode", false)
@@ -144,7 +170,7 @@ func _ensure_combat_rule_footer(show: bool) -> void:
 			_combat_rule_footer = PanelContainer.new()
 			_combat_rule_footer.name = "CombatRuleFooter"
 			var r_style: StyleBoxFlat = StyleBoxFlat.new()
-			r_style.bg_color = Color(0.08, 0.09, 0.14, 0.70)
+			r_style.bg_color = Color(0.06, 0.08, 0.12, 0.70)
 			r_style.border_width_left = 3
 			r_style.border_width_top = 0
 			r_style.border_width_right = 0
@@ -153,19 +179,19 @@ func _ensure_combat_rule_footer(show: bool) -> void:
 			r_style.corner_radius_top_right = 4
 			r_style.corner_radius_bottom_right = 4
 			r_style.content_margin_left = 8
-			r_style.content_margin_top = 4
+			r_style.content_margin_top = 2
 			r_style.content_margin_right = 8
-			r_style.content_margin_bottom = 4
-			_combat_rule_footer.custom_minimum_size = Vector2(680, 28)
+			r_style.content_margin_bottom = 2
+			_combat_rule_footer.custom_minimum_size = Vector2(680, 22)
 			_combat_rule_footer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			_combat_rule_footer.add_theme_stylebox_override("panel", r_style)
 
 			_combat_rule_label = Label.new()
 			_combat_rule_label.text = "Quy tắc khế ước: Trả lời đúng để thi triển thẻ bài đã chọn. Trả lời sai: STOCHAS phản kích gây 10 DMG."
-			_combat_rule_label.custom_minimum_size = Vector2(660, 24)
+			_combat_rule_label.custom_minimum_size = Vector2(660, 18)
 			_combat_rule_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			_combat_rule_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			_combat_rule_label.add_theme_font_size_override("font_size", 10)
+			_combat_rule_label.add_theme_font_size_override("font_size", 9)
 			_combat_rule_label.add_theme_color_override("font_color", Color(0.90, 0.85, 0.70, 0.85))
 			_combat_rule_footer.add_child(_combat_rule_label)
 

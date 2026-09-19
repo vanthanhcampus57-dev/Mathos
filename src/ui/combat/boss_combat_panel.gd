@@ -73,13 +73,26 @@ const FINAL_RELEASE_TRANSFORMS: Dictionary = {
 	7: {"scale": 1.2531, "x": 195.99, "y": 39.83}  # F08
 }
 
+# Karl Battlefield Entity (Refined Proportions: 300 x 300 px, Left: 50, Bottom: 70)
+const KARL_ENTITY_LEFT: float = 50.0
+const KARL_ENTITY_BOTTOM: float = 70.0
+const KARL_ENTITY_WIDTH: float = 300.0
+const KARL_ENTITY_HEIGHT: float = 300.0
+
+const ASSET_KARL_IDLE: String = "res://assets/characters/player/karl/combat_pixel/karl_idle.png"
+const ASSET_KARL_CAST: String = "res://assets/characters/player/karl/combat_pixel/karl_cast.png"
+const ASSET_KARL_HIT: String = "res://assets/characters/player/karl/combat_pixel/karl_hit.png"
+const ASSET_KARL_HEAL: String = "res://assets/characters/player/karl/combat_pixel/karl_heal.png"
+const ASSET_KARL_SHIELD: String = "res://assets/characters/player/karl/combat_pixel/karl_shield.png"
+const ASSET_KARL_DODGE_SEQUENCE: String = "res://assets/characters/player/karl/combat_pixel/karl_dodge_sequence.png"
+
 const CARD_STRIKE_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/STRIKE.png"
 const CARD_DEFEND_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/DEFEND.png"
 const CARD_HEAL_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/HEAL.png"
 const CARD_PROBABILITY_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/PROBABILITY.png"
-const CARD_WIDTH: float = 160.0
-const CARD_HEIGHT: float = 225.0
-const CARD_GAP: float = 16.0
+const CARD_WIDTH: float = 106.0
+const CARD_HEIGHT: float = 154.0
+const CARD_GAP: float = 14.0
 
 const _PRELOAD_STRIKE: Texture2D = preload("res://assets/ui/combat/cards_v1/STRIKE.png")
 const _PRELOAD_DEFEND: Texture2D = preload("res://assets/ui/combat/cards_v1/DEFEND.png")
@@ -165,6 +178,24 @@ var _combat_log_label: Label = null
 var _defeat_overlay: PanelContainer = null
 var _defeat_retry_button: Button = null
 var _victory_overlay: PanelContainer = null
+
+# Karl Battlefield Entity runtime
+enum KarlCombatState { IDLE, CAST, HIT, HEAL, SHIELD, DODGE }
+const KARL_BASELINE_OFFSETS: Dictionary = {
+	KarlCombatState.IDLE: 6.2,
+	KarlCombatState.CAST: 0.0,
+	KarlCombatState.HIT: 6.2,
+	KarlCombatState.HEAL: 0.0,
+	KarlCombatState.SHIELD: 3.8,
+	KarlCombatState.DODGE: 6.2,
+}
+var _current_karl_state: KarlCombatState = KarlCombatState.IDLE
+var _karl_textures: Dictionary = {}
+var _karl_dodge_frames: Array[AtlasTexture] = []
+var _karl_battlefield_entity: Control = null
+var _karl_sprite_rect: TextureRect = null
+var _karl_state_tween: Tween = null
+var _last_ultimate_success: bool = false
 
 var _float_time: float = 0.0
 
@@ -259,7 +290,8 @@ func _on_boss_ultimate_meter_changed(_current: int, _max_val: int) -> void:
 func _on_boss_ultimate_charge_started() -> void:
 	play_ultimate_charge()
 
-func _on_boss_ultimate_resolved(_success: bool, _damage: int) -> void:
+func _on_boss_ultimate_resolved(success: bool, _damage: int) -> void:
+	_last_ultimate_success = success
 	play_ultimate_release()
 
 func _ensure_ui() -> void:
@@ -349,6 +381,11 @@ func _ensure_ui() -> void:
 		grad_tex.height = 256
 		_entry_flash_rect.texture = grad_tex
 		_boss_stage_container.add_child(_entry_flash_rect)
+
+	# ---------------------------------------------------------
+	# 1B. KARL BATTLEFIELD ENTITY (Left ~50px, bottom ~70px, 300x300px)
+	# ---------------------------------------------------------
+	_build_karl_battlefield_entity()
 
 	# ---------------------------------------------------------
 	# 2. TOP DUAL HUD CONTAINER (padding left/right 32px, top 16px)
@@ -868,6 +905,14 @@ func _layout_elements() -> void:
 		_boss_hud_panel.position = Vector2(bh_x, 16.0)
 		_boss_hud_panel.size = Vector2(bh_w, 56.0)
 
+	# 1B. Karl Battlefield Entity: Left ~50px, bottom ~70px, 300x300px
+	if _karl_battlefield_entity != null:
+		var karl_y: float = maxf(0.0, h - KARL_ENTITY_HEIGHT - KARL_ENTITY_BOTTOM)
+		_karl_battlefield_entity.position = Vector2(KARL_ENTITY_LEFT, karl_y)
+		_karl_battlefield_entity.size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
+		if _karl_sprite_rect != null:
+			_karl_sprite_rect.size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
+
 	# 2. Boss Stage: right ~8px, top ~40px, bottom ~48px, width ~460px
 	if _boss_stage_container != null:
 		var stage_w: float = BOSS_STAGE_WIDTH # 460.0
@@ -881,14 +926,14 @@ func _layout_elements() -> void:
 			_boss_visual_rect.size = Vector2(stage_w, stage_h)
 
 	# 3. Bottom Cards Area: centered horizontally, bottom ~12px
-	var cards_w: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP # 4 * 160 + 3 * 16 = 688.0
-	var cards_h: float = CARD_HEIGHT # 225.0
+	var cards_w: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP # 4 * 106 + 3 * 14 = 466.0
+	var cards_h: float = CARD_HEIGHT # 154.0
 
 	if _bottom_center_container != null:
 		var min_bottom_w: float = _bottom_center_container.get_combined_minimum_size().x
 		var actual_bottom_w: float = maxf(cards_w, min_bottom_w)
 		var actual_bottom_x: float = (w - actual_bottom_w) * 0.5
-		var total_bottom_h: float = cards_h + 36.0 # cards + flow pill
+		var total_bottom_h: float = cards_h + 30.0 # cards + flow pill
 		var bottom_y: float = maxf(0.0, h - 12.0 - total_bottom_h)
 		_bottom_center_container.position = Vector2(actual_bottom_x, bottom_y)
 		_bottom_center_container.size = Vector2(actual_bottom_w, total_bottom_h)
@@ -914,11 +959,13 @@ func _layout_elements() -> void:
 	# 7. Ultimate Overlays
 	if _ultimate_dim_overlay != null:
 		_ultimate_dim_overlay.position = Vector2.ZERO
-		_ultimate_dim_overlay.size = Vector2(w, h)
+		if _ultimate_dim_overlay.anchor_right == 0.0:
+			_ultimate_dim_overlay.size = Vector2(w, h)
 
 	if _ultimate_telegraph_panel != null:
 		_ultimate_telegraph_panel.position = Vector2.ZERO
-		_ultimate_telegraph_panel.size = Vector2(w, h)
+		if _ultimate_telegraph_panel.anchor_right == 0.0:
+			_ultimate_telegraph_panel.size = Vector2(w, h)
 		var banner: Control = _ultimate_telegraph_panel.get_node_or_null("TelegraphVBox") as Control
 		if banner != null:
 			banner.position = Vector2((w - 480.0) * 0.5, (h - 100.0) * 0.35)
@@ -1037,18 +1084,18 @@ func _build_card_slots() -> void:
 		badge_label.text = String(def["default_badge"])
 		badge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		badge_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		badge_label.add_theme_font_size_override("font_size", 10)
+		badge_label.add_theme_font_size_override("font_size", 9)
 		badge_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		badge_panel.add_child(badge_label)
 
-		# Texture Rect (Artwork area enlarged to ~145–170px tall)
+		# Texture Rect (Artwork area sized for 106x154 card)
 		var art_margin: MarginContainer = MarginContainer.new()
 		art_margin.name = "ArtMargin"
 		art_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		art_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		art_margin.custom_minimum_size = Vector2(0, 156.0)
-		art_margin.add_theme_constant_override("margin_left", 4)
-		art_margin.add_theme_constant_override("margin_right", 4)
+		art_margin.custom_minimum_size = Vector2(0, 92.0)
+		art_margin.add_theme_constant_override("margin_left", 2)
+		art_margin.add_theme_constant_override("margin_right", 2)
 		card_vbox.add_child(art_margin)
 
 		var tex_rect: TextureRect = TextureRect.new()
@@ -1059,7 +1106,7 @@ func _build_card_slots() -> void:
 		tex_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		tex_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tex_rect.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		tex_rect.custom_minimum_size = Vector2(0, 150.0)
+		tex_rect.custom_minimum_size = Vector2(0, 88.0)
 		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		art_margin.add_child(tex_rect)
 
@@ -1420,12 +1467,20 @@ func _on_combat_log(message: String, type: String) -> void:
 		match type:
 			"player_success":
 				_combat_log_label.add_theme_color_override("font_color", Color(0.4, 1.0, 0.5, 1.0))
+				if _selected_card_id == "card_strike":
+					play_karl_cast()
+				elif _selected_card_id == "card_defend":
+					play_karl_shield()
+				elif _selected_card_id == "card_heal":
+					play_karl_heal()
 			"player_fail", "boss_attack":
 				_combat_log_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4, 1.0))
+				play_karl_hit()
 			"victory":
 				_combat_log_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1.0))
 			"defeat":
 				_combat_log_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3, 1.0))
+				play_karl_hit()
 			_:
 				_combat_log_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 0.9))
 
@@ -1671,9 +1726,9 @@ func get_flow_pill_rect() -> Rect2:
 	var h: float = size.y if size.y > 0.0 else 720.0
 	var cw: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP
 	var cx: float = (w - cw) * 0.5
-	var total_bottom_h: float = CARD_HEIGHT + 36.0
+	var total_bottom_h: float = CARD_HEIGHT + 30.0
 	var bottom_y: float = maxf(0.0, h - 12.0 - total_bottom_h)
-	return Rect2(cx, bottom_y, cw, 26)
+	return Rect2(cx, bottom_y, cw, 24)
 
 func get_card_row_rect() -> Rect2:
 	_ensure_ui()
@@ -1683,9 +1738,9 @@ func get_card_row_rect() -> Rect2:
 	var cw: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP
 	var ch: float = CARD_HEIGHT
 	var cx: float = (w - cw) * 0.5
-	var total_bottom_h: float = CARD_HEIGHT + 36.0
+	var total_bottom_h: float = CARD_HEIGHT + 30.0
 	var bottom_y: float = maxf(0.0, h - 12.0 - total_bottom_h)
-	return Rect2(cx, bottom_y + 32.0, cw, ch)
+	return Rect2(cx, bottom_y + 26.0, cw, ch)
 
 func get_card_rect(card_id: String) -> Rect2:
 	_ensure_ui()
@@ -1857,6 +1912,10 @@ func play_ultimate_release(on_peak_callback: Callable = Callable(), on_finish_ca
 				ultimate_peak_reached.emit()
 				if on_peak_callback.is_valid():
 					on_peak_callback.call()
+				if _last_ultimate_success:
+					play_karl_dodge()
+				else:
+					play_karl_hit()
 		)
 		_boss_action_tween.tween_interval(frame_dur)
 
@@ -1912,3 +1971,161 @@ func get_ultimate_dim_overlay() -> ColorRect:
 func get_ultimate_telegraph_panel() -> Control:
 	_ensure_ui()
 	return _ultimate_telegraph_panel
+
+# ---------------------------------------------------------
+# Karl Battlefield Entity Methods
+# ---------------------------------------------------------
+
+func _build_karl_battlefield_entity() -> void:
+	if _karl_battlefield_entity != null:
+		return
+
+	# Load Karl 5-state textures
+	if ResourceLoader.exists(ASSET_KARL_IDLE):
+		_karl_textures[KarlCombatState.IDLE] = load(ASSET_KARL_IDLE)
+	if ResourceLoader.exists(ASSET_KARL_CAST):
+		_karl_textures[KarlCombatState.CAST] = load(ASSET_KARL_CAST)
+	if ResourceLoader.exists(ASSET_KARL_HIT):
+		_karl_textures[KarlCombatState.HIT] = load(ASSET_KARL_HIT)
+	if ResourceLoader.exists(ASSET_KARL_HEAL):
+		_karl_textures[KarlCombatState.HEAL] = load(ASSET_KARL_HEAL)
+	if ResourceLoader.exists(ASSET_KARL_SHIELD):
+		_karl_textures[KarlCombatState.SHIELD] = load(ASSET_KARL_SHIELD)
+
+	# Load dodge frames from atlas
+	if ResourceLoader.exists(ASSET_KARL_DODGE_SEQUENCE):
+		var dodge_atlas: Texture2D = load(ASSET_KARL_DODGE_SEQUENCE)
+		_karl_dodge_frames.clear()
+		for i in range(6):
+			var at: AtlasTexture = AtlasTexture.new()
+			at.atlas = dodge_atlas
+			at.region = Rect2(i * 256, 0, 256, 256)
+			_karl_dodge_frames.append(at)
+
+	var h: float = size.y if size.y > 0.0 else 720.0
+	var karl_y: float = maxf(0.0, h - KARL_ENTITY_HEIGHT - KARL_ENTITY_BOTTOM)
+
+	_karl_battlefield_entity = Control.new()
+	_karl_battlefield_entity.name = "KarlBattlefieldEntity"
+	_karl_battlefield_entity.position = Vector2(KARL_ENTITY_LEFT, karl_y)
+	_karl_battlefield_entity.size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
+	_karl_battlefield_entity.custom_minimum_size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
+	_karl_battlefield_entity.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_karl_battlefield_entity)
+
+	_karl_sprite_rect = TextureRect.new()
+	_karl_sprite_rect.name = "KarlSprite"
+	_karl_sprite_rect.size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
+	_karl_sprite_rect.custom_minimum_size = Vector2(KARL_ENTITY_WIDTH, KARL_ENTITY_HEIGHT)
+	_karl_sprite_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_karl_sprite_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_karl_sprite_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_karl_battlefield_entity.add_child(_karl_sprite_rect)
+
+	set_karl_state(KarlCombatState.IDLE)
+
+func set_karl_state(state: KarlCombatState) -> void:
+	_current_karl_state = state
+	if _karl_sprite_rect == null:
+		return
+	if state == KarlCombatState.DODGE:
+		if _karl_dodge_frames.size() > 0:
+			_karl_sprite_rect.texture = _karl_dodge_frames[0]
+		elif _karl_textures.has(KarlCombatState.IDLE):
+			_karl_sprite_rect.texture = _karl_textures[KarlCombatState.IDLE]
+	elif _karl_textures.has(state):
+		_karl_sprite_rect.texture = _karl_textures[state]
+
+	var y_offset: float = KARL_BASELINE_OFFSETS.get(state, 0.0)
+	_karl_sprite_rect.position = Vector2(0.0, y_offset)
+	_karl_sprite_rect.modulate = Color(1.0, 1.0, 1.0, 1.0)
+
+func play_karl_dodge() -> void:
+	_ensure_ui()
+	set_karl_state(KarlCombatState.DODGE)
+	if _karl_state_tween != null and _karl_state_tween.is_valid():
+		_karl_state_tween.kill()
+
+	var h: float = size.y if size.y > 0.0 else 720.0
+	var base_entity_pos: Vector2 = Vector2(KARL_ENTITY_LEFT, maxf(0.0, h - KARL_ENTITY_HEIGHT - KARL_ENTITY_BOTTOM))
+
+	var pos_tw: Tween = create_tween()
+	if _karl_battlefield_entity != null:
+		pos_tw.tween_property(_karl_battlefield_entity, "position:x", base_entity_pos.x - 20.0, 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		pos_tw.tween_property(_karl_battlefield_entity, "position:x", base_entity_pos.x, 0.35).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+	_karl_state_tween = create_tween()
+	for i in range(6):
+		var frame_idx: int = i
+		_karl_state_tween.tween_callback(func():
+			if _karl_sprite_rect != null and frame_idx < _karl_dodge_frames.size():
+				_karl_sprite_rect.texture = _karl_dodge_frames[frame_idx]
+		)
+		_karl_state_tween.tween_interval(0.10)
+
+	_karl_state_tween.tween_callback(func():
+		set_karl_state(KarlCombatState.IDLE)
+		if _karl_battlefield_entity != null:
+			_karl_battlefield_entity.position = base_entity_pos
+			_karl_battlefield_entity.scale = Vector2.ONE
+	)
+
+func play_karl_cast() -> void:
+	_ensure_ui()
+	if _karl_state_tween != null and _karl_state_tween.is_valid():
+		_karl_state_tween.kill()
+	set_karl_state(KarlCombatState.CAST)
+	_karl_state_tween = create_tween()
+	_karl_state_tween.tween_interval(0.70)
+	_karl_state_tween.tween_callback(func():
+		set_karl_state(KarlCombatState.IDLE)
+	)
+
+func play_karl_shield() -> void:
+	_ensure_ui()
+	if _karl_state_tween != null and _karl_state_tween.is_valid():
+		_karl_state_tween.kill()
+	set_karl_state(KarlCombatState.SHIELD)
+	_karl_state_tween = create_tween()
+	_karl_state_tween.tween_interval(0.80)
+	_karl_state_tween.tween_callback(func():
+		set_karl_state(KarlCombatState.IDLE)
+	)
+
+func play_karl_heal() -> void:
+	_ensure_ui()
+	if _karl_state_tween != null and _karl_state_tween.is_valid():
+		_karl_state_tween.kill()
+	set_karl_state(KarlCombatState.HEAL)
+	_karl_state_tween = create_tween()
+	_karl_state_tween.tween_interval(0.80)
+	_karl_state_tween.tween_callback(func():
+		set_karl_state(KarlCombatState.IDLE)
+	)
+
+func play_karl_hit() -> void:
+	_ensure_ui()
+	if _karl_state_tween != null and _karl_state_tween.is_valid():
+		_karl_state_tween.kill()
+	set_karl_state(KarlCombatState.HIT)
+	if _karl_sprite_rect != null:
+		var flash_tw: Tween = create_tween()
+		flash_tw.tween_property(_karl_sprite_rect, "modulate", Color(2.0, 0.4, 0.4, 1.0), 0.08)
+		flash_tw.tween_property(_karl_sprite_rect, "modulate", Color.WHITE, 0.15)
+	_karl_state_tween = create_tween()
+	_karl_state_tween.tween_interval(0.60)
+	_karl_state_tween.tween_callback(func():
+		set_karl_state(KarlCombatState.IDLE)
+	)
+
+func get_karl_battlefield_entity() -> Control:
+	_ensure_ui()
+	return _karl_battlefield_entity
+
+func get_karl_sprite_rect() -> TextureRect:
+	_ensure_ui()
+	return _karl_sprite_rect
+
+func get_current_karl_state() -> KarlCombatState:
+	return _current_karl_state
+

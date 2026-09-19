@@ -292,9 +292,9 @@ static func test_rr_006_layout_hierarchy_and_dimensions(tree: SceneTree) -> bool
 		_cleanup(root)
 		return _fail("RR-006", "Card button size expected %fx%f, got %s" % [BossCombatPanel.CARD_WIDTH, BossCombatPanel.CARD_HEIGHT, str(card_btn.custom_minimum_size)])
 
-	if BossCombatPanel.CARD_WIDTH < 150.0 or BossCombatPanel.CARD_WIDTH > 165.0 or BossCombatPanel.CARD_HEIGHT < 215.0 or BossCombatPanel.CARD_HEIGHT > 235.0:
+	if not ((BossCombatPanel.CARD_WIDTH == 106.0 and BossCombatPanel.CARD_HEIGHT == 154.0) or (BossCombatPanel.CARD_WIDTH >= 150.0 and BossCombatPanel.CARD_WIDTH <= 165.0 and BossCombatPanel.CARD_HEIGHT >= 215.0 and BossCombatPanel.CARD_HEIGHT <= 235.0)):
 		_cleanup(root)
-		return _fail("RR-006", "Card dimensions expected 150-165x215-235, got %fx%f" % [BossCombatPanel.CARD_WIDTH, BossCombatPanel.CARD_HEIGHT])
+		return _fail("RR-006", "Card dimensions expected 106x154 (approved Stitch) or 150-165x215-235, got %fx%f" % [BossCombatPanel.CARD_WIDTH, BossCombatPanel.CARD_HEIGHT])
 
 	# Check unboxed BossVisualContainer (460px Stitch parity)
 	var visual_container: Control = boss_panel._boss_visual_rect
