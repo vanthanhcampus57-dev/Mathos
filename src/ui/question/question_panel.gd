@@ -60,7 +60,7 @@ func _apply_combat_styling(is_combat: bool) -> void:
 	_ensure_ui_built()
 	if is_combat:
 		size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		custom_minimum_size = Vector2(740, 310)
+		custom_minimum_size = Vector2(740, 360)
 		var glass_box: StyleBoxFlat = StyleBoxFlat.new()
 		glass_box.bg_color = Color(0.06, 0.08, 0.14, 0.90)
 		glass_box.border_width_left = 1
@@ -96,10 +96,10 @@ func _apply_combat_styling(is_combat: bool) -> void:
 			_feedback_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 		if _interaction_container != null:
-			_interaction_container.custom_minimum_size = Vector2(0, 96)
+			_interaction_container.custom_minimum_size = Vector2(0, 180)
 		var scroll_target: Control = get_interaction_scroll_container()
 		if scroll_target != null:
-			scroll_target.custom_minimum_size = Vector2(0, 92)
+			scroll_target.custom_minimum_size = Vector2(0, 170)
 
 		if _action_hbox != null:
 			_action_hbox.add_theme_constant_override("separation", 12)

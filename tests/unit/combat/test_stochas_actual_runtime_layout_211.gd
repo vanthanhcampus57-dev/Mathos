@@ -121,8 +121,8 @@ func _initialize() -> void:
 		return
 	var qp_rect: Rect2 = qp_host.get_global_rect()
 	var challenge_center_x: float = qp_rect.position.x + qp_rect.size.x * 0.5
-	if qp_rect.position.y < 60.0 or qp_rect.position.y > 130.0 or qp_rect.size.y < 280.0 or qp_rect.size.y > 330.0 or qp_rect.size.x < 700.0 or qp_rect.size.x > 760.0:
-		_fail("QuestionPanelHost not top-center enlarged (~740x300): " + str(qp_rect))
+	if qp_rect.position.y < 60.0 or qp_rect.position.y > 130.0 or qp_rect.size.y < 280.0 or qp_rect.size.y > 390.0 or qp_rect.size.x < 700.0 or qp_rect.size.x > 760.0:
+		_fail("QuestionPanelHost not top-center enlarged (~740x370): " + str(qp_rect))
 		return
 	var center_diff: float = abs(challenge_center_x - 640.0)
 	if center_diff > 30.0:

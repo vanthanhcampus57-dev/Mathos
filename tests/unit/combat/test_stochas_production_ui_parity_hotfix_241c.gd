@@ -184,13 +184,13 @@ static func test_002_question_panel_unclipped_answer_area(tree: SceneTree) -> bo
 # 3. Tactical Card Row Proportions
 # -----------------------------------------------------------------------------
 static func test_003_tactical_card_row_proportions() -> bool:
-	print("[GATE 3] Verifying Tactical Card Row dimensions (106x154 px, ~14px gap, 466px row)...")
+	print("[GATE 3] Verifying Tactical Card Row dimensions (132x188 px, ~14px gap, 570px row)...")
 
-	if BossCombatPanel.CARD_WIDTH != 106.0:
-		return _fail("GATE-3", "BossCombatPanel.CARD_WIDTH expected 106.0, got %f" % BossCombatPanel.CARD_WIDTH)
+	if BossCombatPanel.CARD_WIDTH != 132.0:
+		return _fail("GATE-3", "BossCombatPanel.CARD_WIDTH expected 132.0, got %f" % BossCombatPanel.CARD_WIDTH)
 
-	if BossCombatPanel.CARD_HEIGHT != 154.0:
-		return _fail("GATE-3", "BossCombatPanel.CARD_HEIGHT expected 154.0, got %f" % BossCombatPanel.CARD_HEIGHT)
+	if BossCombatPanel.CARD_HEIGHT != 188.0:
+		return _fail("GATE-3", "BossCombatPanel.CARD_HEIGHT expected 188.0, got %f" % BossCombatPanel.CARD_HEIGHT)
 
 	if BossCombatPanel.CARD_GAP != 14.0:
 		return _fail("GATE-3", "BossCombatPanel.CARD_GAP expected 14.0, got %f" % BossCombatPanel.CARD_GAP)
@@ -200,7 +200,7 @@ static func test_003_tactical_card_row_proportions() -> bool:
 	panel._ensure_ui()
 
 	var card_row_rect: Rect2 = panel.get_card_row_rect()
-	var expected_w: float = 4.0 * 106.0 + 3.0 * 14.0 # 466.0
+	var expected_w: float = 4.0 * 132.0 + 3.0 * 14.0 # 570.0
 	if absf(card_row_rect.size.x - expected_w) > 1.0:
 		panel.free()
 		return _fail("GATE-3", "Card row width expected %f, got %f" % [expected_w, card_row_rect.size.x])
@@ -211,7 +211,7 @@ static func test_003_tactical_card_row_proportions() -> bool:
 		return _fail("GATE-3", "Flow pill must be positioned above the card row")
 
 	panel.free()
-	print("[GATE 3] PASS: Tactical Card row verified (106x154, gap 14, centered at bottom with flow pill)")
+	print("[GATE 3] PASS: Tactical Card row verified (132x188, gap 14, centered at bottom with flow pill)")
 	return true
 
 # -----------------------------------------------------------------------------

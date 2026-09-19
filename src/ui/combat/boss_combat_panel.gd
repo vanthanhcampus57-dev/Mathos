@@ -90,9 +90,15 @@ const CARD_STRIKE_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/STRIKE
 const CARD_DEFEND_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/DEFEND.png"
 const CARD_HEAL_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/HEAL.png"
 const CARD_PROBABILITY_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/PROBABILITY.png"
-const CARD_WIDTH: float = 106.0
-const CARD_HEIGHT: float = 154.0
+const CARD_WIDTH: float = 132.0
+const CARD_HEIGHT: float = 188.0
 const CARD_GAP: float = 14.0
+
+const ASSET_VFX_KARL_PROJECTILE: String = "res://assets/vfx/combat/karl_arcane_projectile.png"
+const ASSET_VFX_STOCHAS_BOLT: String = "res://assets/vfx/combat/stochas_arcane_bolt.png"
+const ASSET_VFX_STOCHAS_ORB: String = "res://assets/vfx/combat/stochas_probability_orb.png"
+const ASSET_VFX_STOCHAS_RIFT: String = "res://assets/vfx/combat/stochas_void_rift.png"
+const ASSET_VFX_STOCHAS_SWEEP: String = "res://assets/vfx/combat/stochas_arcane_sweep.png"
 
 const _PRELOAD_STRIKE: Texture2D = preload("res://assets/ui/combat/cards_v1/STRIKE.png")
 const _PRELOAD_DEFEND: Texture2D = preload("res://assets/ui/combat/cards_v1/DEFEND.png")
@@ -207,6 +213,12 @@ var _ultimate_dim_overlay: ColorRect = null
 var _ultimate_telegraph_panel: Control = null
 var _boss_action_tween: Tween = null
 var _is_animating_ultimate: bool = false
+
+# Combat VFX runtime
+var _floating_status_container: Control = null
+var _karl_vfx_container: Control = null
+var _karl_persistent_barrier: Panel = null
+var _karl_persistent_barrier_tween: Tween = null
 
 func _ready() -> void:
 	_ensure_ui()
@@ -742,6 +754,16 @@ func _ensure_ui() -> void:
 	add_child(_settings_button)
 
 	# ---------------------------------------------------------
+	# 5B. FLOATING STATUS & VFX CONTAINER
+	# ---------------------------------------------------------
+	if _floating_status_container == null:
+		_floating_status_container = Control.new()
+		_floating_status_container.name = "FloatingStatusContainer"
+		_floating_status_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_floating_status_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_floating_status_container)
+
+	# ---------------------------------------------------------
 	# 6. OVERLAYS (Defeat & Victory)
 	# ---------------------------------------------------------
 	_ensure_overlays()
@@ -970,6 +992,12 @@ func _layout_elements() -> void:
 		if banner != null:
 			banner.position = Vector2((w - 480.0) * 0.5, (h - 100.0) * 0.35)
 
+	# 8. Floating Status Container
+	if _floating_status_container != null:
+		_floating_status_container.position = Vector2.ZERO
+		if _floating_status_container.anchor_right == 0.0:
+			_floating_status_container.size = Vector2(w, h)
+
 func _update_full_display() -> void:
 	_ensure_ui()
 	_layout_elements()
@@ -998,6 +1026,7 @@ func _update_full_display() -> void:
 		_player_hp_bar.value = player.current_hp
 		_player_hp_label.text = "%d / %d" % [player.current_hp, player.max_hp]
 		_player_shield_label.text = "  🛡️ Giáp: %d" % player.shield
+		_update_persistent_barrier(player.shield > 0)
 
 	# Update Card Buttons
 	_render_cards()
@@ -1019,6 +1048,7 @@ func _on_player_hp_changed(current: int, max_val: int, _delta: int) -> void:
 		_player_hp_label.text = "%d / %d" % [current, max_val]
 	if _player_shield_label != null and _combat_controller != null and _combat_controller.player_runtime != null:
 		_player_shield_label.text = "  🛡️ Giáp: %d" % _combat_controller.player_runtime.shield
+		_update_persistent_barrier(_combat_controller.player_runtime.shield > 0)
 
 func _build_card_slots() -> void:
 	if not _card_slots.is_empty():
@@ -1088,12 +1118,12 @@ func _build_card_slots() -> void:
 		badge_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		badge_panel.add_child(badge_label)
 
-		# Texture Rect (Artwork area sized for 106x154 card)
+		# Texture Rect (Artwork area sized for 132x188 card)
 		var art_margin: MarginContainer = MarginContainer.new()
 		art_margin.name = "ArtMargin"
 		art_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		art_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		art_margin.custom_minimum_size = Vector2(0, 92.0)
+		art_margin.custom_minimum_size = Vector2(0, 120.0)
 		art_margin.add_theme_constant_override("margin_left", 2)
 		art_margin.add_theme_constant_override("margin_right", 2)
 		card_vbox.add_child(art_margin)
@@ -1106,7 +1136,7 @@ func _build_card_slots() -> void:
 		tex_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		tex_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tex_rect.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		tex_rect.custom_minimum_size = Vector2(0, 88.0)
+		tex_rect.custom_minimum_size = Vector2(0, 116.0)
 		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		art_margin.add_child(tex_rect)
 
@@ -1469,13 +1499,19 @@ func _on_combat_log(message: String, type: String) -> void:
 				_combat_log_label.add_theme_color_override("font_color", Color(0.4, 1.0, 0.5, 1.0))
 				if _selected_card_id == "card_strike":
 					play_karl_cast()
+					_fire_karl_arcane_projectile()
 				elif _selected_card_id == "card_defend":
 					play_karl_shield()
+					_spawn_barrier_pulse()
+					_update_persistent_barrier(true)
+					_spawn_floating_feedback(Vector2(KARL_ENTITY_LEFT + 150.0, 450.0), "+8 GIÁP", Color(0.25, 0.85, 0.98, 1.0))
 				elif _selected_card_id == "card_heal":
 					play_karl_heal()
+					_spawn_emerald_pulse()
+					_spawn_floating_feedback(Vector2(KARL_ENTITY_LEFT + 150.0, 450.0), "+15 HP", Color(0.35, 0.90, 0.45, 1.0))
 			"player_fail", "boss_attack":
 				_combat_log_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4, 1.0))
-				play_karl_hit()
+				_fire_stochas_spell()
 			"victory":
 				_combat_log_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1.0))
 			"defeat":
@@ -1503,9 +1539,11 @@ func _on_combat_reset() -> void:
 		_defeat_overlay.visible = false
 	if _victory_overlay != null:
 		_victory_overlay.visible = false
+	_update_persistent_barrier(false)
 	_update_full_display()
 
 func _on_retry_pressed() -> void:
+	_update_persistent_barrier(false)
 	retry_pressed.emit()
 
 func get_boss_sprite_rect() -> TextureRect:
@@ -2022,6 +2060,14 @@ func _build_karl_battlefield_entity() -> void:
 	_karl_sprite_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_karl_battlefield_entity.add_child(_karl_sprite_rect)
 
+	_karl_vfx_container = Control.new()
+	_karl_vfx_container.name = "KarlVFXContainer"
+	_karl_vfx_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_karl_vfx_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_karl_battlefield_entity.add_child(_karl_vfx_container)
+
+	_build_persistent_barrier()
+
 	set_karl_state(KarlCombatState.IDLE)
 
 func set_karl_state(state: KarlCombatState) -> void:
@@ -2128,4 +2174,239 @@ func get_karl_sprite_rect() -> TextureRect:
 
 func get_current_karl_state() -> KarlCombatState:
 	return _current_karl_state
+
+func get_karl_vfx_container() -> Control:
+	_ensure_ui()
+	return _karl_vfx_container
+
+func get_karl_persistent_barrier() -> Panel:
+	_ensure_ui()
+	return _karl_persistent_barrier
+
+func get_floating_status_container() -> Control:
+	_ensure_ui()
+	return _floating_status_container
+
+func _build_persistent_barrier() -> void:
+	if _karl_persistent_barrier != null or _karl_vfx_container == null:
+		return
+	_karl_persistent_barrier = Panel.new()
+	_karl_persistent_barrier.name = "KarlPersistentBarrier"
+	_karl_persistent_barrier.position = Vector2(8, 8)
+	_karl_persistent_barrier.size = Vector2(284, 284)
+	_karl_persistent_barrier.pivot_offset = Vector2(142, 142)
+	_karl_persistent_barrier.visible = false
+	_karl_persistent_barrier.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var b_box: StyleBoxFlat = StyleBoxFlat.new()
+	b_box.bg_color = Color(0.10, 0.40, 0.70, 0.18)
+	b_box.border_width_left = 3
+	b_box.border_width_top = 3
+	b_box.border_width_right = 3
+	b_box.border_width_bottom = 3
+	b_box.border_color = Color(0.35, 0.90, 1.0, 0.90)
+	b_box.corner_radius_top_left = 142
+	b_box.corner_radius_top_right = 142
+	b_box.corner_radius_bottom_right = 142
+	b_box.corner_radius_bottom_left = 142
+	b_box.shadow_color = Color(0.20, 0.85, 1.0, 0.60)
+	b_box.shadow_size = 18
+	_karl_persistent_barrier.add_theme_stylebox_override("panel", b_box)
+	_karl_vfx_container.add_child(_karl_persistent_barrier)
+
+func _update_persistent_barrier(has_shield: bool) -> void:
+	if _karl_persistent_barrier == null:
+		return
+	if has_shield:
+		_karl_persistent_barrier.visible = true
+		if _karl_persistent_barrier_tween == null or not _karl_persistent_barrier_tween.is_valid():
+			_karl_persistent_barrier_tween = create_tween().set_loops()
+			_karl_persistent_barrier_tween.tween_property(_karl_persistent_barrier, "scale", Vector2(1.03, 1.03), 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			_karl_persistent_barrier_tween.parallel().tween_property(_karl_persistent_barrier, "modulate:a", 0.95, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			_karl_persistent_barrier_tween.tween_property(_karl_persistent_barrier, "scale", Vector2(0.98, 0.98), 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			_karl_persistent_barrier_tween.parallel().tween_property(_karl_persistent_barrier, "modulate:a", 0.70, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	else:
+		if _karl_persistent_barrier_tween != null and _karl_persistent_barrier_tween.is_valid():
+			_karl_persistent_barrier_tween.kill()
+			_karl_persistent_barrier_tween = null
+		_karl_persistent_barrier.visible = false
+
+func _fire_karl_arcane_projectile() -> void:
+	if _floating_status_container == null:
+		return
+	var proj: TextureRect = TextureRect.new()
+	proj.name = "KarlArcaneProjectile"
+	if ResourceLoader.exists(ASSET_VFX_KARL_PROJECTILE):
+		proj.texture = load(ASSET_VFX_KARL_PROJECTILE)
+	proj.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	proj.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	proj.size = Vector2(120, 46)
+	var h: float = size.y if size.y > 0.0 else 720.0
+	var karl_y: float = maxf(0.0, h - KARL_ENTITY_HEIGHT - KARL_ENTITY_BOTTOM)
+	proj.position = Vector2(KARL_ENTITY_LEFT + 218.0, karl_y + 105.0 - 23.0)
+	_floating_status_container.add_child(proj)
+
+	var target_pos: Vector2 = Vector2(950.0, 350.0)
+	if _boss_stage_container != null:
+		target_pos = _boss_stage_container.position + Vector2(230.0, 260.0)
+
+	var travel_tw: Tween = create_tween()
+	travel_tw.tween_property(proj, "position", target_pos, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	travel_tw.tween_callback(func():
+		proj.queue_free()
+		_spawn_impact_particles(target_pos + Vector2(20, 20))
+		_flash_boss_hit()
+		var dmg_text: String = "-10 HP"
+		if _combat_controller != null:
+			var act_card: CardModel = _combat_controller.get_selected_card()
+			if act_card != null and not act_card.effects.is_empty():
+				var amt: int = int(act_card.effects[0].get("amount", 10))
+				dmg_text = "-%d HP" % amt
+		_spawn_floating_feedback(target_pos + Vector2(0, -60), dmg_text, Color(0.95, 0.35, 0.35, 1.0))
+	)
+
+func _flash_boss_hit() -> void:
+	if _boss_sprite_rect != null:
+		var flash_tw: Tween = create_tween()
+		flash_tw.tween_property(_boss_sprite_rect, "modulate", Color(2.2, 0.6, 0.6, 1.0), 0.08)
+		flash_tw.tween_property(_boss_sprite_rect, "modulate", Color.WHITE, 0.15)
+
+func _fire_stochas_spell() -> void:
+	if _floating_status_container == null:
+		return
+	var spell_tex_path: String = ASSET_VFX_STOCHAS_BOLT
+	var spell_size: Vector2 = Vector2(136, 60)
+	var spell: TextureRect = TextureRect.new()
+	spell.name = "StochasSpellProjectile"
+	if ResourceLoader.exists(spell_tex_path):
+		spell.texture = load(spell_tex_path)
+	spell.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	spell.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	spell.size = spell_size
+
+	var stage_x: float = _boss_stage_container.position.x if _boss_stage_container != null else 812.0
+	spell.position = Vector2(stage_x + 50.0, 300.0)
+	_floating_status_container.add_child(spell)
+
+	var h: float = size.y if size.y > 0.0 else 720.0
+	var karl_y: float = maxf(0.0, h - KARL_ENTITY_HEIGHT - KARL_ENTITY_BOTTOM)
+	var target_pos: Vector2 = Vector2(KARL_ENTITY_LEFT + 150.0, karl_y + 120.0)
+
+	var tw: Tween = create_tween()
+	tw.tween_property(spell, "position", target_pos, 0.50).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_callback(func():
+		spell.queue_free()
+		_spawn_impact_particles(target_pos)
+		var p_runtime: PlayerRuntime = _combat_controller.player_runtime if _combat_controller != null else null
+		var has_shield: bool = p_runtime != null and p_runtime.shield > 0
+		if has_shield:
+			_spawn_barrier_pulse()
+			_spawn_floating_feedback(Vector2(KARL_ENTITY_LEFT + 150.0, karl_y + 50.0), "-GIÁP", Color(0.25, 0.85, 0.98, 1.0))
+		else:
+			play_karl_hit()
+			_spawn_floating_feedback(Vector2(KARL_ENTITY_LEFT + 150.0, karl_y + 50.0), "-HP", Color(0.95, 0.35, 0.35, 1.0))
+	)
+
+func _spawn_impact_particles(pos: Vector2) -> void:
+	if _floating_status_container == null:
+		return
+	var spark: Panel = Panel.new()
+	spark.position = pos - Vector2(16, 16)
+	spark.size = Vector2(32, 32)
+	spark.pivot_offset = Vector2(16, 16)
+	var sbox: StyleBoxFlat = StyleBoxFlat.new()
+	sbox.bg_color = Color(0.90, 0.95, 1.0, 0.90)
+	sbox.border_width_left = 2
+	sbox.border_width_top = 2
+	sbox.border_width_right = 2
+	sbox.border_width_bottom = 2
+	sbox.border_color = Color(0.40, 0.80, 1.0, 1.0)
+	sbox.corner_radius_top_left = 16
+	sbox.corner_radius_top_right = 16
+	sbox.corner_radius_bottom_right = 16
+	sbox.corner_radius_bottom_left = 16
+	sbox.shadow_color = Color(0.20, 0.70, 1.0, 0.80)
+	sbox.shadow_size = 14
+	spark.add_theme_stylebox_override("panel", sbox)
+	_floating_status_container.add_child(spark)
+
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(spark, "scale", Vector2(2.0, 2.0), 0.35)
+	tw.tween_property(spark, "modulate:a", 0.0, 0.35)
+	tw.chain().tween_callback(spark.queue_free)
+
+func _spawn_barrier_pulse() -> void:
+	if _karl_vfx_container == null:
+		return
+	var barrier: Panel = Panel.new()
+	barrier.position = Vector2(15, 15)
+	barrier.size = Vector2(270, 270)
+	barrier.pivot_offset = Vector2(135, 135)
+	var b_box: StyleBoxFlat = StyleBoxFlat.new()
+	b_box.bg_color = Color(0.12, 0.45, 0.75, 0.20)
+	b_box.border_width_left = 3
+	b_box.border_width_top = 3
+	b_box.border_width_right = 3
+	b_box.border_width_bottom = 3
+	b_box.border_color = Color(0.30, 0.85, 1.0, 0.85)
+	b_box.corner_radius_top_left = 135
+	b_box.corner_radius_top_right = 135
+	b_box.corner_radius_bottom_right = 135
+	b_box.corner_radius_bottom_left = 135
+	b_box.shadow_color = Color(0.20, 0.80, 1.0, 0.55)
+	b_box.shadow_size = 16
+	barrier.add_theme_stylebox_override("panel", b_box)
+	_karl_vfx_container.add_child(barrier)
+
+	barrier.scale = Vector2(0.85, 0.85)
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(barrier, "scale", Vector2(1.15, 1.15), 0.80)
+	tw.tween_property(barrier, "modulate:a", 0.0, 0.80)
+	tw.chain().tween_callback(barrier.queue_free)
+
+func _spawn_emerald_pulse() -> void:
+	if _karl_vfx_container == null:
+		return
+	var aura: Panel = Panel.new()
+	aura.position = Vector2(20, 15)
+	aura.size = Vector2(260, 270)
+	aura.pivot_offset = Vector2(130, 135)
+	var a_box: StyleBoxFlat = StyleBoxFlat.new()
+	a_box.bg_color = Color(0.15, 0.65, 0.35, 0.22)
+	a_box.border_width_left = 3
+	a_box.border_width_top = 3
+	a_box.border_width_right = 3
+	a_box.border_width_bottom = 3
+	a_box.border_color = Color(0.35, 0.95, 0.55, 0.85)
+	a_box.corner_radius_top_left = 130
+	a_box.corner_radius_top_right = 130
+	a_box.corner_radius_bottom_right = 130
+	a_box.corner_radius_bottom_left = 130
+	a_box.shadow_color = Color(0.25, 0.90, 0.50, 0.55)
+	a_box.shadow_size = 16
+	aura.add_theme_stylebox_override("panel", a_box)
+	_karl_vfx_container.add_child(aura)
+
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(aura, "position:y", aura.position.y - 25.0, 0.90)
+	tw.tween_property(aura, "scale", Vector2(1.10, 1.10), 0.90)
+	tw.tween_property(aura, "modulate:a", 0.0, 0.90)
+	tw.chain().tween_callback(aura.queue_free)
+
+func _spawn_floating_feedback(pos: Vector2, text: String, color: Color) -> void:
+	if _floating_status_container == null:
+		return
+	var lbl: Label = Label.new()
+	lbl.text = text
+	lbl.position = pos - Vector2(100, 10)
+	lbl.custom_minimum_size = Vector2(200, 24)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.add_theme_font_size_override("font_size", 13)
+	lbl.add_theme_color_override("font_color", color)
+	_floating_status_container.add_child(lbl)
+
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(lbl, "position:y", pos.y - 40.0, 1.6)
+	tw.tween_property(lbl, "modulate:a", 0.0, 1.6).set_delay(0.5)
+	tw.chain().tween_callback(lbl.queue_free)
 
