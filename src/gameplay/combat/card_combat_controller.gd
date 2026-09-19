@@ -14,12 +14,29 @@ signal boss_defeated()
 signal player_defeated()
 signal combat_reset()
 
+# Ultimate flow signals
+signal boss_ultimate_meter_changed(current: int, max_val: int)
+signal boss_ultimate_queued()
+signal boss_ultimate_charge_started()
+signal boss_ultimate_challenge_started()
+signal boss_ultimate_resolved(success: bool, damage: int)
+
+const BOSS_ULTIMATE_METER_MAX: int = 4
+const ULTIMATE_CHARGE_DURATION: float = 2.4
+const ULTIMATE_CHALLENGE_DURATION: float = 8.0
+const ULTIMATE_DAMAGE: int = 24
+
 var player_runtime: PlayerRuntime = null
 var boss_entity: EnemyEntity = null
 var hand_cards: Array[CardModel] = []
 var selected_card: CardModel = null
 var is_in_combat: bool = false
 var turn_counter: int = 1
+
+var boss_ultimate_meter: int = 0
+var is_ultimate_queued: bool = false
+var is_ultimate_charge_active: bool = false
+var is_ultimate_challenge_active: bool = false
 
 func start_combat(p_player: PlayerRuntime, p_boss: EnemyEntity, p_cards: Array[CardModel]) -> void:
 	assert(p_player != null, "CardCombatController requires PlayerRuntime")
@@ -30,8 +47,13 @@ func start_combat(p_player: PlayerRuntime, p_boss: EnemyEntity, p_cards: Array[C
 	selected_card = hand_cards[0] if not hand_cards.is_empty() else null
 	is_in_combat = true
 	turn_counter = 1
+	boss_ultimate_meter = 0
+	is_ultimate_queued = false
+	is_ultimate_charge_active = false
+	is_ultimate_challenge_active = false
 
 	combat_state_changed.emit()
+	boss_ultimate_meter_changed.emit(boss_ultimate_meter, BOSS_ULTIMATE_METER_MAX)
 	if selected_card != null:
 		card_selected.emit(selected_card)
 	combat_log_emitted.emit("⚔️ Trận quyết chiến với %s bắt đầu!" % boss_entity.display_name, "info")
@@ -52,9 +74,72 @@ func get_selected_card() -> CardModel:
 		selected_card = hand_cards[0]
 	return selected_card
 
+func increment_boss_ultimate_meter() -> void:
+	if is_ultimate_challenge_active or is_ultimate_charge_active:
+		return
+	boss_ultimate_meter += 1
+	boss_ultimate_meter_changed.emit(boss_ultimate_meter, BOSS_ULTIMATE_METER_MAX)
+	if boss_ultimate_meter >= BOSS_ULTIMATE_METER_MAX:
+		boss_ultimate_meter = 0
+		is_ultimate_queued = true
+		boss_ultimate_queued.emit()
+
+func trigger_boss_ultimate_charge() -> void:
+	if is_ultimate_charge_active or is_ultimate_challenge_active:
+		return
+	is_ultimate_charge_active = true
+	is_ultimate_queued = false
+	boss_ultimate_charge_started.emit()
+
+func trigger_boss_ultimate_challenge() -> void:
+	is_ultimate_charge_active = false
+	is_ultimate_challenge_active = true
+	boss_ultimate_challenge_started.emit()
+
+func resolve_ultimate_outcome(is_correct: bool) -> Dictionary:
+	var outcome: Dictionary = {
+		"is_ultimate": true,
+		"is_correct": is_correct,
+		"damage_dealt": 0,
+		"player_defeated": false,
+		"effects_applied": []
+	}
+	is_ultimate_challenge_active = false
+	is_ultimate_charge_active = false
+	is_ultimate_queued = false
+
+	if is_correct:
+		# Karl Dodge, 0 damage
+		combat_log_emitted.emit("✨ NÉ TRÁNH THÀNH CÔNG! STOCHAS CHAOS VERDICT VÔ HIỆU HOÁ", "player_success")
+		boss_ultimate_resolved.emit(true, 0)
+	else:
+		# 24 damage: shield -> HP
+		var prev_hp: int = player_runtime.current_hp
+		player_runtime.apply_damage(ULTIMATE_DAMAGE)
+		var actual_loss: int = prev_hp - player_runtime.current_hp
+		outcome["damage_dealt"] = ULTIMATE_DAMAGE
+		player_hp_changed.emit(player_runtime.current_hp, player_runtime.max_hp, -actual_loss)
+		combat_log_emitted.emit("💥 CHAOS VERDICT OANH KÍCH -%d HP!" % ULTIMATE_DAMAGE, "boss_attack")
+		boss_ultimate_resolved.emit(false, ULTIMATE_DAMAGE)
+
+		if player_runtime.is_defeated:
+			is_in_combat = false
+			outcome["player_defeated"] = true
+			combat_log_emitted.emit("💀 Bạn đã bị %s áp đảo!" % boss_entity.display_name, "defeat")
+			player_defeated.emit()
+			combat_state_changed.emit()
+			return outcome
+
+	turn_counter += 1
+	combat_state_changed.emit()
+	return outcome
+
 func resolve_answer_outcome(is_correct: bool) -> Dictionary:
 	if not is_in_combat or boss_entity == null or player_runtime == null:
 		return {"success": false, "in_combat": false}
+
+	if is_ultimate_challenge_active:
+		return resolve_ultimate_outcome(is_correct)
 
 	var active_card: CardModel = get_selected_card()
 	var outcome: Dictionary = {
@@ -125,6 +210,8 @@ func resolve_answer_outcome(is_correct: bool) -> Dictionary:
 			combat_state_changed.emit()
 			return outcome
 
+	increment_boss_ultimate_meter()
+
 	turn_counter += 1
 	combat_state_changed.emit()
 	return outcome
@@ -137,9 +224,14 @@ func reset_encounter(stats: PlayerStats) -> void:
 
 	is_in_combat = true
 	turn_counter = 1
+	boss_ultimate_meter = 0
+	is_ultimate_queued = false
+	is_ultimate_charge_active = false
+	is_ultimate_challenge_active = false
 	if not hand_cards.is_empty():
 		selected_card = hand_cards[0]
 
 	combat_reset.emit()
+	boss_ultimate_meter_changed.emit(0, BOSS_ULTIMATE_METER_MAX)
 	combat_state_changed.emit()
 	combat_log_emitted.emit("🔄 Quyết chiến được tái thiết lập. Chuẩn bị tấn công!", "info")

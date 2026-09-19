@@ -167,6 +167,46 @@ const BOSS_ULTIMATE_METER_MAX: int = 4
 const ULTIMATE_CHARGE_DURATION: float = 2.4
 const ULTIMATE_CHALLENGE_DURATION: float = 8.0
 
+const STOCHAS_CHARGE_FRAME_PATHS: Array[String] = [
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f01.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f02.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f03.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f04.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f05.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f06.png"
+]
+
+const STOCHAS_RELEASE_FRAME_PATHS: Array[String] = [
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f01.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f02.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f03.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f04.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f05.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f06.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f07.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f08.png"
+]
+
+const FINAL_CHARGE_TRANSFORMS: Dictionary = {
+	0: {"scale": 1.0076, "x": 203.99, "y": 8.49},
+	1: {"scale": 1.1533, "x": 191.63, "y": 24.47},
+	2: {"scale": 1.1378, "x": 195.26, "y": 25.20}, # F03
+	3: {"scale": 1.1378, "x": 208.35, "y": 35.37}, # F04
+	4: {"scale": 1.1378, "x": 214.89, "y": 25.20}, # F05
+	5: {"scale": 1.1378, "x": 190.18, "y": 14.30}  # F06
+}
+
+const FINAL_RELEASE_TRANSFORMS: Dictionary = {
+	0: {"scale": 1.1512, "x": 190.63, "y": 11.22}, # F01
+	1: {"scale": 1.2852, "x": 192.18, "y": 38.38}, # F02
+	2: {"scale": 1.3829, "x": 193.08, "y": 36.92}, # F03
+	3: {"scale": 1.1775, "x": 193.08, "y": 53.28}, # F04
+	4: {"scale": 1.3067, "x": 194.54, "y": 45.64}, # F05 (PEAK RELEASE)
+	5: {"scale": 1.2652, "x": 194.54, "y": 41.28}, # F06
+	6: {"scale": 1.2673, "x": 197.44, "y": 37.65}, # F07
+	7: {"scale": 1.2531, "x": 195.99, "y": 39.83}  # F08
+}
+
 var boss_ultimate_meter: int = 0
 var is_ultimate_queued: bool = false
 var is_ultimate_charge_active: bool = false
@@ -174,11 +214,14 @@ var is_ultimate_challenge_active: bool = false
 var ultimate_timer: float = 8.0
 var ultimate_telegraph_panel: Control = null
 var ultimate_dim_overlay: ColorRect = null
+var ultimate_entry_flash_rect: TextureRect = null
 var is_tactical_pick_mode: bool = false
 var hand_cursor_node: Control = null
 var karl_dodge_frames: Array[AtlasTexture] = []
 var karl_skill_cast_frames: Array[AtlasTexture] = []
 var stochas_ultimate_frames: Array[AtlasTexture] = []
+var stochas_charge_textures: Array[Texture2D] = []
+var stochas_release_textures: Array[Texture2D] = []
 var tactical_atlas_textures: Dictionary = {}
 var card_row_container: HBoxContainer = null
 
@@ -474,6 +517,19 @@ func _load_karl_textures() -> void:
 			at.atlas = tex
 			at.region = TACTICAL_ATLAS_REGIONS[key]
 			tactical_atlas_textures[key] = at
+
+	# Approved Stochas Charge & Release discrete textures
+	stochas_charge_textures.clear()
+	for p in STOCHAS_CHARGE_FRAME_PATHS:
+		var ct: Texture2D = _load_texture_safe(p)
+		if ct != null:
+			stochas_charge_textures.append(ct)
+
+	stochas_release_textures.clear()
+	for p in STOCHAS_RELEASE_FRAME_PATHS:
+		var rt: Texture2D = _load_texture_safe(p)
+		if rt != null:
+			stochas_release_textures.append(rt)
 
 func _process(delta: float) -> void:
 	if is_ultimate_challenge_active and not combat_resolving:
@@ -2555,6 +2611,82 @@ func increment_ultimate_meter() -> void:
 		is_ultimate_queued = true
 	_update_boss_hud()
 
+func _load_texture_safe(path: String) -> Texture2D:
+	if ResourceLoader.exists(path):
+		var res = load(path)
+		if res is Texture2D:
+			return res
+	if FileAccess.file_exists(path):
+		var img: Image = Image.load_from_file(ProjectSettings.globalize_path(path))
+		if img != null:
+			return ImageTexture.create_from_image(img)
+	return null
+
+func _play_ultimate_entry_flash() -> void:
+	if ultimate_entry_flash_rect == null:
+		ultimate_entry_flash_rect = TextureRect.new()
+		ultimate_entry_flash_rect.name = "UltimateEntryFlash"
+		ultimate_entry_flash_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ultimate_entry_flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var grad: Gradient = Gradient.new()
+		grad.offsets = PackedFloat32Array([0.0, 0.35, 0.70, 1.0])
+		grad.colors = PackedColorArray([
+			Color(0.85, 1.90, 2.50, 1.00),
+			Color(0.40, 1.20, 2.20, 0.85),
+			Color(0.15, 0.50, 1.20, 0.35),
+			Color(0.15, 0.50, 1.20, 0.00)
+		])
+		var grad_tex: GradientTexture2D = GradientTexture2D.new()
+		grad_tex.gradient = grad
+		grad_tex.fill = GradientTexture2D.FILL_RADIAL
+		grad_tex.fill_from = Vector2(0.5, 0.5)
+		grad_tex.fill_to = Vector2(1.0, 0.5)
+		grad_tex.width = 512
+		grad_tex.height = 512
+		ultimate_entry_flash_rect.texture = grad_tex
+		add_child(ultimate_entry_flash_rect)
+
+	if boss_rect != null:
+		ultimate_entry_flash_rect.size = boss_rect.size * 1.3
+		ultimate_entry_flash_rect.position = boss_rect.position - (ultimate_entry_flash_rect.size - boss_rect.size) * 0.5
+	else:
+		ultimate_entry_flash_rect.size = BOSS_BASE_SIZE * 1.3
+		ultimate_entry_flash_rect.position = BOSS_BASE_POS - (ultimate_entry_flash_rect.size - BOSS_BASE_SIZE) * 0.5
+
+	ultimate_entry_flash_rect.visible = true
+	ultimate_entry_flash_rect.modulate.a = 0.0
+	var f_tw: Tween = create_tween()
+	f_tw.tween_property(ultimate_entry_flash_rect, "modulate:a", 1.0, 0.05).set_ease(Tween.EASE_OUT)
+	f_tw.tween_property(ultimate_entry_flash_rect, "modulate:a", 0.0, 0.10).set_ease(Tween.EASE_IN)
+	f_tw.tween_callback(func():
+		if ultimate_entry_flash_rect != null:
+			ultimate_entry_flash_rect.visible = false
+	)
+
+func _set_charge_frame(idx: int) -> void:
+	if boss_rect == null:
+		return
+	if idx >= 0 and idx < stochas_charge_textures.size():
+		boss_rect.texture = stochas_charge_textures[idx]
+	elif idx >= 0 and idx < stochas_ultimate_frames.size():
+		boss_rect.texture = stochas_ultimate_frames[idx]
+	if FINAL_CHARGE_TRANSFORMS.has(idx):
+		var tf: Dictionary = FINAL_CHARGE_TRANSFORMS[idx]
+		boss_rect.scale = Vector2(tf["scale"], tf["scale"])
+		boss_rect.position = BOSS_BASE_POS + Vector2(tf["x"] - 180.0, tf["y"] - 50.0)
+
+func _set_release_frame(idx: int) -> void:
+	if boss_rect == null:
+		return
+	if idx >= 0 and idx < stochas_release_textures.size():
+		boss_rect.texture = stochas_release_textures[idx]
+	elif idx >= 0 and idx < stochas_ultimate_frames.size():
+		boss_rect.texture = stochas_ultimate_frames[idx]
+	if FINAL_RELEASE_TRANSFORMS.has(idx):
+		var tf: Dictionary = FINAL_RELEASE_TRANSFORMS[idx]
+		boss_rect.scale = Vector2(tf["scale"], tf["scale"])
+		boss_rect.position = BOSS_BASE_POS + Vector2(tf["x"] - 180.0, tf["y"] - 50.0)
+
 func trigger_boss_ultimate_charge() -> void:
 	if is_ultimate_charge_active or is_ultimate_challenge_active:
 		return
@@ -2619,16 +2751,18 @@ func trigger_boss_ultimate_charge() -> void:
 	ultimate_telegraph_panel.visible = true
 	ultimate_telegraph_panel.modulate.a = 0.0
 
+	# Play bright cyan/white arcane entry flash
+	_play_ultimate_entry_flash()
+
 	if boss_action_tween != null and boss_action_tween.is_valid():
 		boss_action_tween.kill()
 	boss_action_tween = create_tween()
-	# Loop ping-pong frames 0-3 during the 2.4s telegraph
-	var ping_pong_frames: Array[int] = [0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 0, 1, 2, 3]
-	var step_time: float = ULTIMATE_CHARGE_DURATION / float(ping_pong_frames.size())
-	for idx in ping_pong_frames:
+	# Loop F03, F04, F05, F06 during the 2.4s telegraph (indices 2, 3, 4, 5) - F01/F02 never shown
+	var active_charge_frames: Array[int] = [2, 3, 4, 5, 2, 3, 4, 5, 2, 3, 4, 5]
+	var step_time: float = ULTIMATE_CHARGE_DURATION / float(active_charge_frames.size())
+	for idx in active_charge_frames:
 		boss_action_tween.tween_callback(func():
-			if boss_rect != null and idx < stochas_ultimate_frames.size():
-				boss_rect.texture = stochas_ultimate_frames[idx]
+			_set_charge_frame(idx)
 		)
 		boss_action_tween.tween_interval(step_time)
 
@@ -2636,8 +2770,6 @@ func trigger_boss_ultimate_charge() -> void:
 	fx_tw.set_parallel(true)
 	fx_tw.tween_property(ultimate_dim_overlay, "modulate:a", 1.0, 0.40)
 	fx_tw.tween_property(ultimate_telegraph_panel, "modulate:a", 1.0, 0.40)
-	fx_tw.tween_property(boss_rect, "position", Vector2(730.0, 120.0), 0.60).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	fx_tw.tween_property(boss_rect, "scale", Vector2(1.10, 1.10), 0.60).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	fx_tw.tween_property(boss_rect, "modulate", Color(1.4, 0.9, 1.6, 1.0), 0.60)
 
 	var hold_tw: Tween = create_tween()
@@ -2711,17 +2843,17 @@ func trigger_ultimate_success() -> void:
 	if boss_action_tween != null and boss_action_tween.is_valid():
 		boss_action_tween.kill()
 	boss_action_tween = create_tween()
-	for idx in [4, 5, 6, 7]:
+	# Step through release frames F01..F08 (peak at F05 = idx 4)
+	for idx in range(8):
 		boss_action_tween.tween_callback(func():
-			if boss_rect != null and idx < stochas_ultimate_frames.size():
-				boss_rect.texture = stochas_ultimate_frames[idx]
+			_set_release_frame(idx)
 		)
-		boss_action_tween.tween_interval(0.18)
+		boss_action_tween.tween_interval(0.10)
 
 	_spawn_floating_feedback(Vector2(200, 320), "MISS / NÉ!", COLOR_ACCENT_GOLD)
 
 	var rel_tw: Tween = create_tween()
-	rel_tw.tween_interval(0.75)
+	rel_tw.tween_interval(0.85)
 	rel_tw.tween_callback(func():
 		if boss_rect != null:
 			if ResourceLoader.exists(ASSET_BOSS):
@@ -2752,12 +2884,12 @@ func trigger_ultimate_failure(is_timeout: bool = false) -> void:
 	if boss_action_tween != null and boss_action_tween.is_valid():
 		boss_action_tween.kill()
 	boss_action_tween = create_tween()
-	for idx in [4, 5, 6, 7]:
+	# Step through release frames F01..F08 (peak at F05 = idx 4)
+	for idx in range(8):
 		boss_action_tween.tween_callback(func():
-			if boss_rect != null and idx < stochas_ultimate_frames.size():
-				boss_rect.texture = stochas_ultimate_frames[idx]
+			_set_release_frame(idx)
 		)
-		boss_action_tween.tween_interval(0.18)
+		boss_action_tween.tween_interval(0.10)
 
 	if is_timeout:
 		_spawn_floating_feedback(Vector2(200, 270), "HẾT GIỜ! ĐẠI PHÉP GIÁNG LÂM!", COLOR_ACCENT_RED)

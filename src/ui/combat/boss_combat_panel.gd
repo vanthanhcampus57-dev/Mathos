@@ -16,6 +16,11 @@ signal card_selected(card_id: String)
 signal retry_pressed()
 signal victory_acknowledged()
 
+# Ultimate animation signals
+signal ultimate_peak_reached()
+signal ultimate_charge_finished()
+signal ultimate_release_finished()
+
 const KARL_PORTRAIT_PATH: String = "res://assets/characters/player/karl/karl_portrait.png"
 const STOCHAS_TEXTURE_PATH: String = "res://assets/characters/bosses/dungeon_1/stochas_boss.png"
 const BOSS_VISUAL_CONTAINER_HEIGHT: float = 180.0
@@ -23,6 +28,50 @@ const SAFE_MARGIN_PERCENT: float = 0.10 # 10% safe visual margin (8–12% requir
 
 const BOSS_STAGE_WIDTH: float = 460.0
 const BOSS_ART_HEIGHT: float = 530.0
+
+const STOCHAS_CHARGE_FRAME_PATHS: Array[String] = [
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f01.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f02.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f03.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f04.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f05.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_charge/stochas_ultimate_charge_f06.png"
+]
+
+const STOCHAS_RELEASE_FRAME_PATHS: Array[String] = [
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f01.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f02.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f03.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f04.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f05.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f06.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f07.png",
+	"res://assets/characters/bosses/dungeon_1/stochas_ultimate_release/stochas_ultimate_release_f08.png"
+]
+
+
+
+# Authoritative Human-Approved Final Ultimate Charge Transforms (Task 239S)
+const FINAL_CHARGE_TRANSFORMS: Dictionary = {
+	0: {"scale": 1.0076, "x": 203.99, "y": 8.49},
+	1: {"scale": 1.1533, "x": 191.63, "y": 24.47},
+	2: {"scale": 1.1378, "x": 195.26, "y": 25.20}, # F03
+	3: {"scale": 1.1378, "x": 208.35, "y": 35.37}, # F04
+	4: {"scale": 1.1378, "x": 214.89, "y": 25.20}, # F05
+	5: {"scale": 1.1378, "x": 190.18, "y": 14.30}  # F06
+}
+
+# Authoritative Human-Approved Final Ultimate Release Transforms (Task 240K3 Relock)
+const FINAL_RELEASE_TRANSFORMS: Dictionary = {
+	0: {"scale": 1.1512, "x": 190.63, "y": 11.22}, # F01
+	1: {"scale": 1.2852, "x": 192.18, "y": 38.38}, # F02
+	2: {"scale": 1.3829, "x": 193.08, "y": 36.92}, # F03
+	3: {"scale": 1.1775, "x": 193.08, "y": 53.28}, # F04
+	4: {"scale": 1.3067, "x": 194.54, "y": 45.64}, # F05 (PEAK RELEASE)
+	5: {"scale": 1.2652, "x": 194.54, "y": 41.28}, # F06
+	6: {"scale": 1.2673, "x": 197.44, "y": 37.65}, # F07
+	7: {"scale": 1.2531, "x": 195.99, "y": 39.83}  # F08
+}
 
 const CARD_STRIKE_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/STRIKE.png"
 const CARD_DEFEND_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/DEFEND.png"
@@ -119,13 +168,22 @@ var _victory_overlay: PanelContainer = null
 
 var _float_time: float = 0.0
 
+# Ultimate animation runtime
+var _charge_textures: Array[Texture2D] = []
+var _release_textures: Array[Texture2D] = []
+var _entry_flash_rect: TextureRect = null
+var _ultimate_dim_overlay: ColorRect = null
+var _ultimate_telegraph_panel: Control = null
+var _boss_action_tween: Tween = null
+var _is_animating_ultimate: bool = false
+
 func _ready() -> void:
 	_ensure_ui()
 	_layout_elements()
 	set_process(true)
 
 func _process(delta: float) -> void:
-	if _boss_sprite_rect != null and is_visible_in_tree():
+	if _boss_sprite_rect != null and is_visible_in_tree() and not _is_animating_ultimate:
 		_float_time += delta
 		var offset_y: float = sin(_float_time * 2.2) * 4.0
 		_boss_sprite_rect.position.y = offset_y
@@ -164,6 +222,12 @@ func _disconnect_controller() -> void:
 		_combat_controller.player_defeated.disconnect(_on_player_defeated)
 	if _combat_controller.combat_reset.is_connected(_on_combat_reset):
 		_combat_controller.combat_reset.disconnect(_on_combat_reset)
+	if _combat_controller.boss_ultimate_meter_changed.is_connected(_on_boss_ultimate_meter_changed):
+		_combat_controller.boss_ultimate_meter_changed.disconnect(_on_boss_ultimate_meter_changed)
+	if _combat_controller.boss_ultimate_charge_started.is_connected(_on_boss_ultimate_charge_started):
+		_combat_controller.boss_ultimate_charge_started.disconnect(_on_boss_ultimate_charge_started)
+	if _combat_controller.boss_ultimate_resolved.is_connected(_on_boss_ultimate_resolved):
+		_combat_controller.boss_ultimate_resolved.disconnect(_on_boss_ultimate_resolved)
 
 func _connect_controller() -> void:
 	if _combat_controller == null:
@@ -182,6 +246,21 @@ func _connect_controller() -> void:
 		_combat_controller.player_defeated.connect(_on_player_defeated)
 	if not _combat_controller.combat_reset.is_connected(_on_combat_reset):
 		_combat_controller.combat_reset.connect(_on_combat_reset)
+	if not _combat_controller.boss_ultimate_meter_changed.is_connected(_on_boss_ultimate_meter_changed):
+		_combat_controller.boss_ultimate_meter_changed.connect(_on_boss_ultimate_meter_changed)
+	if not _combat_controller.boss_ultimate_charge_started.is_connected(_on_boss_ultimate_charge_started):
+		_combat_controller.boss_ultimate_charge_started.connect(_on_boss_ultimate_charge_started)
+	if not _combat_controller.boss_ultimate_resolved.is_connected(_on_boss_ultimate_resolved):
+		_combat_controller.boss_ultimate_resolved.connect(_on_boss_ultimate_resolved)
+
+func _on_boss_ultimate_meter_changed(_current: int, _max_val: int) -> void:
+	_update_full_display()
+
+func _on_boss_ultimate_charge_started() -> void:
+	play_ultimate_charge()
+
+func _on_boss_ultimate_resolved(_success: bool, _damage: int) -> void:
+	play_ultimate_release()
 
 func _ensure_ui() -> void:
 	if _boss_name_label != null:
@@ -243,6 +322,33 @@ func _ensure_ui() -> void:
 	_boss_sprite_rect.custom_minimum_size = Vector2(0, BOSS_ART_HEIGHT)
 	_boss_sprite_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	sprite_margin.add_child(_boss_sprite_rect)
+
+	_load_ultimate_textures()
+
+	if _entry_flash_rect == null:
+		_entry_flash_rect = TextureRect.new()
+		_entry_flash_rect.name = "EntryFlashOverlay"
+		_entry_flash_rect.position = Vector2(-110.0, -40.0)
+		_entry_flash_rect.size = Vector2(680.0, 680.0)
+		_entry_flash_rect.pivot_offset = Vector2(340.0, 340.0)
+		_entry_flash_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_entry_flash_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_entry_flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_entry_flash_rect.modulate = Color(1.0, 1.0, 1.0, 0.0)
+		_entry_flash_rect.visible = false
+
+		var grad: Gradient = Gradient.new()
+		grad.set_color(0, Color(0.85, 1.90, 2.50, 1.00)) # Core bright cyan-white arcane bloom
+		grad.set_color(1, Color(0.15, 0.50, 1.20, 0.00)) # Outer cyan-blue fade
+		var grad_tex: GradientTexture2D = GradientTexture2D.new()
+		grad_tex.gradient = grad
+		grad_tex.fill = GradientTexture2D.FILL_RADIAL
+		grad_tex.fill_from = Vector2(0.5, 0.5)
+		grad_tex.fill_to = Vector2(0.5, 0.0)
+		grad_tex.width = 256
+		grad_tex.height = 256
+		_entry_flash_rect.texture = grad_tex
+		_boss_stage_container.add_child(_entry_flash_rect)
 
 	# ---------------------------------------------------------
 	# 2. TOP DUAL HUD CONTAINER (padding left/right 32px, top 16px)
@@ -688,6 +794,58 @@ func _ensure_overlays() -> void:
 		vic_msg.add_theme_font_size_override("font_size", 12)
 		vic_vbox.add_child(vic_msg)
 
+	if _ultimate_dim_overlay == null:
+		_ultimate_dim_overlay = ColorRect.new()
+		_ultimate_dim_overlay.name = "UltimateDimOverlay"
+		_ultimate_dim_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_ultimate_dim_overlay.color = Color(0.04, 0.02, 0.08, 0.50)
+		_ultimate_dim_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_ultimate_dim_overlay.visible = false
+		_ultimate_dim_overlay.modulate.a = 0.0
+		add_child(_ultimate_dim_overlay)
+
+	if _ultimate_telegraph_panel == null:
+		_ultimate_telegraph_panel = Control.new()
+		_ultimate_telegraph_panel.name = "UltimateTelegraphPanel"
+		_ultimate_telegraph_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_ultimate_telegraph_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_ultimate_telegraph_panel.visible = false
+		_ultimate_telegraph_panel.modulate.a = 0.0
+
+		var banner_vbox: VBoxContainer = VBoxContainer.new()
+		banner_vbox.name = "TelegraphVBox"
+		banner_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		banner_vbox.position = Vector2(400, 220)
+		banner_vbox.custom_minimum_size = Vector2(480, 100)
+		banner_vbox.add_theme_constant_override("separation", 4)
+		_ultimate_telegraph_panel.add_child(banner_vbox)
+
+		var t1: Label = Label.new()
+		t1.name = "BossTelegraphTitle"
+		t1.text = "STOCHAS"
+		t1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		t1.add_theme_font_size_override("font_size", 14)
+		t1.add_theme_color_override("font_color", Color(1.0, 0.25, 0.35))
+		banner_vbox.add_child(t1)
+
+		var t2: Label = Label.new()
+		t2.name = "TelegraphSpellName"
+		t2.text = "CHAOS VERDICT"
+		t2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		t2.add_theme_font_size_override("font_size", 24)
+		t2.add_theme_color_override("font_color", Color(0.85, 0.45, 1.0))
+		banner_vbox.add_child(t2)
+
+		var t3: Label = Label.new()
+		t3.name = "TelegraphSubtitle"
+		t3.text = "ĐẠI PHÉP ĐANG ĐƯỢC NIỆM"
+		t3.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		t3.add_theme_font_size_override("font_size", 12)
+		t3.add_theme_color_override("font_color", Color(0.35, 0.90, 1.0))
+		banner_vbox.add_child(t3)
+
+		add_child(_ultimate_telegraph_panel)
+
 func _layout_elements() -> void:
 	var w: float = size.x
 	var h: float = size.y
@@ -752,6 +910,18 @@ func _layout_elements() -> void:
 		var vic_w: float = minf(400.0, w - 40.0)
 		_victory_overlay.position = Vector2((w - vic_w) * 0.5, (h - 150.0) * 0.5)
 		_victory_overlay.size = Vector2(vic_w, 150.0)
+
+	# 7. Ultimate Overlays
+	if _ultimate_dim_overlay != null:
+		_ultimate_dim_overlay.position = Vector2.ZERO
+		_ultimate_dim_overlay.size = Vector2(w, h)
+
+	if _ultimate_telegraph_panel != null:
+		_ultimate_telegraph_panel.position = Vector2.ZERO
+		_ultimate_telegraph_panel.size = Vector2(w, h)
+		var banner: Control = _ultimate_telegraph_panel.get_node_or_null("TelegraphVBox") as Control
+		if banner != null:
+			banner.position = Vector2((w - 480.0) * 0.5, (h - 100.0) * 0.35)
 
 func _update_full_display() -> void:
 	_ensure_ui()
@@ -1529,3 +1699,216 @@ func get_card_rect(card_id: String) -> Rect2:
 
 func get_selected_card_lift() -> float:
 	return 8.0
+
+# ==============================================================================
+# ULTIMATE ANIMATION & RUNTIME METHODS (Task 241A)
+# ==============================================================================
+
+func _load_texture_safe(path: String) -> Texture2D:
+	if ResourceLoader.exists(path):
+		var res = load(path)
+		if res is Texture2D:
+			return res
+	if FileAccess.file_exists(path):
+		var img: Image = Image.load_from_file(ProjectSettings.globalize_path(path))
+		if img != null:
+			return ImageTexture.create_from_image(img)
+	return null
+
+func _load_ultimate_textures() -> void:
+	if not _charge_textures.is_empty() and not _release_textures.is_empty():
+		return
+	_charge_textures.clear()
+	for p in STOCHAS_CHARGE_FRAME_PATHS:
+		var tex: Texture2D = _load_texture_safe(p)
+		if tex != null:
+			_charge_textures.append(tex)
+
+	_release_textures.clear()
+	for p in STOCHAS_RELEASE_FRAME_PATHS:
+		var tex: Texture2D = _load_texture_safe(p)
+		if tex != null:
+			_release_textures.append(tex)
+
+func _set_charge_frame(idx: int) -> void:
+	if _boss_sprite_rect == null:
+		return
+	_load_ultimate_textures()
+	if idx >= 0 and idx < _charge_textures.size():
+		_boss_sprite_rect.texture = _charge_textures[idx]
+	if FINAL_CHARGE_TRANSFORMS.has(idx):
+		var tf: Dictionary = FINAL_CHARGE_TRANSFORMS[idx]
+		_boss_sprite_rect.scale = Vector2(tf["scale"], tf["scale"])
+		_boss_sprite_rect.position = Vector2(tf["x"] - 180.0, tf["y"] - 50.0)
+
+func _set_release_frame(idx: int) -> void:
+	if _boss_sprite_rect == null:
+		return
+	_load_ultimate_textures()
+	if idx >= 0 and idx < _release_textures.size():
+		_boss_sprite_rect.texture = _release_textures[idx]
+	if FINAL_RELEASE_TRANSFORMS.has(idx):
+		var tf: Dictionary = FINAL_RELEASE_TRANSFORMS[idx]
+		_boss_sprite_rect.scale = Vector2(tf["scale"], tf["scale"])
+		_boss_sprite_rect.position = Vector2(tf["x"] - 180.0, tf["y"] - 50.0)
+
+func _restore_canonical_idle() -> void:
+	if _boss_sprite_rect != null:
+		_boss_sprite_rect.texture = _load_boss_texture()
+		_boss_sprite_rect.scale = Vector2.ONE
+		_boss_sprite_rect.position = Vector2.ZERO
+		_boss_sprite_rect.modulate = Color.WHITE
+		_boss_sprite_rect.rotation = 0.0
+
+func play_ultimate_charge(on_finish_callback: Callable = Callable()) -> void:
+	_ensure_ui()
+	_load_ultimate_textures()
+	_is_animating_ultimate = true
+	if _boss_action_tween != null and _boss_action_tween.is_valid():
+		_boss_action_tween.kill()
+
+	if _ultimate_dim_overlay != null:
+		_ultimate_dim_overlay.visible = true
+		_ultimate_dim_overlay.modulate.a = 0.0
+	if _ultimate_telegraph_panel != null:
+		_ultimate_telegraph_panel.visible = true
+		_ultimate_telegraph_panel.modulate.a = 0.0
+	if _entry_flash_rect != null:
+		_entry_flash_rect.visible = true
+		_entry_flash_rect.modulate.a = 0.0
+		_entry_flash_rect.scale = Vector2(0.8, 0.8)
+
+	_boss_action_tween = create_tween()
+
+	# Fade in dim overlay and telegraph panel
+	if _ultimate_dim_overlay != null:
+		_boss_action_tween.parallel().tween_property(_ultimate_dim_overlay, "modulate:a", 1.0, 0.40)
+	if _ultimate_telegraph_panel != null:
+		_boss_action_tween.parallel().tween_property(_ultimate_telegraph_panel, "modulate:a", 1.0, 0.40)
+
+	# 1. Large Arcane Entry Flash (0.15s: 0.06s rise, peak switch directly to F03, 0.09s fade out)
+	if _entry_flash_rect != null:
+		_boss_action_tween.parallel().tween_property(_entry_flash_rect, "modulate:a", 0.95, 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		_boss_action_tween.parallel().tween_property(_entry_flash_rect, "scale", Vector2(1.25, 1.25), 0.06).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+		# At peak flash (0.06s): Switch boss DIRECTLY underneath from IDLE to F03 (index 2)
+		_boss_action_tween.chain().tween_callback(func():
+			_set_charge_frame(2) # F03
+		)
+
+		# 0.06s -> 0.15s: Large bloom fades away to reveal F03 cleanly
+		_boss_action_tween.parallel().tween_property(_entry_flash_rect, "modulate:a", 0.0, 0.09).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		_boss_action_tween.parallel().tween_property(_entry_flash_rect, "scale", Vector2(1.0, 1.0), 0.09).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+		# F03 holds visual duration (0.14s)
+		_boss_action_tween.tween_interval(0.14)
+	else:
+		_set_charge_frame(2)
+		_boss_action_tween.tween_interval(0.20)
+
+	# F04 (0.20s - 0.40s)
+	_boss_action_tween.tween_callback(func(): _set_charge_frame(3))
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "modulate", Color(1.30, 1.20, 1.60), 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_boss_action_tween.tween_interval(0.20)
+
+	# F05 (0.40s - 0.60s)
+	_boss_action_tween.tween_callback(func(): _set_charge_frame(4))
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "modulate", Color(1.60, 1.45, 1.90), 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_boss_action_tween.tween_interval(0.20)
+
+	# F06 (0.60s - 2.40s): Peak charge hold through remainder of 2.4s charge
+	_boss_action_tween.tween_callback(func(): _set_charge_frame(5))
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "modulate", Color(1.80, 1.60, 2.20), 0.20).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	# 2.40s total - 0.60s elapsed = 1.80s hold on F06
+	_boss_action_tween.tween_interval(1.80)
+
+	_boss_action_tween.tween_callback(func():
+		if _ultimate_dim_overlay != null:
+			_ultimate_dim_overlay.visible = false
+		if _ultimate_telegraph_panel != null:
+			_ultimate_telegraph_panel.visible = false
+		if _entry_flash_rect != null:
+			_entry_flash_rect.visible = false
+		ultimate_charge_finished.emit()
+		if on_finish_callback.is_valid():
+			on_finish_callback.call()
+	)
+
+func play_ultimate_release(on_peak_callback: Callable = Callable(), on_finish_callback: Callable = Callable()) -> void:
+	_ensure_ui()
+	_load_ultimate_textures()
+	_is_animating_ultimate = true
+	if _boss_action_tween != null and _boss_action_tween.is_valid():
+		_boss_action_tween.kill()
+
+	_boss_action_tween = create_tween()
+	var frame_dur: float = 0.10
+
+	# Frame 0 (F01)
+	_boss_action_tween.tween_callback(func(): _set_release_frame(0))
+	_boss_action_tween.tween_interval(frame_dur)
+
+	# Frames 1..7 (F02..F08)
+	for i in range(1, 8):
+		var f_idx: int = i
+		_boss_action_tween.tween_callback(func():
+			_set_release_frame(f_idx)
+			if f_idx == 4: # F05 is PEAK RELEASE
+				ultimate_peak_reached.emit()
+				if on_peak_callback.is_valid():
+					on_peak_callback.call()
+		)
+		_boss_action_tween.tween_interval(frame_dur)
+
+	# Recovery / return to idle after F08
+	_boss_action_tween.tween_callback(func():
+		_restore_canonical_idle()
+		_is_animating_ultimate = false
+		ultimate_release_finished.emit()
+		if on_finish_callback.is_valid():
+			on_finish_callback.call()
+	)
+
+func get_boss_ultimate_meter() -> int:
+	if _combat_controller != null:
+		return _combat_controller.boss_ultimate_meter
+	return 0
+
+func get_boss_ultimate_meter_max() -> int:
+	if _combat_controller != null:
+		return _combat_controller.BOSS_ULTIMATE_METER_MAX
+	return 4
+
+func is_ultimate_animating() -> bool:
+	return _is_animating_ultimate
+
+func is_ultimate_anim_playing() -> bool:
+	return _is_animating_ultimate
+
+func get_charge_frames() -> Array[Texture2D]:
+	_load_ultimate_textures()
+	return _charge_textures
+
+func get_charge_textures() -> Array[Texture2D]:
+	_load_ultimate_textures()
+	return _charge_textures
+
+func get_release_frames() -> Array[Texture2D]:
+	_load_ultimate_textures()
+	return _release_textures
+
+func get_release_textures() -> Array[Texture2D]:
+	_load_ultimate_textures()
+	return _release_textures
+
+func get_entry_flash_rect() -> TextureRect:
+	_ensure_ui()
+	return _entry_flash_rect
+
+func get_ultimate_dim_overlay() -> ColorRect:
+	_ensure_ui()
+	return _ultimate_dim_overlay
+
+func get_ultimate_telegraph_panel() -> Control:
+	_ensure_ui()
+	return _ultimate_telegraph_panel
