@@ -41,6 +41,37 @@ var _action_hbox: HBoxContainer = null
 var _hint_button: Button = null
 var _submit_button: Button = null
 
+var _combat_fade_tween: Tween = null
+var _interaction_input_enabled: bool = true
+
+func set_interaction_enabled(enabled: bool) -> void:
+	_interaction_input_enabled = enabled
+	if _submit_button != null:
+		_submit_button.disabled = not enabled or _is_submitting
+	if _hint_button != null:
+		_hint_button.disabled = not enabled
+	if _active_interaction_view != null:
+		_active_interaction_view.mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
+
+func is_interaction_enabled() -> bool:
+	return _interaction_input_enabled
+
+func fade_for_combat(target_alpha: float = 0.22, duration: float = 0.20) -> void:
+	set_interaction_enabled(false)
+	if _combat_fade_tween != null and _combat_fade_tween.is_valid():
+		_combat_fade_tween.kill()
+	_combat_fade_tween = create_tween()
+	_combat_fade_tween.tween_property(self, "modulate:a", target_alpha, duration)
+
+func restore_after_combat(duration: float = 0.24) -> void:
+	if _combat_fade_tween != null and _combat_fade_tween.is_valid():
+		_combat_fade_tween.kill()
+	_combat_fade_tween = create_tween()
+	_combat_fade_tween.tween_property(self, "modulate:a", 1.0, duration)
+	_combat_fade_tween.tween_callback(func():
+		set_interaction_enabled(true)
+	)
+
 func set_combat_action(action_name: String, action_value: String = "") -> void:
 	if action_name.is_empty():
 		_combat_action_text = ""

@@ -16,6 +16,14 @@ signal card_selected(card_id: String)
 signal retry_pressed()
 signal victory_acknowledged()
 
+# Question Combat Fade Signals
+signal question_fade_requested(target_alpha: float, duration: float)
+signal question_restore_requested(duration: float)
+
+# Boss Spell Signals
+signal boss_spell_cast_started(spell_name: String, duration: float)
+signal boss_spell_cast_finished(spell_name: String)
+
 # Ultimate animation signals
 signal ultimate_peak_reached()
 signal ultimate_charge_finished()
@@ -73,11 +81,11 @@ const FINAL_RELEASE_TRANSFORMS: Dictionary = {
 	7: {"scale": 1.2531, "x": 195.99, "y": 39.83}  # F08
 }
 
-# Karl Battlefield Entity (Refined Proportions: 300 x 300 px, Left: 50, Bottom: 70)
-const KARL_ENTITY_LEFT: float = 50.0
+# Karl Battlefield Entity (Refined Proportions: 260 x 260 px, Left: 32, Bottom: 70)
+const KARL_ENTITY_LEFT: float = 32.0
 const KARL_ENTITY_BOTTOM: float = 70.0
-const KARL_ENTITY_WIDTH: float = 300.0
-const KARL_ENTITY_HEIGHT: float = 300.0
+const KARL_ENTITY_WIDTH: float = 260.0
+const KARL_ENTITY_HEIGHT: float = 260.0
 
 const ASSET_KARL_IDLE: String = "res://assets/characters/player/karl/combat_pixel/karl_idle.png"
 const ASSET_KARL_CAST: String = "res://assets/characters/player/karl/combat_pixel/karl_cast.png"
@@ -90,9 +98,23 @@ const CARD_STRIKE_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/STRIKE
 const CARD_DEFEND_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/DEFEND.png"
 const CARD_HEAL_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/HEAL.png"
 const CARD_PROBABILITY_TEXTURE_PATH: String = "res://assets/ui/combat/cards_v1/PROBABILITY.png"
-const CARD_WIDTH: float = 132.0
-const CARD_HEIGHT: float = 188.0
-const CARD_GAP: float = 14.0
+const CARD_WIDTH: float = 160.0
+const CARD_HEIGHT: float = 225.0
+const CARD_GAP: float = 16.0
+
+# Question Combat Mode
+const QUESTION_NORMAL_ALPHA: float = 1.0
+const QUESTION_COMBAT_ALPHA: float = 0.22
+const QUESTION_FADE_OUT_DURATION: float = 0.20
+const QUESTION_FADE_IN_DURATION: float = 0.24
+
+# Boss Spell Types
+enum BossSpellType {
+	ARCANE_BOLT,
+	PROBABILITY_ORB,
+	VOID_RIFT,
+	ARCANE_SWEEP
+}
 
 const ASSET_VFX_KARL_PROJECTILE: String = "res://assets/vfx/combat/karl_arcane_projectile.png"
 const ASSET_VFX_STOCHAS_BOLT: String = "res://assets/vfx/combat/stochas_arcane_bolt.png"
@@ -213,6 +235,13 @@ var _ultimate_dim_overlay: ColorRect = null
 var _ultimate_telegraph_panel: Control = null
 var _boss_action_tween: Tween = null
 var _is_animating_ultimate: bool = false
+var _is_animating_spell: bool = false
+var _boss_spell_cycle: int = 0
+var _current_spell_type: BossSpellType = BossSpellType.ARCANE_BOLT
+
+# Question Combat Fade runtime
+var _question_panel_override: Control = null
+var _question_fade_tween: Tween = null
 
 # Combat VFX runtime
 var _floating_status_container: Control = null
@@ -226,7 +255,7 @@ func _ready() -> void:
 	set_process(true)
 
 func _process(delta: float) -> void:
-	if _boss_sprite_rect != null and is_visible_in_tree() and not _is_animating_ultimate:
+	if _boss_sprite_rect != null and is_visible_in_tree() and not _is_animating_ultimate and not _is_animating_spell:
 		_float_time += delta
 		var offset_y: float = sin(_float_time * 2.2) * 4.0
 		_boss_sprite_rect.position.y = offset_y
@@ -948,14 +977,14 @@ func _layout_elements() -> void:
 			_boss_visual_rect.size = Vector2(stage_w, stage_h)
 
 	# 3. Bottom Cards Area: centered horizontally, bottom ~12px
-	var cards_w: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP # 4 * 106 + 3 * 14 = 466.0
-	var cards_h: float = CARD_HEIGHT # 154.0
+	var cards_w: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP # 4 * 160 + 3 * 16 = 688.0
+	var cards_h: float = CARD_HEIGHT # 225.0
 
 	if _bottom_center_container != null:
 		var min_bottom_w: float = _bottom_center_container.get_combined_minimum_size().x
 		var actual_bottom_w: float = maxf(cards_w, min_bottom_w)
 		var actual_bottom_x: float = (w - actual_bottom_w) * 0.5
-		var total_bottom_h: float = cards_h + 30.0 # cards + flow pill
+		var total_bottom_h: float = cards_h + 36.0 # cards + flow pill
 		var bottom_y: float = maxf(0.0, h - 12.0 - total_bottom_h)
 		_bottom_center_container.position = Vector2(actual_bottom_x, bottom_y)
 		_bottom_center_container.size = Vector2(actual_bottom_w, total_bottom_h)
@@ -1118,12 +1147,12 @@ func _build_card_slots() -> void:
 		badge_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		badge_panel.add_child(badge_label)
 
-		# Texture Rect (Artwork area sized for 132x188 card)
+		# Texture Rect (Artwork area sized for 160x225 card)
 		var art_margin: MarginContainer = MarginContainer.new()
 		art_margin.name = "ArtMargin"
 		art_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		art_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		art_margin.custom_minimum_size = Vector2(0, 120.0)
+		art_margin.custom_minimum_size = Vector2(0, 150.0)
 		art_margin.add_theme_constant_override("margin_left", 2)
 		art_margin.add_theme_constant_override("margin_right", 2)
 		card_vbox.add_child(art_margin)
@@ -1136,7 +1165,7 @@ func _build_card_slots() -> void:
 		tex_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		tex_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tex_rect.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		tex_rect.custom_minimum_size = Vector2(0, 116.0)
+		tex_rect.custom_minimum_size = Vector2(0, 146.0)
 		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		art_margin.add_child(tex_rect)
 
@@ -1498,20 +1527,36 @@ func _on_combat_log(message: String, type: String) -> void:
 			"player_success":
 				_combat_log_label.add_theme_color_override("font_color", Color(0.4, 1.0, 0.5, 1.0))
 				if _selected_card_id == "card_strike":
+					fade_question_for_combat()
 					play_karl_cast()
 					_fire_karl_arcane_projectile()
 				elif _selected_card_id == "card_defend":
+					fade_question_for_combat()
 					play_karl_shield()
 					_spawn_barrier_pulse()
 					_update_persistent_barrier(true)
-					_spawn_floating_feedback(Vector2(KARL_ENTITY_LEFT + 150.0, 450.0), "+8 GIÁP", Color(0.25, 0.85, 0.98, 1.0))
+					_spawn_floating_feedback(Vector2(KARL_ENTITY_LEFT + 130.0, 450.0), "+8 GIÁP", Color(0.25, 0.85, 0.98, 1.0))
+					var sh_tw: Tween = create_tween()
+					sh_tw.tween_interval(1.1)
+					sh_tw.tween_callback(restore_question_after_combat)
 				elif _selected_card_id == "card_heal":
+					fade_question_for_combat()
 					play_karl_heal()
 					_spawn_emerald_pulse()
-					_spawn_floating_feedback(Vector2(KARL_ENTITY_LEFT + 150.0, 450.0), "+15 HP", Color(0.35, 0.90, 0.45, 1.0))
+					_spawn_floating_feedback(Vector2(KARL_ENTITY_LEFT + 130.0, 450.0), "+15 HP", Color(0.35, 0.90, 0.45, 1.0))
+					var hl_tw: Tween = create_tween()
+					hl_tw.tween_interval(1.2)
+					hl_tw.tween_callback(restore_question_after_combat)
+				elif _selected_card_id == "card_probability":
+					fade_question_for_combat()
+					play_karl_cast()
+					_spawn_emerald_pulse()
+					var prob_tw: Tween = create_tween()
+					prob_tw.tween_interval(1.1)
+					prob_tw.tween_callback(restore_question_after_combat)
 			"player_fail", "boss_attack":
 				_combat_log_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4, 1.0))
-				_fire_stochas_spell()
+				_fire_stochas_spell_cycle()
 			"victory":
 				_combat_log_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1.0))
 			"defeat":
@@ -1764,7 +1809,7 @@ func get_flow_pill_rect() -> Rect2:
 	var h: float = size.y if size.y > 0.0 else 720.0
 	var cw: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP
 	var cx: float = (w - cw) * 0.5
-	var total_bottom_h: float = CARD_HEIGHT + 30.0
+	var total_bottom_h: float = CARD_HEIGHT + 36.0
 	var bottom_y: float = maxf(0.0, h - 12.0 - total_bottom_h)
 	return Rect2(cx, bottom_y, cw, 24)
 
@@ -1776,9 +1821,9 @@ func get_card_row_rect() -> Rect2:
 	var cw: float = 4.0 * CARD_WIDTH + 3.0 * CARD_GAP
 	var ch: float = CARD_HEIGHT
 	var cx: float = (w - cw) * 0.5
-	var total_bottom_h: float = CARD_HEIGHT + 30.0
+	var total_bottom_h: float = CARD_HEIGHT + 36.0
 	var bottom_y: float = maxf(0.0, h - 12.0 - total_bottom_h)
-	return Rect2(cx, bottom_y + 26.0, cw, ch)
+	return Rect2(cx, bottom_y + 30.0, cw, ch)
 
 func get_card_rect(card_id: String) -> Rect2:
 	_ensure_ui()
@@ -1791,7 +1836,7 @@ func get_card_rect(card_id: String) -> Rect2:
 	return Rect2()
 
 func get_selected_card_lift() -> float:
-	return 8.0
+	return 6.0
 
 # ==============================================================================
 # ULTIMATE ANIMATION & RUNTIME METHODS (Task 241A)
@@ -1857,6 +1902,7 @@ func play_ultimate_charge(on_finish_callback: Callable = Callable()) -> void:
 	_ensure_ui()
 	_load_ultimate_textures()
 	_is_animating_ultimate = true
+	fade_question_for_combat()
 	if _boss_action_tween != null and _boss_action_tween.is_valid():
 		_boss_action_tween.kill()
 
@@ -1961,6 +2007,7 @@ func play_ultimate_release(on_peak_callback: Callable = Callable(), on_finish_ca
 	_boss_action_tween.tween_callback(func():
 		_restore_canonical_idle()
 		_is_animating_ultimate = false
+		restore_question_after_combat()
 		ultimate_release_finished.emit()
 		if on_finish_callback.is_valid():
 			on_finish_callback.call()
@@ -2193,8 +2240,8 @@ func _build_persistent_barrier() -> void:
 	_karl_persistent_barrier = Panel.new()
 	_karl_persistent_barrier.name = "KarlPersistentBarrier"
 	_karl_persistent_barrier.position = Vector2(8, 8)
-	_karl_persistent_barrier.size = Vector2(284, 284)
-	_karl_persistent_barrier.pivot_offset = Vector2(142, 142)
+	_karl_persistent_barrier.size = Vector2(244, 244)
+	_karl_persistent_barrier.pivot_offset = Vector2(122, 122)
 	_karl_persistent_barrier.visible = false
 	_karl_persistent_barrier.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -2205,10 +2252,10 @@ func _build_persistent_barrier() -> void:
 	b_box.border_width_right = 3
 	b_box.border_width_bottom = 3
 	b_box.border_color = Color(0.35, 0.90, 1.0, 0.90)
-	b_box.corner_radius_top_left = 142
-	b_box.corner_radius_top_right = 142
-	b_box.corner_radius_bottom_right = 142
-	b_box.corner_radius_bottom_left = 142
+	b_box.corner_radius_top_left = 122
+	b_box.corner_radius_top_right = 122
+	b_box.corner_radius_bottom_right = 122
+	b_box.corner_radius_bottom_left = 122
 	b_box.shadow_color = Color(0.20, 0.85, 1.0, 0.60)
 	b_box.shadow_size = 18
 	_karl_persistent_barrier.add_theme_stylebox_override("panel", b_box)
@@ -2264,6 +2311,9 @@ func _fire_karl_arcane_projectile() -> void:
 				dmg_text = "-%d HP" % amt
 		_spawn_floating_feedback(target_pos + Vector2(0, -60), dmg_text, Color(0.95, 0.35, 0.35, 1.0))
 	)
+	var k_rec: Tween = create_tween()
+	k_rec.tween_interval(0.45 + 0.40)
+	k_rec.tween_callback(restore_question_after_combat)
 
 func _flash_boss_hit() -> void:
 	if _boss_sprite_rect != null:
@@ -2271,18 +2321,103 @@ func _flash_boss_hit() -> void:
 		flash_tw.tween_property(_boss_sprite_rect, "modulate", Color(2.2, 0.6, 0.6, 1.0), 0.08)
 		flash_tw.tween_property(_boss_sprite_rect, "modulate", Color.WHITE, 0.15)
 
+# ==============================================================================
+# BOSS SPELL CYCLE & AUTHORED ANIMATION SYSTEM
+# ==============================================================================
+
 func _fire_stochas_spell() -> void:
+	_fire_stochas_spell_cycle()
+
+func _fire_stochas_spell_cycle() -> void:
+	var spells: Array[BossSpellType] = [
+		BossSpellType.ARCANE_BOLT,
+		BossSpellType.PROBABILITY_ORB,
+		BossSpellType.VOID_RIFT,
+		BossSpellType.ARCANE_SWEEP
+	]
+	var spell: BossSpellType = spells[_boss_spell_cycle % spells.size()]
+	_boss_spell_cycle += 1
+	cast_boss_spell(spell)
+
+func cast_boss_spell(spell_type: BossSpellType = BossSpellType.ARCANE_BOLT) -> void:
+	_ensure_ui()
+	_is_animating_spell = true
+	_current_spell_type = spell_type
+	if _boss_action_tween != null and _boss_action_tween.is_valid():
+		_boss_action_tween.kill()
+
+	match spell_type:
+		BossSpellType.ARCANE_BOLT:
+			_execute_arcane_bolt_animation()
+		BossSpellType.PROBABILITY_ORB:
+			_execute_probability_orb_animation()
+		BossSpellType.VOID_RIFT:
+			_execute_void_rift_animation()
+		BossSpellType.ARCANE_SWEEP:
+			_execute_arcane_sweep_animation()
+
+func play_boss_bolt() -> void:
+	cast_boss_spell(BossSpellType.ARCANE_BOLT)
+
+func play_boss_orb() -> void:
+	cast_boss_spell(BossSpellType.PROBABILITY_ORB)
+
+func play_boss_rift() -> void:
+	cast_boss_spell(BossSpellType.VOID_RIFT)
+
+func play_boss_sweep() -> void:
+	cast_boss_spell(BossSpellType.ARCANE_SWEEP)
+
+func is_spell_animating() -> bool:
+	return _is_animating_spell
+
+func get_current_spell_type() -> BossSpellType:
+	return _current_spell_type
+
+func get_boss_spell_cycle() -> int:
+	return _boss_spell_cycle
+
+func _execute_arcane_bolt_animation() -> void:
+	boss_spell_cast_started.emit("ARCANE_BOLT", 1.18)
+	fade_question_for_combat()
+
+	if _boss_sprite_rect == null:
+		_finish_spell_animation("ARCANE_BOLT")
+		return
+
+	_boss_action_tween = create_tween()
+	# Step 1: Anticipation backward (+16px X, -1.5 deg)
+	_boss_action_tween.tween_property(_boss_sprite_rect, "position", Vector2(16.0, 0.0), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "rotation_degrees", -1.5, 0.15)
+
+	# Step 2: Rapid forward snap (-24px X, +2.0 deg) + cyan arcane flare
+	_boss_action_tween.tween_property(_boss_sprite_rect, "position", Vector2(-24.0, 2.0), 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "rotation_degrees", 2.0, 0.18)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "modulate", Color(1.3, 1.8, 2.2, 1.0), 0.18)
+	_boss_action_tween.tween_callback(_spawn_stochas_arcane_bolt_projectile)
+
+	# Step 3: Recoil back to idle baseline (0, 0)
+	_boss_action_tween.tween_property(_boss_sprite_rect, "position", Vector2.ZERO, 0.20).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "rotation_degrees", 0.0, 0.20)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "modulate", Color.WHITE, 0.20)
+
+	# Total duration: 0.15 + 0.18 + 0.50 (travel) + 0.35 (recovery) = 1.18s
+	var rec_tw: Tween = create_tween()
+	rec_tw.tween_interval(1.18)
+	rec_tw.tween_callback(func():
+		_finish_spell_animation("ARCANE_BOLT")
+	)
+
+func _spawn_stochas_arcane_bolt_projectile() -> void:
 	if _floating_status_container == null:
 		return
-	var spell_tex_path: String = ASSET_VFX_STOCHAS_BOLT
-	var spell_size: Vector2 = Vector2(136, 60)
 	var spell: TextureRect = TextureRect.new()
 	spell.name = "StochasSpellProjectile"
-	if ResourceLoader.exists(spell_tex_path):
-		spell.texture = load(spell_tex_path)
+	if ResourceLoader.exists(ASSET_VFX_STOCHAS_BOLT):
+		spell.texture = load(ASSET_VFX_STOCHAS_BOLT)
 	spell.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	spell.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	spell.size = spell_size
+	spell.size = Vector2(136, 60)
 
 	var stage_x: float = _boss_stage_container.position.x if _boss_stage_container != null else 812.0
 	spell.position = Vector2(stage_x + 50.0, 300.0)
@@ -2296,16 +2431,271 @@ func _fire_stochas_spell() -> void:
 	tw.tween_property(spell, "position", target_pos, 0.50).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tw.tween_callback(func():
 		spell.queue_free()
-		_spawn_impact_particles(target_pos)
-		var p_runtime: PlayerRuntime = _combat_controller.player_runtime if _combat_controller != null else null
-		var has_shield: bool = p_runtime != null and p_runtime.shield > 0
-		if has_shield:
-			_spawn_barrier_pulse()
-			_spawn_floating_feedback(Vector2(KARL_ENTITY_LEFT + 150.0, karl_y + 50.0), "-GIÁP", Color(0.25, 0.85, 0.98, 1.0))
-		else:
-			play_karl_hit()
-			_spawn_floating_feedback(Vector2(KARL_ENTITY_LEFT + 150.0, karl_y + 50.0), "-HP", Color(0.95, 0.35, 0.35, 1.0))
+		_apply_boss_attack_feedback(8)
 	)
+
+func _execute_probability_orb_animation() -> void:
+	boss_spell_cast_started.emit("PROBABILITY_ORB", 1.80)
+	fade_question_for_combat()
+
+	if _boss_sprite_rect == null:
+		_finish_spell_animation("PROBABILITY_ORB")
+		return
+
+	_boss_action_tween = create_tween()
+	# Step 1: Vertical float upward & scale expansion (-22px Y, -2.0 deg, 1.05 scale, golden-cyan tint)
+	_boss_action_tween.tween_property(_boss_sprite_rect, "position", Vector2(0.0, -22.0), 0.35).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "rotation_degrees", -2.0, 0.35)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "scale", Vector2(1.05, 1.05), 0.35)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "modulate", Color(1.4, 1.4, 0.9, 1.0), 0.35)
+
+	# Step 2: Release forward (-10px X, 1.02 scale)
+	_boss_action_tween.tween_property(_boss_sprite_rect, "position", Vector2(-10.0, 0.0), 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "rotation_degrees", 0.0, 0.25)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "scale", Vector2(1.02, 1.02), 0.25)
+	_boss_action_tween.tween_callback(_spawn_stochas_probability_orb_projectile)
+
+	# Step 3: Settle back to baseline
+	_boss_action_tween.tween_property(_boss_sprite_rect, "position", Vector2.ZERO, 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "rotation_degrees", 0.0, 0.25)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "scale", Vector2.ONE, 0.25)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "modulate", Color.WHITE, 0.25)
+
+	# Total duration: 0.35 + 0.25 + 0.35 (prep) + 0.55 (travel) + 0.30 (recovery) = 1.80s
+	var rec_tw: Tween = create_tween()
+	rec_tw.tween_interval(1.80)
+	rec_tw.tween_callback(func():
+		_finish_spell_animation("PROBABILITY_ORB")
+	)
+
+func _spawn_stochas_probability_orb_projectile() -> void:
+	if _floating_status_container == null:
+		return
+	var orb: TextureRect = TextureRect.new()
+	orb.name = "StochasProbabilityOrb"
+	if ResourceLoader.exists(ASSET_VFX_STOCHAS_ORB):
+		orb.texture = load(ASSET_VFX_STOCHAS_ORB)
+	orb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	orb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	orb.size = Vector2(90, 90)
+	orb.pivot_offset = Vector2(45, 45)
+	orb.scale = Vector2(0.8, 0.8)
+
+	var stage_x: float = _boss_stage_container.position.x if _boss_stage_container != null else 812.0
+	orb.position = Vector2(stage_x + 40.0, 260.0)
+	_floating_status_container.add_child(orb)
+
+	var h: float = size.y if size.y > 0.0 else 720.0
+	var karl_y: float = maxf(0.0, h - KARL_ENTITY_HEIGHT - KARL_ENTITY_BOTTOM)
+	var target_pos: Vector2 = Vector2(KARL_ENTITY_LEFT + 150.0, karl_y + 120.0)
+
+	var tw: Tween = create_tween()
+	tw.tween_property(orb, "scale", Vector2(1.25, 1.25), 0.35).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(orb, "position", target_pos, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(orb, "scale", Vector2(1.0, 1.0), 0.55)
+	tw.tween_callback(func():
+		orb.queue_free()
+		_apply_boss_attack_feedback(10)
+	)
+
+func _execute_void_rift_animation() -> void:
+	boss_spell_cast_started.emit("VOID_RIFT", 1.50)
+	fade_question_for_combat()
+
+	if _boss_sprite_rect == null:
+		_finish_spell_animation("VOID_RIFT")
+		return
+
+	_boss_action_tween = create_tween()
+	# Step 1: Heavy summon windup & downward sink (+18px X, +18px Y, +3.5 deg, violet glow)
+	_boss_action_tween.tween_property(_boss_sprite_rect, "position", Vector2(18.0, 18.0), 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "rotation_degrees", 3.5, 0.30)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "modulate", Color(0.85, 0.70, 1.20, 1.0), 0.30)
+
+	# Step 2: Spawn rift and hold pose
+	_boss_action_tween.tween_callback(_spawn_stochas_void_rift_effect)
+	_boss_action_tween.tween_interval(0.60)
+
+	# Step 3: Settle back to baseline
+	_boss_action_tween.tween_property(_boss_sprite_rect, "position", Vector2.ZERO, 0.30).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "rotation_degrees", 0.0, 0.30)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "modulate", Color.WHITE, 0.30)
+
+	# Total duration: 0.30 + 0.60 + 0.30 (collapse) + 0.30 (recovery) = 1.50s
+	var rec_tw: Tween = create_tween()
+	rec_tw.tween_interval(1.50)
+	rec_tw.tween_callback(func():
+		_finish_spell_animation("VOID_RIFT")
+	)
+
+func _spawn_stochas_void_rift_effect() -> void:
+	if _floating_status_container == null:
+		return
+	var rift: TextureRect = TextureRect.new()
+	rift.name = "StochasVoidRift"
+	if ResourceLoader.exists(ASSET_VFX_STOCHAS_RIFT):
+		rift.texture = load(ASSET_VFX_STOCHAS_RIFT)
+	rift.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rift.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	rift.size = Vector2(110, 130)
+	rift.pivot_offset = Vector2(55, 65)
+
+	var h: float = size.y if size.y > 0.0 else 720.0
+	var karl_y: float = maxf(0.0, h - KARL_ENTITY_HEIGHT - KARL_ENTITY_BOTTOM)
+	rift.position = Vector2(KARL_ENTITY_LEFT + 130.0, karl_y + 110.0)
+	rift.scale = Vector2(0.2, 0.2)
+	rift.modulate.a = 0.0
+	_floating_status_container.add_child(rift)
+
+	var tw: Tween = create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(rift, "scale", Vector2(1.25, 1.25), 0.60).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(rift, "modulate:a", 1.0, 0.60)
+	tw.chain().tween_callback(func():
+		_apply_boss_attack_feedback(12)
+	)
+	tw.tween_property(rift, "scale", Vector2(0.1, 0.1), 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(rift, "modulate:a", 0.0, 0.30)
+	tw.chain().tween_callback(rift.queue_free)
+
+func _execute_arcane_sweep_animation() -> void:
+	boss_spell_cast_started.emit("ARCANE_SWEEP", 1.75)
+	fade_question_for_combat()
+
+	if _boss_sprite_rect == null:
+		_finish_spell_animation("ARCANE_SWEEP")
+		return
+
+	_boss_action_tween = create_tween()
+	# Step 1: Strong windup (+35px X, -6px Y, -5.5 deg, 1.08 scale)
+	_boss_action_tween.tween_property(_boss_sprite_rect, "position", Vector2(35.0, -6.0), 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "rotation_degrees", -5.5, 0.35)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "scale", Vector2(1.08, 0.95), 0.35)
+
+	# Step 2: Massive forward lunge / sweep across (-35px X, +6px Y, +4.5 deg, violet glow)
+	_boss_action_tween.tween_property(_boss_sprite_rect, "position", Vector2(-35.0, 6.0), 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "rotation_degrees", 4.5, 0.35)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "scale", Vector2(0.96, 1.04), 0.35)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "modulate", Color(1.35, 1.10, 1.70, 1.0), 0.35)
+	_boss_action_tween.tween_callback(_spawn_stochas_arcane_sweep_effect)
+
+	# Step 3: Recoil back to baseline
+	_boss_action_tween.tween_property(_boss_sprite_rect, "position", Vector2.ZERO, 0.30).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "rotation_degrees", 0.0, 0.30)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "scale", Vector2.ONE, 0.30)
+	_boss_action_tween.parallel().tween_property(_boss_sprite_rect, "modulate", Color.WHITE, 0.30)
+
+	# Total duration: 0.35 + 0.35 + 0.65 (travel) + 0.20 (fade) + 0.20 (recovery) = 1.75s
+	var rec_tw: Tween = create_tween()
+	rec_tw.tween_interval(1.75)
+	rec_tw.tween_callback(func():
+		_finish_spell_animation("ARCANE_SWEEP")
+	)
+
+func _spawn_stochas_arcane_sweep_effect() -> void:
+	if _floating_status_container == null:
+		return
+	var sweep: TextureRect = TextureRect.new()
+	sweep.name = "StochasArcaneSweep"
+	if ResourceLoader.exists(ASSET_VFX_STOCHAS_SWEEP):
+		sweep.texture = load(ASSET_VFX_STOCHAS_SWEEP)
+	sweep.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sweep.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sweep.size = Vector2(180, 130)
+
+	var stage_x: float = _boss_stage_container.position.x if _boss_stage_container != null else 812.0
+	var h: float = size.y if size.y > 0.0 else 720.0
+	var karl_y: float = maxf(0.0, h - KARL_ENTITY_HEIGHT - KARL_ENTITY_BOTTOM)
+	sweep.position = Vector2(stage_x - 30.0, karl_y + 90.0)
+	_floating_status_container.add_child(sweep)
+
+	var target_pos: Vector2 = Vector2(KARL_ENTITY_LEFT + 30.0, karl_y + 90.0)
+	var tw: Tween = create_tween()
+	tw.tween_property(sweep, "position", target_pos, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_callback(func():
+		_apply_boss_attack_feedback(14)
+	)
+	tw.tween_property(sweep, "modulate:a", 0.0, 0.20)
+	tw.chain().tween_callback(sweep.queue_free)
+
+func _finish_spell_animation(spell_name: String) -> void:
+	if _boss_sprite_rect != null:
+		_boss_sprite_rect.position = Vector2.ZERO
+		_boss_sprite_rect.rotation_degrees = 0.0
+		_boss_sprite_rect.scale = Vector2.ONE
+		_boss_sprite_rect.modulate = Color.WHITE
+	_is_animating_spell = false
+	boss_spell_cast_finished.emit(spell_name)
+	restore_question_after_combat()
+
+func _apply_boss_attack_feedback(dmg: int) -> void:
+	var h: float = size.y if size.y > 0.0 else 720.0
+	var karl_y: float = maxf(0.0, h - KARL_ENTITY_HEIGHT - KARL_ENTITY_BOTTOM)
+	var impact_pos: Vector2 = Vector2(KARL_ENTITY_LEFT + 150.0, karl_y + 120.0)
+	_spawn_impact_particles(impact_pos)
+
+	var p_runtime: PlayerRuntime = _combat_controller.player_runtime if _combat_controller != null else null
+	var has_shield: bool = p_runtime != null and p_runtime.shield > 0
+	if has_shield:
+		_spawn_barrier_pulse()
+		_spawn_floating_feedback(Vector2(KARL_ENTITY_LEFT + 130.0, karl_y + 50.0), "-GIÁP", Color(0.25, 0.85, 0.98, 1.0))
+	else:
+		play_karl_hit()
+		_spawn_floating_feedback(Vector2(KARL_ENTITY_LEFT + 130.0, karl_y + 50.0), "-%d HP" % dmg, Color(0.95, 0.35, 0.35, 1.0))
+
+# ==============================================================================
+# QUESTION PANEL COMBAT FADE HELPERS
+# ==============================================================================
+
+func set_question_panel_override(panel: Control) -> void:
+	_question_panel_override = panel
+
+func get_target_question_panel() -> Control:
+	if _question_panel_override != null and is_instance_valid(_question_panel_override):
+		return _question_panel_override
+	var p: Node = get_parent()
+	if p != null:
+		var q_host: Node = p.get_node_or_null("QuestionPanelHost")
+		if q_host != null:
+			var qp: Node = q_host.get_node_or_null("QuestionPanel")
+			if qp is Control:
+				return qp as Control
+			for child in q_host.get_children():
+				if child is Control and (child.has_method("fade_for_combat") or child.name == "QuestionPanel"):
+					return child as Control
+			return q_host as Control
+	if is_inside_tree():
+		var tree_qp: Node = get_tree().root.find_child("QuestionPanel", true, false)
+		if tree_qp is Control:
+			return tree_qp as Control
+		var tree_host: Node = get_tree().root.find_child("QuestionPanelHost", true, false)
+		if tree_host is Control:
+			return tree_host as Control
+	return null
+
+func fade_question_for_combat(target_alpha: float = QUESTION_COMBAT_ALPHA, duration: float = QUESTION_FADE_OUT_DURATION) -> void:
+	question_fade_requested.emit(target_alpha, duration)
+	var qp: Control = get_target_question_panel()
+	if qp != null:
+		if qp.has_method("fade_for_combat"):
+			qp.call("fade_for_combat", target_alpha, duration)
+		else:
+			if _question_fade_tween != null and _question_fade_tween.is_valid():
+				_question_fade_tween.kill()
+			_question_fade_tween = create_tween()
+			_question_fade_tween.tween_property(qp, "modulate:a", target_alpha, duration)
+
+func restore_question_after_combat(duration: float = QUESTION_FADE_IN_DURATION) -> void:
+	question_restore_requested.emit(duration)
+	var qp: Control = get_target_question_panel()
+	if qp != null:
+		if qp.has_method("restore_after_combat"):
+			qp.call("restore_after_combat", duration)
+		else:
+			if _question_fade_tween != null and _question_fade_tween.is_valid():
+				_question_fade_tween.kill()
+			_question_fade_tween = create_tween()
+			_question_fade_tween.tween_property(qp, "modulate:a", QUESTION_NORMAL_ALPHA, duration)
 
 func _spawn_impact_particles(pos: Vector2) -> void:
 	if _floating_status_container == null:
