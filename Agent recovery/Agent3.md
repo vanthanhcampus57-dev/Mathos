@@ -18,7 +18,7 @@
 - BRANCH: task/mathos-story-parity-fix-185
 - START_HEAD: 21e41976825b5999e4555e68e31de8eab37102a3
 - CURRENT_HEAD: 21e41976825b5999e4555e68e31de8eab37102a3
-- FINAL_HEAD: PENDING_COMMIT
+- FINAL_HEAD: e5549e1122e4812e8d9cdf817a89be7deed63b0d
 - CANONICAL_BASE: 3568e876c749e26a70b79cb13c6432bca658985b
 - PRODUCTION_SOURCE_CHANGED: YES (`src/gameplay/combat/card_combat_controller.gd`, `src/ui/combat/boss_combat_panel.gd`, `tests/unit/combat/test_stochas_full_combat_card_ultimate_karl_skill_restore_241f.gd`)
 - COMBAT_LAB_CHANGED: NO
