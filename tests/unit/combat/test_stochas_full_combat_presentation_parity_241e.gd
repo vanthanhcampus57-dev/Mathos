@@ -1,5 +1,9 @@
 class_name TestStochasFullCombatPresentationParity241E
-extends RefCounted
+extends SceneTree
+
+func _initialize() -> void:
+	var ok: bool = run_all(self)
+	quit(0 if ok else 1)
 
 ## Verification Suite for Task MATHOS-STOCHAS-COMBAT-PRESENTATION-PARITY-241E (Agent3)
 ## Verifies full production parity requirements:
@@ -19,7 +23,7 @@ static func _fail(gate: String, msg: String) -> bool:
 	printerr(err)
 	return false
 
-static func run_all() -> bool:
+static func run_all(tree: SceneTree = null) -> bool:
 	_failures.clear()
 	print("================================================================================")
 	print("STARTING TEST SUITE: MATHOS-STOCHAS-COMBAT-PRESENTATION-PARITY-241E")
@@ -31,7 +35,7 @@ static func run_all() -> bool:
 	ok = test_003_boss_combat_panel_question_fade_integration() and ok
 	ok = test_004_authored_boss_spell_motion_profiles() and ok
 	ok = test_005_process_floating_guard() and ok
-	ok = test_006_combat_log_and_ultimate_fade_integration() and ok
+	ok = test_006_combat_log_and_ultimate_fade_integration(tree) and ok
 	ok = test_007_strict_locks_preservation() and ok
 
 	if ok and _failures.is_empty():
@@ -282,53 +286,57 @@ static func test_005_process_floating_guard() -> bool:
 # -----------------------------------------------------------------------------
 # 6. Combat Log and Ultimate Fade Integration (Gate 6)
 # -----------------------------------------------------------------------------
-static func test_006_combat_log_and_ultimate_fade_integration() -> bool:
+static func test_006_combat_log_and_ultimate_fade_integration(tree: SceneTree = null) -> bool:
 	print("[GATE 6] Verifying Combat Actions trigger question fade...")
 
 	var panel: BossCombatPanel = BossCombatPanel.new()
 	panel.size = Vector2(1280, 720)
+	if tree != null:
+		tree.root.add_child(panel)
 	panel._ensure_ui()
 
 	var qp_mock: Control = Control.new()
+	if tree != null:
+		tree.root.add_child(qp_mock)
 	panel.set_question_panel_override(qp_mock)
 
-	var fade_count: int = 0
-	panel.question_fade_requested.connect(func(a, d): fade_count += 1)
+	var fade_count: Array = [0]
+	panel.question_fade_requested.connect(func(a, d): fade_count[0] += 1)
 
 	# Trigger Karl Strike via combat log
-	panel._selected_card_id = "card_strike"
+	panel.select_card("card_strike")
 	panel._on_combat_log("Karl tấn công!", "player_success")
-	if fade_count < 1:
+	if fade_count[0] < 1:
 		panel.free()
 		qp_mock.free()
 		return _fail("GATE-6", "card_strike did not trigger question fade")
 
 	# Trigger Karl Defend
-	panel._selected_card_id = "card_defend"
+	panel.select_card("card_defend")
 	panel._on_combat_log("Karl thủ khiên!", "player_success")
-	if fade_count < 2:
+	if fade_count[0] < 2:
 		panel.free()
 		qp_mock.free()
 		return _fail("GATE-6", "card_defend did not trigger question fade")
 
 	# Trigger Karl Heal
-	panel._selected_card_id = "card_heal"
+	panel.select_card("card_heal")
 	panel._on_combat_log("Karl hồi phục!", "player_success")
-	if fade_count < 3:
+	if fade_count[0] < 3:
 		panel.free()
 		qp_mock.free()
 		return _fail("GATE-6", "card_heal did not trigger question fade")
 
 	# Trigger Boss attack
 	panel._on_combat_log("Stochas phản kích!", "boss_attack")
-	if fade_count < 4:
+	if fade_count[0] < 4:
 		panel.free()
 		qp_mock.free()
 		return _fail("GATE-6", "boss_attack did not trigger question fade")
 
 	# Trigger Ultimate charge
 	panel.play_ultimate_charge()
-	if fade_count < 5:
+	if fade_count[0] < 5:
 		panel.free()
 		qp_mock.free()
 		return _fail("GATE-6", "play_ultimate_charge did not trigger question fade")

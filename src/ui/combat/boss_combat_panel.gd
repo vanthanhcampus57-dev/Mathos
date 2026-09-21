@@ -474,7 +474,7 @@ func _on_boss_ultimate_challenge_started() -> void:
 func _start_ultimate_challenge() -> void:
 	_ensure_ui()
 	_is_ultimate_challenge_active = true
-	_ultimate_challenge_timer = ULTIMATE_CHALLENGE_DURATION
+	_ultimate_challenge_timer = CardCombatController.ULTIMATE_CHALLENGE_DURATION
 	if _ultimate_challenge_banner != null:
 		_ultimate_challenge_banner.visible = true
 		if _ultimate_challenge_label != null:

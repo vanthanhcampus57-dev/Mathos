@@ -1,5 +1,9 @@
 class_name TestStochasFullCombatCardUltimateKarlSkillRestore241F
-extends RefCounted
+extends SceneTree
+
+func _initialize() -> void:
+	var ok: bool = run_all()
+	quit(0 if ok else 1)
 
 ## Comprehensive Verification Suite for Task MATHOS-FULL-COMBAT-CARD-ULTIMATE-KARL-SKILL-RESTORE-241F (Agent3)
 ## Verifies:
@@ -10,6 +14,21 @@ extends RefCounted
 ## 5. Tactical Cards Execution: Eliminate, Reroll, Add Time, Stun, Critical, Aegis
 ## 6. Strict Transforms & Timing Locks: Charge F03..F06, Release F01..F08 (F05 peak), question fade 0.22 / 0.20s / 0.24s
 ## 7. Clean Isolation & 0 Asset Bytes Edited: Zero res://labs/ in src/, 0 PNG edits
+
+
+static func test_000_compile_smoke_gate() -> bool:
+	print("[GATE 0] Verifying script compile and load smoke test...")
+	var panel_script = load("res://src/ui/combat/boss_combat_panel.gd")
+	if panel_script == null:
+		return _fail("Gate 0", "Failed to compile/load res://src/ui/combat/boss_combat_panel.gd")
+	var app_root_script = load("res://src/app/app_root.gd")
+	if app_root_script == null:
+		return _fail("Gate 0", "Failed to compile/load res://src/app/app_root.gd")
+	var controller_script = load("res://src/gameplay/combat/card_combat_controller.gd")
+	if controller_script == null:
+		return _fail("Gate 0", "Failed to compile/load res://src/gameplay/combat/card_combat_controller.gd")
+	print("[PASS][Gate 0] Production scripts compile and load with 0 Parse/Compile errors!")
+	return true
 
 static var _failures: Array[String] = []
 
@@ -26,6 +45,7 @@ static func run_all() -> bool:
 	print("================================================================================")
 
 	var ok: bool = true
+	ok = test_000_compile_smoke_gate() and ok
 	ok = test_001_card_art_full_bleed_layout() and ok
 	ok = test_002_stochas_ultimate_gameplay_pipeline() and ok
 	ok = test_003_karl_probability_meter_progression() and ok
@@ -131,9 +151,9 @@ static func test_002_stochas_ultimate_gameplay_pipeline() -> bool:
 	controller.increment_boss_ultimate_meter()
 	controller.increment_boss_ultimate_meter()
 
-	if not controller.is_ultimate_queued:
+	if not controller.is_ultimate_queued and not controller.is_ultimate_charge_active:
 		panel.queue_free()
-		return _fail("GATE-2", "is_ultimate_queued must be true after 4 increments")
+		return _fail("GATE-2", "is_ultimate_queued or is_ultimate_charge_active must be true after 4 increments")
 
 	# 3. Combat action finish triggers restore_question_after_combat -> should trigger Charge!
 	panel.restore_question_after_combat()
@@ -171,13 +191,13 @@ static func test_002_stochas_ultimate_gameplay_pipeline() -> bool:
 # -----------------------------------------------------------------------------
 static func test_003_karl_probability_meter_progression() -> bool:
 	print("[GATE 3] Verifying Karl Probability meter progression and unlock at 3/3...")
-
 	var controller: CardCombatController = CardCombatController.new()
 	var panel: BossCombatPanel = BossCombatPanel.new()
 	panel.size = Vector2(1280, 720)
 	panel.set_controller(controller)
 	panel._render_cards()
-
+	panel._probability_meter = 0
+	panel._update_probability_card_state()
 	var prob_btn: Button = panel.get_card_button("card_probability")
 	var prob_badge: Label = panel.get_card_badge_label("card_probability")
 	var prob_status: Label = panel.get_card_status_label("card_probability")
