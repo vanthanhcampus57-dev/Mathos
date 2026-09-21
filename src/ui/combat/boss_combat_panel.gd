@@ -28,6 +28,83 @@ signal boss_spell_cast_finished(spell_name: String)
 signal ultimate_peak_reached()
 signal ultimate_charge_finished()
 signal ultimate_release_finished()
+signal ultimate_challenge_started()
+
+# Probability & Tactical Draft signals
+signal probability_card_pressed()
+signal probability_draw_opened()
+signal probability_draw_closed()
+signal tactical_card_used(card_id: String)
+signal tactical_card_added(card_id: String)
+
+const ASSET_TACTICAL_ATLAS: String = "res://assets/ui/combat/tactical/tactical_cards_v1_atlas.png"
+const TACTICAL_ATLAS_REGIONS: Dictionary = {
+	"LOAI_TRU": Rect2(0, 0, 320, 448),
+	"DOI_CAU": Rect2(320, 0, 320, 448),
+	"THEM_GIO": Rect2(640, 0, 320, 448),
+	"CHOANG": Rect2(0, 448, 320, 448),
+	"CRITICAL": Rect2(320, 448, 320, 448),
+	"BAO_HO": Rect2(640, 448, 320, 448)
+}
+const TACTICAL_CARD_ATLAS_MAP: Dictionary = {
+	"card_tactical_eliminate": "LOAI_TRU",
+	"card_tactical_reroll": "DOI_CAU",
+	"card_tactical_add_time": "THEM_GIO",
+	"card_tactical_stun": "CHOANG",
+	"card_tactical_critical": "CRITICAL",
+	"card_tactical_aegis": "BAO_HO"
+}
+const TACTICAL_CARDS: Dictionary = {
+	"card_tactical_eliminate": {
+		"id": "card_tactical_eliminate",
+		"name": "LOẠI TRỪ",
+		"rarity": "COMMON",
+		"weight": 70,
+		"desc": "Loại bỏ 1 đáp án sai trong câu hỏi hiện tại.",
+		"color": Color(0.35, 0.75, 1.0, 1.0)
+	},
+	"card_tactical_reroll": {
+		"id": "card_tactical_reroll",
+		"name": "ĐỔI CÂU",
+		"rarity": "COMMON",
+		"weight": 70,
+		"desc": "Đổi sang câu hỏi khác cùng độ khó. Không tốn lượt.",
+		"color": Color(0.35, 0.75, 1.0, 1.0)
+	},
+	"card_tactical_add_time": {
+		"id": "card_tactical_add_time",
+		"name": "THÊM GIỜ",
+		"rarity": "COMMON",
+		"weight": 70,
+		"desc": "+15 giây thời gian suy nghĩ (hoặc +3s né tránh đại phép).",
+		"color": Color(0.35, 0.75, 1.0, 1.0)
+	},
+	"card_tactical_stun": {
+		"id": "card_tactical_stun",
+		"name": "CHOÁNG",
+		"rarity": "RARE",
+		"weight": 30,
+		"desc": "Làm choáng STOCHAS và vô hiệu hóa 1 đòn phản kích tiếp theo.",
+		"color": Color(1.0, 0.82, 0.28, 1.0)
+	},
+	"card_tactical_critical": {
+		"id": "card_tactical_critical",
+		"name": "CRITICAL",
+		"rarity": "RARE",
+		"weight": 30,
+		"desc": "Đòn Tấn Công tiếp theo gây 15 sát thương (+5 DMG).",
+		"color": Color(1.0, 0.82, 0.28, 1.0)
+	},
+	"card_tactical_aegis": {
+		"id": "card_tactical_aegis",
+		"name": "BẢO HỘ",
+		"rarity": "RARE",
+		"weight": 30,
+		"desc": "Nhận ngay +6 Giáp (tối đa 24 Giáp). Không tốn lượt.",
+		"color": Color(1.0, 0.82, 0.28, 1.0)
+	}
+}
+const MAX_TACTICAL_HAND: int = 3
 
 const KARL_PORTRAIT_PATH: String = "res://assets/characters/player/karl/karl_portrait.png"
 const STOCHAS_TEXTURE_PATH: String = "res://assets/characters/bosses/dungeon_1/stochas_boss.png"
@@ -249,6 +326,24 @@ var _karl_vfx_container: Control = null
 var _karl_persistent_barrier: Panel = null
 var _karl_persistent_barrier_tween: Tween = null
 
+# Ultimate & Probability runtime
+var _card_border_overlays_by_id: Dictionary = {}
+var _is_boss_ultimate_queued: bool = false
+var _is_ultimate_challenge_active: bool = false
+var _ultimate_challenge_timer: float = 8.0
+var _ultimate_challenge_banner: PanelContainer = null
+var _ultimate_challenge_label: Label = null
+
+var _probability_meter: int = 0
+var _tactical_hand: Array[Dictionary] = []
+var _tactical_tray: PanelContainer = null
+var _tactical_slots: Array[Button] = []
+var _probability_draw_modal: Control = null
+var _draw_cards_container: HBoxContainer = null
+var _is_critical_armed: bool = false
+var _is_stun_armed: bool = false
+var _tactical_atlas_textures: Dictionary = {}
+
 func _ready() -> void:
 	_ensure_ui()
 	_layout_elements()
@@ -259,6 +354,20 @@ func _process(delta: float) -> void:
 		_float_time += delta
 		var offset_y: float = sin(_float_time * 2.2) * 4.0
 		_boss_sprite_rect.position.y = offset_y
+
+	if _is_ultimate_challenge_active:
+		_ultimate_challenge_timer -= delta
+		if _ultimate_challenge_label != null:
+			_ultimate_challenge_label.text = "⚡ CHAOS VERDICT • THỜI GIAN: %.1fs • PHÁ GIẢI ĐẠI PHÉP!" % maxf(0.0, _ultimate_challenge_timer)
+		if _ultimate_challenge_timer <= 0.0:
+			_is_ultimate_challenge_active = false
+			if _ultimate_challenge_banner != null:
+				_ultimate_challenge_banner.visible = false
+			if _combat_controller != null:
+				_combat_controller.resolve_ultimate_outcome(false)
+			else:
+				_last_ultimate_success = false
+				play_ultimate_release()
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
@@ -296,10 +405,18 @@ func _disconnect_controller() -> void:
 		_combat_controller.combat_reset.disconnect(_on_combat_reset)
 	if _combat_controller.boss_ultimate_meter_changed.is_connected(_on_boss_ultimate_meter_changed):
 		_combat_controller.boss_ultimate_meter_changed.disconnect(_on_boss_ultimate_meter_changed)
+	if _combat_controller.boss_ultimate_queued.is_connected(_on_boss_ultimate_queued):
+		_combat_controller.boss_ultimate_queued.disconnect(_on_boss_ultimate_queued)
 	if _combat_controller.boss_ultimate_charge_started.is_connected(_on_boss_ultimate_charge_started):
 		_combat_controller.boss_ultimate_charge_started.disconnect(_on_boss_ultimate_charge_started)
+	if _combat_controller.boss_ultimate_challenge_started.is_connected(_on_boss_ultimate_challenge_started):
+		_combat_controller.boss_ultimate_challenge_started.disconnect(_on_boss_ultimate_challenge_started)
 	if _combat_controller.boss_ultimate_resolved.is_connected(_on_boss_ultimate_resolved):
 		_combat_controller.boss_ultimate_resolved.disconnect(_on_boss_ultimate_resolved)
+	if _combat_controller.probability_charge_changed.is_connected(_on_probability_charge_changed):
+		_combat_controller.probability_charge_changed.disconnect(_on_probability_charge_changed)
+	if _combat_controller.probability_ready.is_connected(_on_probability_ready):
+		_combat_controller.probability_ready.disconnect(_on_probability_ready)
 
 func _connect_controller() -> void:
 	if _combat_controller == null:
@@ -320,20 +437,66 @@ func _connect_controller() -> void:
 		_combat_controller.combat_reset.connect(_on_combat_reset)
 	if not _combat_controller.boss_ultimate_meter_changed.is_connected(_on_boss_ultimate_meter_changed):
 		_combat_controller.boss_ultimate_meter_changed.connect(_on_boss_ultimate_meter_changed)
+	if not _combat_controller.boss_ultimate_queued.is_connected(_on_boss_ultimate_queued):
+		_combat_controller.boss_ultimate_queued.connect(_on_boss_ultimate_queued)
 	if not _combat_controller.boss_ultimate_charge_started.is_connected(_on_boss_ultimate_charge_started):
 		_combat_controller.boss_ultimate_charge_started.connect(_on_boss_ultimate_charge_started)
+	if not _combat_controller.boss_ultimate_challenge_started.is_connected(_on_boss_ultimate_challenge_started):
+		_combat_controller.boss_ultimate_challenge_started.connect(_on_boss_ultimate_challenge_started)
 	if not _combat_controller.boss_ultimate_resolved.is_connected(_on_boss_ultimate_resolved):
 		_combat_controller.boss_ultimate_resolved.connect(_on_boss_ultimate_resolved)
+	if not _combat_controller.probability_charge_changed.is_connected(_on_probability_charge_changed):
+		_combat_controller.probability_charge_changed.connect(_on_probability_charge_changed)
+	if not _combat_controller.probability_ready.is_connected(_on_probability_ready):
+		_combat_controller.probability_ready.connect(_on_probability_ready)
 
 func _on_boss_ultimate_meter_changed(_current: int, _max_val: int) -> void:
 	_update_full_display()
 
+func _on_boss_ultimate_queued() -> void:
+	_is_boss_ultimate_queued = true
+	if not _is_animating_spell and not _is_animating_ultimate:
+		_trigger_queued_boss_ultimate()
+
+func _trigger_queued_boss_ultimate() -> void:
+	_is_boss_ultimate_queued = false
+	if _combat_controller != null:
+		_combat_controller.trigger_boss_ultimate_charge()
+	else:
+		play_ultimate_charge()
+
 func _on_boss_ultimate_charge_started() -> void:
 	play_ultimate_charge()
 
+func _on_boss_ultimate_challenge_started() -> void:
+	_start_ultimate_challenge()
+
+func _start_ultimate_challenge() -> void:
+	_ensure_ui()
+	_is_ultimate_challenge_active = true
+	_ultimate_challenge_timer = ULTIMATE_CHALLENGE_DURATION
+	if _ultimate_challenge_banner != null:
+		_ultimate_challenge_banner.visible = true
+		if _ultimate_challenge_label != null:
+			_ultimate_challenge_label.text = "⚡ CHAOS VERDICT • THỜI GIAN: 8.0s • PHÁ GIẢI ĐẠI PHÉP!"
+	ultimate_challenge_started.emit()
+	restore_question_after_combat()
+
 func _on_boss_ultimate_resolved(success: bool, _damage: int) -> void:
 	_last_ultimate_success = success
+	_is_ultimate_challenge_active = false
+	if _ultimate_challenge_banner != null:
+		_ultimate_challenge_banner.visible = false
 	play_ultimate_release()
+
+func _on_probability_charge_changed(current: int, _max_val: int) -> void:
+	_probability_meter = current
+	_update_probability_card_state()
+	_update_full_display()
+
+func _on_probability_ready() -> void:
+	_update_probability_card_state()
+	_update_full_display()
 
 func _ensure_ui() -> void:
 	if _boss_name_label != null:
@@ -796,6 +959,9 @@ func _ensure_ui() -> void:
 	# 6. OVERLAYS (Defeat & Victory)
 	# ---------------------------------------------------------
 	_ensure_overlays()
+	_build_tactical_tray()
+	_build_ultimate_challenge_banner()
+	_build_probability_draw_modal()
 
 	_layout_elements()
 
@@ -1094,6 +1260,9 @@ func _build_card_slots() -> void:
 	_card_badge_panels_by_id.clear()
 	_card_statuses_by_id.clear()
 	_card_status_panels_by_id.clear()
+	_card_border_overlays_by_id.clear()
+
+	var empty_btn_style: StyleBoxEmpty = StyleBoxEmpty.new()
 
 	for def in CARD_DEFINITIONS:
 		var c_id: String = String(def["id"])
@@ -1115,23 +1284,41 @@ func _build_card_slots() -> void:
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		btn.clip_contents = true
+		btn.add_theme_stylebox_override("normal", empty_btn_style)
+		btn.add_theme_stylebox_override("hover", empty_btn_style)
+		btn.add_theme_stylebox_override("pressed", empty_btn_style)
+		btn.add_theme_stylebox_override("disabled", empty_btn_style)
+		btn.add_theme_stylebox_override("focus", empty_btn_style)
 		slot.add_child(btn)
 
-		var card_vbox: VBoxContainer = VBoxContainer.new()
-		card_vbox.name = "CardVBox"
-		card_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		card_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		card_vbox.add_theme_constant_override("separation", 2)
-		btn.add_child(card_vbox)
+		# 1. Full-Bleed Card Artwork (covers entire card edge-to-edge)
+		var tex_rect: TextureRect = TextureRect.new()
+		tex_rect.name = "CardTextureRect"
+		tex_rect.texture = load_card_texture(String(def["texture_path"]))
+		tex_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		tex_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		btn.add_child(tex_rect)
 
-		# Top Badge Container
+		# 2. Decorative Border Overlay (rendered directly on top of artwork)
+		var border_overlay: Panel = Panel.new()
+		border_overlay.name = "BorderOverlay"
+		border_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		border_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		btn.add_child(border_overlay)
+
+		# 3. Floating Top Badge Container (anchored top)
 		var badge_margin: MarginContainer = MarginContainer.new()
 		badge_margin.name = "BadgeMargin"
 		badge_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		badge_margin.add_theme_constant_override("margin_top", 4)
-		badge_margin.add_theme_constant_override("margin_left", 4)
-		badge_margin.add_theme_constant_override("margin_right", 4)
-		card_vbox.add_child(badge_margin)
+		badge_margin.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		badge_margin.offset_left = 6.0
+		badge_margin.offset_right = -6.0
+		badge_margin.offset_top = 6.0
+		badge_margin.offset_bottom = 26.0
+		btn.add_child(badge_margin)
 
 		var badge_panel: PanelContainer = PanelContainer.new()
 		badge_panel.name = "BadgePanel"
@@ -1147,36 +1334,16 @@ func _build_card_slots() -> void:
 		badge_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		badge_panel.add_child(badge_label)
 
-		# Texture Rect (Artwork area sized for 160x225 card)
-		var art_margin: MarginContainer = MarginContainer.new()
-		art_margin.name = "ArtMargin"
-		art_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		art_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		art_margin.custom_minimum_size = Vector2(0, 150.0)
-		art_margin.add_theme_constant_override("margin_left", 2)
-		art_margin.add_theme_constant_override("margin_right", 2)
-		card_vbox.add_child(art_margin)
-
-		var tex_rect: TextureRect = TextureRect.new()
-		tex_rect.name = "CardTextureRect"
-		tex_rect.texture = load_card_texture(String(def["texture_path"]))
-		tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		tex_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-		tex_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		tex_rect.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		tex_rect.custom_minimum_size = Vector2(0, 146.0)
-		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		art_margin.add_child(tex_rect)
-
-		# Status Value Label
+		# 4. Floating Status Container (anchored bottom)
 		var status_margin: MarginContainer = MarginContainer.new()
 		status_margin.name = "StatusMargin"
 		status_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		status_margin.add_theme_constant_override("margin_bottom", 4)
-		status_margin.add_theme_constant_override("margin_left", 4)
-		status_margin.add_theme_constant_override("margin_right", 4)
-		card_vbox.add_child(status_margin)
+		status_margin.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+		status_margin.offset_left = 6.0
+		status_margin.offset_right = -6.0
+		status_margin.offset_top = -28.0
+		status_margin.offset_bottom = -6.0
+		btn.add_child(status_margin)
 
 		var status_panel: PanelContainer = PanelContainer.new()
 		status_panel.name = "StatusPanel"
@@ -1195,7 +1362,7 @@ func _build_card_slots() -> void:
 		if not is_skill:
 			btn.pressed.connect(_on_card_button_pressed.bind(c_id))
 		else:
-			btn.disabled = true
+			btn.pressed.connect(_on_probability_card_pressed)
 
 		_card_slots.append(slot)
 		_card_buttons.append(btn)
@@ -1206,6 +1373,7 @@ func _build_card_slots() -> void:
 		_card_badge_panels_by_id[c_id] = badge_panel
 		_card_statuses_by_id[c_id] = status_label
 		_card_status_panels_by_id[c_id] = status_panel
+		_card_border_overlays_by_id[c_id] = border_overlay
 
 func _render_cards() -> void:
 	if _cards_container == null:
@@ -1244,6 +1412,7 @@ func _render_cards() -> void:
 		var badge_panel: PanelContainer = _card_badge_panels_by_id.get(c_id, null) as PanelContainer
 		var status_lbl: Label = _card_statuses_by_id.get(c_id, null) as Label
 		var status_panel: PanelContainer = _card_status_panels_by_id.get(c_id, null) as PanelContainer
+		var border_overlay: Panel = _card_border_overlays_by_id.get(c_id, null) as Panel
 
 		if slot == null or btn == null or tex_rect == null:
 			continue
@@ -1257,33 +1426,62 @@ func _render_cards() -> void:
 		var is_selected: bool = (not is_skill and c_id == active_card_id)
 
 		if is_skill:
-			# PROBABILITY CARD (Disabled, purple treatment, recognizable art)
-			slot.add_theme_constant_override("margin_top", 6)
-			slot.add_theme_constant_override("margin_bottom", 0)
-			btn.disabled = true
+			var is_ready: bool = (_probability_meter >= 3 or (_combat_controller != null and _combat_controller.probability_meter >= 3))
+			if is_ready:
+				slot.add_theme_constant_override("margin_top", 0)
+				slot.add_theme_constant_override("margin_bottom", 6)
+				btn.disabled = false
+				tex_rect.modulate = Color(1.15, 1.10, 1.25, 1.0)
+				if badge_lbl != null:
+					badge_lbl.text = "SẴN SÀNG"
+					badge_lbl.add_theme_color_override("font_color", Color(1.0, 0.90, 0.40, 1.0))
+				if status_lbl != null:
+					status_lbl.text = "SẴN SÀNG"
+					status_lbl.add_theme_color_override("font_color", Color(1.0, 0.90, 0.40, 1.0))
+				if border_overlay != null:
+					var s: StyleBoxFlat = StyleBoxFlat.new()
+					s.bg_color = Color(0, 0, 0, 0)
+					s.border_width_left = 2
+					s.border_width_top = 2
+					s.border_width_right = 2
+					s.border_width_bottom = 2
+					s.border_color = Color(1.0, 0.82, 0.28, 1.0)
+					s.corner_radius_top_left = 8
+					s.corner_radius_top_right = 8
+					s.corner_radius_bottom_right = 8
+					s.corner_radius_bottom_left = 8
+					s.shadow_color = Color(0.9, 0.7, 0.2, 0.5)
+					s.shadow_size = 12
+					border_overlay.add_theme_stylebox_override("panel", s)
+			else:
+				slot.add_theme_constant_override("margin_top", 6)
+				slot.add_theme_constant_override("margin_bottom", 0)
+				btn.disabled = true
+				tex_rect.modulate = Color(0.70, 0.60, 0.85, 0.75)
+				var cur_m: int = _combat_controller.probability_meter if _combat_controller != null else _probability_meter
+				if badge_lbl != null:
+					badge_lbl.text = "%d/3" % cur_m if cur_m > 0 else "KỸ NĂNG"
+					badge_lbl.add_theme_color_override("font_color", Color(0.85, 0.75, 1.0, 0.90))
+				if status_lbl != null:
+					status_lbl.text = "CHƯA KÍCH HOẠT"
+					status_lbl.add_theme_color_override("font_color", Color(0.70, 0.65, 0.85, 0.80))
+				if border_overlay != null:
+					var s: StyleBoxFlat = StyleBoxFlat.new()
+					s.bg_color = Color(0, 0, 0, 0)
+					s.border_width_left = 1
+					s.border_width_top = 1
+					s.border_width_right = 1
+					s.border_width_bottom = 1
+					s.border_color = Color(0.60, 0.40, 0.85, 0.65)
+					s.corner_radius_top_left = 8
+					s.corner_radius_top_right = 8
+					s.corner_radius_bottom_right = 8
+					s.corner_radius_bottom_left = 8
+					border_overlay.add_theme_stylebox_override("panel", s)
 
-			var skill_style: StyleBoxFlat = StyleBoxFlat.new()
-			skill_style.bg_color = Color(0.08, 0.06, 0.14, 0.90)
-			skill_style.border_width_left = 1
-			skill_style.border_width_top = 1
-			skill_style.border_width_right = 1
-			skill_style.border_width_bottom = 1
-			skill_style.border_color = Color(0.60, 0.40, 0.85, 0.65)
-			skill_style.corner_radius_top_left = 8
-			skill_style.corner_radius_top_right = 8
-			skill_style.corner_radius_bottom_right = 8
-			skill_style.corner_radius_bottom_left = 8
-			btn.add_theme_stylebox_override("normal", skill_style)
-			btn.add_theme_stylebox_override("disabled", skill_style)
-
-			tex_rect.modulate = Color(0.70, 0.60, 0.85, 0.75)
-
-			if badge_lbl != null:
-				badge_lbl.text = "KỸ NĂNG"
-				badge_lbl.add_theme_color_override("font_color", Color(0.85, 0.75, 1.0, 0.90))
 			if badge_panel != null:
 				var bp_style: StyleBoxFlat = StyleBoxFlat.new()
-				bp_style.bg_color = Color(0.28, 0.16, 0.40, 0.75)
+				bp_style.bg_color = Color(0.28, 0.16, 0.40, 0.85)
 				bp_style.corner_radius_top_left = 4
 				bp_style.corner_radius_top_right = 4
 				bp_style.corner_radius_bottom_right = 4
@@ -1294,12 +1492,9 @@ func _render_cards() -> void:
 				bp_style.content_margin_bottom = 2
 				badge_panel.add_theme_stylebox_override("panel", bp_style)
 
-			if status_lbl != null:
-				status_lbl.text = "CHƯA KÍCH HOẠT"
-				status_lbl.add_theme_color_override("font_color", Color(0.70, 0.65, 0.85, 0.80))
 			if status_panel != null:
 				var sp_style: StyleBoxFlat = StyleBoxFlat.new()
-				sp_style.bg_color = Color(0.06, 0.05, 0.10, 0.80)
+				sp_style.bg_color = Color(0.06, 0.05, 0.10, 0.85)
 				sp_style.corner_radius_top_left = 4
 				sp_style.corner_radius_top_right = 4
 				sp_style.corner_radius_bottom_right = 4
@@ -1311,30 +1506,26 @@ func _render_cards() -> void:
 				status_panel.add_theme_stylebox_override("panel", sp_style)
 
 		elif is_selected:
-			# SELECTED BASIC CARD (Lifted upward ~6-8px, cyan border, restrained glow, ĐANG CHỌN badge)
 			slot.add_theme_constant_override("margin_top", 0)
 			slot.add_theme_constant_override("margin_bottom", 6)
 			btn.disabled = false
-
-			var sel_style: StyleBoxFlat = StyleBoxFlat.new()
-			sel_style.bg_color = Color(0.12, 0.18, 0.32, 0.98)
-			sel_style.border_width_left = 2
-			sel_style.border_width_top = 2
-			sel_style.border_width_right = 2
-			sel_style.border_width_bottom = 2
-			sel_style.border_color = Color(0.25, 0.90, 1.0, 1.0)
-			sel_style.corner_radius_top_left = 8
-			sel_style.corner_radius_top_right = 8
-			sel_style.corner_radius_bottom_right = 8
-			sel_style.corner_radius_bottom_left = 8
-			sel_style.shadow_color = Color(0.20, 0.85, 1.0, 0.45)
-			sel_style.shadow_size = 10
-			btn.add_theme_stylebox_override("normal", sel_style)
-			btn.add_theme_stylebox_override("hover", sel_style)
-			btn.add_theme_stylebox_override("pressed", sel_style)
-			btn.add_theme_stylebox_override("focus", sel_style)
-
 			tex_rect.modulate = Color(1.0, 1.0, 1.0, 1.0)
+
+			if border_overlay != null:
+				var sel_border: StyleBoxFlat = StyleBoxFlat.new()
+				sel_border.bg_color = Color(0, 0, 0, 0)
+				sel_border.border_width_left = 2
+				sel_border.border_width_top = 2
+				sel_border.border_width_right = 2
+				sel_border.border_width_bottom = 2
+				sel_border.border_color = Color(0.25, 0.90, 1.0, 1.0)
+				sel_border.corner_radius_top_left = 8
+				sel_border.corner_radius_top_right = 8
+				sel_border.corner_radius_bottom_right = 8
+				sel_border.corner_radius_bottom_left = 8
+				sel_border.shadow_color = Color(0.20, 0.85, 1.0, 0.45)
+				sel_border.shadow_size = 10
+				border_overlay.add_theme_stylebox_override("panel", sel_border)
 
 			if badge_lbl != null:
 				badge_lbl.text = "ĐANG CHỌN"
@@ -1374,61 +1565,31 @@ func _render_cards() -> void:
 				status_panel.add_theme_stylebox_override("panel", sp_style)
 
 		else:
-			# UNSELECTED BASIC CARD (Distinct Amber/Gold for DEFEND, Emerald for HEAL, Slate for STRIKE)
+			# UNSELECTED BASIC CARD
 			slot.add_theme_constant_override("margin_top", 6)
 			slot.add_theme_constant_override("margin_bottom", 0)
 			btn.disabled = false
+			tex_rect.modulate = Color(0.92, 0.95, 1.0, 1.0)
 
-			var norm_style: StyleBoxFlat = StyleBoxFlat.new()
-			norm_style.border_width_left = 2
-			norm_style.border_width_top = 2
-			norm_style.border_width_right = 2
-			norm_style.border_width_bottom = 2
-			match c_id:
-				"card_defend":
-					norm_style.bg_color = Color(0.10, 0.08, 0.05, 0.95)
-					norm_style.border_color = Color(1.0, 0.82, 0.28, 0.95) # Amber/gold border
-				"card_heal":
-					norm_style.bg_color = Color(0.06, 0.12, 0.09, 0.95)
-					norm_style.border_color = Color(0.28, 0.92, 0.52, 0.90) # Emerald/green border
-				_:
-					norm_style.bg_color = Color(0.06, 0.09, 0.16, 0.95)
-					norm_style.border_color = Color(0.35, 0.65, 0.95, 0.85) # Slate/azure border
-			norm_style.corner_radius_top_left = 8
-			norm_style.corner_radius_top_right = 8
-			norm_style.corner_radius_bottom_right = 8
-			norm_style.corner_radius_bottom_left = 8
-
-			var hov_style: StyleBoxFlat = StyleBoxFlat.new()
-			hov_style.bg_color = Color(0.12, 0.16, 0.26, 0.96)
-			hov_style.border_width_left = 2
-			hov_style.border_width_top = 2
-			hov_style.border_width_right = 2
-			hov_style.border_width_bottom = 2
-			match c_id:
-				"card_defend":
-					hov_style.border_color = Color(1.0, 0.92, 0.45, 1.0)
-				"card_heal":
-					hov_style.border_color = Color(0.38, 1.0, 0.60, 1.0)
-				_:
-					hov_style.border_color = Color(0.45, 0.75, 1.0, 1.0)
-			hov_style.corner_radius_top_left = 8
-			hov_style.corner_radius_top_right = 8
-			hov_style.corner_radius_bottom_right = 8
-			hov_style.corner_radius_bottom_left = 8
-
-			btn.add_theme_stylebox_override("normal", norm_style)
-			btn.add_theme_stylebox_override("hover", hov_style)
-			btn.add_theme_stylebox_override("pressed", norm_style)
-			btn.add_theme_stylebox_override("focus", hov_style)
-
-			match c_id:
-				"card_defend":
-					tex_rect.modulate = Color(1.0, 0.98, 0.92, 1.0) # 100% full brightness so shield radiates
-				"card_heal":
-					tex_rect.modulate = Color(0.95, 1.0, 0.95, 1.0)
-				_:
-					tex_rect.modulate = Color(0.95, 0.98, 1.0, 1.0)
+			if border_overlay != null:
+				var norm_border: StyleBoxFlat = StyleBoxFlat.new()
+				norm_border.bg_color = Color(0, 0, 0, 0)
+				norm_border.border_width_left = 2
+				norm_border.border_width_top = 2
+				norm_border.border_width_right = 2
+				norm_border.border_width_bottom = 2
+				match c_id:
+					"card_defend":
+						norm_border.border_color = Color(1.0, 0.82, 0.28, 0.95)
+					"card_heal":
+						norm_border.border_color = Color(0.28, 0.92, 0.52, 0.90)
+					_:
+						norm_border.border_color = Color(0.35, 0.65, 0.95, 0.85)
+				norm_border.corner_radius_top_left = 8
+				norm_border.corner_radius_top_right = 8
+				norm_border.corner_radius_bottom_right = 8
+				norm_border.corner_radius_bottom_left = 8
+				border_overlay.add_theme_stylebox_override("panel", norm_border)
 
 			if badge_lbl != null:
 				badge_lbl.text = String(def["default_badge"])
@@ -1971,6 +2132,7 @@ func play_ultimate_charge(on_finish_callback: Callable = Callable()) -> void:
 		ultimate_charge_finished.emit()
 		if on_finish_callback.is_valid():
 			on_finish_callback.call()
+		_on_ultimate_charge_completed()
 	)
 
 func play_ultimate_release(on_peak_callback: Callable = Callable(), on_finish_callback: Callable = Callable()) -> void:
@@ -2686,6 +2848,9 @@ func fade_question_for_combat(target_alpha: float = QUESTION_COMBAT_ALPHA, durat
 			_question_fade_tween.tween_property(qp, "modulate:a", target_alpha, duration)
 
 func restore_question_after_combat(duration: float = QUESTION_FADE_IN_DURATION) -> void:
+	if _is_boss_ultimate_queued or (_combat_controller != null and _combat_controller.is_ultimate_queued):
+		_trigger_queued_boss_ultimate()
+		return
 	question_restore_requested.emit(duration)
 	var qp: Control = get_target_question_panel()
 	if qp != null:
@@ -2799,4 +2964,522 @@ func _spawn_floating_feedback(pos: Vector2, text: String, color: Color) -> void:
 	tw.tween_property(lbl, "position:y", pos.y - 40.0, 1.6)
 	tw.tween_property(lbl, "modulate:a", 0.0, 1.6).set_delay(0.5)
 	tw.chain().tween_callback(lbl.queue_free)
+
+# ==============================================================================
+# TACTICAL CARDS & PROBABILITY DRAFT FLOW
+# ==============================================================================
+
+func get_card_border_overlay(card_id: String) -> Panel:
+	_ensure_ui()
+	_build_card_slots()
+	var norm: String = _normalize_card_id(card_id)
+	return _card_border_overlays_by_id.get(norm, null) as Panel
+
+func get_tactical_tray() -> PanelContainer:
+	_ensure_ui()
+	return _tactical_tray
+
+func get_tactical_hand() -> Array[Dictionary]:
+	return _tactical_hand.duplicate()
+
+func get_probability_meter() -> int:
+	if _combat_controller != null:
+		return _combat_controller.probability_meter
+	return _probability_meter
+
+func is_ultimate_challenge_active() -> bool:
+	return _is_ultimate_challenge_active
+
+func get_ultimate_challenge_timer() -> float:
+	return _ultimate_challenge_timer
+
+func _on_probability_card_pressed() -> void:
+	probability_card_pressed.emit()
+	var cur_m: int = _combat_controller.probability_meter if _combat_controller != null else _probability_meter
+	if cur_m >= 3:
+		_probability_meter = 0
+		if _combat_controller != null:
+			_combat_controller.consume_probability_charge()
+		_update_probability_card_state()
+		trigger_probability_draw_sequence()
+	else:
+		_spawn_floating_feedback(Vector2(690, 460), "XÁC SUẤT %d/3" % cur_m, Color(0.70, 0.50, 0.95))
+
+func trigger_probability_draw_sequence() -> void:
+	play_karl_cast()
+	fade_question_for_combat()
+	var tw: Tween = create_tween()
+	tw.tween_interval(0.40)
+	tw.tween_callback(open_probability_draw)
+
+func _update_probability_card_state() -> void:
+	var c_id: String = "card_probability"
+	var btn: Button = _card_buttons_by_id.get(c_id, null) as Button
+	var badge_lbl: Label = _card_badges_by_id.get(c_id, null) as Label
+	var status_lbl: Label = _card_statuses_by_id.get(c_id, null) as Label
+	var overlay: Panel = _card_border_overlays_by_id.get(c_id, null) as Panel
+	var tex_rect: TextureRect = _card_textures_by_id.get(c_id, null) as TextureRect
+
+	var is_ready: bool = (_probability_meter >= 3 or (_combat_controller != null and _combat_controller.probability_meter >= 3))
+	if is_ready:
+		if btn != null:
+			btn.disabled = false
+		if badge_lbl != null:
+			badge_lbl.text = "SẴN SÀNG"
+			badge_lbl.add_theme_color_override("font_color", Color(1.0, 0.90, 0.40, 1.0))
+		if status_lbl != null:
+			status_lbl.text = "SẴN SÀNG"
+			status_lbl.add_theme_color_override("font_color", Color(1.0, 0.90, 0.40, 1.0))
+		if tex_rect != null:
+			tex_rect.modulate = Color(1.15, 1.10, 1.25, 1.0)
+		if overlay != null:
+			var s: StyleBoxFlat = StyleBoxFlat.new()
+			s.bg_color = Color(0, 0, 0, 0)
+			s.border_width_left = 2
+			s.border_width_top = 2
+			s.border_width_right = 2
+			s.border_width_bottom = 2
+			s.border_color = Color(1.0, 0.82, 0.28, 1.0)
+			s.corner_radius_top_left = 8
+			s.corner_radius_top_right = 8
+			s.corner_radius_bottom_right = 8
+			s.corner_radius_bottom_left = 8
+			s.shadow_color = Color(0.9, 0.7, 0.2, 0.5)
+			s.shadow_size = 12
+			overlay.add_theme_stylebox_override("panel", s)
+	else:
+		if btn != null:
+			btn.disabled = true
+		var cur_m: int = _combat_controller.probability_meter if _combat_controller != null else _probability_meter
+		if badge_lbl != null:
+			badge_lbl.text = "%d/3" % cur_m if cur_m > 0 else "KỸ NĂNG"
+			badge_lbl.add_theme_color_override("font_color", Color(0.85, 0.75, 1.0, 0.90))
+		if status_lbl != null:
+			status_lbl.text = "CHƯA KÍCH HOẠT"
+			status_lbl.add_theme_color_override("font_color", Color(0.70, 0.65, 0.85, 0.80))
+		if tex_rect != null:
+			tex_rect.modulate = Color(0.70, 0.60, 0.85, 0.75)
+		if overlay != null:
+			var s: StyleBoxFlat = StyleBoxFlat.new()
+			s.bg_color = Color(0, 0, 0, 0)
+			s.border_width_left = 1
+			s.border_width_top = 1
+			s.border_width_right = 1
+			s.border_width_bottom = 1
+			s.border_color = Color(0.60, 0.40, 0.85, 0.65)
+			s.corner_radius_top_left = 8
+			s.corner_radius_top_right = 8
+			s.corner_radius_bottom_right = 8
+			s.corner_radius_bottom_left = 8
+			overlay.add_theme_stylebox_override("panel", s)
+
+func _build_tactical_tray() -> void:
+	if _tactical_tray != null:
+		return
+	_tactical_tray = PanelContainer.new()
+	_tactical_tray.name = "TacticalHandTray"
+	_tactical_tray.position = Vector2(32.0, 96.0)
+	_tactical_tray.custom_minimum_size = Vector2(260, 48)
+	var t_box: StyleBoxFlat = StyleBoxFlat.new()
+	t_box.bg_color = Color(0.06, 0.09, 0.16, 0.85)
+	t_box.border_width_left = 1
+	t_box.border_width_top = 1
+	t_box.border_width_right = 1
+	t_box.border_width_bottom = 1
+	t_box.border_color = Color(0.25, 0.65, 0.85, 0.50)
+	t_box.corner_radius_top_left = 6
+	t_box.corner_radius_top_right = 6
+	t_box.corner_radius_bottom_right = 6
+	t_box.corner_radius_bottom_left = 6
+	t_box.content_margin_left = 4
+	t_box.content_margin_top = 4
+	t_box.content_margin_right = 4
+	t_box.content_margin_bottom = 4
+	_tactical_tray.add_theme_stylebox_override("panel", t_box)
+	add_child(_tactical_tray)
+
+	var hbox: HBoxContainer = HBoxContainer.new()
+	hbox.name = "TacticalHBox"
+	hbox.add_theme_constant_override("separation", 4)
+	_tactical_tray.add_child(hbox)
+
+	_tactical_slots.clear()
+	for i in range(MAX_TACTICAL_HAND):
+		var btn: Button = Button.new()
+		btn.name = "TacticalSlot_%d" % i
+		btn.text = "[ Trống ]"
+		btn.custom_minimum_size = Vector2(80, 40)
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.add_theme_font_size_override("font_size", 10)
+		var s_style: StyleBoxFlat = StyleBoxFlat.new()
+		s_style.bg_color = Color(0.10, 0.14, 0.22, 0.50)
+		s_style.border_width_left = 1
+		s_style.border_width_top = 1
+		s_style.border_width_right = 1
+		s_style.border_width_bottom = 1
+		s_style.border_color = Color(0.20, 0.35, 0.55, 0.30)
+		s_style.corner_radius_top_left = 4
+		s_style.corner_radius_top_right = 4
+		s_style.corner_radius_bottom_right = 4
+		s_style.corner_radius_bottom_left = 4
+		btn.add_theme_stylebox_override("normal", s_style)
+		btn.add_theme_stylebox_override("disabled", s_style)
+		btn.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 0.6))
+		btn.disabled = true
+		var idx: int = i
+		btn.pressed.connect(func(): use_tactical_card(idx))
+		hbox.add_child(btn)
+		_tactical_slots.append(btn)
+
+func _update_tactical_tray() -> void:
+	for i in range(_tactical_slots.size()):
+		var btn: Button = _tactical_slots[i]
+		if btn == null:
+			continue
+		if i < _tactical_hand.size():
+			var card: Dictionary = _tactical_hand[i]
+			var is_rare: bool = (String(card.get("rarity", "")) == "RARE")
+			btn.text = String(card.get("name", ""))
+			btn.disabled = false
+			var s: StyleBoxFlat = StyleBoxFlat.new()
+			s.bg_color = Color(0.15, 0.12, 0.08, 0.90) if is_rare else Color(0.08, 0.16, 0.26, 0.90)
+			s.border_width_left = 1
+			s.border_width_top = 1
+			s.border_width_right = 1
+			s.border_width_bottom = 1
+			s.border_color = Color(1.0, 0.82, 0.28, 0.9) if is_rare else Color(0.35, 0.75, 1.0, 0.9)
+			s.corner_radius_top_left = 4
+			s.corner_radius_top_right = 4
+			s.corner_radius_bottom_right = 4
+			s.corner_radius_bottom_left = 4
+			btn.add_theme_stylebox_override("normal", s)
+			btn.add_theme_stylebox_override("hover", s)
+			btn.add_theme_color_override("font_color", Color(1.0, 0.9, 0.4) if is_rare else Color.WHITE)
+		else:
+			btn.text = "[ Trống ]"
+			btn.disabled = true
+			var s: StyleBoxFlat = StyleBoxFlat.new()
+			s.bg_color = Color(0.10, 0.14, 0.22, 0.50)
+			s.border_width_left = 1
+			s.border_width_top = 1
+			s.border_width_right = 1
+			s.border_width_bottom = 1
+			s.border_color = Color(0.20, 0.35, 0.55, 0.30)
+			s.corner_radius_top_left = 4
+			s.corner_radius_top_right = 4
+			s.corner_radius_bottom_right = 4
+			s.corner_radius_bottom_left = 4
+			btn.add_theme_stylebox_override("normal", s)
+			btn.add_theme_stylebox_override("disabled", s)
+			btn.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 0.6))
+
+func _build_ultimate_challenge_banner() -> void:
+	if _ultimate_challenge_banner != null:
+		return
+	_ultimate_challenge_banner = PanelContainer.new()
+	_ultimate_challenge_banner.name = "UltimateChallengeBanner"
+	_ultimate_challenge_banner.position = Vector2(300.0, 16.0)
+	_ultimate_challenge_banner.custom_minimum_size = Vector2(680, 48)
+	_ultimate_challenge_banner.visible = false
+	var b_box: StyleBoxFlat = StyleBoxFlat.new()
+	b_box.bg_color = Color(0.18, 0.05, 0.28, 0.92)
+	b_box.border_width_left = 2
+	b_box.border_width_top = 2
+	b_box.border_width_right = 2
+	b_box.border_width_bottom = 2
+	b_box.border_color = Color(0.95, 0.35, 1.0, 1.0)
+	b_box.corner_radius_top_left = 8
+	b_box.corner_radius_top_right = 8
+	b_box.corner_radius_bottom_right = 8
+	b_box.corner_radius_bottom_left = 8
+	b_box.shadow_color = Color(0.85, 0.20, 0.95, 0.60)
+	b_box.shadow_size = 14
+	_ultimate_challenge_banner.add_theme_stylebox_override("panel", b_box)
+	add_child(_ultimate_challenge_banner)
+
+	_ultimate_challenge_label = Label.new()
+	_ultimate_challenge_label.name = "ChallengeLabel"
+	_ultimate_challenge_label.text = "⚡ CHAOS VERDICT • THỜI GIAN: 8.0s • PHÁ GIẢI ĐẠI PHÉP!"
+	_ultimate_challenge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_ultimate_challenge_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_ultimate_challenge_label.add_theme_font_size_override("font_size", 14)
+	_ultimate_challenge_label.add_theme_color_override("font_color", Color(1.0, 0.85, 1.0, 1.0))
+	_ultimate_challenge_banner.add_child(_ultimate_challenge_label)
+
+func _on_ultimate_charge_completed() -> void:
+	if _combat_controller != null:
+		_combat_controller.trigger_boss_ultimate_challenge()
+	_start_ultimate_challenge()
+
+func _build_probability_draw_modal() -> void:
+	if _probability_draw_modal != null:
+		return
+	_probability_draw_modal = Control.new()
+	_probability_draw_modal.name = "ProbabilityDrawModal"
+	_probability_draw_modal.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_probability_draw_modal.visible = false
+	_probability_draw_modal.z_index = 100
+	add_child(_probability_draw_modal)
+
+	var dimmer: ColorRect = ColorRect.new()
+	dimmer.name = "Dimmer"
+	dimmer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dimmer.color = Color(0.02, 0.04, 0.08, 0.70)
+	_probability_draw_modal.add_child(dimmer)
+
+	var dialog: PanelContainer = PanelContainer.new()
+	dialog.name = "DrawDialog"
+	dialog.position = Vector2(280.0, 120.0)
+	dialog.custom_minimum_size = Vector2(720, 460)
+	var dbox: StyleBoxFlat = StyleBoxFlat.new()
+	dbox.bg_color = Color(0.06, 0.08, 0.14, 0.96)
+	dbox.border_width_left = 2
+	dbox.border_width_top = 2
+	dbox.border_width_right = 2
+	dbox.border_width_bottom = 2
+	dbox.border_color = Color(0.25, 0.75, 1.0, 0.90)
+	dbox.corner_radius_top_left = 12
+	dbox.corner_radius_top_right = 12
+	dbox.corner_radius_bottom_right = 12
+	dbox.corner_radius_bottom_left = 12
+	dbox.content_margin_left = 16
+	dbox.content_margin_top = 14
+	dbox.content_margin_right = 16
+	dbox.content_margin_bottom = 14
+	dialog.add_theme_stylebox_override("panel", dbox)
+	_probability_draw_modal.add_child(dialog)
+
+	var dvbox: VBoxContainer = VBoxContainer.new()
+	dvbox.add_theme_constant_override("separation", 10)
+	dialog.add_child(dvbox)
+
+	var title: Label = Label.new()
+	title.text = "RÚT BÀI CHIẾN THUẬT (CHỌN 1 TRONG 3)"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_color_override("font_color", Color(1.0, 0.82, 0.28, 1.0))
+	dvbox.add_child(title)
+
+	var subtitle: Label = Label.new()
+	subtitle.text = "✦ Tỷ lệ: 70% Thường / 30% Hiếm • Nhận hiệu ứng hỗ trợ tức thời hoặc kích hoạt ✦"
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.add_theme_font_size_override("font_size", 11)
+	subtitle.add_theme_color_override("font_color", Color(0.65, 0.75, 0.88, 0.80))
+	dvbox.add_child(subtitle)
+
+	_draw_cards_container = HBoxContainer.new()
+	_draw_cards_container.name = "CardsRow"
+	_draw_cards_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	_draw_cards_container.add_theme_constant_override("separation", 14)
+	_draw_cards_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dvbox.add_child(_draw_cards_container)
+
+	var close_btn: Button = Button.new()
+	close_btn.text = "ĐÓNG / BỎ QUA"
+	close_btn.custom_minimum_size = Vector2(140, 32)
+	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	close_btn.pressed.connect(close_probability_draw)
+	dvbox.add_child(close_btn)
+
+func get_tactical_card_atlas_texture(card_id: String) -> AtlasTexture:
+	var region_key: String = TACTICAL_CARD_ATLAS_MAP.get(card_id, "")
+	if _tactical_atlas_textures.has(region_key):
+		return _tactical_atlas_textures[region_key]
+	if ResourceLoader.exists(ASSET_TACTICAL_ATLAS) and TACTICAL_ATLAS_REGIONS.has(region_key):
+		var tex: Texture2D = load(ASSET_TACTICAL_ATLAS)
+		var at: AtlasTexture = AtlasTexture.new()
+		at.atlas = tex
+		at.region = TACTICAL_ATLAS_REGIONS[region_key]
+		_tactical_atlas_textures[region_key] = at
+		return at
+	return null
+
+func draw_three_tactical_cards() -> Array[Dictionary]:
+	var keys: Array = TACTICAL_CARDS.keys().duplicate()
+	keys.shuffle()
+	var drawn: Array[Dictionary] = []
+	for i in range(mini(3, keys.size())):
+		drawn.append(TACTICAL_CARDS[keys[i]])
+	return drawn
+
+func open_probability_draw() -> void:
+	_ensure_ui()
+	_build_probability_draw_modal()
+	fade_question_for_combat()
+
+	for child in _draw_cards_container.get_children():
+		child.queue_free()
+
+	var drawn_cards: Array[Dictionary] = draw_three_tactical_cards()
+	for i in range(drawn_cards.size()):
+		var card_data: Dictionary = drawn_cards[i]
+		var is_rare: bool = (String(card_data.get("rarity", "")) == "RARE")
+		var pnl: PanelContainer = PanelContainer.new()
+		pnl.custom_minimum_size = Vector2(210, 330)
+		var pstyle: StyleBoxFlat = StyleBoxFlat.new()
+		pstyle.bg_color = Color(0.12, 0.10, 0.06, 0.95) if is_rare else Color(0.07, 0.11, 0.18, 0.95)
+		pstyle.border_width_left = 2
+		pstyle.border_width_top = 2
+		pstyle.border_width_right = 2
+		pstyle.border_width_bottom = 2
+		pstyle.border_color = Color(1.0, 0.82, 0.28, 1.0) if is_rare else Color(0.25, 0.75, 1.0, 1.0)
+		pstyle.corner_radius_top_left = 8
+		pstyle.corner_radius_top_right = 8
+		pstyle.corner_radius_bottom_right = 8
+		pstyle.corner_radius_bottom_left = 8
+		pstyle.content_margin_left = 10
+		pstyle.content_margin_top = 10
+		pstyle.content_margin_right = 10
+		pstyle.content_margin_bottom = 10
+		pnl.add_theme_stylebox_override("panel", pstyle)
+
+		var cvbox: VBoxContainer = VBoxContainer.new()
+		cvbox.add_theme_constant_override("separation", 6)
+		pnl.add_child(cvbox)
+
+		var r_lbl: Label = Label.new()
+		r_lbl.text = "✦ THẺ HIẾM ✦" if is_rare else "✦ THẺ THƯỜNG ✦"
+		r_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		r_lbl.add_theme_font_size_override("font_size", 10)
+		r_lbl.add_theme_color_override("font_color", Color(1.0, 0.82, 0.28, 1.0) if is_rare else Color(0.35, 0.75, 1.0, 1.0))
+		cvbox.add_child(r_lbl)
+
+		var card_art: TextureRect = TextureRect.new()
+		card_art.name = "CardArt"
+		card_art.custom_minimum_size = Vector2(90, 120)
+		card_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		card_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		var atlas_tex: AtlasTexture = get_tactical_card_atlas_texture(String(card_data.get("id", "")))
+		if atlas_tex != null:
+			card_art.texture = atlas_tex
+		cvbox.add_child(card_art)
+
+		var name_lbl: Label = Label.new()
+		name_lbl.text = String(card_data.get("name", ""))
+		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_lbl.add_theme_font_size_override("font_size", 14)
+		name_lbl.add_theme_color_override("font_color", Color.WHITE)
+		cvbox.add_child(name_lbl)
+
+		var desc_lbl: Label = Label.new()
+		desc_lbl.text = String(card_data.get("desc", ""))
+		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc_lbl.add_theme_font_size_override("font_size", 10)
+		desc_lbl.add_theme_color_override("font_color", Color(0.75, 0.85, 0.95, 0.80))
+		desc_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		cvbox.add_child(desc_lbl)
+
+		var pick_btn: Button = Button.new()
+		pick_btn.text = "CHỌN THẺ NÀY"
+		pick_btn.custom_minimum_size = Vector2(0, 34)
+		var b_style: StyleBoxFlat = StyleBoxFlat.new()
+		b_style.bg_color = Color(0.85, 0.65, 0.15, 1.0) if is_rare else Color(0.20, 0.55, 0.85, 1.0)
+		b_style.corner_radius_top_left = 4
+		b_style.corner_radius_top_right = 4
+		b_style.corner_radius_bottom_right = 4
+		b_style.corner_radius_bottom_left = 4
+		pick_btn.add_theme_stylebox_override("normal", b_style)
+		pick_btn.add_theme_color_override("font_color", Color(0.05, 0.08, 0.12, 1.0))
+		pick_btn.add_theme_font_size_override("font_size", 12)
+		var c_data: Dictionary = card_data
+		pick_btn.pressed.connect(func(): _on_tactical_card_picked(c_data))
+		cvbox.add_child(pick_btn)
+
+		_draw_cards_container.add_child(pnl)
+
+	_probability_draw_modal.visible = true
+	probability_draw_opened.emit()
+
+func close_probability_draw() -> void:
+	if _probability_draw_modal != null:
+		_probability_draw_modal.visible = false
+	restore_question_after_combat()
+	probability_draw_closed.emit()
+
+func _on_tactical_card_picked(card_data: Dictionary) -> void:
+	if _tactical_hand.size() < MAX_TACTICAL_HAND:
+		_tactical_hand.append(card_data)
+	else:
+		_tactical_hand[0] = card_data
+	_update_tactical_tray()
+	_spawn_floating_feedback(Vector2(640, 350), "Đã nhận: " + String(card_data.get("name", "")), Color(1.0, 0.85, 0.3))
+	close_probability_draw()
+	tactical_card_added.emit(String(card_data.get("id", "")))
+
+func use_tactical_card(slot_idx: int) -> void:
+	if slot_idx < 0 or slot_idx >= _tactical_hand.size():
+		return
+	var card: Dictionary = _tactical_hand[slot_idx]
+	var card_id: String = String(card.get("id", ""))
+
+	match card_id:
+		"card_tactical_eliminate":
+			play_karl_cast()
+			var qp: Control = get_target_question_panel()
+			var eliminated: bool = false
+			if qp != null and qp.has_method("eliminate_wrong_option"):
+				eliminated = bool(qp.call("eliminate_wrong_option"))
+			elif qp != null:
+				var buttons: Array = qp.find_children("*", "Button", true, false)
+				for b in buttons:
+					if b is Button and b.name.begins_with("ChoiceButton") and not b.disabled:
+						b.disabled = true
+						eliminated = true
+						break
+			_spawn_floating_feedback(Vector2(640, 350), "Đã loại bỏ 1 đáp án sai!", Color(0.35, 0.75, 1.0))
+			_tactical_hand.remove_at(slot_idx)
+			_update_tactical_tray()
+			tactical_card_used.emit(card_id)
+
+		"card_tactical_reroll":
+			if _is_ultimate_challenge_active:
+				_spawn_floating_feedback(Vector2(640, 350), "Không thể đổi câu khi Đại Phép đang triển khai!", Color(1.0, 0.4, 0.4))
+				return
+			play_karl_cast()
+			var qp: Control = get_target_question_panel()
+			if qp != null and qp.has_signal("retry_requested"):
+				qp.emit_signal("retry_requested")
+			_spawn_floating_feedback(Vector2(640, 350), "Đã đổi câu hỏi!", Color(1.0, 0.82, 0.28))
+			_tactical_hand.remove_at(slot_idx)
+			_update_tactical_tray()
+			tactical_card_used.emit(card_id)
+
+		"card_tactical_add_time":
+			play_karl_cast()
+			if _is_ultimate_challenge_active:
+				_ultimate_challenge_timer = minf(12.0, _ultimate_challenge_timer + 3.0)
+				_spawn_floating_feedback(Vector2(640, 350), "+3s NÉ TRÁNH ĐẠI PHÉP!", Color(0.3, 0.9, 0.4))
+			else:
+				_spawn_floating_feedback(Vector2(640, 350), "+15s THỜI GIAN!", Color(0.3, 0.9, 0.4))
+			_tactical_hand.remove_at(slot_idx)
+			_update_tactical_tray()
+			tactical_card_used.emit(card_id)
+
+		"card_tactical_stun":
+			play_karl_cast()
+			_is_stun_armed = true
+			_spawn_floating_feedback(Vector2(200, 300), "⚡ CHOÁNG ĐÃ NẠP! (Chặn đòn tiếp theo)", Color(1.0, 0.82, 0.28))
+			_tactical_hand.remove_at(slot_idx)
+			_update_tactical_tray()
+			tactical_card_used.emit(card_id)
+
+		"card_tactical_critical":
+			play_karl_cast()
+			_is_critical_armed = true
+			_spawn_floating_feedback(Vector2(200, 300), "⚔️ CRITICAL ĐÃ NẠP! (+5 DMG Strike)", Color(1.0, 0.3, 0.3))
+			_tactical_hand.remove_at(slot_idx)
+			_update_tactical_tray()
+			tactical_card_used.emit(card_id)
+
+		"card_tactical_aegis":
+			play_karl_cast()
+			if _combat_controller != null and _combat_controller.player_runtime != null:
+				_combat_controller.player_runtime.apply_shield(6)
+				_update_persistent_barrier(true)
+			_spawn_barrier_pulse()
+			_spawn_floating_feedback(Vector2(200, 300), "+6 GIÁP (BẢO HỘ)", Color(0.25, 0.90, 1.0))
+			_tactical_hand.remove_at(slot_idx)
+			_update_tactical_tray()
+			tactical_card_used.emit(card_id)
+
 

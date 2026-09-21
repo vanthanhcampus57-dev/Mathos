@@ -21,10 +21,16 @@ signal boss_ultimate_charge_started()
 signal boss_ultimate_challenge_started()
 signal boss_ultimate_resolved(success: bool, damage: int)
 
+# Karl Probability flow signals
+signal probability_charge_changed(current: int, max_val: int)
+signal probability_ready()
+
 const BOSS_ULTIMATE_METER_MAX: int = 4
 const ULTIMATE_CHARGE_DURATION: float = 2.4
 const ULTIMATE_CHALLENGE_DURATION: float = 8.0
 const ULTIMATE_DAMAGE: int = 24
+
+const PROBABILITY_METER_MAX: int = 3
 
 var player_runtime: PlayerRuntime = null
 var boss_entity: EnemyEntity = null
@@ -37,6 +43,8 @@ var boss_ultimate_meter: int = 0
 var is_ultimate_queued: bool = false
 var is_ultimate_charge_active: bool = false
 var is_ultimate_challenge_active: bool = false
+
+var probability_meter: int = 0
 
 func start_combat(p_player: PlayerRuntime, p_boss: EnemyEntity, p_cards: Array[CardModel]) -> void:
 	assert(p_player != null, "CardCombatController requires PlayerRuntime")
@@ -73,6 +81,25 @@ func get_selected_card() -> CardModel:
 	if selected_card == null and not hand_cards.is_empty():
 		selected_card = hand_cards[0]
 	return selected_card
+
+func get_probability_meter() -> int:
+	return probability_meter
+
+func set_probability_meter(val: int) -> void:
+	var old_val: int = probability_meter
+	probability_meter = clampi(val, 0, PROBABILITY_METER_MAX)
+	probability_charge_changed.emit(probability_meter, PROBABILITY_METER_MAX)
+	if probability_meter == PROBABILITY_METER_MAX and old_val < PROBABILITY_METER_MAX:
+		probability_ready.emit()
+
+func add_probability_charge(amount: int = 1) -> void:
+	set_probability_meter(probability_meter + amount)
+
+func consume_probability_charge() -> bool:
+	if probability_meter >= PROBABILITY_METER_MAX:
+		set_probability_meter(0)
+		return true
+	return false
 
 func increment_boss_ultimate_meter() -> void:
 	if is_ultimate_challenge_active or is_ultimate_charge_active:
@@ -151,6 +178,7 @@ func resolve_answer_outcome(is_correct: bool) -> Dictionary:
 	}
 
 	if is_correct:
+		add_probability_charge(1)
 		# Player card executes successfully
 		if active_card != null:
 			for ef_var in active_card.effects:
@@ -228,10 +256,12 @@ func reset_encounter(stats: PlayerStats) -> void:
 	is_ultimate_queued = false
 	is_ultimate_charge_active = false
 	is_ultimate_challenge_active = false
+	probability_meter = 0
 	if not hand_cards.is_empty():
 		selected_card = hand_cards[0]
 
 	combat_reset.emit()
 	boss_ultimate_meter_changed.emit(0, BOSS_ULTIMATE_METER_MAX)
+	probability_charge_changed.emit(0, PROBABILITY_METER_MAX)
 	combat_state_changed.emit()
 	combat_log_emitted.emit("🔄 Quyết chiến được tái thiết lập. Chuẩn bị tấn công!", "info")
