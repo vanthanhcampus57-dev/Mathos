@@ -2993,6 +2993,10 @@ func is_ultimate_challenge_active() -> bool:
 func get_ultimate_challenge_timer() -> float:
 	return _ultimate_challenge_timer
 
+func is_probability_draw_open() -> bool:
+	return _probability_draw_modal != null and _probability_draw_modal.visible
+
+
 func _on_probability_card_pressed() -> void:
 	probability_card_pressed.emit()
 	var cur_m: int = _combat_controller.probability_meter if _combat_controller != null else _probability_meter
@@ -3216,21 +3220,26 @@ func _build_probability_draw_modal() -> void:
 		return
 	_probability_draw_modal = Control.new()
 	_probability_draw_modal.name = "ProbabilityDrawModal"
+	_probability_draw_modal.top_level = true
 	_probability_draw_modal.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_probability_draw_modal.size = Vector2(1280, 720)
 	_probability_draw_modal.visible = false
 	_probability_draw_modal.z_index = 100
+	_probability_draw_modal.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_probability_draw_modal)
 
 	var dimmer: ColorRect = ColorRect.new()
 	dimmer.name = "Dimmer"
 	dimmer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dimmer.color = Color(0.02, 0.04, 0.08, 0.70)
+	dimmer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_probability_draw_modal.add_child(dimmer)
 
 	var dialog: PanelContainer = PanelContainer.new()
 	dialog.name = "DrawDialog"
-	dialog.position = Vector2(280.0, 120.0)
-	dialog.custom_minimum_size = Vector2(720, 460)
+	dialog.position = Vector2(260.0, 100.0)
+	dialog.custom_minimum_size = Vector2(760, 500)
+	dialog.mouse_filter = Control.MOUSE_FILTER_STOP
 	var dbox: StyleBoxFlat = StyleBoxFlat.new()
 	dbox.bg_color = Color(0.06, 0.08, 0.14, 0.96)
 	dbox.border_width_left = 2
@@ -3242,15 +3251,16 @@ func _build_probability_draw_modal() -> void:
 	dbox.corner_radius_top_right = 12
 	dbox.corner_radius_bottom_right = 12
 	dbox.corner_radius_bottom_left = 12
-	dbox.content_margin_left = 16
-	dbox.content_margin_top = 14
-	dbox.content_margin_right = 16
-	dbox.content_margin_bottom = 14
+	dbox.content_margin_left = 18
+	dbox.content_margin_top = 16
+	dbox.content_margin_right = 18
+	dbox.content_margin_bottom = 16
 	dialog.add_theme_stylebox_override("panel", dbox)
 	_probability_draw_modal.add_child(dialog)
 
 	var dvbox: VBoxContainer = VBoxContainer.new()
 	dvbox.add_theme_constant_override("separation", 10)
+	dvbox.mouse_filter = Control.MOUSE_FILTER_PASS
 	dialog.add_child(dvbox)
 
 	var title: Label = Label.new()
@@ -3258,6 +3268,7 @@ func _build_probability_draw_modal() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 16)
 	title.add_theme_color_override("font_color", Color(1.0, 0.82, 0.28, 1.0))
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dvbox.add_child(title)
 
 	var subtitle: Label = Label.new()
@@ -3265,19 +3276,22 @@ func _build_probability_draw_modal() -> void:
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.add_theme_font_size_override("font_size", 11)
 	subtitle.add_theme_color_override("font_color", Color(0.65, 0.75, 0.88, 0.80))
+	subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dvbox.add_child(subtitle)
 
 	_draw_cards_container = HBoxContainer.new()
 	_draw_cards_container.name = "CardsRow"
 	_draw_cards_container.alignment = BoxContainer.ALIGNMENT_CENTER
-	_draw_cards_container.add_theme_constant_override("separation", 14)
+	_draw_cards_container.add_theme_constant_override("separation", 16)
 	_draw_cards_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_draw_cards_container.mouse_filter = Control.MOUSE_FILTER_PASS
 	dvbox.add_child(_draw_cards_container)
 
 	var close_btn: Button = Button.new()
 	close_btn.text = "ĐÓNG / BỎ QUA"
 	close_btn.custom_minimum_size = Vector2(140, 32)
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	close_btn.mouse_filter = Control.MOUSE_FILTER_STOP
 	close_btn.pressed.connect(close_probability_draw)
 	dvbox.add_child(close_btn)
 
@@ -3315,7 +3329,8 @@ func open_probability_draw() -> void:
 		var card_data: Dictionary = drawn_cards[i]
 		var is_rare: bool = (String(card_data.get("rarity", "")) == "RARE")
 		var pnl: PanelContainer = PanelContainer.new()
-		pnl.custom_minimum_size = Vector2(210, 330)
+		pnl.custom_minimum_size = Vector2(220, 380)
+		pnl.mouse_filter = Control.MOUSE_FILTER_PASS
 		var pstyle: StyleBoxFlat = StyleBoxFlat.new()
 		pstyle.bg_color = Color(0.12, 0.10, 0.06, 0.95) if is_rare else Color(0.07, 0.11, 0.18, 0.95)
 		pstyle.border_width_left = 2
@@ -3335,6 +3350,7 @@ func open_probability_draw() -> void:
 
 		var cvbox: VBoxContainer = VBoxContainer.new()
 		cvbox.add_theme_constant_override("separation", 6)
+		cvbox.mouse_filter = Control.MOUSE_FILTER_PASS
 		pnl.add_child(cvbox)
 
 		var r_lbl: Label = Label.new()
@@ -3342,23 +3358,46 @@ func open_probability_draw() -> void:
 		r_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		r_lbl.add_theme_font_size_override("font_size", 10)
 		r_lbl.add_theme_color_override("font_color", Color(1.0, 0.82, 0.28, 1.0) if is_rare else Color(0.35, 0.75, 1.0, 1.0))
+		r_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cvbox.add_child(r_lbl)
+
+		# Art Box Container with clip_contents = true to prevent ANY visual overflow
+		var art_box: PanelContainer = PanelContainer.new()
+		art_box.name = "ArtContainer"
+		art_box.custom_minimum_size = Vector2(195, 140)
+		art_box.clip_contents = true
+		art_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var art_style: StyleBoxFlat = StyleBoxFlat.new()
+		art_style.bg_color = Color(0.04, 0.06, 0.10, 0.80)
+		art_style.border_width_left = 1
+		art_style.border_width_top = 1
+		art_style.border_width_right = 1
+		art_style.border_width_bottom = 1
+		art_style.border_color = Color(1.0, 0.82, 0.28, 0.60) if is_rare else Color(0.25, 0.75, 1.0, 0.60)
+		art_style.corner_radius_top_left = 6
+		art_style.corner_radius_top_right = 6
+		art_style.corner_radius_bottom_right = 6
+		art_style.corner_radius_bottom_left = 6
+		art_box.add_theme_stylebox_override("panel", art_style)
 
 		var card_art: TextureRect = TextureRect.new()
 		card_art.name = "CardArt"
-		card_art.custom_minimum_size = Vector2(90, 120)
+		card_art.set_anchors_preset(Control.PRESET_FULL_RECT)
 		card_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		card_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		card_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		card_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var atlas_tex: AtlasTexture = get_tactical_card_atlas_texture(String(card_data.get("id", "")))
 		if atlas_tex != null:
 			card_art.texture = atlas_tex
-		cvbox.add_child(card_art)
+		art_box.add_child(card_art)
+		cvbox.add_child(art_box)
 
 		var name_lbl: Label = Label.new()
 		name_lbl.text = String(card_data.get("name", ""))
 		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		name_lbl.add_theme_font_size_override("font_size", 14)
 		name_lbl.add_theme_color_override("font_color", Color.WHITE)
+		name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cvbox.add_child(name_lbl)
 
 		var desc_lbl: Label = Label.new()
@@ -3367,11 +3406,14 @@ func open_probability_draw() -> void:
 		desc_lbl.add_theme_font_size_override("font_size", 10)
 		desc_lbl.add_theme_color_override("font_color", Color(0.75, 0.85, 0.95, 0.80))
 		desc_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		desc_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cvbox.add_child(desc_lbl)
 
 		var pick_btn: Button = Button.new()
+		pick_btn.name = "PickButton_" + String(card_data.get("id", ""))
 		pick_btn.text = "CHỌN THẺ NÀY"
 		pick_btn.custom_minimum_size = Vector2(0, 34)
+		pick_btn.mouse_filter = Control.MOUSE_FILTER_STOP
 		var b_style: StyleBoxFlat = StyleBoxFlat.new()
 		b_style.bg_color = Color(0.85, 0.65, 0.15, 1.0) if is_rare else Color(0.20, 0.55, 0.85, 1.0)
 		b_style.corner_radius_top_left = 4
@@ -3381,8 +3423,7 @@ func open_probability_draw() -> void:
 		pick_btn.add_theme_stylebox_override("normal", b_style)
 		pick_btn.add_theme_color_override("font_color", Color(0.05, 0.08, 0.12, 1.0))
 		pick_btn.add_theme_font_size_override("font_size", 12)
-		var c_data: Dictionary = card_data
-		pick_btn.pressed.connect(func(): _on_tactical_card_picked(c_data))
+		pick_btn.pressed.connect(_on_tactical_card_picked.bind(card_data))
 		cvbox.add_child(pick_btn)
 
 		_draw_cards_container.add_child(pnl)
