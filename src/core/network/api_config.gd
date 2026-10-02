@@ -2,9 +2,10 @@ class_name ApiConfig
 extends RefCounted
 
 ## Centralized API Configuration & Endpoint Path Registry.
-## Defaults to local development endpoint (http://127.0.0.1:8080) with full runtime override capability.
+## Defaults to production endpoint (https://api.mathos.vn) with full runtime override capability.
 
-const DEFAULT_BASE_URL: String = "http://127.0.0.1:8080"
+const DEFAULT_BASE_URL: String = "https://api.mathos.vn"
+const LOCAL_DEV_BASE_URL: String = "http://127.0.0.1:8080"
 
 const REGISTER_PATH: String = "/api/v1/auth/register"
 const LOGIN_PATH: String = "/api/v1/auth/login"
@@ -16,7 +17,13 @@ const RESET_PASSWORD_PATH: String = "/api/v1/auth/reset-password"
 
 var _base_url: String = DEFAULT_BASE_URL
 
-func _init(base_url: String = DEFAULT_BASE_URL) -> void:
+func _init(base_url: String = "") -> void:
+	if base_url.is_empty():
+		var env_url: String = OS.get_environment("MATHOS_API_URL")
+		if not env_url.is_empty():
+			base_url = env_url
+		else:
+			base_url = DEFAULT_BASE_URL
 	set_base_url(base_url)
 
 func set_base_url(url: String) -> void:
