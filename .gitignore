@@ -3,6 +3,7 @@
 
 # Build artifacts
 build/
+release/
 *.import
 
 # OS and Editor artifacts
